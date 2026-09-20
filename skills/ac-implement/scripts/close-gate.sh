@@ -167,6 +167,132 @@ br_field() { # <bead-id> <jq field> -> value; a REFUSED read is a NOT-CHECKED, n
   printf '%s\n' "$v"
 }
 
+# ---------------------------------------------------------------------------------------
+# THE TYPE-ROUTED RULING PATH — a `decision`-type bead, or one labelled `human-gate`, closes
+# on a recorded ruling comment, never on the probe machinery below. This is a REAL skip, not
+# a leg-outcome change: no RED-receipt read, no PROBE-DRIFT, no GREEN/COVERAGE, no SCANNER,
+# no EVIDENCE core, no claim taken, and no ownership pre-check — a recorded ruling ends a
+# decision bead whoever holds it. Every other `issue_type`/label combination falls through
+# to the unchanged leg 1-8 flow below.
+#
+# WHO MAY RULE (Craig's ruling on ac-4y7l.21, 2026-09-19, list location per ac-4y7l.30): every
+# no-probe close requires a ruling signed by a name on the CLOSING BOARD's own `.beads/config.yaml`
+# `humans:` key (comma-separated; `<human>` in every template is copied VERBATIM from that
+# key — skills/beads-standards/reference/bead-conventions.md and
+# skills/ac-human/references/action-loop.md both point here, never restate the list). A board
+# with no key authorizes nobody — fail closed, not NOT-CHECKED: a missing/empty list is a
+# deterministic "nobody", the same as any other unlisted name. The only non-human ruling
+# accepted is the exact `DECISION (ac-tidy): moot` on a bead labelled `pipeline-proposal` — a
+# non-`moot` ac-tidy ruling is refused like any other unauthorized actor. OUT: verifying that
+# the named human actually wrote the comment (plan risk R1).
+# ---------------------------------------------------------------------------------------
+BEAD_TYPE=$(br_field "$BEAD" issue_type)
+BEAD_LABELS=$(br_call show "$BEAD" --json </dev/null \
+  | jq -r 'if type == "array" then .[0] else . end | (.labels // []) | join(",")' 2>/dev/null) \
+  || not_checked "READ" "br_call show refused for $BEAD — the gate cannot verify this close"
+has_label() { case ",$BEAD_LABELS," in *",$1,"*) return 0 ;; *) return 1 ;; esac; }
+
+# read_humans — the closing board's own `.beads/config.yaml` `humans:` key, raw (comma-
+# separated, untrimmed). A missing file or missing key prints nothing — fail closed, never an
+# error: "no key" IS "authorizes nobody" (Craig's ruling on ac-4y7l.30), not an unverifiable
+# state.
+read_humans() {
+  local cfg="$ROOT/.beads/config.yaml"
+  [ -f "$cfg" ] || return 0
+  grep -m1 '^humans:' "$cfg" | sed 's/^humans:[[:space:]]*//'
+}
+
+# human_is_authorized <actor> <humans-csv> — split the csv on commas; each entry is trimmed
+# of LEADING/TRAILING whitespace only, so a multi-word name ("Craig van Heerden") is compared
+# as one whole entry, never split on its own inner spaces.
+human_is_authorized() {
+  local actor entry
+  actor=$(printf '%s' "$1" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+  [ -n "$2" ] || return 1
+  local IFS=,
+  for entry in $2; do
+    entry=$(printf '%s' "$entry" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+    [ "$entry" = "$actor" ] && return 0
+  done
+  return 1
+}
+
+# find_authorized_ruling — the ONE matcher for a recorded "DECISION (<actor>): ..." comment
+# signed by an authorized human (or the exact `DECISION (ac-tidy): moot` on a
+# `pipeline-proposal` bead). Sets $RULING to the authorized line, or empty when none is
+# found/authorized. Shared by the type-routed ruling path directly below AND LEG 6's
+# scanner-refusal override, so the two never drift apart. A ruling is a comment's own FIRST
+# LINE, at column 0, naming an actor that is not a bare template placeholder (`<human>`) —
+# this excludes both an indented draft buried inside a longer note and an unfilled template
+# quoted on a memo's second line.
+#
+# THE NEWEST AUTHORIZED RULING WINS: every DECISION-shaped first line across every comment is
+# checked, in board order (oldest first), and each authorized one OVERWRITES $RULING — so an
+# earlier `DECISION (agent)` never blocks a later valid human ruling, and between two human
+# rulings the newer one stands, never the first `grep -m1` hit found.
+#
+#   Return 0 — the comments read succeeded (RULING may still be empty: none was authorized).
+#   Return 1 — the comments read itself refused; the caller decides whether that is
+#              NOT-CHECKED (the type-routed path) or simply "no override" (LEG 6, which only
+#              ever narrows an existing refusal and never turns a refusal into a pass).
+#
+# Also sets $RULING_COMMENT_ID to the winning comment's own `id` — LEG 8's landing record
+# cites it (`ruling-comment: #<id>`) so check 35 rule 6 (ac-4y7l.31) can cross-reference the
+# ruling back to a real comment on the row, never a bare unverifiable claim.
+find_authorized_ruling() {
+  local comments_json rows cid ctext actor humans_csv
+  RULING=""; RULING_COMMENT_ID=""
+  comments_json=$(br_call comments list "$BEAD" --json </dev/null 2>/dev/null) || return 1
+  rows=$(printf '%s' "$comments_json" \
+    | jq -r '.[] | [(.id // ""), ((.text // "") | split("\n")[0])] | @tsv' 2>/dev/null)
+  [ -n "$rows" ] || return 0
+  humans_csv=$(read_humans)
+  while IFS=$'\t' read -r cid ctext; do
+    [ -n "$ctext" ] || continue
+    printf '%s' "$ctext" | grep -qE '^DECISION \([^<)][^)]*\): \S' || continue
+    actor=$(printf '%s' "$ctext" | sed -n 's/^DECISION (\([^)]*\)):.*/\1/p')
+    [ -n "$actor" ] || continue
+    if [ "$actor" = "ac-tidy" ]; then
+      if has_label "pipeline-proposal" \
+         && printf '%s' "$ctext" | grep -qE '^DECISION \(ac-tidy\): moot([[:space:]]|$)'; then
+        RULING="$ctext"; RULING_COMMENT_ID="$cid"
+      fi
+    elif human_is_authorized "$actor" "$humans_csv"; then
+      RULING="$ctext"; RULING_COMMENT_ID="$cid"
+    fi
+  done <<EOF
+$rows
+EOF
+  return 0
+}
+
+if [ "$BEAD_TYPE" = "decision" ] || has_label "human-gate"; then
+  find_authorized_ruling \
+    || not_checked "DECISION" "comments list refused for $BEAD — a ruling cannot be verified"
+  if [ -z "$RULING" ]; then
+    echo "CLOSE-REFUSED DECISION: no 'DECISION (<actor>): ...' comment on $BEAD is both a real ruling (first line, column 0, no placeholder actor) and signed by an authorized human — or ac-tidy on a pipeline-proposal bead — a ruling must be recorded before this bead can close" >&2
+    exit 1
+  fi
+  if [ "$DRY" = 1 ]; then
+    echo "close-gate[$BEAD] DRY-RUN — ruling path: would close on the recorded ruling: $RULING"
+    exit 0
+  fi
+  command -v "$BR" >/dev/null 2>&1 || not_checked "OWNERSHIP" "br unavailable — the ruling close cannot be verified"
+  RULE_SHA=$(git rev-parse --short HEAD 2>/dev/null || echo unknown)
+  RULE_TS=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+  RULE_TEXT="GATE: decided — $BEAD — $REASON; ruling verified: $RULING (ruling-comment: #${RULING_COMMENT_ID:-none}; at $RULE_SHA by ${ACTOR:-<unattributed>} at $RULE_TS)"
+  # The landing record commits ATOMICALLY with the close via --transition-comment (br
+  # 0.5.12) — no separate post-close write, so no post-close RECORD-FAILED can follow a
+  # close that already landed.
+  "$BR" close "$BEAD" --reason "$REASON" --transition-comment "$RULE_TEXT" </dev/null >/dev/null 2>&1 || true
+  POST_STATUS=$(br_field "$BEAD" status)
+  [ "$POST_STATUS" = "closed" ] \
+    || refuse "LANDING" "the close did not land — $BEAD reads '$POST_STATUS' after the write"
+  echo "close-gate[$BEAD] GATE: decided RECORDED on the bead"
+  echo "close-gate[$BEAD] CLOSED — ruling: a recorded DECISION comment authorized this close; no probe legs were run."
+  exit 0
+fi
+
 # THE DISPOSITION VERB: parsed from the close reason, never from the bead's labels — the
 # reason is the caller's claim, and this gate judges claims. Leading whitespace allowed;
 # `wontfix` is deliberately absent (intent stays human).
@@ -248,6 +374,7 @@ rfield() { printf '%s\n' "$LAST" | grep -m1 "^$1:" | sed "s|^$1:[[:space:]]*||";
 
 RED_PROBE=$(rfield 'red-probe')
 RED_BEAD=$(rfield 'bead')
+RED_AT=$(rfield 'at')
 
 # THE FRESH-VERIFICATION CARVE-OUT (ac-close-gate-already-green-carveout-8r3o, extended by
 # run 20260907-exhaust): a bead with no usable claim-time receipt banks no temporal anchor,
@@ -452,22 +579,36 @@ fi
 echo "close-gate[$BEAD] COVERAGE ok — $ASSERTIONS assertion result(s) from $ASSERT_SOURCE"
 
 # ---------------------------------------------------------------------------------------
-# LEG 6 — SCANNER. Only on non-empty argv, and it asserts scanned-equals-passed by reading
-# the DETAIL lines, never the summary counter: ubs's summary counts CATEGORIES CHECKED, not
-# findings, and it silently drops every language it has no scanner for.
+# LEG 6 — SCANNER. Only on non-empty argv. ubs runs ONCE at HEAD — no baseline diff (the
+# operator's way-forward ruling, 2026-09-19: a prior base-tree/scratch-tree signature match
+# never matched on real ubs output — absolute paths, permalinks, capped detail lists, a
+# missing lint config, bash's rule-on-the-previous-line all defeated it; see
+# skills/ac-pipeline/FRICTIONS.md scanner-leg-has-no-baseline). The Combined Summary's own
+# Critical/Warning/Info counters are the verdict, never the DETAIL line count: ubs's DETAIL
+# regex misses some scanners' shapes (e.g. bandit's `Location:` lines) and a summary-only
+# ubs invocation can carry counts with no DETAIL lines printed at all.
 #
-# THE ARGV IS PARTITIONED FIRST, because that silent drop is the trap. ubs 5.3.13 scans
+# Critical or Warning findings refuse (CLOSE-REFUSED: SCANNER, via refuse() below). Info
+# findings are reported in this leg's own output and never refuse on their own. A refused
+# close still closes when the bead carries an authorized human ruling — find_authorized_ruling(),
+# the SAME matcher the type-routed ruling path above uses — accepting the findings; the
+# landing record (LEG 8) names the ruling whenever it was the reason a scanner refusal did
+# not stand.
+#
+# THE ARGV IS PARTITIONED FIRST, because ubs's silent drop is a trap. ubs 5.3.13 scans
 # js python cpp rust golang java ruby swift csharp elixir and NOTHING else — no shell, no
 # markdown, the two commonest file types in this registry. Hand it one .ts and one .md and
-# it scans the .ts, never names the .md, and reports `Files: 1`; the scanned-equals-passed
-# assertion below then read 1 of 2 and refused the close as a SHORTFALL. Measured 2026-09-19:
+# it scans the .ts, never names the .md, and reports `Files: 1`; a scanned-equals-handed
+# assertion then read 1 of 2 and refused the close as a SHORTFALL. Measured 2026-09-19:
 # a routine bead delivering a module plus its doc could not close, and the message blamed a
 # coverage gap rather than saying the doc was never scannable.
 #
 # So an unscannable path is a DECLARED TIER, never a shortfall and never silence: it is named
 # in the ok line, and if NOTHING in the argv is scannable the leg is NOT-CHECKED naming the
-# files. What is refused is a real finding; what is reported is the part no scanner covers.
+# files. Shell goes to shellcheck below, which ubs does not cover at all. What is refused is
+# a real finding; what is reported is the part no scanner covers.
 # ---------------------------------------------------------------------------------------
+SCANNER_RULING=""
 if [ "${#SCAN_FILES[@]}" -gt 0 ]; then
   command -v ubs >/dev/null 2>&1 \
     || not_checked "SCANNER" "${#SCAN_FILES[@]} file(s) were handed to --scan but ubs is not on PATH — NOT-GATED, not clean"
@@ -528,38 +669,49 @@ if [ "${#SCAN_FILES[@]}" -gt 0 ]; then
       | grep -oE '[0-9]+' | sort -n | tail -1)
   fi
   [ -n "${SCANNED:-}" ] || not_checked "SCANNER" "ubs printed no 'Files scanned' count — coverage is unassertable"
+  # The denominator is SCANNABLE, never the whole --scan argv: shell and unscannable paths
+  # were partitioned out above, and ubs never sees them. Comparing against SCAN_FILES read
+  # "1 of 2" for a routine module-plus-doc bead and refused it as a coverage SHORTFALL.
   [ "$SCANNED" -eq "${#SCANNABLE[@]}" ] \
     || not_checked "SCANNER" "ubs scanned $SCANNED of ${#SCANNABLE[@]} SCANNABLE file(s) — a shortfall among files it does scan is NOT-GATED, not a pass"
-  FINDINGS=$(printf '%s' "$SCAN_OUT" | grep -cE '^[[:space:]]+[^[:space:]]+:[0-9]+:[0-9]+' || true)
-  # ubs's js module exits 1 with zero findings (tool-side noise, ac-x9dy): the verdict
-  # is the finding count, never the exit code alone. The DETAIL regex misses python
-  # bandit Location lines, so the Combined Summary's CRITICAL counter corroborates.
-  #
-  # WARNING AND INFO ARE DELIBERATELY NOT CORROBORATED, measured 2026-09-19 across five
-  # workers in one easy-mode swarm. ubs's style heuristics saturate both tiers on idiomatic
-  # code: `js.async.await-no-try` alone scored 2 Warning + 29 Info on a BRAND-NEW test file
-  # its author had just written, because `await expect(...).resolves` is the house idiom in
-  # a package with 341 such tests. Requiring zero at those tiers made this leg unsatisfiable
-  # for any bead touching a real file, so every worker omitted --scan and took the documented
-  # skip -- the leg ran on NO bead all run, which reads as coverage and is not.
-  #
-  # This is a narrowing, not a cure. The leg still compares an ABSOLUTE count, so a legacy
-  # file carrying a pre-existing Critical still blocks every bead that touches it. The real
-  # fix is a baseline comparison -- assert no NEW findings against the base commit -- already
-  # specified in easy-mode's FRICTIONS.md under
-  # `close-gate-cannot-tell-an-authorised-scan-skip-from-a-dropped-argument` and never built.
+
+  # ubs's js module exits 1 with zero findings (tool-side noise, ac-x9dy): the verdict is the
+  # Combined Summary's severity counts, never the exit code alone — and never the DETAIL line
+  # count, whose regex misses some scanners' shapes (bandit's `Location:` lines).
   SUM_CRIT=$(printf '%s' "$SCAN_OUT" | grep -oE '^Critical: [0-9]+' | grep -oE '[0-9]+' | head -1)
-  [ "${FINDINGS:-0}" -eq 0 ] && [ "${SUM_CRIT:-0}" -eq 0 ] \
-    || refuse "SCANNER" "ubs exit $SCAN_RC with ${FINDINGS:-0} detail finding(s) (Critical ${SUM_CRIT:-0}) over ${#SCANNABLE[@]} scanned file(s)"
+  SUM_WARN=$(printf '%s' "$SCAN_OUT" | grep -oE '^Warning: [0-9]+' | grep -oE '[0-9]+' | head -1)
+  SUM_INFO=$(printf '%s' "$SCAN_OUT" | grep -oE '^Info: [0-9]+' | grep -oE '[0-9]+' | head -1)
+  CRIT="${SUM_CRIT:-0}"; WARN="${SUM_WARN:-0}"; INFO="${SUM_INFO:-0}"
+
   SC_NOTE=""
   [ "${#SHELLFILES[@]}" -gt 0 ] && SC_NOTE="; shellcheck -S error clean over ${#SHELLFILES[@]} shell file(s)"
   [ "$SC_LOWER" -gt 0 ] && SC_NOTE="$SC_NOTE ($SC_LOWER below the error bar, reported not refused)"
-  if [ "${#UNSCANNABLE[@]}" -gt 0 ]; then
-    echo "close-gate[$BEAD] SCANNER ok — $SCANNED/${#SCANNABLE[@]} scanned, 0 detail findings$SC_NOTE; UNSCANNED TIER (no scanner for these, reported not passed): ${UNSCANNABLE[*]}"
+  UN_NOTE=""
+  [ "${#UNSCANNABLE[@]}" -gt 0 ] && UN_NOTE="; UNSCANNED TIER (no scanner for these, reported not passed): ${UNSCANNABLE[*]}"
+
+  # WARNING REFUSES, and the human ruling below is what keeps that satisfiable. Measured
+  # 2026-09-19 across five workers in one swarm: ubs's style heuristics saturate the Warning
+  # and Info tiers on idiomatic code (`js.async.await-no-try` scored 2 Warning + 29 Info on a
+  # brand-new test file, because `await expect(...).resolves` is the house idiom). Refusing on
+  # Warning with NO escape valve made the leg unsatisfiable and every worker simply omitted
+  # --scan, so it ran on no bead at all -- which reads as coverage and is not. Info is
+  # therefore REPORTED, never refusing; Warning refuses but an authorized ruling overrides it.
+  # If Warning saturation starts forcing a ruling on routine beads, that is this trap
+  # returning and the tier bar is what to revisit -- not the --scan argv.
+  if [ "$CRIT" -eq 0 ] && [ "$WARN" -eq 0 ] && [ "$INFO" -eq 0 ]; then
+    echo "close-gate[$BEAD] SCANNER ok — $SCANNED/${#SCANNABLE[@]} scanned, 0 findings$SC_NOTE$UN_NOTE"
+  elif [ "$CRIT" -eq 0 ] && [ "$WARN" -eq 0 ]; then
+    echo "close-gate[$BEAD] SCANNER ok — $SCANNED/${#SCANNABLE[@]} scanned, $INFO Info finding(s) reported (Info never refuses), 0 Critical/Warning$SC_NOTE$UN_NOTE"
   else
-    echo "close-gate[$BEAD] SCANNER ok — $SCANNED/${#SCANNABLE[@]} scanned, 0 detail findings$SC_NOTE"
+    find_authorized_ruling
+    if [ -n "$RULING" ]; then
+      SCANNER_RULING="$RULING"
+      echo "close-gate[$BEAD] SCANNER ruling — $CRIT Critical, $WARN Warning, $INFO Info finding(s) over ${#SCANNABLE[@]} scanned file(s); a human ruling overrides a scanner refusal: $RULING"
+    else
+      refuse "SCANNER" "ubs exit $SCAN_RC with $CRIT Critical, $WARN Warning finding(s) (plus $INFO Info) over ${#SCANNABLE[@]} scanned file(s)"
+    fi
   fi
-  fi
+  fi   # closes: if [ -z "${SCANNER_DONE:-}" ] — the shell-only argv short-circuits above
 else
   echo "close-gate[$BEAD] SCANNER skipped — no --scan argv (this gate reports the skip; it never implies clean)"
 fi
@@ -588,7 +740,7 @@ fi
 # ---------------------------------------------------------------------------------------
 if [ "$DRY" = 1 ]; then
   echo "close-gate[$BEAD] DRY-RUN — every leg held; would re-assert in_progress ownership, then:"
-  echo "close-gate[$BEAD]   $BR close $BEAD --reason \"$REASON\""
+  echo "close-gate[$BEAD]   $BR close $BEAD --reason \"$REASON\" --transition-comment \"<landing record>\""
   echo "close-gate[$BEAD]   then read back status == closed"
   exit 0
 fi
@@ -603,34 +755,48 @@ if [ -n "$ACTOR" ] && [ "$PRE_ASSIGNEE" != "$ACTOR" ]; then
   refuse "OWNERSHIP" "the bead is assigned to '$PRE_ASSIGNEE', not '$ACTOR' — someone else owns this close"
 fi
 
-"$BR" close "$BEAD" --reason "$REASON" </dev/null >/dev/null 2>&1 || true
+# THE LANDING RECORD: every accepted close leaves exactly one comment naming the evidence
+# it ran from — the record is the difference between a verified close and a wave-through,
+# and a comment nobody wrote proves nothing to the next reader. Computed BEFORE the write so
+# it can travel through `br close --transition-comment` (br 0.5.12), which commits the
+# comment ATOMICALLY with the close — no separate post-close write, so no RECORD-FAILED can
+# follow a close that already landed.
+LND_SHA=$(git rev-parse --short HEAD 2>/dev/null || echo unknown)
+LND_TS=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+# Every branch below names its evidence in a shape check 35 rule 6 (ac-4y7l.31) can
+# cross-reference on the SAME row: `GATE: receipt` cites the flight receipt's own `at:`
+# stamp (`receipt-at:`); `GATE: decided` cites the ruling comment's id (`ruling-comment:
+# #<id>`, set above by find_authorized_ruling); the cascade and fresh-verify branches
+# self-cite the tree they verified (`tree: <sha>`) — there is no separate receipt to point
+# at in either case.
+if [ "$DISPOSITION_LEG" = "cascade" ]; then
+  LND_LABEL="TRIAGE-CLOSE"
+  LND_TEXT="TRIAGE-CLOSE: $BEAD — ${REASON%%:*} close accepted on the cascade leg — consumed blocker(s)$CASCADE_DETAIL verified closed-with-disposition on the board at (tree: $LND_SHA) by ${ACTOR:-<unattributed>} at $LND_TS; AC probes NOT all green, and a disposition close never claims a causal flip."
+elif [ "$FRESH_VERIFY" = 1 ]; then
+  PER_PROBE=""
+  for r in "${PROBE_RESULTS[@]:-}"; do
+    [ -n "$r" ] && PER_PROBE="$PER_PROBE [$r]"
+  done
+  LND_LABEL="fresh-verify"
+  LND_TEXT="FRESH-VERIFY: $BEAD — ${REASON%%:*} close with no usable claim-time receipt; all $PROBE_GREEN AC probe(s) verified green at (tree: $LND_SHA) by ${ACTOR:-<unattributed>} at $LND_TS — per-probe:$PER_PROBE"
+else
+  # The ordinary receipt-backed close (DISPOSITION=0) and a disposition close resolved on
+  # its `green` leg with a usable receipt both write the same record — one text, covering
+  # both.
+  LND_LABEL="GATE: receipt"
+  LND_TEXT="GATE: receipt — $BEAD — RED probe: $RED_PROBE; receipt-at: ${RED_AT:-none}; reason: $REASON; verified at $LND_SHA by ${ACTOR:-<unattributed>} at $LND_TS"
+fi
+
+# The landing record says so: a scanner refusal that a human ruling overrode is named on the
+# same comment as the rest of the evidence, never silently absorbed into an ordinary GREEN.
+[ -n "$SCANNER_RULING" ] && LND_TEXT="$LND_TEXT; scanner ruling: $SCANNER_RULING"
+
+"$BR" close "$BEAD" --reason "$REASON" --transition-comment "$LND_TEXT" </dev/null >/dev/null 2>&1 || true
 
 POST_STATUS=$(br_field "$BEAD" status)
 [ "$POST_STATUS" = "closed" ] \
   || refuse "LANDING" "the close did not land — $BEAD reads '$POST_STATUS' after the write"
-
-# THE LANDING RECORD: a close accepted on fresh verification or on the cascade leg leaves
-# the evidence it ran from on the bead — the record is the difference between a verified
-# close and a wave-through, and a comment nobody wrote proves nothing to the next reader.
-if [ "$DISPOSITION_LEG" = "cascade" ] || [ "$FRESH_VERIFY" = 1 ]; then
-  FRESH_SHA=$(git rev-parse --short HEAD 2>/dev/null || echo unknown)
-  FRESH_TS=$(date -u +%Y-%m-%dT%H:%M:%SZ)
-  if [ "$DISPOSITION_LEG" = "cascade" ]; then
-    "$BR" comments add "$BEAD" \
-      "TRIAGE-CLOSE: $BEAD — ${REASON%%:*} close accepted on the cascade leg — consumed blocker(s)$CASCADE_DETAIL verified closed-with-disposition on the board at $FRESH_SHA by ${ACTOR:-<unattributed>} at $FRESH_TS; AC probes NOT all green, and a disposition close never claims a causal flip." \
-      </dev/null >/dev/null 2>&1 || true
-    echo "close-gate[$BEAD] TRIAGE-CLOSE RECORDED on the bead"
-  else
-    PER_PROBE=""
-    for r in "${PROBE_RESULTS[@]:-}"; do
-      [ -n "$r" ] && PER_PROBE="$PER_PROBE [$r]"
-    done
-    "$BR" comments add "$BEAD" \
-      "FRESH-VERIFY: $BEAD — ${REASON%%:*} close with no usable claim-time receipt; all $PROBE_GREEN AC probe(s) verified green at HEAD $FRESH_SHA by ${ACTOR:-<unattributed>} at $FRESH_TS — per-probe:$PER_PROBE" \
-      </dev/null >/dev/null 2>&1 || true
-    echo "close-gate[$BEAD] fresh-verify RECORDED on the bead"
-  fi
-fi
+echo "close-gate[$BEAD] $LND_LABEL RECORDED on the bead"
 
 if [ "$DISPOSITION" = 1 ]; then
   echo "close-gate[$BEAD] CLOSED — disposition ($DISPOSITION_LEG): the state this bead aimed at is settled at HEAD; no causal flip is claimed."

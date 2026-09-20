@@ -173,11 +173,11 @@ from a git hook — a hook cannot see a DB-only close.
 
 ## Delivers
 - gate: skills/ac-implement/scripts/close-gate.sh
-  touchers: `rg -l -F "scripts/close-gate" . -g '!skills/ac-implement/scripts/close-gate.sh' -g '!node_modules/**' -g '!.beads/**' -g '!_plans/**' -g '!_backlog/**' -g '!_docs/**' -g '!docs/**' -g '!memory/**' -g '!CHANGELOG*'` → 7 · owned by: ac-qn7h.2
+  touchers: `rg -l -F "scripts/close-gate" . -g '!skills/ac-implement/scripts/close-gate.sh' -g '!node_modules/**' -g '!.beads/**' -g '!_plans/**' -g '!_backlog/**' -g '!_docs/**' -g '!docs/**' -g '!memory/**' -g '!CHANGELOG*'` → 4 · owned by: ac-qn7h.2
 - harness: skills/ac-implement/scripts/close-gate.test.sh
-  touchers: `rg -l -F "scripts/close-gate.test" . -g '!skills/ac-implement/scripts/close-gate.test.sh' -g '!node_modules/**' -g '!.beads/**' -g '!_plans/**' -g '!_backlog/**' -g '!_docs/**' -g '!docs/**' -g '!memory/**' -g '!CHANGELOG*'` → 2 · owned by: ac-qn7h.2
+  touchers: `rg -l -F "scripts/close-gate.test" . -g '!skills/ac-implement/scripts/close-gate.test.sh' -g '!node_modules/**' -g '!.beads/**' -g '!_plans/**' -g '!_backlog/**' -g '!_docs/**' -g '!docs/**' -g '!memory/**' -g '!CHANGELOG*'` → 1 · owned by: ac-qn7h.2
 - wiring: the close step of skills/ac-implement/SKILL.md invokes the gate
-  touchers: `rg -l -F "ac-implement/SKILL" . -g '!skills/ac-implement/SKILL.md' -g '!node_modules/**' -g '!.beads/**' -g '!_plans/**' -g '!_backlog/**' -g '!_docs/**' -g '!docs/**' -g '!memory/**' -g '!CHANGELOG*'` → 7 · out-of-scope: the referrers cite the skill by path, not the close step this bead edits
+  touchers: `rg -l -F "ac-implement/SKILL" . -g '!skills/ac-implement/SKILL.md' -g '!node_modules/**' -g '!.beads/**' -g '!_plans/**' -g '!_backlog/**' -g '!_docs/**' -g '!docs/**' -g '!memory/**' -g '!CHANGELOG*'` → 2 · out-of-scope: the referrers cite the skill by path, not the close step this bead edits
 
 ## Consumes
 - ac-qn7h -> skills/ac-pipeline/SKILL.md (the MODE / ON-FAILURE declaration this script conforms to)

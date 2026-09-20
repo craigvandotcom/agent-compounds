@@ -134,6 +134,41 @@ if [ "$rc" -eq 3 ] && printf '%s' "$out" | grep -q 'REFUSED \[outside-lock\]'; t
   pass "refuses a commit taken outside the lock, naming outside-lock"
 else fail "outside-lock: rc=$rc out=$out"; fi
 
+# --- 5b. refusal: placeholder subject/body (fcc88b3 shipped subject "test" / body "body") --
+PR="$(new_repo placeholder)"
+printf 'test\n\nbody\n' >"$PR/placeholder.txt"
+out="$(cd "$PR" && "$LANE" --identity t --message-file placeholder.txt --path mine.txt --no-push 2>&1)"; rc=$?
+if [ "$rc" -eq 3 ] && printf '%s' "$out" | grep -q 'REFUSED \[placeholder-message\]'; then
+  pass "placeholder subject refused (fcc88b3's 'test' / 'body' shape), naming placeholder-message"
+else fail "placeholder-message: rc=$rc out=$out"; fi
+
+# --- 5c. a short commit of a type outside the usual set is NOT a placeholder ---------------
+PR2="$(new_repo reviewtype)"
+printf 'review(ac-4y7l): batch3 findings\n\nfiled.\n' >"$PR2/review.txt"
+out="$(cd "$PR2" && "$LANE" --identity t --message-file review.txt --path mine.txt --no-push 2>&1)"; rc=$?
+if [ "$rc" -eq 0 ]; then
+  pass "a short review(scope): subject with a thin body is accepted — any lowercase type prefix is conventional"
+else
+  fail "short review(scope): subject refused: rc=$rc $out"
+fi
+
+# A short conventional subject is never flagged, even with a thin body — its own repo, so
+# the assertion covers a real commit attempt, not just a skipped refusal.
+PR2="$(new_repo placeholder-short-conventional)"
+printf 'fix: bug\n' >"$PR2/short-conventional.txt"
+out="$(cd "$PR2" && "$LANE" --identity t --message-file short-conventional.txt --path mine.txt --no-push 2>&1)"; rc=$?
+if [ "$rc" -eq 0 ]; then
+  pass "a short conventional subject is never flagged as a placeholder"
+else fail "short-conventional falsely refused as placeholder: rc=$rc out=$out"; fi
+
+# An unconventional subject with a real explanatory body is never flagged either.
+PR3="$(new_repo placeholder-real-body)"
+printf 'lane docs update\n\nnames the actual failure this commit prevents in enough words\n' >"$PR3/real-body.txt"
+out="$(cd "$PR3" && "$LANE" --identity t --message-file real-body.txt --path mine.txt --no-push 2>&1)"; rc=$?
+if [ "$rc" -eq 0 ]; then
+  pass "an unconventional subject with a real explanatory body is never flagged as a placeholder"
+else fail "real-body falsely refused as placeholder: rc=$rc out=$out"; fi
+
 # --- 6. happy path: commits, scopes, pushes ------------------------------------------------
 R="$(new_repo happy)"
 printf 'sib v2\n' >"$R/sib.txt"
@@ -280,7 +315,7 @@ if git -C "$R" worktree add -q -b wtbranch "$WT" >/dev/null 2>&1; then
     pass "linked worktree reproduces the submodule shape (.git is a FILE)"
   else fail "worktree .git is not a file — the scar case was not reproduced"; fi
   printf 'wt v2\n' >"$WT/mine.txt"
-  printf 'wt commit\n' >"$WT/msg.txt"
+  printf 'fix: commit through the worktree lane\n\nverifies the linked worktree case\n' >"$WT/msg.txt"
   out="$(cd "$WT" && "$LANE" --identity wt-job --message-file msg.txt --path mine.txt \
           --branch wtbranch --no-push 2>&1)"; rc=$?
   if [ "$rc" -eq 0 ]; then pass "the lane works where .git is a FILE"
@@ -316,11 +351,13 @@ COMMON="$(git -C "$R" rev-parse --git-common-dir)"
 case "$COMMON" in /*) ;; *) COMMON="$(cd "$R" && cd "$COMMON" && pwd)" ;; esac
 mkdir -p "$R/.beads" "$COMMON/ac-flight"
 # a board with one bead: claimed, flight-check refused at 2026-09-07T07:00:00Z (title prefixed),
-# never re-claimed (no receipt after the refusal).
+# never re-claimed (no receipt after the refusal). A non-`ac-` prefixed id (`bd-`) going RED
+# proves the widened <prefix>-<id> grammar actually catches it (ac-4y7l.6) — not that the
+# grep merely happened to match because the id started with `ac-`.
 cat >"$R/.beads/issues.jsonl" <<'JSONL'
-{"id":"ac-refused-demo","title":"PREMISE-FAILED: demo bead refused at claim","status":"open","issue_type":"task","updated_at":"2026-09-07T07:00:00Z","comments":[{"created_at":"2026-09-07T07:00:00Z","text":"Premise failure: RED — no RED is recorded per the bead's named probes"}]}
+{"id":"bd-refused-demo","title":"PREMISE-FAILED: demo bead refused at claim","status":"open","issue_type":"task","updated_at":"2026-09-07T07:00:00Z","comments":[{"created_at":"2026-09-07T07:00:00Z","text":"Premise failure: RED — no RED is recorded per the bead's named probes"}]}
 JSONL
-printf 'feat(ac-refused-demo): ship the work anyway\n' >"$R/msg.txt"
+printf 'feat(bd-refused-demo): ship the work anyway\n' >"$R/msg.txt"
 out="$(cd "$R" && AC2_FLIGHT_DIR="$COMMON/ac-flight" "$LANE" --identity t --message-file msg.txt --path mine.txt --no-push 2>&1)"; rc=$?
 if [ "$rc" -eq 3 ] && printf '%s' "$out" | grep -q 'REFUSED \[no-claim-receipt\]'; then
   pass "refuses a subject naming a claim-refused bead with no fresh receipt, naming no-claim-receipt"

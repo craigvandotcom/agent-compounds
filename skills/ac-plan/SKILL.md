@@ -48,10 +48,10 @@ a line to cut — the plan is graded on whether its claims are checkable, never 
    the falsity, by when), Decisions (§ next step), `## Seams` (after Decisions — one row per surviving finding, object by object; `plan-checklist.md` § 1 re-derives every object's touchers against it — an uncovered file is an unowned seam), Risk + sequence (`Human gates:` names every authorization gate), Out of scope, Success criterion.
 6. **Decisions and improvements** per `references/decisions.md`: `settled: <choice> — <why>` or `needs-human`, each settled card quoting its `## Vision` line;
    up to two opt-in improvements alongside, never folded into Deliverables on the agent's own judgement — each accepted one appends one sentence to `## Vision`, quoted by its card.
-7. **Diet pass to fixpoint.** Spawn a fresh orchestrator-tier reader with the plan and one question — where is the fat: the same
-   functionality, experience and reliability with less or simpler. One floor: it never proposes cutting a refusal, a fail-closed check or a
-   confirmed finding — those return as questions, not cuts. It returns cuts with reasons, never edits; the conductor applies each cut unless it
-   reverses a confirmed Seams row or orphans a Vision sentence (both read from the plan itself), and repeats until a round proposes no change to a mechanism.
+7. **Diet pass, bounded.** Spawn a fresh orchestrator-tier reader with the plan and one question — where is the fat: the same functionality,
+   experience and reliability with less or simpler. It returns cuts, each naming what replaces it, never edits. The conductor checks each claim and
+   applies a cut only when nothing concrete is lost — a safeguard, a Seams finding, a Vision sentence left unmet — keeping the rest without a card; a
+   question is answered by lookup; a trade it still backs rides the opt-in line (`references/decisions.md` § Improvements). Stop when a round applies nothing, three rounds at most.
 8. **Approve.** Render `references/approval-brief.md`'s brief and run ONE question round — open cards plus **Approve / Change / Park**. Approve runs
    `skills/_tools/plan-approve.sh approve <plan> "$(git config user.name)"`, the ONE writer, never a hand edit. Unattended: the plan stays `draft` and the docket shows it waiting.
 9. **Stop.** End with the line `Next: /ac-polish plan <path>` — never invoke the next stage.

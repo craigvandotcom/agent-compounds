@@ -47,8 +47,8 @@ dispositionally, and leaves the stamp otherwise. Count the eligible pool with wo
 terminal pick (worker.md §8), closed with no work step. Register with Agent Mail; install the pre-commit guard once (workers never do).
 
 **Phase 1 — spawn, then wait.** Spawn `width` implementer subagents — never `general`, which has no tier and rides the orchestrator's model — whose prompt is `references/worker.md`
-VERBATIM, followed by one appended line `SCRIPTS=<scripts>` (the worker refuses to start without it) — and, ONLY if `--cap N` was given, one more line naming the cap. Verbatim means
-verbatim: a paraphrased loop is a different loop, and the worker cannot tell which one it got. The conductor hands NO agent name to a child — the child always mints its own identity, and the conductor **captures the minted name back from the `ACTOR:` first line of the worker's hand-back** (a child's `macro_start_session` response is not visible to the parent) and uses THAT name for its roster and its Layer-2 sweep (canon: `agent-mail/references/agent-identity.md` § Handing a name is a SPEC VIOLATION). Then WAIT: do not poll `br`, do not read worker transcripts, do not work beads. The
+VERBATIM, followed by one appended line `SCRIPTS=<scripts>` (the worker refuses to start without it) and one appended line naming this run's id for the worker's `task_description` — and, ONLY if `--cap N` was given, one more line naming the cap. Verbatim means
+verbatim: a paraphrased loop is a different loop, and the worker cannot tell which one it got. The conductor hands NO agent name to a child — the child always mints its own identity via `macro_start_session`, and the conductor **reads that name back off the `ACTOR:` first line of the worker's hand-back**, because a child's `macro_start_session` response is NOT visible to the parent and this stance carries no Agent Mail tools of its own to query the registry with. Those names are its roster and its Layer-2 sweep (canon: `agent-mail/references/agent-identity.md` § Handing a name is a SPEC VIOLATION). Then WAIT: do not poll `br`, do not read worker transcripts, do not work beads. The
 pool GROWS as a chain unlocks, so a worker that finds it dry and exits is correct, not idle —
 spawn a replacement only when ready beads outnumber live workers. **The pool is the only work
 source — `br`'s filter, never tree text** (a `br create` line in a file is a template, not a
@@ -58,7 +58,7 @@ task; canon: `ac-pipeline/references/work-derivation.md`).
 when it goes wrong — script plus checklist, not prose:
 
     git fetch origin                                    # yours; the gate never fetches
-    bash <scripts>/coordinator.sh --run <run-id> --actor <name> [--actor <name>...]
+    bash <scripts>/coordinator.sh --run <run-id> --actor <name>...  # one --actor per ACTOR: line handed back
 
 It refuses `LEDGER-STALE` (origin moved — flushing would overwrite another writer's closes),
 `ORPHANS` (a claim held by a worker of this run that has returned), or `LEDGER-WRITE` (nothing
@@ -80,12 +80,25 @@ Then, and only after it exits 0:
    the width to 1 if two tuning sessions show no throughput over width 1, and this number decides.
 4. **Release reservations and deregister** every worker identity, including any you swept.
 
+**Shell divergence.** A pasted bash snippet is bash-authored by default and silently diverges
+under the org's zsh instead of erroring when it hits an offender like `tr` shadowed by a tmux
+alias, unquoted glob expansion, or array/brace-expansion bash tolerates. Run it once and
+verify under zsh — the harness's actual shell — before it ships.
+
 ## The exhaust rule
 
 Discovered PRODUCT work goes to the board with `discovered-from: <bead>`, filed by the
 coordinator alone: it confirms and files each worker's PROPOSED-BEAD block (product work and
 mid-bead forks); a worker files NOTHING, it proposes. Process observations go to the family
 ledger, never a self-bead; every finding writes its VERDICT and catch-stage label.
+
+**Budget the ratchet before writing.** A finding-scoped fix — "add the missing caveat",
+"correct this sentence" — carries no line budget, so its compression cost prices as free and
+surfaces only at refusal, when the pull is toward the `net-growth-ok` stamp to preserve text
+already written. Decide compress-vs-stamp — fold the addition into an existing bullet vs.
+content genuinely new enough to warrant the stamp — BEFORE the first edit, not after the
+ratchet refuses. Mechanical note: an HTML-comment stamp cannot live inside a bash fence, so a
+fenced addition forces the stamp onto an added prose line outside the fence.
 
 **Stale and superseded board state is closed by the swarm itself, never parked for a human.**
 A worker closes what it holds through §4b; the Phase 0 sweep closes what it can prove

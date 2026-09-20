@@ -223,8 +223,18 @@ close. Closure requires a recorded human decision, then the agent executes the
 consequences and closes:
 
 ```bash
-br comments add bd-mf9k1 -m "DECISION (operator): option (a), OneSignal. Free tier is
+# "Jordan" here is a stand-in for whichever name is actually on the closing board's own
+# `.beads/config.yaml` `humans:` key (bead-conventions.md § Decision beads) — copied
+# VERBATIM from that key, never a role like "operator", which the gate refuses because
+# it names nobody on that key.
+br comments add bd-mf9k1 -m "DECISION (Jordan): option (a), OneSignal. Free tier is
 fine at this scale, revisit if we outgrow it."
-# ... agent implements the consequence, then:
-br close bd-mf9k1 -r "shipped: OneSignal wired per the operator's decision (see comments)"
+# ... agent implements the consequence, then close through the gate (the ruling idiom
+# fenced once at skills/ac-human/references/action-loop.md — never a bare `br close`).
+# Resolve close-gate.sh consumer-first: `.claude/skills/...` is where deploy.sh symlinks
+# it into every app; `skills/...` (this registry and one other app that carries it
+# natively) is the fallback.
+CLOSE_GATE=".claude/skills/ac-implement/scripts/close-gate.sh"
+[ -f "$CLOSE_GATE" ] || CLOSE_GATE="skills/ac-implement/scripts/close-gate.sh"
+"$CLOSE_GATE" bd-mf9k1 --reason "shipped: OneSignal wired per the operator's decision (see comments)"
 ```

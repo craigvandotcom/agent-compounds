@@ -1,0 +1,212 @@
+[
+  {
+    "round": 1,
+    "key": "lint/checks/35-board-integrity.py:167|cross-agent-wedge",
+    "reviewer": "security",
+    "severity": "Medium",
+    "file": "lint/checks/35-board-integrity.py",
+    "line": 167,
+    "category": "cross-agent-wedge",
+    "summary": "Off-canon status rule is board-wide in the staged lane: one agent's `br update --status pinned` blocks every other agent's ledger commit"
+  },
+  {
+    "round": 1,
+    "key": "skills/beads-standards/SKILL.md:163|missing-boundary-error-handling",
+    "reviewer": "architecture",
+    "severity": "Medium",
+    "file": "skills/beads-standards/SKILL.md",
+    "line": 163,
+    "category": "missing-boundary-error-handling",
+    "summary": "`blocked` status is canonised as 'needs a human' but no human surface reads it \u2014 parked beads sink silently"
+  },
+  {
+    "round": 1,
+    "key": "skills/beads-standards/reference/bead-conventions.md:54|pattern-drift",
+    "reviewer": "architecture",
+    "severity": "Medium",
+    "file": "skills/beads-standards/reference/bead-conventions.md",
+    "line": 54,
+    "category": "pattern-drift",
+    "summary": "Second copies of the status canon left drifting after `blocked` was admitted"
+  },
+  {
+    "round": 1,
+    "key": "lint/checks/35-board-integrity.py:72|missing-edge-case",
+    "reviewer": "correctness",
+    "severity": "Medium",
+    "file": "lint/checks/35-board-integrity.py",
+    "line": 72,
+    "category": "missing-edge-case",
+    "summary": "WORKER_RE requires the whole comment to be one line, so a canon stamp followed by a narrative is refused"
+  },
+  {
+    "round": 1,
+    "key": "lint/checks/35-board-integrity.test.sh:138|hollow-test",
+    "reviewer": "test-quality",
+    "severity": "Medium",
+    "file": "lint/checks/35-board-integrity.test.sh",
+    "line": 138,
+    "category": "hollow-test",
+    "summary": "WORKER fixtures don't match the real board's receipt shapes (trailing newline, spaced model ids)"
+  },
+  {
+    "round": 1,
+    "key": "skills/beads-standards/SKILL.md:292|contract-drift",
+    "reviewer": "contracts",
+    "severity": "Medium",
+    "file": "skills/beads-standards/SKILL.md",
+    "line": 292,
+    "category": "contract-drift",
+    "summary": "qa-blocker bullet now says 'use the blocked status' to mark a bead blocked, contradicting the canon's own blocks-edge rule and the blocked row's semantics"
+  },
+  {
+    "round": 1,
+    "key": "lint/checks/35-board-integrity.py:39|doc-mismatch",
+    "reviewer": "contracts",
+    "severity": "Medium",
+    "file": "lint/checks/35-board-integrity.py",
+    "line": 39,
+    "category": "doc-mismatch",
+    "summary": "Check 35 docstring still says closed beads are NEVER scanned and describes rule 4 as 'either status', but rules 4 and 5 now scan closed rows"
+  },
+  {
+    "round": 2,
+    "key": "skills/beads-standards/SKILL.md:374|pattern-drift",
+    "reviewer": "architecture",
+    "severity": "Medium",
+    "file": "skills/beads-standards/SKILL.md",
+    "line": 374,
+    "category": "pattern-drift",
+    "summary": "Second copies left behind: raw `br close` canon (and a `--force` escape the gate cannot take) in beads-standards, and filed-as-beads counts in dream after filing was deleted"
+  },
+  {
+    "round": 2,
+    "key": "skills/ac-beadify/references/bead-schema.md:160|missing-test-coverage",
+    "reviewer": "correctness",
+    "severity": "Medium",
+    "file": "skills/ac-beadify/references/bead-schema.md",
+    "line": 160,
+    "category": "missing-test-coverage",
+    "summary": "touchers.test.sh Case 12 red: caused by 07c3cf5 (ac-4y7l.5) adding 5 close-gate referrers without re-deriving bead-schema.md's example count"
+  },
+  {
+    "round": 2,
+    "key": "lint/checks/35-board-integrity.py:161|logic-error",
+    "reviewer": "correctness",
+    "severity": "Medium",
+    "file": "lint/checks/35-board-integrity.py",
+    "line": 161,
+    "category": "logic-error",
+    "summary": "Rule 5 picks 'new' comments by position, but br orders comments by created_at, so a legacy receipt is still re-judged"
+  },
+  {
+    "round": 2,
+    "key": "skills/ac-implement/scripts/close-gate.test.sh:259|missing-test-coverage",
+    "reviewer": "correctness",
+    "severity": "Medium",
+    "file": "skills/ac-implement/scripts/close-gate.test.sh",
+    "line": 259,
+    "category": "missing-test-coverage",
+    "summary": "close-gate suite never asserts the GATE: receipt record or RECORD-FAILED: both survive sabotage"
+  },
+  {
+    "round": 2,
+    "key": "skills/ac-implement/scripts/close-gate.sh:179|swallowed-exception",
+    "reviewer": "correctness",
+    "severity": "Medium",
+    "file": "skills/ac-implement/scripts/close-gate.sh",
+    "line": 179,
+    "category": "swallowed-exception",
+    "summary": "Ruling path swallows a refused comments read as 'no ruling found' (exit 1) instead of NOT-CHECKED (exit 2)"
+  },
+  {
+    "round": 2,
+    "key": "skills/_tools/touchers.test.sh:216|flakiness-precursor",
+    "reviewer": "test-quality",
+    "severity": "Medium",
+    "file": "skills/_tools/touchers.test.sh",
+    "line": 216,
+    "category": "flakiness-precursor",
+    "summary": "touchers Case 12 pins a live-repo referrer count (\u2192 8) in a doc example, so any unrelated edit anywhere in the registry turns it red"
+  },
+  {
+    "round": 2,
+    "key": "skills/dream/workflows/dream-daily.md:62|doc-mismatch",
+    "reviewer": "contracts",
+    "severity": "Medium",
+    "file": "skills/dream/workflows/dream-daily.md",
+    "line": 62,
+    "category": "doc-mismatch",
+    "summary": "The dream 'bead filing DISABLED' edit left the old contract standing in both files: step 4 references step 7 'filing', and the digest and status vocabulary still count filed beads"
+  },
+  {
+    "round": 3,
+    "key": "skills/ac-implement/scripts/close-gate.sh:200|authz-bypass",
+    "reviewer": "security",
+    "severity": "Medium",
+    "file": "skills/ac-implement/scripts/close-gate.sh",
+    "line": 200,
+    "category": "authz-bypass",
+    "summary": "Any genuine human DECISION ever posted becomes close authority after a live relabel or reopen (retype bypass without forgery)"
+  },
+  {
+    "round": 3,
+    "key": "skills/ac-implement/scripts/close-gate.sh:576|fail-open-gate",
+    "reviewer": "security",
+    "severity": "Medium",
+    "file": "skills/ac-implement/scripts/close-gate.sh",
+    "line": 576,
+    "category": "fail-open-gate",
+    "summary": "Scanner baseline tree comes from an unauthenticated receipt file, is read even when LEG 1 rejected that receipt, and is never checked to predate the bead's work; inert today only because real ubs prints absolute paths"
+  },
+  {
+    "round": 3,
+    "key": "skills/ac-implement/scripts/close-gate.sh:617|double-work",
+    "reviewer": "performance",
+    "severity": "Medium",
+    "file": "skills/ac-implement/scripts/close-gate.sh",
+    "line": 617,
+    "category": "double-work",
+    "summary": "Base-tree ubs scan runs even when summary-only findings already make refusal certain"
+  },
+  {
+    "round": 3,
+    "key": "skills/ac-implement/scripts/close-gate.sh:186|double-work",
+    "reviewer": "performance",
+    "severity": "Medium",
+    "file": "skills/ac-implement/scripts/close-gate.sh",
+    "line": 186,
+    "category": "double-work",
+    "summary": "New label lookup fetches the same bead with br show again, right after br_field did"
+  },
+  {
+    "round": 3,
+    "key": "skills/beads-standards/reference/human-gate-template.md:233|pattern-drift",
+    "reviewer": "architecture",
+    "severity": "Medium",
+    "file": "skills/beads-standards/reference/human-gate-template.md",
+    "line": 233,
+    "category": "pattern-drift",
+    "summary": "Consumer-first path resolution is copied into four prose fences in a different order from the gate, and the 'fenced once' idiom is now fenced twice"
+  },
+  {
+    "round": 3,
+    "key": "skills/ac-implement/scripts/close-gate.sh:629|logic-error",
+    "reviewer": "correctness",
+    "severity": "Medium",
+    "file": "skills/ac-implement/scripts/close-gate.sh",
+    "line": 629,
+    "category": "logic-error",
+    "summary": "Set-membership match rescues a newly added duplicate finding"
+  },
+  {
+    "round": 3,
+    "key": "skills/ac-implement/references/worker.md:200|untested-promise",
+    "reviewer": "contracts",
+    "severity": "Medium",
+    "file": "skills/ac-implement/references/worker.md",
+    "line": 200,
+    "category": "untested-promise",
+    "summary": "The implementer's new tool list cannot carry out worker.md's renew, re-list and message steps"
+  }
+]

@@ -29,15 +29,20 @@
 #
 # Usage:
 #   coordinator.sh --run <run-id> [--actor <name>]... [--root <repo root>]
-#                  [--actor-prefix <p>] [--mirror-artifacts] [--dry-run]
+#                  [--branch <trunk>] [--actor-prefix <p>] [--mirror-artifacts] [--dry-run]
 #
-# --actor             REPEATABLE, and the identity source the orphan sweep actually wants: one
+# --actor <name>      REPEATABLE, and the identity source the orphan sweep actually wants: one
 #                     per worker, exactly as its hand-back's `ACTOR:` line reported. worker.md
 #                     §9 mandates that line for precisely this reason -- "the only way the
-#                     minted name reaches its roster and its orphan sweep" -- and until now
-#                     there was no parameter to carry it, so the sweep guessed a prefix and
-#                     matched nothing. Give every actor of this run; the sweep matches the set
-#                     exactly.
+#                     minted name reaches its roster and its orphan sweep". A child's
+#                     `macro_start_session` response is NOT visible to the parent, so the name
+#                     is reported back, never captured at spawn. Give every actor of this run;
+#                     the sweep matches the set EXACTLY, never as a prefix. An empty roster is
+#                     NOT-GATED: a sweep with no set to select on has not swept.
+#
+# --branch <trunk>    OPTIONAL, FORWARDED to swarm-commit.sh, never defaulted here. Without it
+#                     a checkout whose trunk is not `main` had its ledger commit refused
+#                     unconditionally (measured 2026-09-12, easy-mode trunk `dev`).
 #
 # --mirror-artifacts  OPTIONAL checkpoint (ac-28nm): after a successful ledger flush, mirror
 #                     this run's /tmp-mortal scratch into <git-common-dir>/ac-flight/<run-id>/
@@ -56,7 +61,16 @@ while [ $# -gt 0 ]; do
     --run)             RUN="${2:-}"; shift 2 ;;
     --branch)          BRANCH="${2:-}"; shift 2 ;;
     --root)            ROOT="${2:-}"; shift 2 ;;
-    --actor)           ACTORS+=("${2:-}"); shift 2 ;;
+    --actor)
+      # A trailing bare --actor (no value follows) and an explicit empty value are both
+      # refused HERE, at parse time: `$# -lt 2` means there is no second argument to shift
+      # onto, so `shift 2` would fail silently and loop forever (measured); an empty value
+      # would otherwise sit in the roster and match any unassigned claim's blank assignee.
+      if [ $# -lt 2 ] || [ -z "$2" ]; then
+        echo "NOT-GATED: --actor requires a non-empty value" >&2
+        exit 2
+      fi
+      ACTORS+=("$2"); shift 2 ;;
     --actor-prefix)    PREFIX="${2:-}"; shift 2 ;;
     --mirror-artifacts) MIRROR=1; shift ;;
     --dry-run)         DRY=1; shift ;;
@@ -74,8 +88,12 @@ done
 # agent, because the coordinator cannot predict the name. So it is given, never guessed --
 # and an absent identity source is NOT-GATED, because a sweep that can match nothing has
 # verified nothing, which is the one thing this file exists to refuse.
+#
+# Fires purely on an absent identity source, regardless of whether br/jq are present or the
+# board is reachable -- "a sweep with no set to select on has not swept" is never read as
+# "nothing to sweep, so pass clean."
 if [ "${#ACTORS[@]}" -eq 0 ] && [ -z "$PREFIX" ]; then
-  echo "NOT-GATED: no worker identity given, so the orphan sweep can match nothing and would print clean over a live orphan. Pass --actor <name> once per worker (the ACTOR: line in each hand-back), or --actor-prefix <p> if this run really does use a shared prefix." >&2
+  echo "NOT-GATED when empty: no --actor roster passed; the orphan sweep has no set to select on and would print clean over a live orphan. Pass --actor <name> once per worker (the ACTOR: line in each hand-back), or --actor-prefix <p> if this run really does use a shared prefix." >&2
   exit 2
 fi
 
@@ -128,13 +146,15 @@ if command -v "$BR" >/dev/null 2>&1 && command -v jq >/dev/null 2>&1; then
   CLAIMS=$(RUST_LOG=error br_call coordination status --json 2>/dev/null) || CLAIMS=""
   if [ -z "$CLAIMS" ]; then
     # FALLBACK, and deliberately not a skip. `br coordination` landed in a later br than some
-    # machines run -- measured absent on br 0.1.14, where this gate went NOT-GATED and took the
-    # entire close-out with it (no ledger flush, no commit). The orphan test reads only
-    # id/status/assignee, which `br list --json` already carries, so reshape that into the same
-    # {claims:[{issue:{...}}]} envelope the jq below expects. The REFUSAL keeps its teeth: a
-    # gate that cannot fire reads as coverage, which is the failure this whole file exists for.
+    # machines run -- measured ABSENT on br 0.1.14 ("unrecognized subcommand 'coordination'"),
+    # where this gate went NOT-GATED and took the entire close-out with it (no ledger flush,
+    # no commit). The orphan test reads only id/status/holder, which `br list --json` already
+    # carries at the TOP level of each record, so reshape that into the same envelope the jq
+    # below expects -- holder under .assessment.assignee, so ONE selector serves both sources.
+    # The REFUSAL keeps its teeth: a gate that cannot fire reads as coverage, which is the
+    # failure this whole file exists for.
     CLAIMS=$(RUST_LOG=error br_call list --json --limit 0 2>/dev/null \
-      | jq -c '{claims: [ .[]? | {issue: {id: .id, status: .status, assignee: .assignee}} ]}' 2>/dev/null) \
+      | jq -c '{claims: [ .[]? | {issue: {id: .id, status: .status}, assessment: {assignee: .assignee}} ]}' 2>/dev/null) \
       || CLAIMS=""
   fi
   [ -n "$CLAIMS" ] || ungated "neither '$BR coordination status' nor '$BR list --json' yielded claim state; liveness is unknown and orphans cannot be ruled out"
@@ -146,10 +166,15 @@ if command -v "$BR" >/dev/null 2>&1 && command -v jq >/dev/null 2>&1; then
   else
     ACTORS_JSON='[]'
   fi
+  # The holder lives at .assessment.assignee in `br coordination status` (br 0.5.12): .issue
+  # carries NO assignee key at all, so selecting on .issue.assignee always reads null and the
+  # sweep never fires (ac-4y7l.11). The `//` chain also accepts the flat .issue.assignee shape
+  # so neither br generation silently reads null.
   ORPHANS=$(printf '%s' "$CLAIMS" | jq -r --arg p "$PREFIX" --argjson a "$ACTORS_JSON" \
     '[.claims[]? | select((.issue.status? // "") == "in_progress")
-       | select( (($a | length) > 0 and ((.issue.assignee? // "") as $x | $a | index($x)))
-                 or (($a | length) == 0 and $p != "" and ((.issue.assignee? // "") | startswith($p))) )
+       | ((.assessment.assignee? // .issue.assignee? // "") as $x
+          | select( (($a | length) > 0 and ($a | index($x)))
+                    or (($a | length) == 0 and $p != "" and ($x | startswith($p))) ))
        | .issue.id] | join(" ")' 2>/dev/null || echo "?")
   [ "$ORPHANS" = "?" ] && ungated "could not parse '$BR coordination status'; orphans cannot be ruled out"
   [ -z "${ORPHANS// /}" ] || refuse "ORPHANS" \

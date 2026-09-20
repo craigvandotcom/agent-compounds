@@ -207,18 +207,40 @@ else
 fi
 
 # --- Case 12: the worked example shipped in bead-schema.md is VALID under this gate -----
-# The contract ac-beadify compiles to is a real file, not a fixture invented here: if the
-# shipped example stops passing, the schema teaches a shape its own gate refuses.
+# Case 12 runs against a fixture tree, never the live registry: touchers_check resolves its
+# `root` via `git rev-parse --show-toplevel` from the CURRENT PROCESS's cwd and re-runs each
+# declared command from there, so the only way to stop its verdict drifting with every future
+# referrer anywhere in the registry is a throwaway git repo whose referrer set is fixed at
+# fixture-build time. The example TEXT a human reads in the schema is unchanged — only WHERE
+# Case 12 executes its commands moves. (Measured: ac-4y7l.5 added five hand-close referrers to
+# `scripts/close-gate` and the live count moved from 8 to 13 with no edit to this bead or the
+# schema — a flake, not evidence, exactly what fixture-scoping every other case here avoids.)
 SCHEMA="$ROOT/skills/ac-beadify/references/bead-schema.md"
 if [ ! -f "$SCHEMA" ]; then
   fail "Case 12: $SCHEMA is missing — the schema whose example this gate judges does not exist"
 else
+  EXFIX="$WORK/schema-example-fixture"
+  mkdir -p "$EXFIX/skills/ac-implement/scripts" "$EXFIX/refs"
+  git -C "$EXFIX" init -q
+  # The three Delivers paths must EXIST at the same relative location touchers_derive checks
+  # against — empty placeholders; their own content is never searched (they are excluded from
+  # every command's `-g` glob by construction, same as the shipped example excludes itself).
+  : >"$EXFIX/skills/ac-implement/scripts/close-gate.sh"
+  : >"$EXFIX/skills/ac-implement/scripts/close-gate.test.sh"
+  : >"$EXFIX/skills/ac-implement/SKILL.md"
+  # 3 referrers naming "scripts/close-gate" alone, plus 1 naming "scripts/close-gate.test"
+  # (an `-F` substring match on "scripts/close-gate" too — same overlap the live registry's
+  # own count carries) -> gate 4, harness 1. 2 referrers naming "ac-implement/SKILL" -> wiring 2.
+  for i in 1 2 3; do printf 'refers to scripts/close-gate here\n' >"$EXFIX/refs/gate-ref$i.md"; done
+  printf 'refers to scripts/close-gate.test here\n' >"$EXFIX/refs/harness-ref1.md"
+  for i in 1 2; do printf 'refers to ac-implement/SKILL here\n' >"$EXFIX/refs/wiring-ref$i.md"; done
+
   sed -n '/ac-example-bead:start/,/ac-example-bead:end/p' "$SCHEMA" >"$WORK/schema-example.md"
-  run_check "$WORK/schema-example.md" bead-schema-example
+  OUT=$(cd "$EXFIX" && bash "$TOOL" check "$WORK/schema-example.md" bead-schema-example 2>&1); RC=$?
   if [ "$RC" -eq 0 ]; then
-    pass "Case 12: the worked example in bead-schema.md passes touchers_check (exit 0)"
+    pass "Case 12: the worked example in bead-schema.md passes touchers_check against a fixture tree (exit 0)"
   else
-    fail "Case 12: the shipped example bead was REFUSED, got $RC. Output: $OUT"
+    fail "Case 12: the shipped example bead was REFUSED against the fixture, got $RC. Output: $OUT"
   fi
 fi
 

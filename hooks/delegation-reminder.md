@@ -8,4 +8,4 @@ Beads: Only file new beads if you cannot fix instead (ie. ambiguous/complex)
 Commit often: logical groups preferred, sooner ok, never late.
 Code: write less, understand more
 Text: clear, concise, simple, aesthetic
-</reminder>
+</reminder>/

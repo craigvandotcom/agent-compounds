@@ -106,6 +106,32 @@ done
 [ -r "$MSGFILE" ] || refuse no-message-file "message file '$MSGFILE' is missing or unreadable"
 [ -s "$MSGFILE" ] || refuse no-message-file "message file '$MSGFILE' is empty"
 
+# --- placeholder-message ------------------------------------------------------------------
+# fcc88b3 shipped a bead's work as subject "test" / body "body" — the commit-msg hook only
+# WARNS on a missing Cause: line, and nothing in the lane ever judged the subject or body
+# shape, so the lane had no owner refusing a placeholder. Refused only when the subject
+# looks like a placeholder (no conventional type prefix, AND under four words) AND the body
+# also looks like a placeholder (under three words total) — a real short conventional
+# subject with a thin body, or an unconventional subject with a real explanatory body, is
+# left alone; only the fcc88b3 combination is refused.
+MSG_SUBJECT="$(sed -n '1p' "$MSGFILE" 2>/dev/null || true)"
+MSG_BODY="$(tail -n +2 "$MSGFILE" 2>/dev/null | grep -v '^[[:space:]]*$' || true)"
+subj_words=$(printf '%s' "$MSG_SUBJECT" | wc -w | tr -d '[:space:]')
+body_words=$(printf '%s' "$MSG_BODY" | wc -w | tr -d '[:space:]')
+subj_placeholder=0
+# ANY lowercase `type:` or `type(scope):` prefix counts as conventional — this repo's own
+# history carries ac, beads, dream, batch, review, skills, friction and doctrine beside the
+# usual set, and an enumerated whitelist refuses a legitimate short commit the moment a new
+# type appears (found by the final review of ac-4y7l: `review(...)` was missing).
+if printf '%s' "$MSG_SUBJECT" | grep -qE '^[a-z]+(\([^)]*\))?!?: .'; then
+  :
+else
+  [ "${subj_words:-0}" -lt 4 ] && subj_placeholder=1
+fi
+if [ "$subj_placeholder" -eq 1 ] && [ "${body_words:-0}" -lt 3 ]; then
+  refuse placeholder-message "subject '$MSG_SUBJECT' names no conventional type (a lowercase 'type:' or 'type(scope):' prefix) and is under four words, and the body is under three words — this looks like fcc88b3's placeholder ('test' / 'body'), not a message naming the failure this commit prevents"
+fi
+
 # --- pathspec ---------------------------------------------------------------------------
 # flock serialises the lane's writers; it does NOT serialise other sessions sharing the
 # checkout. An unscoped commit still publishes whatever is sitting in the shared index
@@ -231,8 +257,9 @@ BOARD="$(git rev-parse --show-toplevel 2>/dev/null || pwd)/.beads/issues.jsonl"
 [ -n "$MSGFILE" ] && [ -r "$MSGFILE" ] || refuse no-claim-receipt "the message file is unreadable — the subject cannot be checked for a refused claim"
 SUBJECT=$(sed -n '1p' "$MSGFILE" 2>/dev/null || true)
 if [ -n "$SUBJECT" ] && [ -f "$BOARD" ] && command -v jq >/dev/null 2>&1; then
-  # every ac-* token in the subject is a candidate bead id; the board decides if it IS one
-  for tok in $(printf '%s\n' "$SUBJECT" | grep -oE 'ac-[A-Za-z0-9][A-Za-z0-9._-]*' | sort -u); do
+  # every <prefix>-<id> token in the subject is a candidate bead id, any board prefix
+  # (not only `ac-`) — the board decides if it IS one via the exact-id lookup below.
+  for tok in $(printf '%s\n' "$SUBJECT" | grep -oE '[A-Za-z]+-[A-Za-z0-9][A-Za-z0-9._-]*' | sort -u); do
     row=$(jq -c --arg id "$tok" 'select(.id == $id)' "$BOARD" 2>/dev/null | head -1)
     [ -n "$row" ] || continue
     title=$(printf '%s' "$row" | jq -r '.title // ""')

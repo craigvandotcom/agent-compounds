@@ -122,8 +122,8 @@ Each check below is tagged `[T0 daily]` or `[T2 weekly]`.
     conductor, is uncounted. Separately, and behind the same arming gate
     (a re-ablation is only meaningful once an uptake baseline exists to invalidate): if the
     set of `model=` values in the `WORKER:` bead stamps
-    (`grep 'WORKER:' .beads/issues.jsonl`; grammar
-    `WORKER: model=<id> session=<name> skill@version=<SHA> duration=<wall-clock>`) in the
+    (`grep 'WORKER:' .beads/issues.jsonl`; grammar per
+    `skills/beads-standards/SKILL.md` § Worker-identity stamp) in the
     trailing window differs from the preceding window of equal length — both non-empty, so
     a first observation is never a "change" — it files a re-ablation review proposal,
     because the uptake baseline does not survive a model generation. Emit-only: the script

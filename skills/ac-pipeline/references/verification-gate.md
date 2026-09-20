@@ -75,7 +75,7 @@ CLASS_NATIVE=0 CLASS_WEBUI=0 CLASS_WEBRT=0 CLASS_LOGIC=0 CLASS_RUNTIME=0
 # keep in sync (`^\.beads/`/`^scripts/ci/` rationale: §Journey registry). EXACTLY ONE probe
 # opts out and reads unfiltered $FILES — CLASS_WEBUI's design-token line, where markdown IS the
 # surface. A second $FILES reader re-opens this hole; a blanket hoist breaks that opt-out.
-PAT_DOC_TEST_CI='\.(md|mdx)$|\.test\.|\.spec\.|__tests__/|^\.github/|^docs/|^\.beads/|^scripts/ci/|ios/App/fastlane/review_notes\.txt'
+PAT_DOC_TEST_CI='\.(md|mdx)$|\.test\.|\.spec\.|__tests__/|^\.github/|^docs/|^\.beads/|^_ci-evidence/|^scripts/ci/|ios/App/fastlane/review_notes\.txt'
 CODE_FILES=$(printf '%s\n' "$FILES" | grep -vE "$PAT_DOC_TEST_CI" || true)
 
 # Native shell — plugins, native projects, capacitor config/deps. The package.json content
@@ -161,10 +161,9 @@ gate selects ui-elevate at **`full` or `exhaustive`** depth, run the per-route f
 **standing authorization** for that workflow's multi-agent opt-in;
 manual ad-hoc invocations still require explicit opt-in.
 
-**Native pass platform gate (reuse legacy-merge semantics):** `ac-qa` requires
-`uname = Darwin`. If `native` but not on a Mac → do **not** block; emit the
-`mac-needed` note ("native-touching wave verified without device QA — run
-`ac-qa` smoke from a Mac before the next TestFlight push").
+**Native pass platform gate:** `ac-qa`'s device workflow resolves its own macOS host,
+local or remote (`ac-qa/workflows/device.md` § Platform Gate). Only when it reports
+`mac-needed` → do **not** block; the `needs-device` bead it files holds the ship gate.
 
 **Registry-driven smoke selection (replaces "primary journey"):** the smoke pass's
 journey list is not ad hoc — it's every journey in the registry (§Journey registry
@@ -306,7 +305,7 @@ silently:**
 git diff <RANGE> --name-only | grep -qE '^ios/|capacitor\.config|cap-build|@capacitor' \
   || git diff <RANGE> -- package.json | grep -qE '@capacitor|capacitor' \
   || SKIP_SIM_SMOKE=1                                           # 2. native-adjacent diff
-[ "$(uname)" = "Darwin" ] || SKIP_SIM_SMOKE=mac-needed          # 3. simulators need Xcode
+# 3. a macOS host — local, or remote per ac-qa device.md § Platform Gate; none → mac-needed
 ```
 
 - **All hold** → load `ac-qa/SKILL.md`, run a **smoke** pass (build, launch, auth,
@@ -315,9 +314,9 @@ git diff <RANGE> --name-only | grep -qE '^ios/|capacitor\.config|cap-build|@capa
 - **Smoke FAILS** → STOP before the ceremony proceeds. Report the `QA_VALIDATION` block
   (`platform: ios-simulator`) and ask: abort (fix first) vs proceed anyway (not
   recommended).
-- **`mac-needed`** (native-touching diff, not on a Mac) → do NOT block; surface a loud
-  report note: "native-touching change shipped without device QA — run `ac-qa`
-  smoke from a Mac session before the next TestFlight push."
+- **`mac-needed`** (native-touching diff, no macOS host reachable) → do NOT block; the
+  `needs-device` bead the Platform Gate filed makes `ac-publish` refuse until a device
+  sitting closes it. Surface a loud report note naming the bead.
 
 **Browser twin (any OS):** if the diff touched web UI
 (`git diff <RANGE> --name-only | grep -qE '\.(tsx|jsx|css)$|app/|components/'`), load

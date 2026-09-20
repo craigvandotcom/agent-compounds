@@ -52,6 +52,8 @@ last_pass: 2026-09-08
 - last_seen: 2026-08-04
 - stage: ac-loop
 - status: open
+- control: br lint — the canon's two epic rows now say what its epic template demands
+- control_landed: 2026-09-19
 - proposed_fix: decide and record which side gives, then make the other side quiet. Either `bead-conventions.md`'s epic template adopts the heading `br lint` expects, or the standard states explicitly that this particular lint warning is EXPECTED on epics authored to our conventions and is not to be actioned. Do not leave both in place: an unexplained warning on every correctly-authored epic is the shape that trains agents to ignore lint output wholesale.
 - narrative: `br lint` warns that an epic is missing a `## Success Criteria` section, while `beads-standards/reference/bead-conventions.md` prescribes `## Delivers` for exactly that content. Both are "right" — the tool ships its own expectation, the convention is ours and deliberate — so an epic authored correctly against our doctrine is warned about by our own linter, every time. Warning-only, so nothing blocked and the run cost was zero; logged because the cost is not per-occurrence. A standing warning that correct work always produces is a broken detector: it teaches every agent that reads `br lint` output that some of it is noise, and the judgement of WHICH part is noise is then re-made by each agent under time pressure. That is how a real lint finding gets waved through later. Also a heading-drift hazard in its own right, since two names for one section means beads in the wild will carry both and any grep over epic structure has to know that. This is a doctrine-vs-tool divergence rather than a defect on either side, which is why it wants an explicit recorded decision rather than a fix.
 

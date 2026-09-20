@@ -160,6 +160,7 @@ provenance uses `-t discovered-from`, never `--parent`.
 |---|---|
 | `open` | Not yet started |
 | `in_progress` | Actively claimed. Stale >7 days gets challenged — re-verify the claim before trusting it (`br stale --status in_progress --days 7`; tighter than `br stale`'s generic 30-day default) |
+| `blocked` | parked after repeated failure, needs a human |
 | `closed` | Done. **Requires `close_reason`** (`br close -r "..."`) |
 | `deferred` | Scheduled for later. **Requires `defer_until`** (`br defer --until <date>`) — a deferred bead with no date is a lost bead |
 | `tombstone` | Deleted (`br delete`) — excluded from every "live" scan |
@@ -261,14 +262,14 @@ is a per-child session + model, otherwise unrecoverable. At close, the implement
 stable-greppable-prefix style as the VERDICT grammar (`grep 'WORKER:' .beads/issues.jsonl`):
 
 ```
-WORKER: model=<model-id> session=<session-name> skill@version=<agent-compounds SHA> duration=<wall-clock>
+WORKER: model=<model-id> actor=<actor-id> tree=<tree-sha>
 ```
 
 Fields are **joinable for future model-level comparison**: `model` groups runs by model,
-`skill@version` (the agent-compounds git SHA at skill-load) is the **skills-eval before/after
-axis** — it lets a doctrine change be measured against outcomes. Per-bead **token cost is
-excluded** (a child can't observe its own usage — a per-bead split would be fabricated
-precision); token cost is reported at batch/child granularity by the batch boundary.
+`tree` (the tree SHA at close) is the **skills-eval before/after axis** — it lets a doctrine
+change be measured against outcomes. Per-bead **token cost is excluded** (a child can't
+observe its own usage — a per-bead split would be fabricated precision); token cost is
+reported at batch/child granularity by the batch boundary.
 
 ## Label hygiene rules
 
@@ -288,8 +289,8 @@ precision); token cost is reported at batch/child granularity by the batch bound
   with `br label rename <old> <new>`.
 - **`qa-blocker` is REPO-WIDE, not per-bead.** It is a gate label: Hard-stops
   batch close-out for every batch in this repo until removed. Use it only
-  when the whole ship path must halt pending QA. To mark a single bead blocked, use a
-  `blocks` dependency — never this label. (There is no `blocked` status.)
+  when the whole ship path must halt pending QA. To mark a single bead blocked, use the
+  `blocked` status (§ Status & priority canon), never this label.
 
 ## Backfill (2026-07-15 audit) — one-time alignment checklist
 
@@ -321,7 +322,7 @@ neutral title + pointer.
 
 `br` ([beads_rust](https://github.com/Dicklesworthstone/beads_rust)) is the issue
 tracker; `bv` ([beads_viewer](https://github.com/Dicklesworthstone/beads_viewer)) is a
-graph-aware triage engine over `.beads/beads.jsonl`. Use `bv`'s robot flags for
+graph-aware triage engine over `.beads/issues.jsonl`. Use `bv`'s robot flags for
 deterministic, dependency-aware output (PageRank, betweenness, critical path, cycles)
 rather than parsing JSONL or guessing at graph traversal.
 
@@ -367,7 +368,7 @@ br list --status=open     # all open
 br show <id>              # full detail with dependencies
 br create --title="..." --type=task --priority=2 --labels=origin:<skill>,unrefined   # origin: is MANDATORY — see canon above
 br update <id> --status=in_progress
-br close <id> --reason="shipped: ..."   # close_reason is MANDATORY — see canon above
+br close <id> --reason="shipped: ..."   # close_reason is MANDATORY — see canon above; in the ac2 pipeline, close through skills/ac-implement/scripts/close-gate.sh instead — it writes the landing record check 35 expects
 br close <id1> <id2>      # close several
 br dep add <issue> <depends-on>          # wire a blocking dependency
 br update <id> --status closed           # REFUSED rc 4 — terminal states close via `br close -r` only (0.5.12)
@@ -389,11 +390,11 @@ br sync --flush-only      # export DB -> JSONL
   `br show <id> --json | jq '.[0].labels'`), NOT `.id` directly: `jq '.id'` on a `br show`
   array fails with `Cannot index array with string`. Don't reach for `.issues` on these.
   Parsers must handle both shapes.
-- **`br list` hides CLOSED beads by default — pass `--all`.** Without it an existence
-  probe false-negatives: a conductor once concluded a plan had zero beads and dispatched
-  a beadify child, when the epic was 18/20 closed and shipped. Sound probe form:
-  `br list --all --limit 0 --json`, matched against title AND labels AND description —
-  matching descriptions only misses beads titled from the plan's own heading.
+- **A closed-bead existence probe needs `--all`, or it false-negatives** (a conductor once
+  dispatched a beadify child on an 18/20-closed epic). Use the one closed-read line
+  (`ac-pipeline/references/board-scan.md` Scan A: `br_call list --all --status closed --json`),
+  matched against title AND labels AND description — description-only misses beads titled
+  from the plan's own heading.
 - **A `-d`/`--description` body is shell text, not a literal.** A double-quoted body
   containing backticks runs command substitution; an angle-bracket `<placeholder>` parses
   as a redirect. Both fail with a shell-syntax error that names nothing about the bead.

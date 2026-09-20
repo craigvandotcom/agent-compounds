@@ -1,0 +1,7 @@
+{
+  "round": 3,
+  "range": "89dd650..40140a5",
+  "spawned": ["security", "performance", "architecture", "correctness", "test-quality", "contracts"],
+  "skipped": {},
+  "note": "Review round 3 (final) of epic ac-4y7l: wave 3 closed ac-4y7l.15 .16 .17 .18 .19 .22 .23 (commits abe555c a66601f 1407fb8 1ea8a59 fcc88b3 1393518 5602900 f3a86bb 40140a5; ledger commits 7147bd8 2bb443a excluded by pathspec). ac-4y7l.7 re-closed through the new scanner leg; ac-4y7l.2's re-close was refused by it. Deep panel: close-gate.sh, check 35, check 05, the implementer stance and the docket canon changed. Review surface scoped to this registry's product, as in rounds 1-2."
+}

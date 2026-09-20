@@ -54,6 +54,29 @@ STATE="${AC2_TEST_BR_STATE:-/nonexistent}"
 cmd="${1:-}"; shift 2>/dev/null || true
 id=""
 for a in "$@"; do case "$a" in --*) ;; -*) ;; *) [ -z "$id" ] && id="$a" ;; esac; done
+
+# next_id <bead-id> — a per-bead incrementing integer comment id, the real br 0.5.12 shape
+# (`{"id": <int>, ...}`) — needed so a citation-by-id (GATE: decided's ruling-comment id) has
+# a real id to cite and check-35's cross-reference can resolve it.
+next_id() {
+  local seqf="$STATE/$1.seq" n
+  n=$(cat "$seqf" 2>/dev/null || echo 0)
+  n=$((n + 1))
+  printf '%s' "$n" >"$seqf"
+  printf '%s' "$n"
+}
+
+append_comment() { # <bead-id> <text> — one writer for both the close-transition path and
+                    # `comments add`, so the two can never disagree on shape.
+  local cid="$1" body="$2" cfile cnid
+  cfile="$STATE/$cid.comments.json"
+  [ -f "$cfile" ] || echo '[]' >"$cfile"
+  cnid=$(next_id "$cid")
+  jq --arg t "$body" --argjson i "$cnid" \
+    '. + [{"id":$i,"author":"mock","created_at":"2026-01-01T00:00:00Z","text":$t}]' \
+    "$cfile" >"$cfile.tmp" 2>/dev/null && mv "$cfile.tmp" "$cfile"
+}
+
 case "$cmd" in
   show)
     [ "${AC2_TEST_BR_SHOW_FAIL:-0}" = "1" ] && exit 1
@@ -62,8 +85,31 @@ case "$cmd" in
   close)
     [ -f "$STATE/$id.json" ] || exit 1
     [ "${AC2_TEST_BR_CLOSE_NOOP:-0}" = "1" ] && exit 0
-    jq '.status = "closed"' "$STATE/$id.json" >"$STATE/$id.json.tmp" && mv "$STATE/$id.json.tmp" "$STATE/$id.json" ;;
+    # `--transition-comment <text>` (br 0.5.12) — the landing record commits ATOMICALLY
+    # with the close: recorded into the same comments log/store a `comments add` would use,
+    # so a fixture cannot tell the two write paths apart by their output.
+    tc=""; tprev=""
+    for a in "$@"; do
+      case "$tprev" in tc) tc="$a"; tprev=""; continue ;; esac
+      case "$a" in --transition-comment) tprev=tc ;; *) tprev="" ;; esac
+    done
+    jq '.status = "closed"' "$STATE/$id.json" >"$STATE/$id.json.tmp" && mv "$STATE/$id.json.tmp" "$STATE/$id.json"
+    if [ -n "$tc" ]; then
+      printf '%s\n' "$tc" >> "$STATE/comments.log"
+      append_comment "$id" "$tc"
+    fi ;;
   comments)
+    sub="${1:-}"
+    if [ "$sub" = "list" ]; then
+      # `comments list <id> --json` — the ruling path's own read. Bare array of objects
+      # carrying the comment in a `text` key, the real br 0.5.12 shape.
+      shift 2>/dev/null || true
+      lcid=""
+      for a in "$@"; do case "$a" in --*) ;; *) [ -z "$lcid" ] && lcid="$a" ;; esac; done
+      cfile="$STATE/$lcid.comments.json"
+      [ -f "$cfile" ] && cat "$cfile" || echo '[]'
+      exit 0
+    fi
     # `comments add <id> -f <file>` (or inline text) — recorded so a fixture can assert
     # that the gate WROTE the record it claims to write (the fresh-verification receipt).
     cid=""; body=""; prev=""
@@ -82,6 +128,7 @@ case "$cmd" in
     done
     [ -f "$STATE/$cid.json" ] || exit 1
     printf '%s\n' "$body" >> "$STATE/comments.log"
+    append_comment "$cid" "$body"
     exit 0 ;;
   *) exit 0 ;;
 esac
@@ -109,6 +156,60 @@ case "${AC2_TEST_UBS_MODE:-clean}" in
   exit1-summary) echo "UBS Meta-Runner"; echo "Files scanned: $n"
             echo "   Location: /tmp/x.py:2:11"
             echo "Files: $n"; echo "Critical: 2"; echo "Warning: 1"; echo "Info: 1"; exit 1 ;;
+  captured) # A FIXED transcript captured from a real `ubs` run in this repo (2026-09-19,
+            # /tmp/ubs_probe.py) — absolute paths, docs.astral.sh/cwe.mitre.org permalinks and
+            # bandit's `Location:` shape (which the DETAIL regex misses; only the Combined
+            # Summary counters corroborate it). Replaces the old procedural `content` mode
+            # (ac-4y7l.24): LEG 6 no longer diffs against a baseline tree, so a per-line
+            # rule+text generator has nothing left to feed.
+            echo "UBS Meta-Runner v5.4.2  2026-09-19 23:32:28"
+            echo "Project: /home/craigvandotcom/mission/software/agent-compounds"
+            echo "Detected: python"
+            echo "Scanning python..."
+            echo ""
+            echo "──────── python ────────"
+            echo ">> Issue: [B602:subprocess_popen_with_shell_equals_true] subprocess call with shell=True identified, security issue."
+            echo "   CWE: CWE-78 (https://cwe.mitre.org/data/definitions/78.html)"
+            echo "   More Info: https://bandit.readthedocs.io/en/1.9.4/plugins/b602_subprocess_popen_with_shell_equals_true.html"
+            echo "   Location: /tmp/ubs_probe.py:5:4"
+            echo "6. ERROR HANDLING ANTI-PATTERNS"
+            echo "[critical] Bare except — except: (1 found) — py.error-handling.bare-except"
+            echo "    /tmp/ubs_probe.py:12  Bare except — except:"
+            echo "7. SECURITY VULNERABILITIES"
+            echo "[critical] Insecure pickle usage — return pickle.loads(data) (1 found) — py.security.pickle-usage"
+            echo "    /tmp/ubs_probe.py:8  Insecure pickle usage — return pickle.loads(data)"
+            echo "[warning] Subprocess call has no bounded timeout — subprocess.call(cmd, shell=True) (1 found) — py.security.subprocess-timeout"
+            echo "    /tmp/ubs_probe.py:5  Subprocess call has no bounded timeout — subprocess.call(cmd, shell=True)"
+            echo ""
+            echo "Summary Statistics:"
+            echo "Files scanned: $n"
+            echo "Critical issues: 5"; echo "Warning issues: 1"; echo "Info items: 3"
+            echo ""
+            echo "──────── Combined Summary ────────"
+            echo "Files: $n"; echo "Critical: 5"; echo "Warning: 1"; echo "Info: 3"
+            exit 0 ;;
+  captured-info) # A FIXED info-only transcript in the same real-ubs shape — a capped detail
+            # list (ubs's own "N more not shown" quirk) and no Critical/Warning at all, so
+            # LEG 6 must report it without refusing.
+            echo "UBS Meta-Runner v5.4.2  2026-09-19 23:32:11"
+            echo "Project: /home/craigvandotcom/mission/software/agent-compounds"
+            echo "Detected: bash"
+            echo "Scanning bash..."
+            echo ""
+            echo "──────── bash ────────"
+            echo "UBS module: Bash (contract v2) — /tmp/ubs-probe.sh"
+            echo "4. DEFENSIVE PROGRAMMING & ROBUSTNESS"
+            echo "[info] Unquoted variable expansion — rm -rf \$2 (2 found, showing 1) — sh.style.unquoted-var"
+            echo "    /tmp/ubs-probe.sh:3  Unquoted variable expansion — rm -rf \$2"
+            echo "    ... 1 more finding capped (see full report)"
+            echo ""
+            echo "Summary Statistics:"
+            echo "Files scanned: $n"
+            echo "Critical issues: 0"; echo "Warning issues: 0"; echo "Info items: 2"
+            echo ""
+            echo "──────── Combined Summary ────────"
+            echo "Files: $n"; echo "Critical: 0"; echo "Warning: 0"; echo "Info: 2"
+            exit 0 ;;
 esac
 MOCKUBS
 chmod +x "$MOCK_BIN/ubs"
@@ -204,6 +305,33 @@ board() { # <root> <status> <assignee>
     >"$1/.br/$BEAD.json"
 }
 
+# A decision-type fixture: no harness, no extractable Probe: line at all — proving the
+# ruling path truly skips legs 1-8 rather than merely passing them. `.beads/config.yaml`'s
+# `humans:` key is the ruling matcher's live authority (ac-4y7l.25); "Craig" is this
+# fixture's authorized name.
+mkcase_decision() {
+  local root="$WORKDIR/$1"
+  mkdir -p "$root/skills/ac-pipeline/scripts" "$root/skills/_tools" "$root/.flight" "$root/.br" "$root/.beads"
+  cp "$EVIDENCE_SRC" "$root/skills/ac-pipeline/scripts/close-evidence-check.sh"
+  cp "$BR_CALL_SRC" "$root/skills/_tools/br-call.sh"
+  chmod +x "$root/skills/ac-pipeline/scripts/close-evidence-check.sh"
+  printf 'humans: Craig, Craig van Heerden\n' >"$root/.beads/config.yaml"
+  printf 'Pick between option A and option B.\n' >"$root/body.md"
+  echo "$root"
+}
+
+board_decision() { # <root> <status> <assignee> [labels-json]
+  local labels="${4:-[]}"
+  jq -n --arg id "$BEAD" --arg st "$2" --arg as "$3" --argjson lb "$labels" --rawfile d "$1/body.md" \
+    '{id:$id,title:"fixture decision",issue_type:"decision",status:$st,assignee:$as,labels:$lb,description:$d}' \
+    >"$1/.br/$BEAD.json"
+}
+
+add_ruling() { # <root> <text> — records a ruling comment directly via the mock, as a human
+               # or system actor would before the close is attempted.
+  ( cd "$1" && AC2_TEST_BR_STATE="$1/.br" br comments add "$BEAD" "$2" >/dev/null 2>&1 )
+}
+
 fly() { # <root> — run the REAL flight-check to bank a receipt
   ( cd "$1" && AC2_FLIGHT_DIR="$1/.flight" AC2_TEST_BR_STATE="$1/.br" AC2_DRY_RUN=1 \
       bash "$FLIGHT" "$BEAD" --body-file "$1/body.md" --root "$1" ) >/dev/null 2>&1
@@ -235,6 +363,150 @@ if ! grep -q 'Name a test-shaped harness' "$GATE"; then
   pass "AC2e'': the gate no longer prescribes a vacuous harness as the prose remedy"
 else fail "AC2e'': the vacuous-harness remedy text is still in the gate"; fi
 
+# ============================================================================================
+# AC-ruling — a decision-type bead closes on a recorded ruling comment, never through the
+# probe machinery: unclaimed (no in_progress row, no --actor), a body with no extractable
+# Probe: line at all — proving legs 1-8 truly did not run, not merely pass.
+# ============================================================================================
+R="$(mkcase_decision ruling-accept)"
+board_decision "$R" open ""
+add_ruling "$R" "DECISION (Craig): option A — because it is cheaper"
+out="$(gate "$R" --reason "decided: option A, per the recorded ruling")"
+GATE_RC=$(cat "$RCFILE")
+if [ "$GATE_RC" -eq 0 ] && printf '%s' "$out" | grep -qi 'ruling'; then
+  pass "AC-ruling: a decision bead with a recorded DECISION comment closes via the type-routed path"
+else fail "AC-ruling accept: rc=$GATE_RC out=$out"; fi
+if [ "$(jq -r .status "$R/.br/$BEAD.json")" = "closed" ]; then
+  pass "AC-ruling: the ruling close landed"
+else fail "AC-ruling: the ruling close did not land"; fi
+if [ -f "$R/.br/comments.log" ] && grep -q 'GATE: decided' "$R/.br/comments.log"; then
+  pass "AC-ruling: the landing record begins GATE: decided"
+else fail "AC-ruling: no GATE: decided record landed"; fi
+
+R="$(mkcase_decision ruling-refuse)"
+board_decision "$R" open ""     # unclaimed; NO ruling comment recorded at all
+out="$(gate "$R" --reason "decided: nothing was ruled")"
+GATE_RC=$(cat "$RCFILE")
+if [ "$GATE_RC" -eq 1 ] && printf '%s' "$out" | grep -q 'CLOSE-REFUSED DECISION'; then
+  pass "AC-ruling: CLOSE-REFUSED DECISION when no ruling comment is recorded"
+else fail "AC-ruling refuse: rc=$GATE_RC out=$out"; fi
+if [ "$(jq -r .status "$R/.br/$BEAD.json")" = "open" ]; then
+  pass "AC-ruling: the refused decision bead stays open"
+else fail "AC-ruling: the bead was closed despite no ruling"; fi
+
+# ============================================================================================
+# AC-ruling — a placeholder ruling never counts, and a draft note does not count either: only
+# a comment's own FIRST LINE, at column 0, is ever read as a ruling. An indented draft buried
+# inside a longer conductor note, and an unfilled template quoted on a memo's second line, are
+# each a REAL comment in the fixture — neither is ever line 1 of its own comment.
+# ============================================================================================
+R="$(mkcase_decision ruling-placeholder)"
+board_decision "$R" open ""
+add_ruling "$R" "Conductor note: still discussing.
+  DECISION (Craig): draft — not final yet
+Will update after standup."
+add_ruling "$R" "See template below:
+DECISION (<human>): <choice> — <why>"
+out="$(gate "$R" --reason "decided: nothing was actually ruled")"
+GATE_RC=$(cat "$RCFILE")
+if [ "$GATE_RC" -eq 1 ] && printf '%s' "$out" | grep -q 'CLOSE-REFUSED DECISION'; then
+  pass "AC-ruling: a placeholder ruling never counts, and a draft note does not count either"
+else fail "AC-ruling placeholder: rc=$GATE_RC out=$out"; fi
+if [ "$(jq -r .status "$R/.br/$BEAD.json")" = "open" ]; then
+  pass "AC-ruling: the placeholder-ruling bead stays open"
+else fail "AC-ruling placeholder: the bead was closed despite no valid ruling"; fi
+
+# ============================================================================================
+# AC-ruling — WHO MAY RULE: only a human on the closing board's own `.beads/config.yaml`
+# `humans:` key, or the exact `DECISION (ac-tidy): moot` on a bead labelled
+# `pipeline-proposal`.
+# ============================================================================================
+R="$(mkcase_decision ruling-agent-refused)"
+board_decision "$R" open ""
+add_ruling "$R" "DECISION (agent): option A — because it is cheaper"
+out="$(gate "$R" --reason "decided: option A")"
+GATE_RC=$(cat "$RCFILE")
+if [ "$GATE_RC" -eq 1 ] && printf '%s' "$out" | grep -q 'CLOSE-REFUSED DECISION'; then
+  pass "AC-ruling: agent self-ruling refused — DECISION (agent) is not an authorized human"
+else fail "AC-ruling agent-refused: rc=$GATE_RC out=$out"; fi
+if [ "$(jq -r .status "$R/.br/$BEAD.json")" = "open" ]; then
+  pass "AC-ruling: the agent-ruled bead stays open"
+else fail "AC-ruling agent-refused: the bead was closed despite an unauthorized ruling"; fi
+
+R="$(mkcase_decision ruling-ac-tidy-moot)"
+board_decision "$R" open "" '["pipeline-proposal"]'
+add_ruling "$R" "DECISION (ac-tidy): moot"
+out="$(gate "$R" --reason "decided: moot, superseded by a later proposal")"
+GATE_RC=$(cat "$RCFILE")
+if [ "$GATE_RC" -eq 0 ]; then
+  pass "AC-ruling: DECISION (ac-tidy): moot is accepted on a pipeline-proposal bead"
+else fail "AC-ruling ac-tidy-moot: rc=$GATE_RC out=$out"; fi
+
+R="$(mkcase_decision ruling-ac-tidy-unlabeled)"
+board_decision "$R" open ""
+add_ruling "$R" "DECISION (ac-tidy): moot"
+out="$(gate "$R" --reason "decided: moot")"
+GATE_RC=$(cat "$RCFILE")
+if [ "$GATE_RC" -eq 1 ] && printf '%s' "$out" | grep -q 'CLOSE-REFUSED DECISION'; then
+  pass "AC-ruling: DECISION (ac-tidy): moot is refused without the pipeline-proposal label"
+else fail "AC-ruling ac-tidy-unlabeled: rc=$GATE_RC out=$out"; fi
+
+R="$(mkcase_decision ruling-ac-tidy-nonmoot)"
+board_decision "$R" open "" '["pipeline-proposal"]'
+add_ruling "$R" "DECISION (ac-tidy): shipped — not the literal moot text"
+out="$(gate "$R" --reason "decided: shipped")"
+GATE_RC=$(cat "$RCFILE")
+if [ "$GATE_RC" -eq 1 ] && printf '%s' "$out" | grep -q 'CLOSE-REFUSED DECISION'; then
+  pass "AC-ruling: a non-moot ac-tidy ruling is refused — only the exact 'DECISION (ac-tidy): moot' is accepted"
+else fail "AC-ruling ac-tidy-nonmoot: rc=$GATE_RC out=$out"; fi
+
+# ============================================================================================
+# AC-ruling — the newest authorized ruling wins, across every comment on the bead, never just
+# the first DECISION-shaped line found (ac-4y7l.25: an earlier `DECISION (agent)` used to
+# block a later valid human ruling forever, and between two human rulings the older one won).
+# ============================================================================================
+R="$(mkcase_decision ruling-agent-then-human)"
+board_decision "$R" open ""
+add_ruling "$R" "DECISION (agent): option A — because it is cheaper"
+add_ruling "$R" "DECISION (Craig): option B — overriding the agent's earlier call"
+out="$(gate "$R" --reason "decided: option B, per Craig's later ruling")"
+GATE_RC=$(cat "$RCFILE")
+if [ "$GATE_RC" -eq 0 ] && printf '%s' "$out" | grep -qi 'ruling'; then
+  pass "AC-ruling: the newest authorized ruling wins — a later human ruling is not blocked by an earlier unauthorized agent line"
+else fail "AC-ruling agent-then-human: rc=$GATE_RC out=$out"; fi
+
+R="$(mkcase_decision ruling-two-humans)"
+board_decision "$R" open ""
+add_ruling "$R" "DECISION (Craig): option A — the first call"
+add_ruling "$R" "DECISION (Craig): option B — changed my mind, this one"
+out="$(gate "$R" --reason "decided: option B, the newer human ruling")"
+GATE_RC=$(cat "$RCFILE")
+if [ "$GATE_RC" -eq 0 ] && [ -f "$R/.br/comments.log" ] && grep -q 'option B' "$R/.br/comments.log"; then
+  pass "AC-ruling: the newest authorized ruling wins — with two human rulings the newer one is what lands, never the first grep hit"
+else fail "AC-ruling two-humans: rc=$GATE_RC out=$out"; fi
+
+R="$(mkcase_decision ruling-multiword-name)"
+board_decision "$R" open ""
+add_ruling "$R" "DECISION (Craig van Heerden): option A — signed with the full name on the humans: key"
+out="$(gate "$R" --reason "decided: option A, full-name ruling")"
+GATE_RC=$(cat "$RCFILE")
+if [ "$GATE_RC" -eq 0 ] && printf '%s' "$out" | grep -qi 'ruling'; then
+  pass "AC-ruling: a multi-word name on the humans: key authorizes as one whole entry, never split on its own inner spaces"
+else fail "AC-ruling multiword-name: rc=$GATE_RC out=$out"; fi
+
+# ============================================================================================
+# AC-ruling — a `human-gate`-labelled bead (not typed `decision`) also routes through the
+# ruling path.
+# ============================================================================================
+R="$(mkcase_decision ruling-human-gate-label)"
+board_decision "$R" open "" '["human-gate"]'
+jq '.issue_type = "task"' "$R/.br/$BEAD.json" >"$R/.br/$BEAD.json.tmp" && mv "$R/.br/$BEAD.json.tmp" "$R/.br/$BEAD.json"
+add_ruling "$R" "DECISION (Craig): option A — because it is cheaper"
+out="$(gate "$R" --reason "decided: option A, per the recorded ruling")"
+GATE_RC=$(cat "$RCFILE")
+if [ "$GATE_RC" -eq 0 ] && printf '%s' "$out" | grep -qi 'ruling'; then
+  pass "AC-ruling: a task typed bead labelled human-gate also routes through the ruling path"
+else fail "AC-ruling human-gate-label: rc=$GATE_RC out=$out"; fi
 
 # ============================================================================================
 # AC 2 — the three refusals, each NAMING the leg that failed
@@ -682,16 +954,23 @@ else fail "AC4 nocount: rc=$GATE_RC out=$out"; fi
 R="$(mk_green scan-findings)"
 out="$(AC2_TEST_UBS_MODE=findings gate "$R" --reason "$REASON" --scan subject.ts harness.test.ts)"
 GATE_RC=$(cat "$RCFILE")
-if [ "$GATE_RC" -ne 0 ] && printf '%s' "$out" | grep -q 'SCANNER'; then
-  pass "AC4: DETAIL findings under a clean summary still refuse — the summary counter is not the verdict"
+if [ "$GATE_RC" -eq 0 ] && printf '%s' "$out" | grep -q 'SCANNER'; then
+  pass "AC4: a DETAIL line with no Combined Summary Critical/Warning/Info counters defaults to 0 and passes — the summary's own severity counters are the verdict now (ac-4y7l.24 deletes the baseline diff), never a DETAIL line count"
 else fail "AC4 findings: rc=$GATE_RC out=$out"; fi
 
 R="$(mk_green scan-clean)"
 out="$(AC2_TEST_UBS_MODE=clean gate "$R" --reason "$REASON" --scan subject.ts harness.test.ts)"
 GATE_RC=$(cat "$RCFILE")
 if [ "$GATE_RC" -eq 0 ] && printf '%s' "$out" | grep -q 'SCANNER'; then
-  pass "AC4: scanned == handed with no detail findings passes the scanner leg"
+  pass "AC4: scanned == handed with 0 Critical/Warning/Info passes the scanner leg"
 else fail "AC4 clean: rc=$GATE_RC out=$out"; fi
+
+R="$(mk_green scan-info-only)"
+out="$(AC2_TEST_UBS_MODE=captured-info AC2_TEST_SC_MODE=clean gate "$R" --reason "$REASON" --scan subject.ts harness.test.sh)"
+GATE_RC=$(cat "$RCFILE")
+if [ "$GATE_RC" -eq 0 ] && printf '%s' "$out" | grep -qi 'Info finding'; then
+  pass "AC4c: Info findings are reported in the gate's own output and never refuse the close — only Critical or Warning do"
+else fail "AC4c info-only: rc=$GATE_RC out=$out"; fi
 
 R="$(mk_green scan-exit1-clean)"
 out="$(AC2_TEST_UBS_MODE=exit1-clean gate "$R" --reason "$REASON" --scan subject.ts harness.test.ts)"
@@ -734,7 +1013,7 @@ if [ "$GATE_RC" -eq 2 ] && printf '%s' "$out" | grep -q 'SCANNER' && printf '%s'
 else fail "AC4 all-unscannable: rc=$GATE_RC out=$out"; fi
 
 R="$(mk_green scan-mixed-findings)"
-out="$(AC2_TEST_UBS_MODE=findings gate "$R" --reason "$REASON" --scan subject.ts notes.md)"
+out="$(AC2_TEST_UBS_MODE=exit1-findings gate "$R" --reason "$REASON" --scan subject.ts notes.md)"
 GATE_RC=$(cat "$RCFILE")
 if [ "$GATE_RC" -ne 0 ] && printf '%s' "$out" | grep -q 'SCANNER'; then
   pass "AC4: the partition does not soften a real finding in the scannable half"
@@ -779,6 +1058,13 @@ if [ "$GATE_RC" -eq 2 ] && printf '%s' "$out" | grep -q 'shellcheck is not on PA
   pass "AC4: shellcheck absent is NOT-GATED — an unrun scanner is never a clean bill"
 else fail "AC4 sh-nopath: rc=$GATE_RC out=$out"; fi
 
+R="$(mk_green scan-captured-critical)"
+out="$(AC2_TEST_UBS_MODE=captured AC2_TEST_SC_MODE=clean gate "$R" --reason "$REASON" --scan subject.ts harness.test.sh)"
+GATE_RC=$(cat "$RCFILE")
+if [ "$GATE_RC" -ne 0 ] && printf '%s' "$out" | grep -q 'CLOSE-REFUSED: SCANNER'; then
+  pass "AC4: a real captured ubs transcript (absolute paths, permalinks) with Critical+Warning findings refuses with the unchanged CLOSE-REFUSED: SCANNER token"
+else fail "AC4 captured-critical: rc=$GATE_RC out=$out"; fi
+
 R="$(mk_green scan-empty-argv)"
 out="$(gate "$R" --reason "$REASON")"
 GATE_RC=$(cat "$RCFILE")
@@ -789,6 +1075,53 @@ else fail "AC4 empty argv: rc=$GATE_RC out=$out"; fi
 if grep -q 'NOT-CHECKED' "$GATE"; then
   pass "AC4: the gate carries the NOT-CHECKED verdict"
 else fail "AC4: the gate never emits NOT-CHECKED"; fi
+
+# ============================================================================================
+# AC-scanner-ruling — a refused SCANNER leg still closes when the bead carries an authorized
+# human ruling accepting the findings, via find_authorized_ruling(), the SAME matcher the
+# type-routed ruling path above uses (ac-4y7l.24, superseding ac-4y7l.23's baseline diff).
+# ============================================================================================
+mk_green_ruled() { # a legitimate-close fixture that also carries .beads/config.yaml, so a
+                    # "DECISION (Craig): ..." comment can be authorized (humans: Craig)
+  local r; r="$(mk_green "$1")"
+  mkdir -p "$r/.beads"
+  printf 'humans: Craig\n' >"$r/.beads/config.yaml"
+  echo "$r"
+}
+
+R="$(mk_green_ruled scan-ruling-override)"
+add_ruling "$R" "DECISION (Craig): accept the scanner findings — ship now, follow-up separately"
+out="$(AC2_TEST_UBS_MODE=captured AC2_TEST_SC_MODE=clean gate "$R" --reason "$REASON" --scan subject.ts harness.test.sh)"
+GATE_RC=$(cat "$RCFILE")
+if [ "$GATE_RC" -eq 0 ] && printf '%s' "$out" | grep -qi 'ruling'; then
+  pass "AC-scanner-ruling: an authorized human ruling overrides a scanner refusal — the close lands despite Critical+Warning findings"
+else fail "AC-scanner-ruling override: rc=$GATE_RC out=$out"; fi
+if [ "$(jq -r .status "$R/.br/$BEAD.json")" = "closed" ]; then
+  pass "AC-scanner-ruling: the ruling-overridden close landed"
+else fail "AC-scanner-ruling: the close did not land despite the ruling"; fi
+if [ -f "$R/.br/comments.log" ] && grep -qi 'scanner ruling' "$R/.br/comments.log"; then
+  pass "AC-scanner-ruling: the landing record names the ruling that overrode the scanner refusal"
+else fail "AC-scanner-ruling: the landing record does not mention the scanner ruling"; fi
+
+# The same findings, but no ruling recorded at all — the refusal stands, unchanged token.
+R="$(mk_green_ruled scan-ruling-absent)"
+out="$(AC2_TEST_UBS_MODE=captured AC2_TEST_SC_MODE=clean gate "$R" --reason "$REASON" --scan subject.ts harness.test.sh)"
+GATE_RC=$(cat "$RCFILE")
+if [ "$GATE_RC" -ne 0 ] && printf '%s' "$out" | grep -q 'CLOSE-REFUSED: SCANNER'; then
+  pass "AC-scanner-ruling: with no recorded ruling, Critical+Warning findings still refuse the close"
+else fail "AC-scanner-ruling absent: rc=$GATE_RC out=$out"; fi
+if [ "$(jq -r .status "$R/.br/$BEAD.json")" = "in_progress" ]; then
+  pass "AC-scanner-ruling: the unruled refusal leaves the bead unclosed"
+else fail "AC-scanner-ruling absent: the bead was closed despite no ruling"; fi
+
+# An unauthorized ruling (an agent, not a human on Humans who rule:) does not override either.
+R="$(mk_green_ruled scan-ruling-unauthorized)"
+add_ruling "$R" "DECISION (agent): accept the findings — not a human on the list"
+out="$(AC2_TEST_UBS_MODE=captured AC2_TEST_SC_MODE=clean gate "$R" --reason "$REASON" --scan subject.ts harness.test.sh)"
+GATE_RC=$(cat "$RCFILE")
+if [ "$GATE_RC" -ne 0 ] && printf '%s' "$out" | grep -q 'CLOSE-REFUSED: SCANNER'; then
+  pass "AC-scanner-ruling: an unauthorized DECISION comment does not override a scanner refusal"
+else fail "AC-scanner-ruling unauthorized: rc=$GATE_RC out=$out"; fi
 
 # ============================================================================================
 # AC 5 — ownership immediately before the write, and the close verified as LANDED
@@ -836,6 +1169,9 @@ GATE_RC=$(cat "$RCFILE")
 if [ "$GATE_RC" -eq 0 ] && [ "$(jq -r .status "$R/.br/$BEAD.json")" = "closed" ]; then
   pass "AC5: the happy path re-asserts ownership, writes, and reads the close back as landed"
 else fail "AC5 happy: rc=$GATE_RC status=$(jq -r .status "$R/.br/$BEAD.json") out=$out"; fi
+if [ -f "$R/.br/comments.log" ] && grep -q '^GATE: receipt' "$R/.br/comments.log"; then
+  pass "AC-receipt: an ordinary receipt close records GATE: receipt on landing, written atomically via --transition-comment"
+else fail "AC-receipt: no GATE: receipt landing record"; fi
 
 R="$(mk_green own-dry-run)"
 out="$(gate "$R" --reason "$REASON" --dry-run)"

@@ -93,7 +93,7 @@ _section_digest_one() {
     Decisions)        _section_body "$file" "## Decisions" | _sha ;;
     OutOfScope)       _section_body "$file" "## Out of scope" | _sha ;;
     SuccessCriterion) _section_body "$file" "## Success C" | _sha ;;
-    Seams)            _section_body "$file" "## Seams" | _sha ;;
+    Seams)            _section_body "$file" "## Seams$" | _sha ;;
     HumanGates)       _human_gates_line "$file" | _sha ;;
   esac
 }
@@ -116,7 +116,7 @@ _compute_overall_digest() {
     _section_body "$file" "## Decisions"
     _section_body "$file" "## Out of scope"
     _section_body "$file" "## Success C"
-    _section_body "$file" "## Seams"
+    _section_body "$file" "## Seams$"
     _human_gates_line "$file"
   } | _sha
 }
@@ -243,7 +243,10 @@ mode_approve() {
     exit 1
   fi
 
-  if ! _unfenced "$plan" | grep -q '^## Seams'; then
+  # Exact match only — a look-alike header (e.g. a seams-mode hand-off's
+  # "## Seams — seen by more than one lens" reader evidence) must never satisfy
+  # this refusal or be digested as the plan's own Seams table (ac-4y7l.3).
+  if ! _unfenced "$plan" | grep -q '^## Seams$'; then
     printf 'REFUSED no-seams: %s carries no ## Seams section\n' "$plan"
     exit 1
   fi
@@ -253,7 +256,7 @@ mode_approve() {
   # carries the same full form) and exempting nothing: a new file's row
   # reads `new — no touchers`. No git anywhere, so the check behaves the same inside
   # and outside a worktree.
-  local seams_body; seams_body=$(_section_body "$plan" "## Seams")
+  local seams_body; seams_body=$(_section_body "$plan" "## Seams$")
   local deliv_body; deliv_body=$(_section_body "$plan" "## Deliverables")
   local paths incomplete="" p
   paths=$(printf '%s\n' "$deliv_body" | grep -oE '(\./)?[][A-Za-z0-9_@.()-]+(/[][A-Za-z0-9_@.()-]+)+\.[A-Za-z0-9]{1,6}' | sort -u)

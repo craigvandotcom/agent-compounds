@@ -229,9 +229,17 @@ case "$ITYPE" in
       verdict "NOT-CHECKED" "epic has no populated '## Delivers' section — there is no declared artifact to cross-reference. Give the bead a Delivers section, or bypass explicitly" 2
     fi
 
+    # A dotted CHILD BEAD ID (`ac-4y7l.5`, which a touchers line's `owned by:` clause
+    # names) is path-shaped to this regex but is not a file, so reading it as an artifact
+    # refuses the epic for a path that can never exist on disk — measured on ac-4y7l,
+    # whose nine Delivers bullets each name their owner bead. Board ids are dropped
+    # before the on-disk check; a real path carries a `/`, or an extension that is not
+    # a run of digits.
     ARTIFACTS=$(printf '%s' "$DELIVERS" \
       | grep -oE '[A-Za-z0-9_.][A-Za-z0-9_./-]*\.[A-Za-z0-9]+' \
-      | grep -vE '^\.+$' | LC_ALL=C sort -u)
+      | grep -vE '^\.+$' \
+      | grep -vE '^[a-z0-9]+(-[a-z0-9]+)+(\.[0-9]+)+$' \
+      | LC_ALL=C sort -u)
 
     if [ -z "$ARTIFACTS" ]; then
       verdict "UNVERIFIABLE-DELIVERS" "epic bead $BEAD_ID carries a prose-only '## Delivers' — no path-shaped artifact exists to cross-reference, so NO close of this bead can ever pass evidence check. Fix the bead (give Delivers a path) or bypass explicitly. Audit siblings: close-evidence-check.sh --list-unverifiable" 2

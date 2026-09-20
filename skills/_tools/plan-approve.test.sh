@@ -50,7 +50,7 @@ W=$(mktemp -d /tmp/plan-approve-test-XXXXXX)
 
 # The suite never depends on the invoking cwd: everything it touches travels by
 # absolute path, and it parks itself in TMPDIR before the first case.
-cd "${TMPDIR:-/tmp}"
+cd "${TMPDIR:-/tmp}" || exit 2
 
 # A Deliverable path with a ## Seams row carrying the same FULL path, so the
 # seams-complete fixtures exercise the full-path row requirement (ac-zug5.1: rows
@@ -172,6 +172,16 @@ mk_plan "$W/p5.md" "- **D1 \`$REAL_PATH\`** — a thing." "$SETTLED_CARD" "| obj
 cap "$SCRIPT" approve "$W/p5.md" "the operator"
 expect "$RC" 1 "existing path with no Seams row -> exit 1"
 expect "$(grep -c "REFUSED seams-incomplete $REAL_PATH" <<<"$OUT")" 1 "existing path with no Seams row -> REFUSED seams-incomplete"
+
+# 6b — a seams-mode hand-off's reader-diagnosis header ("## Seams — seen by more than one
+# lens" and its kin) must never satisfy the no-seams refusal by PREFIX (ac-4y7l.3): a plan
+# carrying only a look-alike header, and no exact ## Seams section, is still refused.
+{
+  printf -- '---\nstatus: draft\n---\n# Plan\n\n## Vision\n\nv\n\n## Deliverables\n\n- D1 x\n\n## Decisions\n\n%s\n\n## Seams — seen by more than one lens\n\nsome reader evidence, never the real Seams table\n\n## Out of scope\n\nn\n\n## Success criterion\n\ns\n' "$SETTLED_CARD"
+} > "$W/p5b.md"
+cap "$SCRIPT" approve "$W/p5b.md" "Craig"
+expect "$RC" 1 "look-alike Seams header -> REFUSED no-seams exit 1"
+expect "$(grep -c 'REFUSED no-seams' <<<"$OUT")" 1 "look-alike Seams header -> REFUSED no-seams"
 
 # 7 — approve refuses a settled card with no vision: quote (exit 1)
 mk_plan "$W/p6.md" "- D1 x" "$NOVISION_CARD" "a"
@@ -341,6 +351,21 @@ sedi "$W/s.md" 's/some finding/some OTHER finding/'
 cap "$SCRIPT" ready "$W/s.md"
 expect "$RC" 1 "edit inside ## Seams -> exit 1"
 expect "$(grep -c '^REFUSED regate Seams$' <<<"$OUT")" 1 "edit inside ## Seams -> REFUSED regate Seams"
+
+# 24b — a plan carrying BOTH an exact ## Seams section and a look-alike (## Seams — seen
+# by more than one lens) digests only the exact one (ac-4y7l.3): an edit made INSIDE the
+# look-alike section does not regate Seams, or anything else.
+{
+  printf -- '---\nstatus: draft\ncreated: 2026-09-05\n---\n# Plan\n\n## Vision\n\n%s\n\n## Deliverables\n\n%s\n\n## Decisions\n\n%s\n\n## Seams\n\n%s\n\n## Seams — seen by more than one lens\n\nsome reader evidence, never the real Seams table\n\n## Out of scope\n\n- nothing\n\n## Success criterion\n\nSome criterion.\n' \
+    "$vision_line" "- **D1 \`$REAL_PATH\`** — a thing." "$SETTLED_CARD" "$SEAMS_OK"
+} > "$W/s-lookalike.md"
+cap "$SCRIPT" approve "$W/s-lookalike.md" "Craig"
+expect "$RC" 0 "setup: approve s-lookalike"
+add_polish_keys "$W/s-lookalike.md"
+sed -i 's/some reader evidence/some OTHER reader evidence/' "$W/s-lookalike.md"
+cap "$SCRIPT" ready "$W/s-lookalike.md"
+expect "$RC" 0 "edit inside look-alike Seams section does not regate -> exit 0"
+expect "$(grep -c '^READY:' <<<"$OUT")" 1 "edit inside look-alike Seams section does not regate -> READY"
 
 # 25 — ready after adding a Human gates: line names only that section (exit 1):
 # the line lives in frontmatter, outside every ## body, so only its own leg moves.

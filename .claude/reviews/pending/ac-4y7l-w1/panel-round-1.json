@@ -1,0 +1,7 @@
+{
+  "round": 1,
+  "range": "2e14a91..dfab85f",
+  "spawned": ["security", "performance", "architecture", "correctness", "test-quality", "contracts"],
+  "skipped": {},
+  "note": "Batch 1 of epic ac-4y7l (run 20260918-223112-ac4y7l): five wave commits 1241931 2c6109e 5526269 3d3c72e dfab85f; ledger commit 368a158 and foreign commits e9eb6dd 1016bcd 6db37ba excluded. Deep panel: the diff changes three gates (bead-capture-guard hook, check 35, the coordinator orphan sweep). Review surface scoped to this registry's product (its gates, hooks, lint checks, scripts and the skill prose agents execute), as on the ac-ympj factory review; test-quality and contracts spawn because the diff changes three test harnesses and a script's CLI flags."
+}

@@ -23,7 +23,7 @@ ac-human — and any workflow that files beads. One principle drives all of it:
 | `bug` | CONFIRMED defect (root cause or solid repro in hand) | Fixed + verified |
 | `investigation` | Suspected issue / open question an agent can resolve (repro, research, spike) | Answered: spawned fix beads, or documented-and-closed |
 | `decision` | A fork that passes the escalation test (`reference/human-gate-template.md` § The escalation test) — taste, product, money, risk | Human decision RECORDED, consequences executed |
-| `epic` | Grouping container | `## Delivers` covered, PROPOSED by `ac-align` (probe-less only — D5) |
+| `epic` | Grouping container | `## Success Criteria` + `## Delivers` covered, PROPOSED by `ac-align` (probe-less only — D5) |
 
 **No confirm-ceremony beads.** If the finding stage already diagnosed it —
 **diagnosed = source-traced, not inferred** — file the `bug` directly.
@@ -179,7 +179,7 @@ be configured, so the schema meets it by NAMING the first section per type:
 | Type | First section header | `br lint` also wants |
 | ---- | -------------------- | -------------------- |
 | `bug` | `## Steps to Reproduce` — a bug's intent IS its repro | `## Acceptance Criteria` |
-| `epic` | `## Success Criteria` — an epic's intent IS what done looks like | — |
+| `epic` | `## Success Criteria` — an epic's intent IS what done looks like | `## Delivers` |
 | `task` / `feature` | `## Intent` | `## Acceptance Criteria` |
 | `investigation` | `## Intent` (the open question) | `## Acceptance Criteria` (exit criteria) |
 | `decision` | the pre-staged memo (context · options · recommendation — § Decision beads) | — |
@@ -223,6 +223,17 @@ contract plus useful pointers, not prophecy dressed as fact.
 
 ## Decision beads (the human-gate contract)
 
+Who may rule: the closing board's own `.beads/config.yaml` `humans:` key
+(comma-separated names) — that key, read live by `close-gate.sh`
+(`skills/ac-implement/scripts/close-gate.sh`) from the board it closes on, is
+the sole authority for who may sign a `DECISION (<actor>): ...` ruling
+comment; `<human>` in every template (here and in
+`skills/ac-human/references/action-loop.md`) is copied VERBATIM from that
+key, never restated by hand. A board with no `humans:` key authorizes
+nobody — fail closed. The sole non-human exception is `DECISION (ac-tidy):
+moot` on a bead labelled `pipeline-proposal`; any other agent name is
+refused CLOSE-REFUSED DECISION.
+
 The contract that keeps autonomous sweeps safe:
 
 1. **Agent creates it PRE-STAGED** — a decision memo, not a vague flag:
@@ -230,8 +241,12 @@ The contract that keeps autonomous sweeps safe:
    the work a decision can absorb before the human arrives.
 2. **Agents may enrich, never close.** Closure requires a recorded human
    decision (`br comments add <id> "DECISION (<human>): <choice> — <why>"`),
-   after which the agent executes the consequences and closes. The decision
-   trail lives in the bead.
+   after which the agent executes the consequences and closes through
+   `skills/ac-implement/scripts/close-gate.sh`. The decision trail lives in
+   the bead. One system ruling stands beside the human one: a nightly
+   moot-proposal close records `DECISION (ac-tidy): moot — target <epic>
+   closed` the same way, before closing through the same gate — the same
+   contract, a script as the actor.
 3. **Downstream work blocks on it via normal deps**
    (`br dep add <downstream> <decision-id>`). `br ready` then excludes the
    subtree automatically — `bv --robot-next` cannot select past an undecided
@@ -285,10 +300,10 @@ rests on, so closed beads cluster cleanly for future metrics:
 Thin rules — no new template machinery, no per-type description headers, no lint schema
 change. Enforcement is **MECHANICAL at close time** (ac-on0y.2):
 `ac-pipeline/scripts/close-evidence-check.sh` refuses a close whose `close_reason` lacks
-the shape its type declares, wired at the single live `br close` call site (`ac-implement`'s
-close step) and seam-proofed — its harness greps that call site and goes RED if the
-invocation is silently reverted. `br lint` is unchanged: it checks DESCRIPTION template
-sections only (§ Body template), never `close_reason`.
+the shape its type declares, wired at the one writer, `skills/ac-implement/scripts/close-gate.sh`,
+and seam-proofed — its harness greps that call site and goes RED if the invocation is
+silently reverted. `br lint` is unchanged: it checks DESCRIPTION template sections only
+(§ Body template), never `close_reason`.
 
 Still **presence-checked, not truth-checked** — semantic verification remains review's job.
 Exit 2 = NOT-CHECKED and is never a pass. `human-gate` beads are exempt (their

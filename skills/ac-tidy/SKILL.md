@@ -17,17 +17,15 @@ Apply what is provable. File a bead for what is not. Never guess.
 
 Do NOT reconcile in the live checkout. `BCA=$(git rev-parse --show-toplevel)` is the live app
 checkout. Fetch `origin/main`, `git worktree add --detach "$WT" origin/main`, `cd "$WT"`, then
-`br sync --db "$WT/.beads/beads.db"` to rebuild the beads DB from `issues.jsonl`.
-`br` auto-discovery ignores worktree cwd and resolves to the live checkout (bd-6kwqo) —
-pass `--db "$WT/.beads/beads.db"` explicitly on EVERY `br` invocation in the worktree,
-never rely on cwd. Skill files resolve only through
-$BCA/.claude/… (relative symlinks). If the worktree cannot be created: Slack degraded, exit,
-nothing written.
+`export BEADS_DB="$WT/.beads/beads.db"` and `br sync` to rebuild the beads DB from `issues.jsonl`
+(`br` auto-discovery ignores worktree cwd, bd-6kwqo — the exported var directs every `br` call).
+Skill files resolve only through $BCA/.claude/… (relative symlinks). If the worktree cannot be
+created: Slack degraded, exit, nothing written.
 
 ## 2. Scan
 
-Read the board per `ac-pipeline/references/board-scan.md`. Closed beads come from
-`.beads/issues.jsonl`, never `br list`. Print the docket-health line.
+Read the board per `ac-pipeline/references/board-scan.md` (closed beads: Scan A's
+`br_call list --all --status closed --json`, never a raw `br list`). Print the docket-health line.
 
 ### 2b. Surviving-gate verify
 
@@ -47,10 +45,11 @@ Stamp a comment `verified: <date>`. Never de-gate, close, or edit the body.
 | closed bead still labelled `unrefined` | `br label remove` |
 | open non-epic bead with none of `unrefined` / `refined` / `human-gate` | `br label add unrefined` (never `refined`) |
 | label `beads-standards` does not name | correct or remove, report it |
-| open `pipeline-proposal` bead whose target epic is closed | close: `obsolete: moot — target closed` |
+| open `pipeline-proposal` bead whose target epic is closed | record `DECISION (ac-tidy): moot — target <epic> closed`, then `close-gate.sh <id> --reason "obsolete: moot — target closed"` |
 
 Open `human-gate` and `qa-blocker` beads are untouchable except by the last row. A condition
 that needs a judgment call ("looks done", "probably a duplicate") is not provable: step 4.
+A `task`-typed proposal skips the ruling path (routed by `issue_type`) and LEG-2 NOT-CHECKs; report that exit as the skip, not a failure.
 
 ## 4. Findings — judgment, never apply
 
@@ -63,13 +62,10 @@ fails its row above · duplicate or mergeable items.
 
 ## 5. Land
 
-Commit the exact paths touched, per `ac-pipeline/references/commit-discipline.md`:
-`AGENT_NAME=FoggyCreek git commit -m "chore(tidy): <what>" -- <paths>`, then push
-(NIGHTLY: `git push --no-verify origin HEAD:main`). NIGHTLY also: verify from the live checkout
-that `git -C "$BCA" rev-parse origin/main` equals HEAD — rejected means degraded, do not retry;
-Slack card via `slack-send --card --status <healthy|degraded>` on the app's ops channel, one line
-of counts; write `$BCA/.claude/skills/ac-tidy/workflows/last-run.json` with date, counts,
-pushed_sha, status; remove the worktree and prune. Teardown runs on every exit path, abort included.
+Commit the exact paths touched, per `ac-pipeline/references/commit-discipline.md`: `AGENT_NAME=FoggyCreek git commit -m "chore(tidy): <what>" -- <paths>`, then push (NIGHTLY: `git push --no-verify origin HEAD:main`).
+NIGHTLY also: verify from the live checkout that `git -C "$BCA" rev-parse origin/main` equals HEAD — rejected means degraded, do not retry.
+Slack card via `slack-send --card --status <healthy|degraded>` on the app's ops channel, one line of counts (`drift-skipped:` — § 2b gates skipped on ledger-copy disagreement — plus the since-last-run app-board counts `foreign status:` / `off-canon receipts:` / `unrecorded closes:` against D4/D1's canon grammar).
+Write `$BCA/.claude/skills/ac-tidy/workflows/last-run.json` with date, counts, pushed_sha, status; remove the worktree and prune. Teardown runs on every exit path, abort included.
 
 ---
 

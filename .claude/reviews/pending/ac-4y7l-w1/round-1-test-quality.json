@@ -1,0 +1,57 @@
+{
+  "reviewer": "test-quality",
+  "round": 1,
+  "payload_read": "git diff 2e14a91..dfab85f",
+  "findings": [
+    {
+      "title": "ORPHANS fixture puts assignee where real br never does, so the roster sweep is certified green while fail-open on every real board",
+      "severity": "Critical",
+      "file": "skills/ac-implement/scripts/coordinator.test.sh",
+      "line": 117,
+      "category": "testing-the-mock",
+      "evidence": "The fixture CLAIM is {\"claims\":[{\"issue\":{\"id\":\"ac-1\",\"status\":\"in_progress\",\"assignee\":\"Cave\"}}]}, and coordinator.sh:121 reads .issue.assignee. Live `RUST_LOG=error br coordination status --json` in this repo returns issue keys [dependency_count, dependent_count, id, issue_type, labels, latest_comments, priority, status, title]. There is no assignee on .issue. The assignee lives at .assessment.assignee (live value 'ac-20260916-172808-148122'). Probe: running the script's exact jq filter over the live claims with roster [\"ac-20260916-172808-148122\"], which is the exact in_progress assignee, returned '' (no orphan). So on a real board `.issue.assignee // \"\"` is always '', the roster never matches, and the ORPHANS gate never fires. The rewritten test only passes because it invents a shape br does not emit. This fixture shape was inherited from 2e14a91, but dfab85f rewrote this block and kept it.",
+      "fix": "Replace the CLAIM fixture with a shape captured from a live `br coordination status --json` (issue without assignee, assessment.assignee set). Then fix coordinator.sh:121 to read `(.assessment.assignee? // .issue.assignee? // \"\")`. Add a guard in the test that fails if the fixture ever drifts from the live schema (e.g. assert the fixture carries schema_version br.coordination.v1 and assessment.assignee).",
+      "auto_fixable": false
+    },
+    {
+      "title": "Nothing tests the bead's core contract, exact match and never a prefix",
+      "severity": "High",
+      "file": "skills/ac-implement/scripts/coordinator.test.sh",
+      "line": 126,
+      "category": "hollow-test",
+      "evidence": "The only discriminating case uses roster 'Other' against assignee 'Cave', so the two names share no prefix. Sabotage probe in a disposable worktree: I replaced `select($roster | index($a))` with the prefix matcher the bead removed, `select(any($roster[]; . as $r | $a | startswith($r)))`. Result: coordinator.test: 19 passed, 0 failed (still green).",
+      "fix": "Add a prefix-collision case: claim assignee 'CaveBear' (or 'swarm-RUNA-Cave') with `--actor Cave` must exit 0. Add the reverse too: assignee 'Cave' with `--actor CaveBear` must exit 0.",
+      "auto_fixable": false
+    },
+    {
+      "title": "The REPEATABLE --actor roster is never exercised with more than one actor",
+      "severity": "High",
+      "file": "skills/ac-implement/scripts/coordinator.test.sh",
+      "line": 121,
+      "category": "hollow-test",
+      "evidence": "Every call passes exactly one --actor. Sabotage probe in a disposable worktree: I changed coordinator.sh:57 from `ACTORS+=(\"${2:-}\")` to `ACTORS=(\"${2:-}\")`, so the last --actor overwrites the roster. Result: coordinator.test: 19 passed, 0 failed (still green). In a real wave the conductor passes N actors, and with this regression only the last worker's orphans would be swept.",
+      "fix": "Add a case with a claim assigned to 'Cave', run as `--actor Cave --actor Other`. It must be refused (rc 1, names ac-1). Also add `--actor Other --actor Cave` so position does not matter.",
+      "auto_fixable": false
+    },
+    {
+      "title": "WORKER-grammar rule's changed-id scoping is unguarded: an untouched malformed receipt is never in any fixture",
+      "severity": "High",
+      "file": "lint/checks/35-board-integrity.test.sh",
+      "line": 151,
+      "category": "hollow-test",
+      "evidence": "Rule 5 only fires for `rid in changed_ids` (35-board-integrity.py:171). Neither staged-lane fixture has a malformed WORKER receipt on an UNCHANGED row: staged-red changes the bad row, and staged-green's unchanged row (OPEN_TAGGED) has no comments. Sabotage probe in a disposable worktree: I changed the guard to `if changed_ids is not None:`, which drops the changed-id scope so every row on the board is checked on every commit. Result: 'OK: every board-integrity case passed' (still green). The regression matters because the live board carries legacy receipts that break the grammar, e.g. 3x 'WORKER: model=Claude Sonnet 5 actor=ac-20260915-004158 tree=fd11d9d', whose spaces fail WORKER_RE (confirmed: re.match -> False). Unscoped, any ledger commit would go RED on history.",
+      "fix": "Add a staged-lane case: commit WORKER_BAD at HEAD via git_board, then stage an unrelated OPEN_TAGGED change. Expect rc 0. This mirrors the existing 'pre-existing malformed bead untouched by this commit' case for the origin/probe rules.",
+      "auto_fixable": false
+    },
+    {
+      "title": "WORKER fixtures don't match the real board's receipt shapes (trailing newline, spaced model ids)",
+      "severity": "Medium",
+      "file": "lint/checks/35-board-integrity.test.sh",
+      "line": 138,
+      "category": "hollow-test",
+      "evidence": "Fixture-shape check against .beads/issues.jsonl: real receipts end in '\\n' (e.g. \"WORKER: model=deepseek-v4-flash actor=swarm-20260907-exhaust-SilverGorge tree=df42ae4\\n\"), and some carry a spaced model ('model=Claude Sonnet 5'). Both fixtures are newline-free, single-token strings, so the `.strip()` handling is never exercised. The fixtures also don't decide whether a spaced model id is RED or GREEN. WORKER_BAD's 'session=/skill@version=/duration=' grammar does not appear on the board. It is plausible legacy text, but it is not a sampled row. This is from reading only; no probe was spent on it.",
+      "fix": "Give WORKER_GOOD the real trailing '\\n'. Add a fixture using a live legacy receipt ('model=Claude Sonnet 5 ...') with the verdict decided explicitly (RED per the canon's <model-id>, or the regex widened), so the rule's behaviour on real history is pinned instead of accidental.",
+      "auto_fixable": false
+    }
+  ]
+}

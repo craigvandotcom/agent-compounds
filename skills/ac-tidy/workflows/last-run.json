@@ -1,29 +1,29 @@
 {
   "status": "healthy",
   "mode": "NIGHTLY",
-  "date": "2026-09-18",
+  "date": "2026-09-20",
   "machine": "omarchine",
   "branch": "main",
   "scope": "body_compass_app",
   "counts": {
-    "closed_unrefined_stripped": 1,
+    "closed_unrefined_stripped": 2,
     "open_unrefined_stamped": 0,
-    "open_human_gates_verified": 3,
+    "open_human_gates_verified": 2,
     "plans_reconciled": 0,
     "proposals": 0,
     "files_moved": 0,
-    "beads_created": 1,
-    "beads_created_and_self_closed": 1,
-    "labels_corrected": 1
+    "beads_created": 0,
+    "beads_created_and_self_closed": 0,
+    "labels_corrected": 2
   },
-  "pushed_sha": "70245a08b47de6a9c5a79f397f42b2123e03d137",
-  "bca_pushed_sha": "70245a08b47de6a9c5a79f397f42b2123e03d137",
+  "pushed_sha": "9f21d2fc8053c878cdad73beba490a35125676e6",
+  "bca_pushed_sha": "9f21d2fc8053c878cdad73beba490a35125676e6",
   "push_verified": true,
   "stranded_sha": null,
   "slack": {
     "channel": "bca",
     "status": "healthy",
-    "ts": "1789685604.086049"
+    "ts": "1789858220.567749"
   },
-  "note": "Re-verified all 3 open human-gate beads (bd-m7rh2, bd-8yql5, bd-r4n2a) — status agreed between BCA local .beads/issues.jsonl and the worktree copy for all 3, br show confirms each is still genuinely blocked on a human, stamped verified: 2026-09-18. Docket-health: 3 open human-gate, 1 reason-less >48h (bd-r4n2a — pre-existing, carried over from prior runs, not a new gap). One provable label fix: bd-9bgfv (closed, still carried unrefined) stripped. 0 open pipeline-proposal beads. 0 open non-epic beads missing a readiness label. No label literally named beads-standards found. Backlog scan (57 files under active/ + pool/ + root): none fully-checked or status:complete, none captured-but-named-by-a-plan (both live plans — 2026-09-16-2236-gate-refusal-small-epic.md [approved] and 2026-09-03-seams-personal-zone-promotion-demotion.md [draft, seams_verdict unstamped] — reference no _backlog file). Plans scan: only those 2 non-done plans exist; neither beadified, neither missing frontmatter; the previously-flagged 2026-08-26-2100-gate-audit-remediation.md is now correctly in _plans/_done/ (superseded). Step 4 structural checks: computed the full parent-child/blocks graph over 3704 jsonl records — 137 epics, 0 open epics with zero open children AND no Probe: line, exactly 1 authored blocks-edge onto an epic (bd-m7rh2 -> bd-dtpqg, the same one flagged 2026-09-16). Filed it as bd-0m18u before finding last night's last-run.json note that this exact edge was already evaluated and deliberately left unfiled (named by bd-r4n2a + bd-m7rh2 themselves) — closed bd-0m18u obsolete/duplicate in the same run once caught. Checked all 9 _done/ plans carrying a beadified: field: none also carry delivered:, so no beadified/delivered/epic-state disagreement is computable this run (all pre-emptively 'retired by ac-tidy', not shipped-and-stamped). No exhaustive duplicate/mergeable sweep run against the full board this pass — only the two 050-numbered wellness-tracker backlog files looked duplicate-shaped and were confirmed to be deliberately sequenced sub-features (v1.1/v1.2), not a collision. Lesson for next run: check last-run.json's note field for previously-declined targets BEFORE filing a Step-4 finding, not after."
+  "note": "Isolated worktree from origin/main (235c11c47), br sync --import-only --rebuild (3739 issues incl. tombstones, 3724 via list --all). docket-health: ok — 2 open human-gate, 0 reason-less, 0 >48h ALARM (bd-r4n2a and bd-m7rh2, the two reason-less gates flagged in prior runs, are now themselves closed — see below). Step 2b surviving-gate verify: 2 open human-gate beads this run (bd-48phd, bd-q432x.2), both carry a Gate-reason and both agree between the live checkout's committed .beads/issues.jsonl (git status showed zero .beads/ diff) and the worktree copy — stamped verified: 2026-09-20 on both. Step 3 reconcile: closed-but-still-unrefined sweep found 2 (bd-m7rh2, bd-r4n2a — both closed via last night's human rulings per commits a0c33a2a3/235c11c47) — label removed from both. 0 open non-epic beads missing a readiness label. 0 open pipeline-proposal beads with a closed target epic. Backlog: 11 _backlog/active/*.md, none fully checked or status:complete; one reference (053-stickiness-v1-acceptance-suite.md cited as rationale, not delivery target, in _plans/2026-09-19-1438-universal-food-composer.md) judged NOT a 'plan names it' match — cited for context, not being delivered — left as-is, not filed as a finding since it isn't wrong, just ambiguous. Plans: 3 live (non-done) plans, none carry beadified:, none missing frontmatter, none require moving to _done/. Step 4 structural checks: verified issue_type=='epic' beads only (16 open) for the zero-open-children-AND-no-Probe finding — none qualify (every open epic either has open children or carries its own Probe: line). Did NOT re-run the full blocks-edge-onto-epic sweep (board-scan I2) this pass, nor the _done/ plan beadified-vs-delivered cross-check across all 245 _done/ plans, nor a duplicate/mergeable sweep — resource-bounded this run to the checks above; the one blocks-edge previously named (bd-dtpqg -> bd-m7rh2) is moot now since bd-dtpqg closed and both endpoint beads (bd-r4n2a, bd-m7rh2) are themselves closed. Live checkout carried unrelated uncommitted WIP (_plans/2026-09-19-1438-universal-food-composer.md modified, _plans/2026-09-12-1930-ci-runner-topology.md and _artifacts/curator/2026-09-18.md untracked) — correctly out of scope for this isolated worktree run, left untouched. Only write this run: 2 verified: stamp comments + 2 label removals, committed and pushed as 9f21d2fc8."
 }

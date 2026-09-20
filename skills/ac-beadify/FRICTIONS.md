@@ -36,3 +36,23 @@ Fixes are proposed here and applied to the skill only after the pattern recurs o
   round-trip and a false human-gate label on a closed question. Same-run sibling: bead .8 named
   a GitHub secret for the golden key although all eleven workflows run on a self-hosted runner
   whose ~/actions-runner/.env can hold it — another fact a grep of `runs-on` would have given.
+
+## probe-binds-incidental-shape
+- skills: [ac-beadify, ac-polish]
+- impact: M
+- frequency: occasional
+- perceptibility: misleading
+- recurrence: 1
+- related: []
+- first_seen: 2026-09-18
+- last_seen: 2026-09-18
+- stage: manual
+- status: open
+- proposed_fix: probes name paths through the root env vars (`$INFRA_ROOT`, `$MISSION_ROOT`) or
+  paths relative to the repo, never an absolute home path. Probes assert meaning (a symbol, a
+  value), not the source layout a formatter owns. The bead polish checklist flags both.
+- narrative: one swarm run hit two probes bound to shape rather than meaning. A probe that
+  hardcoded `~/Repos/infrastructure/…` (the old Mac layout) could never pass on omarchine, so
+  finished work sat open. Another probe regex-matched a one-line type declaration, so the
+  worker added `// prettier-ignore` to three declarations to stop the formatter breaking the
+  match. The probe's shape leaked into production code.

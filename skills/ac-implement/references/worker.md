@@ -30,7 +30,13 @@ project key and NO `agent_name` — the server mints one — and set `ACTOR` to 
 the guard compares that against your reservations' holder; anything else rejects your OWN
 commit as a foreign conflict. Never let the identity come from the static `AGENT_NAME` env for
 the same reason: a static fallback shadows the live session name and fails in the direction of
-looking like someone else.
+looking like someone else. Pass `task_description` naming the run id the conductor appended to
+this prompt, so the registration is attributable to this run rather than a sibling's.
+
+**If registration FAILS in a swarm, do not fall back to the local mint below and keep going.**
+A worker under a self-minted name holds claims the coordinator's roster never learns, so its
+orphans are invisible to the exact sweep that exists to catch them. Hand back at once (§9),
+claiming nothing.
 
 **Only when Agent Mail tools are absent** (a single worker outside a swarm, or a harness that
 does not expose them) mint the identity locally, and say so in the hand-back as an unverified

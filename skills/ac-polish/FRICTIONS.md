@@ -230,14 +230,14 @@ last_pass: 2026-09-07
   the ledger is the only honest witness that a round happened.
 
 ## seams-reader-stance-cannot-write-report
-- skills: [ac-polish]
+- skills: [ac-polish, ac-plan]
 - impact: M
 - frequency: occasional
 - perceptibility: loud
-- recurrence: 1
+- recurrence: 2
 - related: []
 - first_seen: 2026-09-04
-- last_seen: 2026-09-04
+- last_seen: 2026-09-18
 - stage: manual
 - status: open
 - proposed_fix: name the reader agent in `workflows/seams.md` READERS and make it one that can
@@ -814,3 +814,39 @@ last_pass: 2026-09-07
   filed 15 rows under `pause` and `resume`, names absent from the flows line. All 15 were fenced.
   The rows were real and belonged under `emit` and `apply`; the reader lost them to a naming
   choice. First time the flow fence has caught invented names rather than drift.
+
+## plan-mode-keeps-no-reader-reports
+- skills: [ac-polish]
+- impact: M
+- frequency: occasional
+- perceptibility: silent
+- recurrence: 1
+- related: []
+- first_seen: 2026-09-18
+- last_seen: 2026-09-18
+- stage: manual
+- status: open
+- proposed_fix: plan mode saves each round's reader report under `<STATE>/reports/r<N>.md`,
+  as bead and seams mode already do, so a later re-approval can show what the rounds changed.
+- narrative: `workflows/plan.md` keeps only the per-round digests (`round-N.sha`). The plan
+  folder is git-ignored, and no transcript or subagent log keeps the reader reports. When
+  `plan-approve.sh` asked for a regate on a plan already at its fixpoint, nothing could show
+  the human what the earlier rounds had edited.
+
+## prod-label-audit-misses-already-refined-beads
+- skills: [ac-polish, ac-implement]
+- impact: L
+- frequency: rare
+- perceptibility: silent
+- recurrence: 1
+- related: []
+- first_seen: 2026-09-18
+- last_seen: 2026-09-18
+- stage: manual
+- status: open
+- proposed_fix: before a swarm opens, sweep every claimable `refined` bead in the epic (not only
+  this run's polish set) against the `sensitive-prod` predicate, and stamp or gate what matches.
+- narrative: a bead that minted production rows and re-ran a live batch over prod data carried
+  no `sensitive-prod` label. It was already `refined` before the run, so bead-mode polish never
+  read it, and live swarm workers could claim it. The conductor noticed by chance and gated it
+  by hand. Nothing in the pipeline would have caught it.

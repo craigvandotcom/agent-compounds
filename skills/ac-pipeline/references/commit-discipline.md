@@ -8,10 +8,12 @@ enter YOUR commits — **pathspec-mandatory**: `git commit -- <files>`. **Never
 `git add -A` / `git add .` / `git commit -a`** — a wildcard add sweeps whatever
 foreign WIP sits in the shared tree into your commit under your message
 (incident: staged-sweep). Pathspec commits are atomic and self-documenting —
-no staging window for another session to race. **Never `git stash`** — stash
-pops can surface other sessions' entries and corrupt unrelated files
-(incident: stash-corruption). Foreign uncommitted work: inventory it, never
-touch it, never commit it "on their behalf".
+no staging window for another session to race. **Never an unscoped `git stash`** —
+a bare, whole-tree stash pop can surface other sessions' entries and corrupt
+unrelated files (incident: stash-corruption); a single-path SCOPED
+`stash push --` (the no-stash escalation ladder's step 4 below) is not that
+incident. Foreign uncommitted work: inventory it, never touch it, never
+commit it "on their behalf".
 
 ---
 
@@ -144,7 +146,7 @@ to the target's `main`.
 
 ## No-stash escalation ladder (when rebase/push is blocked by foreign WIP)
 
-Cheapest first — stop at the first that applies. **Never `git stash`.**
+Cheapest first — stop at the first that applies. **Never an unscoped `git stash`.**
 
 1. **`origin == HEAD` already → skip rebase entirely.**
    ```bash
@@ -171,13 +173,12 @@ Cheapest first — stop at the first that applies. **Never `git stash`.**
    git push --no-verify origin main
    ```
 
-4. **Foreign ledger churn blocking rebase → discard machine-local generated files you did not author.**
-   ```bash
-   # Safe examples: .beads/issues.jsonl, skills/*/workflows/last-run.json
-   git checkout -- .beads/issues.jsonl   # only if YOU did not edit it this session
-   git -c rebase.empty=drop pull --rebase origin main
-   git push --no-verify origin main
-   ```
+4. **Foreign ledger churn blocking rebase → a pathspec-scoped stash-push over that one
+   machine-local generated file, never the whole tree.** Only for a file you did NOT edit
+   this session (e.g. `.beads/issues.jsonl`, `skills/*/workflows/last-run.json`): in words —
+   `stash push --` that ONE path only (never a bare, unscoped `git stash`), rebase, pop,
+   verify by arithmetic, then push. The same scoped-stash-push recipe for
+   `.beads/issues.jsonl` is documented at `skills/jef-flywheel/lessons/10_dcg.md`.
 
 5. **Worst case — foreign WIP truly can't be reset → object-DB rebase via scratch index
    (never touch the working tree):**
@@ -227,8 +228,12 @@ this path).
   foreign WIP); real verification is the per-commit gate + post-push CI.
 - Never force-push `main`.
 - `--force-with-lease` on a NON-main working branch (e.g. a pre-PR wave-branch push) is the sanctioned exception — branch-scoped only, never `main`.
-- Never stash. Never `git add -A`.
+- Never an unscoped stash (a bare `git stash` with no pathspec). Never `git add -A`.
 - `cross-repo` beads: commit in the repo that tracks the files (see § Cross-repo).
 - One scheduled writer per generated artifact (`.beads/issues.jsonl`, tidy
   proposals). Mapping lives on the job objects in `infrastructure/jobs/daily.json`
-  / `weekly.json` (`_authorized_commits` / `_do_not_commit`).
+  / `weekly.json` (`_authorized_commits` / `_do_not_commit`). The ruling tap
+  (`ac-human/references/action-loop.md`), tidy and triage stay outside swarm-commit.sh's lane
+  on purpose — each is a single, already-scoped writer, and the lane's concurrent-writer
+  refusal set is kept whole for the concurrent writers it was built for, not diluted onto
+  solitary ones.

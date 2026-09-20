@@ -1,0 +1,77 @@
+{
+  "reviewer": "architecture",
+  "round": 1,
+  "payload_read": "git diff 2e14a91..dfab85f",
+  "findings": [
+    {
+      "title": "Create guard still admits `refined` at creation whenever an allowed readiness label rides alongside it",
+      "severity": "High",
+      "file": "hooks/bead-capture-guard.py",
+      "line": 353,
+      "category": "missing-boundary-error-handling",
+      "evidence": "2c6109e only shrinks READINESS to (unrefined, human-gate); has_readiness() is still `any(r in all_labels(cmd) for r in READINESS)`, a presence test for an allowed label, not an absence test for `refined`. Probed live: `br create \"x\" -t task -l \"origin:x,refined,unrefined\" -d \"- AC: x. Probe: `true` - tier: none\"` -> rc=0 (ALLOW); `-l origin:x -l unrefined -l refined` -> rc=0. Only the bare `origin:x,refined` case (the one test row changed) is blocked. Epics (READINESS_EXEMPT_TYPES) and type-less creates (typ None) skip the readiness branch entirely, so `-t epic -l origin:x,refined` also passes. The comment at :73-76 claims this closed 'the one door that sole-writer invariant left open' — the door is still open to any create that also carries unrefined/human-gate.",
+      "fix": "Add an explicit refusal before the readiness check, independent of type: `if 'refined' in all_labels(cmd): refuse(REFINED_AT_CREATE)` (epics included, since stamp-refined.sh is the sole writer for them too). Add test rows for `refined,unrefined`, repeated `-l ... -l refined`, and `-t epic -l ...,refined`.",
+      "auto_fixable": true
+    },
+    {
+      "title": "WORKER_RE is anchored to the whole comment, so every multi-line canon receipt (and any non-stamp `WORKER:` note) goes RED",
+      "severity": "High",
+      "file": "lint/checks/35-board-integrity.py",
+      "line": 175,
+      "category": "missing-boundary-error-handling",
+      "evidence": "`WORKER_RE = ^WORKER: model=\\S+ actor=\\S+ tree=\\S+$` is matched against `text.strip()` of the whole comment with no re.M, so `$` means end-of-comment. Current ledger: 26 WORKER comments are canon on line 1 but carry narrative after (e.g. ac-1p7j.18 'WORKER: model=glm-5.3-flash actor=... tree=775f88f\\n\\nTakeover from MistyCreek...', ac-6asz 2026-09-16) and some are non-stamp notes using the prefix ('WORKER: diff-closure REFUSED [unowned-callers] analysed...' on ac-1p7j.23). Propagation: a worker writes such a comment -> the coordinator's single ledger commit stages that closed id -> pre-commit lint.sh --changed runs check 35 -> RED -> swarm-commit rejects -> coordinator.sh refuses LEDGER-WRITE, blocking the whole run's close-out on a well-formed receipt. The test only covers single-line good/bad strings, so it cannot see this.",
+      "fix": "Validate only the first line of a `WORKER:` comment: `first = stripped.splitlines()[0]; if first.startswith('WORKER: model=') and not WORKER_RE.match(first)` (or match with re.M on line 1). Decide in beads-standards whether `WORKER:` is reserved for the stamp; if so, say so there and keep the rule, if not, key the check on `WORKER: model=`. Add a multi-line canon-receipt GREEN case to 35-board-integrity.test.sh.",
+      "auto_fixable": true
+    },
+    {
+      "title": "Staged-lane WORKER rule re-judges every historical comment on a touched id, contradicting the check's own forward-only doctrine (docstring left stale)",
+      "severity": "High",
+      "file": "lint/checks/35-board-integrity.py",
+      "line": 173,
+      "category": "pattern-drift",
+      "evidence": "The loop iterates `rec.get('comments')` in full for any rid in changed_ids — not the comments this commit added. The ledger holds 96 WORKER comments in the retired grammar (session=/skill@version=/duration=, e.g. ac-07v, ac-08k, ac-1kk), all written when that grammar WAS canon. Any later touch of such a bead (ac-tidy readiness-label repair, a reopen, a verified: stamp, a DECISION comment) makes it a changed id and the commit goes RED on a receipt nobody in this commit wrote. The docstring at :39 still says 'Closed beads are NEVER scanned — forward-only, no backfill, per the origin-provenance ruling', which rules 4 and 5 now both violate (the test deliberately uses status=closed rows). The whole-board-lane skip of rule 5 was chosen precisely because of this legacy population, yet the staged lane re-exposes it one bead at a time.",
+      "fix": "Scope rule 5 to comments NEW in this commit: diff the comment ids of the staged row against the HEAD row (the check already loads both blobs for changed_ids) and validate only the added ones. Update the docstring's 'Closed beads are NEVER scanned' paragraph to name which rules are status-agnostic (4) and which are delta-scoped (5).",
+      "auto_fixable": true
+    },
+    {
+      "title": "Orphan-sweep roster has no producer: workers mint `ac-<ts>-$$` and never hand their ACTOR back",
+      "severity": "High",
+      "file": "skills/ac-implement/references/worker.md",
+      "line": 19,
+      "category": "unproven-seam",
+      "evidence": "dfab85f makes coordinator.sh select ORPHANS by exact membership in `--actor` names that SKILL.md:51 says the conductor 'captures from the spawn's macro_start_session response (agent.name)'. But worker.md:19 mints ACTOR=\"ac-$(date ...)-$$\" and only swaps to the Agent Mail name when one is registered (usually absent per the run contract); §9 HAND BACK (:269-272) returns closed/blocked ids and tiers but not ACTOR. This run's own ledger proves the path: claims/receipts are `actor=ac-20260918-223217-3995540` / CLAIM: ac-20260918-223412-4014937 — no macro_start_session name exists for the conductor to capture. Propagation: the conductor either passes no --actor (NOT-GATED, close-out blocked) or passes guessed/Agent-Mail names that match no assignee — and the sweep passes vacuously, the exact 'silent' failure _docs/seams/bead-record/map.json:807 recorded against the old prefix. The bead's premise ('the conductor already captures every worker's minted name') is unverified, and the test only feeds a hand-picked matching name.",
+      "fix": "Close the producer side: worker.md §9 must return `ACTOR: <value>` as a required hand-back line (and SKILL.md Phase 1/2 must collect it from the hand-back, not from a tool response the conductor never sees); or have coordinator.sh derive the roster from this run's `CLAIM:` comments. Add a coordinator.test case where the assignee is an `ac-<ts>-<pid>` identity to prove the roster path end-to-end.",
+      "auto_fixable": false
+    },
+    {
+      "title": "`blocked` status is canonised as 'needs a human' but no human surface reads it — parked beads sink silently",
+      "severity": "Medium",
+      "file": "skills/beads-standards/SKILL.md",
+      "line": 163,
+      "category": "missing-boundary-error-handling",
+      "evidence": "The new canon row says `blocked` = 'parked after repeated failure, needs a human'. The writer (worker.md:291 `br update <id> --status blocked`) adds no human-gate label, and the human docket in board-scan.md:128 builds its population as `hg = [i for i in issues if 'human-gate' in labels]` — status alone never reaches it. board-scan.md:65's 'blocked' category is defined as `status=open` not in br ready, so status=blocked rows fall in no category at all. Live evidence: ac-4y7l.2 and ac-4y7l.7 (this diff's own beads, code committed in 2c6109e/dfab85f) sit at status=blocked with labels [origin:ac-beadify, plan-seams-bead-lifecycle, refine-full, refined] — no human-gate, invisible to ac-human.",
+      "fix": "Give the state one reader: either make worker.md's park step also add `human-gate` (and a Gate-reason:) so the existing docket owns it, or make board-scan.md's docket population `human-gate OR status==blocked` and add a `status=blocked` row to the categorization table. Pick one and state it in the canon row.",
+      "auto_fixable": false
+    },
+    {
+      "title": "Second copies of the status canon left drifting after `blocked` was admitted",
+      "severity": "Medium",
+      "file": "skills/beads-standards/reference/bead-conventions.md",
+      "line": 54,
+      "category": "pattern-drift",
+      "evidence": "3d3c72e rewrites SKILL.md's qa-blocker bullet to 'To mark a single bead blocked, use the `blocked` status', but bead-conventions.md:54 (same skill, the pipeline-contract reference) still says 'For a single bead, use a `blocks` dependency — never this label.' board-scan.md:66 still categorises closed as `status=closed/done` — `done` is now a check-35 RED off-canon status. The added board-scan.md:118 comment says on_docket 'reads the canon status set' while it hardcodes its own tuple ('open','blocked','in_progress') — a comment asserting a coupling that nothing enforces.",
+      "fix": "Update bead-conventions.md:54 to point at the `blocked` status (or to SKILL.md § Status & priority canon rather than restating); drop `/done` from board-scan.md:66; replace the on_docket comment with a pointer only, or delete it.",
+      "auto_fixable": true
+    },
+    {
+      "title": "`tree=` field is filled with the consumer repo's commit SHA yet canonised as the tree SHA and the skills-eval axis",
+      "severity": "Medium",
+      "file": "skills/beads-standards/SKILL.md",
+      "line": 269,
+      "category": "naming-inconsistency",
+      "evidence": "Canon now reads '`tree` (the tree SHA at close) is the skills-eval before/after axis — it lets a doctrine change be measured against outcomes', replacing `skill@version` (the agent-compounds SHA at skill-load). The only emitter, worker.md:243, writes `tree=$(git rev-parse --short HEAD)` — a COMMIT sha, not a tree sha, and of the repo the worker is in. In any app repo (body-compass-app, unsit-app, ...) that SHA says nothing about which agent-compounds doctrine the worker ran, so the before/after join dream relies on (lint-checks.md:124 now defers to this grammar) silently loses its key; check 35 validates shape only, so nothing goes red.",
+      "fix": "Either rename the field to what it holds (`commit=`) and drop the skills-eval claim, or keep a doctrine axis explicitly (e.g. `skills=$(git -C <agent-compounds> rev-parse --short HEAD)`) and update WORKER_RE, worker.md:243, and the canon together.",
+      "auto_fixable": false
+    }
+  ]
+}

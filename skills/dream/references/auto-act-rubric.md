@@ -96,12 +96,10 @@ writes unreviewed content. The asymmetry is intentional.
 3. **Approved backlog → apply now:** any proposal already at `status: approved` (the operator
    tapped Approve on a prior card) is applied the same way — this closes the
    approve-but-never-applied gap.
-4. **Gated + still pending + unfiled → decision bead:** `file-beads.py` files each as a
-   `-t decision` + `human-gate,dream-proposal` bead in its target repo (full memo inline for
-   private repos; pointer-only for the public agent-compounds db) and records the bead id in
-   the proposal's `bead:` frontmatter (the dedup marker). It re-checks the predicate, so a
-   manual run never files an auto-tier item. Decisions are worked via `ac-human` (the
-   decision docket), not a Slack tap.
+4. **Gated + still pending → stays queued, not filed:** bead filing is DISABLED
+   (dream-daily.md step 7, no-self-beads doctrine) — the proposal remains a FILE in the
+   queue with an empty `bead:` slot, read directly by the human tuning session, never a
+   `human-gate,dream-proposal` bead in a target repo.
 5. **Digest nudge:** one summary card — *N auto-applied (listed) · M filed as beads · K open
    in the docket* — pointing at `br ready --label dream-proposal`. Slack notifies; the bead
    docket decides.

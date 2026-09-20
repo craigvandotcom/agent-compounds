@@ -197,6 +197,19 @@ case "$cmd" in
       printf '{"error":{"code":"NOT_FOUND","message":"no such bead: %s"}}\n' "$id"; exit 0
     fi
     echo "close $*" >>"$LOG"
+    # Real br 0.5.12 writes --transition-comment as a comment on the bead, atomically
+    # with the close (close-gate.sh relies on this for its landing record). Mirror that
+    # here so the suite proves against the real contract, not a stub that drops it.
+    tc=""; prev=""
+    for a in "$@"; do
+      case "$prev" in
+        transition-comment) tc="$a"; prev="" ;;
+        *) case "$a" in
+             --transition-comment) prev=transition-comment ;;
+           esac ;;
+      esac
+    done
+    [ -n "$tc" ] && printf '%s\n' "$tc" >>"${BR_COMMENTS_LOG:?}"
     jq '.status="closed"' "$STATE/$id.json" >"$STATE/$id.json.tmp" \
       && mv "$STATE/$id.json.tmp" "$STATE/$id.json"
     exit 0 ;;

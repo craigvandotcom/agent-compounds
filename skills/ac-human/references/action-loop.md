@@ -13,11 +13,19 @@ auto-advance, Done as escape); this file carries the per-type playbook.
       AskUserQuestion(question: "{decision title}", options: [{option A (Recommended)}, {B}, {C}, {Defer}, {Done}])
       ```
     - **Memo missing/thin** (a bare "HUMAN: decide X" with no options) → it is **not tap-ready; do NOT fake buttons.** Surface it as `⚠ no memo` and offer: `Frame it now` (research + write the memo onto the bead, then present options) / `Decide raw` / `Skip` / `Done`. The dashboard **self-heals** bare beads into tap-ready ones.
-  On tap (either path) → record + execute + close + **confirm the ripple**, then auto-advance:
+  On tap (either path) → record + execute + close + **confirm the ripple**, then auto-advance.
+  `<human>` is copied VERBATIM from the closing board's own `.beads/config.yaml` `humans:`
+  key (`beads-standards/reference/bead-conventions.md` § Decision beads is the sole
+  restatement) — never a role name, never typed from memory:
   ```bash
-  br comments add <id> "RULING (<human>): <choice> — <why>"
+  br comments add <id> "DECISION (<human>): <choice> — <why>"
   # ...carry out consequences...
-  br close <id> --reason "<what was decided/done>"
+  # Resolve close-gate.sh consumer-first: `.claude/skills/...` is where deploy.sh symlinks
+  # it into every app; `skills/...` (this registry and one other app that carries it
+  # natively) is the fallback.
+  CLOSE_GATE=".claude/skills/ac-implement/scripts/close-gate.sh"
+  [ -f "$CLOSE_GATE" ] || CLOSE_GATE="skills/ac-implement/scripts/close-gate.sh"
+  "$CLOSE_GATE" <id> --reason "<what was decided/done>"
   br sync --flush-only && git add .beads/issues.jsonl \
     && git commit -m "chore(beads): human ruling on <id> [no-bead]" && git push
   ```

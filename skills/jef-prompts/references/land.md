@@ -47,19 +47,14 @@ git push
 git status  # Must show "up to date with origin"
 ```
 
-### 5. Sync External State (if using beads)
+### 5. External State & Ledger
 
-```bash
-bd sync  # Export DB to JSONL
-git add .beads/
-git commit -m "chore: sync beads state"
-git push
-```
+Syncing beads state and committing `.beads/` is `ac-land`'s territory, not a raw commit here
+— see `ac-land`, the skill that already owns landing a session's work.
 
 ### 6. Clean State
 
 ```bash
-git stash clear  # If stashes exist
 git branch --merged | xargs git branch -d  # Prune merged branches
 ```
 

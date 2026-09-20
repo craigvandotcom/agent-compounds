@@ -4,7 +4,10 @@
 # Deliberately UNWIRED in hooks/hooks.json: it is the PROOF for bead-capture-guard.py,
 # not a hook itself. Declared so orphan detection (lint Check 21) does not read a live
 # proof harness as a dead executable.
-import json, os, subprocess, sys
+import json
+import os
+import subprocess
+import sys
 G = os.path.join(os.path.dirname(os.path.abspath(__file__)), "bead-capture-guard.py")
 BLOCK, ALLOW = 2, 0
 cases = [
@@ -14,18 +17,18 @@ cases = [
  (ALLOW, 'br create --help',                                        "help"),
  (ALLOW, 'br list --json',                                          "other subcommand"),
  (ALLOW, 'bv --robot-next',                                         "bv untouched"),
- (ALLOW, 'br q "x" -l origin:manual',                               "quick capture with origin"),
+ (ALLOW, 'br q "x" -t epic -l origin:manual',                       "quick capture with origin"),
  (BLOCK, 'br q "x" -l unrefined',                                   "quick capture without"),
- (ALLOW, 'br create "t" -l "origin:x" -d "then run br create foo"', "br create inside description"),
+ (ALLOW, 'br create "t" -t epic -l "origin:x" -d "then run br create foo"', "br create inside description"),
  (ALLOW, 'echo "br create foo"',                                    "br create inside echo string"),
  (ALLOW, 'git commit -m "br create thing"',                         "br create in commit msg"),
  (BLOCK, 'cd /tmp && br create "y" -t task',                        "chained after cd"),
   (ALLOW, 'cd /tmp && br create "y" -t task -l origin:ac-land,unrefined,impact:data -d "- AC: x. Probe: `true` - tier: none"', "chained, labelled"),
- (ALLOW, 'br create "x" --labels=origin:ac-backlog',                "--labels= form"),
+ (ALLOW, 'br create "x" -t epic --labels=origin:ac-backlog',        "--labels= form"),
  (BLOCK, 'br create "x" --labels=hygiene',                          "--labels= without origin"),
  (BLOCK, 'FOO=1 br create "x" -t task',                             "env-prefixed"),
  (BLOCK, 'br create "x" -l "notorigin:sneaky"',                     "origin as substring must not pass"),
-  (ALLOW, 'br create "x" -l "unrefined,origin:ac-qa,impact:data"',              "origin second in list"),
+  (ALLOW, 'br create "x" -t investigation -l "unrefined,origin:ac-qa,impact:data"', "origin second in list"),
  (ALLOW, 'br create "x" -t task -l "origin:unknown,unrefined" -d "- AC: x. Probe: `true` - tier: none"', "unknown is legal"),
  (ALLOW, "cat <<'EOF'\nbr create nope\nEOF",                        "heredoc body"),
  # --- origin gate: multi-line shapes (ac-y25j). A heredoc body is DATA, never a
@@ -35,10 +38,10 @@ cases = [
          "newline-separated create, no origin"),
  (BLOCK, "cat > /tmp/x.md <<'EOF'\nit's a body\nEOF\nbr create \"t\" -t task -p 2 -l human-gate",
          "apostrophe in heredoc body, then create, no origin"),
- (ALLOW, 'br create "x" -l "origin:a" ; br create "y" -l origin:b', "two labelled creates"),
+ (ALLOW, 'br create "x" -t epic -l "origin:a" ; br create "y" -t epic -l origin:b', "two labelled creates"),
  (BLOCK, 'br create "x" -l origin:a ; br create "y" -t task',       "second create unlabelled"),
  (ALLOW, 'echo "unbalanced \'quote',                                "unparseable -> fail open"),
- (ALLOW, '/Users/x/.local/bin/br create "z" -l origin:ac-review,impact:data',   "absolute path br"),
+ (ALLOW, '/Users/x/.local/bin/br create "z" -t epic -l origin:ac-review,impact:data', "absolute path br"),
  (BLOCK, '/Users/x/.local/bin/br create "z" -t bug',                "absolute path br, no origin"),
 # qa-shared.md ships an origin placeholder the caller must substitute. An UNsubstituted
   # placeholder must still block — otherwise a copy-paste files beads with a literal
@@ -52,14 +55,24 @@ cases = [
  (BLOCK, 'br create "x" -t bug -l "origin:ac-review,review-finding"', "bug, no readiness"),
  (ALLOW, 'br create "x" -t task -l "origin:ac-review,unrefined,impact:data" -d "- AC: x. Probe: `true` - tier: none"',  "task + unrefined"),
  (ALLOW, 'br create "x" -t decision -l "origin:dream,human-gate"',    "decision + human-gate"),
- (ALLOW, 'br create "x" -t task -l "origin:x,refined" -d "- AC: x. Probe: `true` - tier: none"',  "refined accepted, not second-guessed"),
+ (BLOCK, 'br create "x" -t task -l "origin:x,refined" -d "- AC: x. Probe: `true` - tier: none"',  "refined rejected at create, sole writer is stamp-refined.sh"),
+ # ac-4y7l.13: `refined` must be refused whatever readiness label rides beside it and
+ # whatever the type — a readiness label present does not make it exempt.
+ (BLOCK, 'br create "x" -t task -l "origin:x,unrefined,refined" -d "- AC: x. Probe: `true` - tier: none"',
+         "refined beside a readiness label is still blocked"),
+ (BLOCK, 'br create "x" -t task -l "origin:x,unrefined" -l "refined" -d "- AC: x. Probe: `true` - tier: none"',
+         "refined in a separate -l flag is still blocked"),
+ (BLOCK, 'br create "x" -l "origin:x,unrefined,refined" -d "- AC: x. Probe: `true` - tier: none"',
+         "refined with no -t (defaults to task) is still blocked"),
+ (BLOCK, 'br create "Epic: x" -t epic -l "origin:x,refined"',
+         "refined on an epic is still blocked — no type exemption"),
  # Epics are containers, never picked up — exempt, and must stay exempt or every
  # epic-creation template in the registry breaks.
  (ALLOW, 'br create "Epic: x" -t epic -l "origin:ac-review,impact:data"',        "epic exempt from readiness"),
  (ALLOW, 'br create "Epic: x" --type=epic -l "origin:ac-hygiene,impact:data"',   "epic via --type= form"),
  # Unknowable type must SKIP readiness, not block: `<type>` could stand for epic.
  (ALLOW, 'br create "x" -t <type> -l "origin:ac-backlog"',      "placeholder type skips readiness"),
- (ALLOW, 'br create "x" -l "origin:ac-backlog"',                "absent type skips readiness"),
+ (BLOCK, 'br create "x" -l "origin:ac-backlog"',                "no -t defaults to task, still needs readiness"),
  # -l is repeatable; readiness may live in the SECOND flag.
   (ALLOW, 'br create "x" -t task -l "origin:x" -l "unrefined" -d "- AC: x. Probe: `true` - tier: none"', "readiness in a repeated -l"),
   (BLOCK, 'br create "x" -t task -l "origin:x" -l "backend"',         "repeated -l, still no readiness"),
@@ -125,7 +138,7 @@ for case in cases:
     if env_extra:
         env.update(env_extra)
     p = subprocess.run([sys.executable, G], input=json.dumps(payload),
-                       capture_output=True, text=True, env=env)
+                       capture_output=True, text=True, env=env, timeout=30, check=False)
     got = p.returncode
     ok = got == want
     if not ok:

@@ -7,8 +7,8 @@ the spine's loop boundary — this lens applies AFTER the boundary filter.
 ## Your lens on the board
 
 - **🔴 Decision Docket (PRIMARY)** = board beads matching `human-gate` OR `pipeline-proposal` OR `dream-proposal`, open. The first-class channel for human-required work — pre-staged with a memo (context, options + trade-offs, recommendation); agents enrich but **never** close them, so they survive every autonomous sweep until the human decides. The collector is the union, not a pairing — proposal beads do not need `human-gate` to appear. (`qa-blocker` is a *merge* gate, agent-resolvable — NOT human-gate, so it never appears here.)
-  - **Applying a pipeline proposal:** invoke the owning skill (`ac-align`) in its INTERACTIVE flow. The skill's own gate re-confirms the moves against the *current* board (this late-binding re-prompt is intended, not a bug — do NOT add a bypass), then set the proposal file `status: applied` + `br close` the bead. **Verify the memo's HARM, not only its facts** — ask "what consumes this, and what breaks if I do nothing?" before working the list. A memo is an argument, not a finding.
-  - **Discarding one:** set the proposal file `status: rejected` + `br close` the bead; do NOT invoke the owning skill.
+  - **Applying a pipeline proposal:** invoke the owning skill (`ac-align`) in its INTERACTIVE flow. The skill's own gate re-confirms the moves against the *current* board (this late-binding re-prompt is intended, not a bug — do NOT add a bypass), then set the proposal file `status: applied`, record the ruling and close through `close-gate.sh` per `references/action-loop.md`'s idiom. **Verify the memo's HARM, not only its facts** — ask "what consumes this, and what breaks if I do nothing?" before working the list. A memo is an argument, not a finding.
+  - **Discarding one:** set the proposal file `status: rejected`, record the ruling and close through `close-gate.sh` per `references/action-loop.md`'s idiom; do NOT invoke the owning skill.
   - **Verify before presenting (anti-rot):** human-gate beads outlive their work and memos freeze step-lists later waves can invalidate. Before surfacing an item, spend ~1 read confirming its live state. Present the *verified* remaining scope — often "already done → one tap to book it" — and fold corrections onto the bead as an enrichment comment.
     - **MANDATORY FIRST READ — the bead's own `events` table, before any other verification.** `sqlite3 .beads/beads.db "SELECT created_at,event_type,comment FROM events WHERE issue_id='<id>' ORDER BY created_at;"`. **A comment is a CLAIM; `events` is the RECORD.** `label_removed human-gate` followed by a DECISION/RULING/RELEASE comment means the bead was RELEASED — do not re-gate it, and NEVER re-gate one released more than once. Evidence: `references/docket-anti-rot.md`.
     - **FRESHNESS BOUND on `(tap-ready)` — DATE precision, three branches.** The nightly stamps a surviving gate with a `verified: <YYYY-MM-DD>` comment (`ac-tidy/SKILL.md`); read the newest stamp and render exactly one of three ways:
@@ -25,8 +25,38 @@ At org level or asked "across everything", sweep ALL `.beads/` repos, not just t
 ```bash
 for repo in "$REPOS_ROOT" $(while IFS= read -r a; do echo "$REPOS_ROOT"/$a; done < "$APPS_LIST"); do
   [ -d "$repo/.beads" ] || continue
-  (cd "$repo" && br list --json --limit 0 2>/dev/null) | \
-    jq --arg repo "$(basename $repo)" '[.issues[] | select((.labels // []) | (index("human-gate") or index("pipeline-proposal") or index("dream-proposal"))) | select(.status != "closed") | . + {repo: $repo}]'
+  # br_call (skills/_tools/br-call.sh) is the ONE routed `br … --json` read — resolve it
+  # PER REPO, consumer path first: `.claude/skills/_tools/br-call.sh` is where deploy.sh
+  # symlinks it into every app; `skills/_tools/br-call.sh` (this registry and one other app
+  # that carries it natively) is the fallback. Neither path existing is a DEGRADED repo,
+  # never a silent skip.
+  BR_CALL="$repo/.claude/skills/_tools/br-call.sh"
+  [ -f "$BR_CALL" ] || BR_CALL="$repo/skills/_tools/br-call.sh"
+  if [ ! -f "$BR_CALL" ]; then
+    echo "DEGRADED $repo — br-call.sh not found at .claude/skills/_tools/br-call.sh or skills/_tools/br-call.sh; this repo is not represented in the sweep below"
+    continue
+  fi
+  # Sourced per repo so a refused read surfaces on stderr instead of being swallowed by
+  # `2>/dev/null` (that swallow was the exact failure this routes around).
+  . "$BR_CALL"
+  # A repo whose read refuses (br_call, or D3's row-shape idiom) renders DEGRADED and is
+  # dropped from the sweep below it — never silently absent with no trace.
+  RAW=$(cd "$repo" && br_call list --json --limit 0 \
+    | jq -e 'if type=="object" then .issues else . end | if all(.[]; .id and .status and .created_at) then . else error("row shape") end' 2>/dev/null)
+  if [ -z "$RAW" ]; then
+    echo "DEGRADED $repo — read refused; this repo is not represented in the sweep below"
+  else
+    printf '%s' "$RAW" | jq --arg repo "$(basename "$repo")" \
+      '[.[] | select((.labels // []) | (index("human-gate") or index("pipeline-proposal") or index("dream-proposal"))) | select(.status != "closed") | . + {repo: $repo}]'
+  fi
+  # unpushed ledger: a session that died (or lost a push race) before this repo's
+  # .beads/issues.jsonl reached origin. No upstream is NOT a silent zero — a different fact.
+  if (cd "$repo" && git rev-parse --abbrev-ref --symbolic-full-name '@{u}') >/dev/null 2>&1; then
+    N=$(cd "$repo" && git log @{u}..HEAD -- .beads/issues.jsonl | grep -c '^commit ')
+    echo "unpushed ledger: $N ($(basename "$repo"))"
+  else
+    echo "unpushed ledger: NOT-CHECKED (no upstream) ($(basename "$repo"))"
+  fi
 done
 ```
 

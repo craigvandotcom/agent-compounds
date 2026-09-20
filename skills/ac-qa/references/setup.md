@@ -80,27 +80,21 @@ WDA breaks on new Xcode/iOS versions for weeks at a time.
 > (see → act → assert over the a11y tree, journeys, checklist) is
 > tool-agnostic — re-evaluate the tool layer when Xcode 27 ships.
 
-## Appendix: Linux → Mac remote driving (idb)
+## Appendix: Remote macOS host over SSH
 
-The only mature path for driving a Mac-hosted simulator from a Linux session:
+When the session runs off-Mac and the Platform Gate resolved a remote host:
 
-```bash
-# Mac:   brew tap facebook/fb && brew install idb-companion
-#        idb_companion --udid <SIM-UDID>        # gRPC on :10882
-# Linux: pip install fb-idb
-#        idb connect <mac-ip> 10882
-idb ui describe-all        # accessibility JSON
-idb ui tap <x> <y>
-idb ui text "hello"
-idb ui swipe <x1> <y1> <x2> <y2>
-```
-
-Works, but: Meta maintains idb at a slow burn (expect lag after Xcode
-releases), the companion must be (re)started on the Mac out-of-band, and
-screenshots/video still need `simctl` on the Mac side. idb shares AXe's
-private-AX-API plane, so expect the same webview blindness on tree dumps.
-**Default remains: run simulator QA from a Mac session.** Builds can't run
-from Linux either way — the Mac is required regardless.
+- **Run every command on the host**, in its interactive login shell so PATH matches a
+  terminal: `ssh <host> '<shell> -lic "cd <checkout> && <cmd>"'`. The deployment's machines
+  reference names the shell and the checkout.
+- **Sync code first.** Push the tip; on the host, `git pull --ff-only`, install deps, then the
+  app's own build command. The build boots and installs the sim headless.
+- **Drive as usual.** `agent-device`, `simctl` and screenshots run on the host unchanged.
+- **Redirect only to literal paths** on the host (`/tmp/qa-device-<run>/…`); guards refuse
+  truncating writes through a variable.
+- **Bring artifacts back:** `rsync -a <host>:/tmp/qa-device-<run>/ $ARTIFACTS_DIR/`.
+- **Signing, archive and upload need the host's unlocked keychain**, which SSH does not give.
+  Ship from the Mac itself.
 
 ## Appendix: Layer 3 — DOM-in-shell (Appium webview context)
 

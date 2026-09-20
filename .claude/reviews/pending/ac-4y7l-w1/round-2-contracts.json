@@ -1,0 +1,77 @@
+{
+  "reviewer": "contracts",
+  "round": 2,
+  "payload_read": "git diff 2dc960b..fd2f7ca",
+  "findings": [
+    {
+      "title": "RECORD-FAILED exits 1 after the close has landed, but exit 1 is documented as 'the bead stays open', and refly.sh reopens on it",
+      "severity": "High",
+      "file": "skills/ac-implement/scripts/close-gate.sh",
+      "line": 603,
+      "category": "lying-status-code",
+      "evidence": "The header (lines 70-72) says 'Exit 1 CLOSE-REFUSED — a named leg failed; the bead stays open'. The new RECORD-FAILED arms (lines 200 and 603) exit 1 after POST_STATUS has read back 'closed'. The code's own comment calls this 'a distinct, post-close failure mode', yet it reuses the refusal code. Callers act on the documented meaning. worker.md:238 says 'exit 1 — Fix what the leg names and re-run'. On a non-decision bead a re-run refuses OWNERSHIP because the status is 'closed', not in_progress, so the record can never be written. worker.md:145 (§4b) says 'comment, unclaim'. refly.sh triage_disposition treats any non-zero close_rc as refused and runs `br update \"$id\" --status open --assignee \"\"`, which tries to reopen a bead that just closed, and then prints 'kept stamped'. Neither RECORD-FAILED arm is tested: close-gate.test.sh has no case where `comments add` fails, and the ordinary-path 'GATE: receipt' record is never asserted (only GATE: decided, FRESH-VERIFY and TRIAGE-CLOSE are). The code's intent, a distinct post-close failure, is right. The exit code is wrong.",
+      "fix": "Give RECORD-FAILED its own exit code (for example 3) in both arms. Document it in the header's Exit block and in worker.md §4b and §7 as 'closed, record missing: write the landing comment by hand, never re-run the gate, never unclaim'. Make refly.sh treat that code as closed and not reopen. Add close-gate.test.sh cases where the stub br fails `comments add` on the ordinary path and on the ruling path: expect the new code, status closed and the RECORD-FAILED token. Add one case that asserts 'GATE: receipt' lands on an ordinary receipt-backed close.",
+      "auto_fixable": true
+    },
+    {
+      "title": "Rule 6's 'the ledger commit itself is the gate' is not wired: the installed pre-commit is gitleaks-only, and a460628 landed four unrecorded closes that check 35 flags RED",
+      "severity": "High",
+      "file": "lint/checks/35-board-integrity.py",
+      "line": 19,
+      "category": "untested-promise",
+      "evidence": "The docstring (lines 16-20) says the pre-commit chain runs `lint.sh --changed`, so the ledger commit itself is the gate, and rule 6 is described as the board-side sensor for every close path. In reality, .git/hooks/pre-commit in this checkout is a 5-line gitleaks script (installed 2026-09-10). It never dispatches .git/hooks/hooks.d/pre-commit/60-ac-lint, and core.hooksPath is unset. I reproduced this in a scratch clone: HEAD at fd2f7ca with a460628's ledger staged makes check 35 exit 1 with four RED rows (ac-4y7l.11, .12, .13 and .4, closed with no GATE:/FRESH-VERIFY:/TRIAGE-CLOSE: comment). Yet a460628, this very run's coordinator ledger commit, is on main. The refusal text is also a dead end. It says 'close through close-gate.sh', but for an already-closed non-decision bead close-gate refuses OWNERSHIP ('not in_progress'), and no hand-recovery recipe is named anywhere. The rule is right. Its trigger is absent, and its remedy cannot be carried out.",
+      "fix": "Restore a pre-commit dispatcher that runs hooks.d/pre-commit/* (harness-sync.sh should own and verify it, and chain gitleaks as an entry rather than a replacement). Add a sensor, such as a lint check or a harness-sync --check leg, that goes RED when .git/hooks/pre-commit does not dispatch 60-ac-lint. Change rule 6's message to name a recovery that works on a closed bead, for example `br comments add <id> \"GATE: receipt — <id> — backfilled: <evidence>\"`. Repair the four beads.",
+      "auto_fixable": false
+    },
+    {
+      "title": "The ruling-tap idiom sends every human-gate bead through close-gate.sh, but only issue_type=decision takes the ruling path, so task/bug/feature gate beads cannot be closed by the documented tap",
+      "severity": "High",
+      "file": "skills/ac-human/references/action-loop.md",
+      "line": 20,
+      "category": "contract-drift",
+      "evidence": "action-loop.md:20 (and ac-human/SKILL.md:58, session-scan.md:10-11, bead-conventions.md:233, human-gate-template.md:229) now says to close through `close-gate.sh <id> --reason \"<what was decided/done>\"`. close-gate.sh:177 routes only `decision` to the ruling path. Every other type falls through to LEG 1-8, which needs a flight receipt, green probes and in_progress ownership, and ends in CLOSE-REFUSED or NOT-CHECKED. The same file's Migration duty (action-loop.md:41) requires `-t task` for manual-action human-gate beads. The live docket agrees: art-still-app has 10 task-typed gate/proposal beads, infrastructure has 5 task, 3 bug and 1 feature, and body-compass-app has 3 task and 1 feature. ac-tidy/SKILL.md:52 already concedes that 'a task-typed proposal ... LEG-2 NOT-CHECKs'. The path is also wrong outside two repos: `skills/ac-implement/scripts/close-gate.sh` is relative, and unsit-app and art-still-app have no `skills/` dir (only `.claude/skills/`). So the tap either refuses or hits command-not-found for much of the docket. Intent (one close writer that leaves a landing record) is right. The router is too narrow for the population the docs send it.",
+      "fix": "Route on the ruling rather than on issue_type: take the ruling path for any bead carrying `human-gate`, `pipeline-proposal` or `dream-proposal` with a DECISION comment, or for type decision. Resolve the gate path the way close-gate resolves its evidence core (`.claude/skills/...` fallback), or spell it via `$(git rev-parse --show-toplevel)/.claude/skills/ac-implement/scripts/close-gate.sh`. Add close-gate.test.sh cases: a `-t task` + human-gate bead with a DECISION comment closes with GATE: decided, and one without a DECISION comment gives CLOSE-REFUSED DECISION.",
+      "auto_fixable": true
+    },
+    {
+      "title": "The org-wide sweep sources br-call.sh from <toplevel>/skills/_tools, which does not exist at org level or in unsit/art-still, so every repo renders a false DEGRADED",
+      "severity": "High",
+      "file": "skills/ac-human/references/session-scan.md",
+      "line": 29,
+      "category": "contract-drift",
+      "evidence": "The new block runs `. \"$(git rev-parse --show-toplevel)/skills/_tools/br-call.sh\"` and then says 'A repo whose read refuses ... renders DEGRADED'. ac-human/SKILL.md:47 says this sweep runs 'At org level', meaning cwd ~/mission, whose toplevel has no skills/ dir. Reproduced from ~/mission: `.` fails ('No such file'), then `br_call: command not found`, RAW is empty, and the output is 'DEGRADED agent-compounds' for a board that reads fine. unsit-app and art-still-app also lack skills/_tools (only .claude/skills/_tools), so running from there fails the same way. The sensor built to mean 'this repo could not be read' now also fires on 'the helper was not found', which is the exact collapse of two facts the bead forbids. The 'unpushed ledger: N' line also names no repo, so in a multi-repo loop N cannot be attributed.",
+      "fix": "Resolve the helper from the skill's own install location (for example `${CLAUDE_SKILL_DIR:-$HOME/mission/software/agent-compounds/skills}/_tools/br-call.sh`, or try `skills/_tools` then `.claude/skills/_tools`) and abort with a single `NOT-CHECKED: br-call.sh not found` if `type br_call` fails, never DEGRADED per repo. Print `unpushed ledger ($(basename \"$repo\")): N`.",
+      "auto_fixable": true
+    },
+    {
+      "title": "Scan A's two fenced reads dropped --json but still promise an {issues:[...]} object and a flat array",
+      "severity": "Medium",
+      "file": "skills/ac-pipeline/references/board-scan.md",
+      "line": 35,
+      "category": "doc-mismatch",
+      "evidence": "The new lines 35-36 are `br_call list  --limit 0  # ... → object {issues:[...], total, has_more, limit}` and `br_call ready  # ... → a FLAT array`. br-call.sh passes args through unchanged. It adds no --json, and its own header says it is the '`br … --json` invocation shape'. Without --json, br 0.5.12 prints human text: `br list --limit 1` gives '○ ac-48vu [● P1] [bug] - ...'. The row-shape idiom fenced 10 lines later (`br_call <sub> --json | jq -e ...`) would reject that text, and 'every Scan A read pipes through it' is not what the Scan A block shows. The page also never says how to source br_call, so an agent following Scan A literally gets command-not-found. The idiom (with --json) is right. The Scan A block is stale.",
+      "fix": "Make Scan A `br_call list --limit 0 --json | <idiom>` and `br_call ready --json | <idiom>`, and add the one sourcing line (with the .claude/skills fallback) above it.",
+      "auto_fixable": true
+    },
+    {
+      "title": "The dream 'bead filing DISABLED' edit left the old contract standing in both files: step 4 references step 7 'filing', and the digest and status vocabulary still count filed beads",
+      "severity": "Medium",
+      "file": "skills/dream/workflows/dream-daily.md",
+      "line": 62,
+      "category": "doc-mismatch",
+      "evidence": "Commit fd2f7ca ('delete four contradictions — dream-daily, auto-act-rubric') rewrote rubric step 4 and one Success Criteria line. dream-daily.md:62-63 still says new gated proposals 'are filed as decision beads in Step 7 and worked via ac-human', while Step 7 (line 77) says 'Do NOT run file-beads.py'. Lines 72 and 95-97 (the digest fields 'Filed as beads=<N this run>' and '+ N beads filed for your decision docket') and line 108 (Success Criteria 'filed-as-beads') still report a count that is now always zero. In auto-act-rubric.md, step 5 still reads '*M filed as beads* ... pointing at `br ready --label dream-proposal`', and § Status vocabulary still says 'Gated: `pending` → a decision bead is filed (the `bead:` field becomes the filed marker)'. The new step 4 (stay queued as files) is right. The surrounding text now contradicts it.",
+      "fix": "Delete the 'filed as decision beads in Step 7' sentence (dream-daily:62-63). Drop the Filed-as-beads field and count from lines 72, 95-97 and 108 and rubric step 5 (point the nudge at the queued-file count instead). Rewrite the rubric's Status vocabulary Gated path to `pending` → (human tuning session) → `applied` | `rejected`.",
+      "auto_fixable": true
+    },
+    {
+      "title": "ac-tidy's three new app-board counts have no producer: no jq lines, no definition, and a pointer to 'D4/D1' in a gitignored plan",
+      "severity": "Medium",
+      "file": "skills/ac-tidy/SKILL.md",
+      "line": 67,
+      "category": "stub-in-production",
+      "evidence": "Line 67 now requires the nightly card to carry `foreign status:` / `off-canon receipts:` / `unrecorded closes:` 'against D4/D1's canon grammar'. Bead ac-4y7l.8 specifies 'three jq lines, scoped to rows whose updated_at is on or after the previous run's date (from last-run.json)'. None of that is in the skill: grep finds these tokens only on this line. 'D4/D1' are decision ids from `_plans/_done/2026-09-18-seams-bead-lifecycle.md`, and `_plans/` is gitignored and untracked (AGENTS.md), so a nightly agent in an app worktree cannot resolve them. The agent must invent three predicates (for example, what counts as 'unrecorded' when the grammar lives in check 35), so the numbers will not be comparable run to run. The bead is right. The skill text is a placeholder.",
+      "fix": "Inline the three jq predicates next to line 67, mirroring check 35's STATUS_CANON set, WORKER_RE first-line match and the GATE:/FRESH-VERIFY:/TRIAGE-CLOSE: prefix set, with the since-date read from last-run.json. Replace 'D4/D1' with those in-repo anchors (`lint/checks/35-board-integrity.py` rules 4-6). Add a lint or grep probe that fails if the three predicates drift from check 35's constants.",
+      "auto_fixable": true
+    }
+  ]
+}

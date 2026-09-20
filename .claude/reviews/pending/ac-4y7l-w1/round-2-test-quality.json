@@ -1,0 +1,47 @@
+{
+  "reviewer": "test-quality",
+  "round": 2,
+  "payload_read": "git diff 2dc960b..fd2f7ca",
+  "findings": [
+    {
+      "title": "RECORD-FAILED exit (ac-4y7l.5) has no covering case: deleting both `exit 1`s leaves close-gate.test.sh green",
+      "severity": "High",
+      "file": "skills/ac-implement/scripts/close-gate.test.sh",
+      "line": 797,
+      "category": "hollow-test",
+      "evidence": "Sabotage probe in a disposable worktree at fd2f7ca: removed `exit 1` after both RECORD-FAILED echoes in close-gate.sh (lines 200 and 603), which brings back the swallowed `|| true` behaviour this bead set out to remove. Result: `close-gate.test.sh: all 58 case(s) passed`. No case ever makes `comments add` fail after a successful close. The mock's `comments add` only exits 1 when the state file is missing, and no fixture triggers that after a close. The batch says RECORD-FAILED is covered, but no assertion exists (grep finds 'RECORD' 0 times in the test).",
+      "fix": "Add a mock switch such as AC2_TEST_BR_COMMENT_FAIL=1 that makes `comments add` exit 1. Add two cases, one on the ordinary receipt close and one on the decision ruling close. Each should assert rc=1, 'RECORD-FAILED' on stderr, and status=closed (the close landed and the record did not).",
+      "auto_fixable": false
+    },
+    {
+      "title": "The new ordinary-close landing record (`GATE: receipt`) is never asserted: skipping the write leaves the suite green",
+      "severity": "High",
+      "file": "skills/ac-implement/scripts/close-gate.test.sh",
+      "line": 797,
+      "category": "hollow-test",
+      "evidence": "Same worktree probe: changed close-gate.sh:604 to `if [ \"$LND_LABEL\" = \"GATE: receipt\" ] || br_call comments add ...`, so the receipt-backed close writes no comment but still prints 'GATE: receipt RECORDED'. Result: 58/58 green. The test asserts `GATE: decided` (ruling path, line 275), `FRESH-VERIFY` (542/570) and `TRIAGE-CLOSE` (632), but never `GATE: receipt` in comments.log. This is the most common close path, and lint rule 6 now fails any commit where that close leaves no such record, so an unrecorded write here would block every normal close at ledger commit, and the gate's own suite would not catch it.",
+      "fix": "In the basic accepted receipt-backed close case, add `grep -q '^GATE: receipt — ' \"$R/.br/comments.log\"`, plus a check that the text names the RED probe and the reason.",
+      "auto_fixable": false
+    },
+    {
+      "title": "Rule 6 accepts FRESH-VERIFY: and TRIAGE-CLOSE: records, but only GATE: is ever fixtured; dropping both prefixes stays green",
+      "severity": "High",
+      "file": "lint/checks/35-board-integrity.test.sh",
+      "line": 200,
+      "category": "hollow-test",
+      "evidence": "Sabotage probe in a fresh worktree: changed 35-board-integrity.py:232 from `.startswith((\"GATE:\", \"FRESH-VERIFY:\", \"TRIAGE-CLOSE:\"))` to `.startswith((\"GATE:\",))`. Result: `OK: every board-integrity case passed`. Every green landing fixture (WORKER_GOOD, WORKER_MULTILINE, LANDING_PRESENT) carries a `GATE: receipt` comment. The test output even names all three prefixes ('no GATE:/FRESH-VERIFY:/TRIAGE-CLOSE: landing record'), but only one of them is checked. With this regression, every fresh-verify close and every cascade close that close-gate.sh writes would go RED at ledger commit.",
+      "fix": "Add two GREEN staged-lane fixtures, each a bead newly closed this commit: one with only a `FRESH-VERIFY: ...` comment and one with only a `TRIAGE-CLOSE: ...` comment. Assert rc=0 for each. Use the text shape close-gate.sh emits, not invented strings.",
+      "auto_fixable": false
+    },
+    {
+      "title": "touchers Case 12 pins a live-repo referrer count (→ 8) in a doc example, so any unrelated edit anywhere in the registry turns it red",
+      "severity": "Medium",
+      "file": "skills/_tools/touchers.test.sh",
+      "line": 216,
+      "category": "flakiness-precursor",
+      "evidence": "Case 12 extracts the worked example from skills/ac-beadify/references/bead-schema.md and runs touchers_check on it. That check executes the example's `rg -l -F \"scripts/close-gate\" . ...` against the whole live checkout and compares the result with the hard-coded `→ 8`. Rerun on fd2f7ca in a clean worktree: `FAIL: Case 12 ... declare → 8 but the command reproduces 13`. The 13 includes files this epic touched for unrelated reasons (35-board-integrity.py, action-loop.md, bead-conventions.md, human-gate-template.md, beads-standards/SKILL.md), and rg also counts untracked non-ignored files. History shows the churn: 03b22b1 'fix(ac-ujej): re-derive bead-schema touchers example to 7 referrers' already re-stamped it once. The test mixes two claims. One is sound: the example's shape passes the gate. The other is unsound: a documentation example's count matches the live tree, which no author of the referring files can see or maintain. So it fails for reasons unrelated to touchers.sh and teaches people to re-stamp it without looking.",
+      "fix": "Separate shape from count. Run Case 12 in a fixture tree under $WORK that contains exactly the N referrer files the example declares, with the example's rg command run from that cwd. Alternatively, rewrite the example to reference a stable fixture path. Either way the test proves the example's grammar and stays independent of the live registry's referrer count.",
+      "auto_fixable": false
+    }
+  ]
+}

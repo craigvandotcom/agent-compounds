@@ -502,10 +502,11 @@ last_pass: 2026-09-07
 - last_seen: 2026-09-06
 - stage: ac-implement
 - status: open
-- control: untreated
+- control: I3
+- control_landed: 2026-09-19
 - receipt: BCA swarm run 20260905-2134 — three beads (utg43.3, n0lug.4, and the five ops scripts of bd-y1u0u) refused on SCANNER because ubs already exited 1 on the file at the pre-change commit with the same finding count; two of them sit blocked with work committed (former bead bd-y1u0u, closed to this ledger 2026-09-06)
-- proposed_fix: SCANNER asserts no NEW findings against the base commit (run ubs on base and head, diff the located findings), never an absolute clean scan
-- narrative: any bead editing part of a large legacy file inherits that file's whole ubs baseline and can never close. The leg measures the file, not the change.
+- proposed_fix: LANDED (ac-4y7l.24, 2026-09-19, superseding ac-4y7l.23's base-tree diff the same day — Craig's way-forward ruling after a second-opinion read: on real ubs output the signature match never matched at all, defeated by absolute paths, permalinks, capped detail lists, a missing lint config and bash's rule-on-the-previous-line) — SCANNER now runs ubs ONCE at HEAD; the Combined Summary's Critical/Warning counters refuse (Info counters are reported and never refuse on their own), and a refusal still closes when the bead carries an authorized human ruling accepting the findings (find_authorized_ruling(), the same matcher the type-routed ruling path uses). Proof: close-gate.test.sh AC4 + AC-scanner-ruling.
+- narrative: any bead editing part of a large legacy file inherits that file's whole ubs baseline and can never close. The leg measures the file, not the change. A scanner refusal on a finding this bead's diff never introduced also breaks the gate's own causal-necessity claim (RED before the diff, GREEN after, therefore the diff caused the flip) — I3 governs close-gate.sh's refuse-correctness, and an untraceable refusal is exactly the kind of noise that erodes trust in "silence is never success."
 
 ## ops-scripts-do-not-load-env-local
 - skills: [ac-triage]
@@ -706,7 +707,8 @@ last_pass: 2026-09-07
 - last_seen: 2026-09-10
 - stage: ac-implement
 - status: open
-- control: untreated
+- control: C-batch-boundary-reads
+- control_landed: 2026-09-12
 - receipt: RUN 2026-09-10 ac-implement swarm — every worker's swarm-commit.sh exited 5 (commit rejected by hook) across three beads, deadlocking the lane swarm-wide. lint.sh --changed ran the HOOKS-scope Check 35 board-integrity against the dirty .beads/issues.jsonl plus an in-flight uncommitted edit to lint/checks/35-board-integrity.py; the board sat mid DB→jsonl flush and 12 open beads read as probe-less (all 12 were probe-bearing once synced). No worker diff was at fault; the lane unblocked only when the foreign edit landed and the board flushed.
 - proposed_fix: run the pre-commit lane against the commit's named paths and the committed board (`git show :path` or a per-bead worktree), never the shared working tree; a HOOKS-scope check must not read a concurrently-written ledger from the worktree.
 - narrative: a gate that measures the shared worktree turns one writer's in-flight file — or a ledger caught between DB and jsonl flush — into a repo-global block. worker.md §5 already calls the two repo-wide lint gates advisory in a swarm; the pre-commit hook is the one path where that advisory silently becomes blocking, and its false red (a transiently stale board) is indistinguishable from a real board defect at the worker.
@@ -758,3 +760,24 @@ last_pass: 2026-09-07
 - receipt: BCA swarm run 20260911-maroonhill (review .claude/reviews/2026-09-11-2115-ac2-swarm-20260911-maroonhill.md). One run, four breaches: a worker committed bd-yfv1j (18c1302a) without holding the claim, self-reported on the bead; a worker committed bd-3gkp2 (67cc4b0b) after flight-check returned PREMISE-FAILED; bd-0k4kn closed (42b008d6) after editing two callers outside its Territory, the exact case a sibling had correctly unclaimed on; two workers stopped with ready beads left.
 - proposed_fix: CANDIDATE, NOT RULED — swarm-commit.sh refuses a commit whose subject bead is not claimed by --identity, or whose latest flight receipt is a refusal. the operator flagged it as likely problematic before building: a dead-claim takeover, a coordinator ledger or review commit ([no-bead]), a harness restart that re-mints the identity, and a multi-bead commit all trip it. Discuss the false-refusal cases before any control lands.
 - narrative: the loop's claim, premise and Territory rules live only in worker prose, and the one structure every commit passes through, the commit lane, checks none of them — so a breach is invisible until a reviewer reads the diff against the board.
+
+## diff-closure-counts-prose-mentions-as-callers
+- skills: [ac-implement, ac-pipeline]
+- impact: M
+- frequency: occasional
+- perceptibility: loud
+- recurrence: 1
+- related: [diff-closure-measures-the-shared-worktree]
+- first_seen: 2026-09-18
+- last_seen: 2026-09-18
+- stage: manual
+- status: open
+- control: untreated
+- receipt: 6db37ba (unreflected body-compass-app swarm session, 2026-09-18 — a worker's hand-back: diff-closure refused 6 comment and doc mentions of createAdminClient as undeclared callers)
+- proposed_fix: match callers on import or call syntax (`import … SYMBOL`, `SYMBOL(`), not on
+  the bare word. Or report prose-only hits (comments, markdown) separately from refused callers.
+- narrative: `callers_of` in `diff-closure.sh` greps the symbol as a word. Typing an exported
+  `createAdminClient` gave REFUSED [unowned-callers] with 6 callers the bead's `touchers:` line
+  did not declare. The worker reported that all six were comment or doc mentions, not imports.
+  A worker who trusts the count treats the bead spec as wrong, or pads `touchers:` with files
+  it never changes.
