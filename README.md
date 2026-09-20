@@ -117,8 +117,8 @@ Portable agent definitions. Each declares a semantic `tier:` (orchestrator | coo
 | Agent | What it does |
 |-------|-------------|
 | **[orchestrator](./agents/orchestrator.md)** | Fleet-conductor stance — plans, sequences, delegates, holds decisions and batch boundaries; never implements |
-| **[coordinator](./agents/coordinator.md)** | Judgment stance — looks, understands, critiques, synthesizes; read-only analysis, no mechanical execution |
-| **[researcher](./agents/researcher.md)** | Read-only gather-and-distill stance — investigates the brain, codebase, and web; never writes |
+| **[coordinator](./agents/coordinator.md)** | Judgment stance — looks, understands, critiques, synthesizes; edits the artifact it judges when asked, no mechanical execution |
+| **[researcher](./agents/researcher.md)** | Gather-and-distill stance — investigates the brain, codebase, and web; writes only scratch and its digest |
 | **[implementer](./agents/implementer.md)** | Production stance — scoped execution of approved plans/specs (code, content, config) |
 | **[validator](./agents/validator.md)** | Adversarial verification stance — audits/judges work against rubrics, finds issues, never fixes |
 

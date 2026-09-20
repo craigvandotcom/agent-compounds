@@ -56,8 +56,8 @@ each with a semantic `tier:` resolved per harness from `harnesses.json agent_mod
 | Stance | Tier | Use for | Never for |
 |--------|------|---------|-----------|
 | **orchestrator** | orchestrator | plans, sequences, delegates; holds decisions and batch boundaries | implementing itself |
-| **coordinator** | coordinator | looks, understands, critiques, synthesizes (read-only) | mechanical execution |
-| **researcher** | worker | read-only investigation (brain → code → web), returns cited summary | making changes |
+| **coordinator** | coordinator | looks, understands, critiques, synthesizes; edits the artifact it judges when asked | mechanical execution |
+| **researcher** | worker | investigation (brain → code → web), returns cited summary; writes scratch + its digest only | changing tracked source |
 | **implementer** | worker | scoped execution of an approved plan/spec | planning, verification |
 | **validator** | coordinator | adversarial review/audit against rubrics & tests | fixing what it finds |
 

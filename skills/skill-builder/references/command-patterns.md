@@ -63,7 +63,7 @@ Delegate work to a **stance**, loading the relevant **skill** for domain depth �
 per-workflow agent (fat skills, thin agents; one shared registry).
 
 ```
-researcher  — gather & distill, read-only        (Phase 1, fact-checks)
+researcher  — gather & distill, scratch-only     (Phase 1, fact-checks)
 implementer — produce the artifact                (the core work)
 validator   — adversarial check vs a rubric, RO   (quality gates)
 ```

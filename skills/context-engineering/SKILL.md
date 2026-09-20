@@ -315,10 +315,10 @@ duplicating a domain skill is a registry bug.
 | Agent | Stance | Tool boundary | Why the boundary is load-bearing |
 |---|---|---|---|
 | **orchestrator** | plans, sequences, delegates; holds decisions & batch boundaries | all tools, but delegates the doing | implementing itself defeats the point of holding the plan |
-| **coordinator** | looks, understands, critiques, synthesizes | read-only (no Write/Edit) | can't fix what it's meant to judge |
-| **researcher** | gather & distill, never produce | read-only + web (no Write/Edit) | can't pollute the substrate |
+| **coordinator** | looks, understands, critiques, synthesizes | all tools; edits only the artifact under judgment | code changes belong to implementer |
+| **researcher** | gather & distill, never produce | all tools + web; writes scratch + its digest only | editing what it studies pollutes the substrate |
 | **implementer** | scoped production | all tools | — (scoped by prompt, not tools) |
-| **validator** | adversarial — refute, verify, judge | read-only + test-running (no Write/Edit) | can't "fix" its way out of a finding |
+| **validator** | adversarial — refute, verify, judge | test-running + Write for report/scratch (no Edit) | can't "fix" its way out of a finding |
 
 Kept outside the five: infra agents (hook plumbing), harness built-ins (`Explore`, `Plan`, `general-purpose`).
 

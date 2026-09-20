@@ -42,7 +42,7 @@ assuming how the system works instead of reading a working example.
 
 **Goal:** deep pattern analysis, synthesized — not designed by you yet. **~15-25 min.**
 
-Spawn a **researcher** (read-only stance) to analyze and return a cited summary of:
+Spawn a **researcher** to analyze and return a cited summary of:
 - the structural patterns in the example workflows (phases, gates, delegation, outputs),
 - the source process's real steps and decision points,
 - high-performing external examples *if* this is a first-of-type workflow,
