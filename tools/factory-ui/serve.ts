@@ -37,15 +37,22 @@ const HARNESSES = path.join(ROOT, "harnesses.json");
 const CONSUMER = path.join(ROOT, "lint", "consumer.py");
 const SYNC = path.join(ROOT, "engine", "sync.sh");
 
-function reposRoot(): string {
-  try {
-    const h = JSON.parse(fs.readFileSync(HARNESSES, "utf8"));
-    const r = String(h.repos_root || "").replace(/^~(?=\/|$)/, process.env.HOME || "");
-    return r || "";
-  } catch { return ""; }
+// ORG_ROOT derivation mirrors engine/sync.sh and engine/exceptions.sh: the engine
+// self-locates from its own path rather than reading a root key out of harnesses.json
+// (that single `repos_root` key was removed — see harness.config.json's `_doc`, change
+// ac-9ahd — and hard-failed on any layout but one specific machine's monorepo anyway).
+// ROOT here is AC_ROOT (this repo's root, two levels above tools/factory-ui); the org
+// root is AC_ROOT's third parent in every supported layout.
+function orgRoot(): string {
+  return path.resolve(ROOT, "..", "..", "..");
 }
 function targetsListPath(): string {
-  return path.join(reposRoot(), "infrastructure", "ac-deploy-targets.list");
+  // AC_TARGETS_LIST overrides the default sibling path, same override the shell engine
+  // honours (engine/exceptions.sh, engine/sync.sh) — kept in sync so all three callers
+  // agree on one target list for one machine.
+  const override = process.env.AC_TARGETS_LIST;
+  if (override) return override.replace(/^~(?=\/|$)/, process.env.HOME || "");
+  return path.join(orgRoot(), "infrastructure", "ac-deploy-targets.list");
 }
 
 function readManifest(): { order: string[]; pkgs: Record<string, Pkg>; raw: Record<string, unknown> } {
