@@ -2,7 +2,7 @@
 # touchers.sh — the single home of the `touchers:` derivation and its check.
 #
 # Canon: beads-standards/reference/bead-create-contract.md § Touchers. A `## Delivers` path
-# that EXISTS in the tree and is REFERENCED by another file owes, beneath its bullet, one
+# that git TRACKS and that is REFERENCED by another file owes, beneath its bullet, one
 # line naming who updates those referrers:
 #
 #   touchers: `<command>` → <N> · owned by: <bead ids> | out-of-scope: <reason>
@@ -33,7 +33,7 @@
 #
 # `derive <rel-path>` prints one TAB-separated line `<stem>\t<N>\t<command>`, where the
 # command is the gate's own rg shape written to run from the repo root — paste it into the
-# bead. A path that does not exist in the tree prints `new` (a new artifact owes nothing).
+# bead. A path git does not track prints `new` (a new artifact owes nothing).
 #
 # Exit codes (assurance-declarations § NOT-GATED):
 #   0  touchers: OK        — nothing owed, or every owed line present and reproducing
@@ -74,9 +74,16 @@ _touchers_command() {
   printf 'rg -l -F "%s" . -g %s!%s%s %s' "$2" "$_tc_q" "$1" "$_tc_q" "$(_touchers_globs)"
 }
 
+# Existence is a GIT fact, not a disk fact: a path on disk but untracked is a NEW artifact
+# that owes nothing. `derive` and `check` share this ONE home so the two readings of "exists"
+# cannot drift.
+_touchers_tracked() {
+  git -C "$1" ls-files --error-unmatch -- "$2" >/dev/null 2>&1
+}
+
 # touchers_derive <rel-path>
-#   -> `<stem>\t<N>\t<command>`  (path exists and was measured)
-#   -> `new`                     (path does not exist yet — nothing owed)
+#   -> `<stem>\t<N>\t<command>`  (path is git-tracked and was measured)
+#   -> `new`                     (path is not tracked yet — nothing owed)
 #   -> exit 2                    (rg absent or broken; the count is UNKNOWN, never zero)
 touchers_derive() {
   local rel="${1:-}" root stem cmd out rc n
@@ -90,7 +97,7 @@ touchers_derive() {
     printf 'touchers: NOT-GATED not inside a git repo, so touchers cannot be derived; refusing rather than guessing.\n' >&2
     return 2
   fi
-  if [ ! -f "$root/$rel" ]; then
+  if ! _touchers_tracked "$root" "$rel"; then
     printf 'new\n'
     return 0
   fi
@@ -151,7 +158,7 @@ touchers_check() {
     existing=$(printf '%s\n' "$paths" | while IFS= read -r p; do
       p="${p#./}"
       [ -n "$p" ] || continue
-      [ -f "$root/$p" ] && printf '%s\n' "$p"
+      _touchers_tracked "$root" "$p" && printf '%s\n' "$p"
     done)
     count=$(printf '%s\n' "$existing" | grep -c .)
     [ "${count:-0}" -gt 0 ] || continue          # only NEW artifacts here — nothing owed

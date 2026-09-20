@@ -222,12 +222,15 @@ else
   EXFIX="$WORK/schema-example-fixture"
   mkdir -p "$EXFIX/skills/ac-implement/scripts" "$EXFIX/refs"
   git -C "$EXFIX" init -q
-  # The three Delivers paths must EXIST at the same relative location touchers_derive checks
-  # against — empty placeholders; their own content is never searched (they are excluded from
-  # every command's `-g` glob by construction, same as the shipped example excludes itself).
+  # The three Delivers paths must be TRACKED BY GIT at the same relative location
+  # touchers_derive checks against — existence is a git fact, so an unstaged placeholder
+  # would read as `new` and this case would pass vacuously. Empty placeholders; their own
+  # content is never searched (they are excluded from every command's `-g` glob by
+  # construction, same as the shipped example excludes itself).
   : >"$EXFIX/skills/ac-implement/scripts/close-gate.sh"
   : >"$EXFIX/skills/ac-implement/scripts/close-gate.test.sh"
   : >"$EXFIX/skills/ac-implement/SKILL.md"
+  ( cd "$EXFIX" && git add skills/ac-implement/scripts/close-gate.sh skills/ac-implement/scripts/close-gate.test.sh skills/ac-implement/SKILL.md )
   # 3 referrers naming "scripts/close-gate" alone, plus 1 naming "scripts/close-gate.test"
   # (an `-F` substring match on "scripts/close-gate" too — same overlap the live registry's
   # own count carries) -> gate 4, harness 1. 2 referrers naming "ac-implement/SKILL" -> wiring 2.
@@ -242,6 +245,29 @@ else
   else
     fail "Case 12: the shipped example bead was REFUSED against the fixture, got $RC. Output: $OUT"
   fi
+fi
+
+# --- Case 13: a path ON DISK but UNTRACKED is still NEW — git decides existence ----------
+# A bead's own new artifact sits on disk once the worker writes it but before it is committed;
+# reading "on disk" as "exists" makes the stamp re-gate DEMAND a touchers line for the bead's
+# own new file and strip `refined`. Case 6 covers the absent path; this covers the
+# present-but-uncommitted one, which is the one a worker actually hits mid-flight.
+UNTRACKED_FIX="$WORK/untracked-fixture"
+mkdir -p "$UNTRACKED_FIX/skills/_tools"
+git -C "$UNTRACKED_FIX" init -q
+: >"$UNTRACKED_FIX/skills/_tools/still-new.md"
+# A referrer is ON DISK too, so only the git-tracked test can spare this path an obligation:
+# if the reader ever falls back to disk existence, the count becomes 1, a touchers line is
+# demanded, and this case goes red — which is the point.
+printf 'refers to _tools/still-new here\n' >"$UNTRACKED_FIX/skills/_tools/referrer.md"
+D=$(write_desc untracked.md "## Delivers
+- \`skills/_tools/still-new.md\` — an artifact this bead has written but not committed
+")
+OUT=$(cd "$UNTRACKED_FIX" && bash "$TOOL" check "$D" untracked 2>&1); RC=$?
+if [ "$RC" -eq 0 ] && echo "$OUT" | grep -q "touchers: OK"; then
+  pass "Case 13: a Delivers path on disk but UNTRACKED by git is still NEW and owes no line (exit 0)"
+else
+  fail "Case 13: expected exit 0 — untracked is not existing, got $RC. Output: $OUT"
 fi
 
 echo
