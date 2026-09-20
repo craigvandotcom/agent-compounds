@@ -1,4 +1,4 @@
-# dcg configuration — neoMeta fleet
+# dcg configuration — example (copy to ~/.config/dcg/config.toml and adapt)
 #
 # Custom packs live in ~/.config/dcg/packs/.
 #
