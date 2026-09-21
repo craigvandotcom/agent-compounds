@@ -15,8 +15,9 @@ _plans/
 # Idea inbox — local only, same convention as _plans/
 _ideas/
 
-# Machine-local harness manifest overlay (template: harnesses.local.json.example)
-harnesses.local.json
+# This machine's local settings file (template: machine.example.json) — absolute paths,
+# so it never rides a commit; engine/machine.sh is its only reader
+machine.json
 
 # bv (beads viewer) local config and caches
 .bv/

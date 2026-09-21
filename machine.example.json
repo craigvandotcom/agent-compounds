@@ -1,0 +1,23 @@
+{
+  "_doc": "machine.json — THIS machine's facts in full: where its projects are (targets[]), where its org root is (org_root), and which tools it has (harnesses). Copy to machine.json at the repo root (gitignored) and edit by hand — no tool writes it. engine/machine.sh is its only reader; every other tool asks the reader. Paths are absolute. Each target: path (required; an entry that does not exist is an error — a per-machine file lists only what this machine has), public (true for a published repo, whose harness layer must be gitignored there), packages (optional subset of skills/packages.json names; absent means every package). harnesses deep-merges over harnesses.json exactly as the retired harnesses.local.json did — only override the keys you change.",
+  "org_root": "/absolute/path/to/org-root",
+  "targets": [
+    {
+      "path": "/absolute/path/to/org-root/software/example-app",
+      "public": false
+    },
+    {
+      "path": "/absolute/path/to/org-root/software/example-public-app",
+      "public": true,
+      "packages": ["factory-core", "substrate"]
+    }
+  ],
+  "harnesses": {
+    "pi": {
+      "home_default": "/absolute/path/to/pi/agent"
+    },
+    "droid": {
+      "enabled": true
+    }
+  }
+}
