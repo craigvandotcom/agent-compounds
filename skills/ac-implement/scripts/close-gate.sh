@@ -122,6 +122,12 @@ not_checked() { echo "NOT-CHECKED: $1 — $2" >&2; exit 2; }
 
 . "$BR_CALL" 2>/dev/null || not_checked "READ" "br-call.sh helper missing at '$BR_CALL' — no br read can be verified"
 
+# The Delivers-path extraction pattern has ONE home (skills/_tools/delivers-paths.sh).
+# Same resolution rule as BR_CALL: computed BEFORE the cd, from the original cwd.
+# shellcheck source=delivers-paths.sh
+DP_HOME="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../_tools" 2>/dev/null && pwd)/delivers-paths.sh"
+. "$DP_HOME" 2>/dev/null || not_checked "READ" "delivers-paths.sh helper missing at '$DP_HOME' — the Delivers-path extraction pattern cannot be resolved"
+
 sha256_of_stdin() {
   if command -v shasum >/dev/null 2>&1; then shasum -a 256 | awk '{print $1}'
   elif command -v sha256sum >/dev/null 2>&1; then sha256sum | awk '{print $1}'
@@ -462,7 +468,7 @@ fi
 delivers_paths() { # <body-file> — path-shaped tokens under ## Delivers, touchers: lines excluded
   awk '/^## Delivers/{on=1; next} /^## /{on=0} on' "$1" \
     | grep -v '^[[:space:]]*touchers:' \
-    | grep -oE '(\./)?[][A-Za-z0-9_@.()-]+(/[][A-Za-z0-9_@.()-]+)+\.[A-Za-z0-9]{1,6}' | sort -u
+    | extract_paths
 }
 
 if [ "$(git rev-parse --is-inside-work-tree 2>/dev/null)" = "true" ]; then

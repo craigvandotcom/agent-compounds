@@ -51,6 +51,11 @@
 #        plan-approve.sh check   <plan-path>
 set -u
 
+# The Delivers-path extraction pattern has ONE home (skills/_tools/delivers-paths.sh).
+_DP_HOME="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/delivers-paths.sh"
+[ -f "$_DP_HOME" ] || die_notgated "delivers-paths.sh missing at $_DP_HOME — the extraction pattern cannot be resolved"
+. "$_DP_HOME"
+
 die_notgated() { printf 'NOT-GATED: %s\n' "$*"; exit 2; }
 
 # Fail-closed digest guard: `set -u` is on but there is no pipefail, so an exit
@@ -259,7 +264,7 @@ mode_approve() {
   local seams_body; seams_body=$(_section_body "$plan" "## Seams$")
   local deliv_body; deliv_body=$(_section_body "$plan" "## Deliverables")
   local paths incomplete="" p
-  paths=$(printf '%s\n' "$deliv_body" | grep -oE '(\./)?[][A-Za-z0-9_@.()-]+(/[][A-Za-z0-9_@.()-]+)+\.[A-Za-z0-9]{1,6}' | sort -u)
+  paths=$(printf '%s\n' "$deliv_body" | extract_paths)
   while IFS= read -r p; do
     [ -n "$p" ] || continue
     p="${p#./}"

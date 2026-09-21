@@ -51,6 +51,12 @@ else
   _TOUCHERS_SELF="${BASH_SOURCE[0]}"
 fi
 
+# The Delivers-path extraction pattern has ONE home (skills/_tools/delivers-paths.sh);
+# sourcing it here keeps the writer and the gate on the same pattern.
+_DP_HOME="$(cd "$(dirname "$_TOUCHERS_SELF")" && pwd)/delivers-paths.sh"
+[ -f "$_DP_HOME" ] || { printf 'touchers: NOT-GATED — delivers-paths.sh missing at %s — the extraction pattern cannot be resolved\n' "$_DP_HOME" >&2; return 2 2>/dev/null || exit 2; }
+. "$_DP_HOME"
+
 # The exclusion set is part of the DERIVATION, not a caller's taste: change it here and the
 # writer and the gate change together. `.beads/**`, `_plans/**` and the doc dirs are excluded
 # because a bead body or a retired plan naming a path is not a caller of it.
@@ -154,7 +160,7 @@ touchers_check() {
     # those as deliveries invented obligations no bullet could ever satisfy (measured
     # 2026-09-06), so the disposition is excluded from the extraction, never from the check.
     paths=$(printf '%s\n' "$block" | grep -v '^[[:space:]]*touchers:' \
-      | grep -oE '(\./)?[][A-Za-z0-9_@.()-]+(/[][A-Za-z0-9_@.()-]+)+\.[A-Za-z0-9]{1,6}' | sort -u)
+      | extract_paths)
     existing=$(printf '%s\n' "$paths" | while IFS= read -r p; do
       p="${p#./}"
       [ -n "$p" ] || continue
