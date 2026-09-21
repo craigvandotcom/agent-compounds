@@ -295,6 +295,48 @@ else
   fail "Case 14: expected the bracketed path to be NEW and owe nothing, got rc=$RC derive='$DER'. Output: $OUT"
 fi
 
+# --- Case 15: the self-exclusion glob names the bracketed path LITERALLY -----------------
+# Case 14 pins the git-pathspec half of the bracket class (ac-c214); this pins the rg-glob
+# half. A TRACKED parent carries one `-g "!<rel>"` to keep the delivered file out of its OWN
+# referrer count. Unquoted, rg reads `[slug]` there as a character class: the exclusion lands
+# on the tracked glob sibling `app/s/page.tsx` instead and LEAVES the bracketed file counted,
+# so a bracketed path whose own body names its stem derives a count inflated by 1 — a line no
+# re-derivation can make reproduce. The delivered file names its OWN stem (the self-reference
+# the exclusion exists to drop) and the sibling matches the class on purpose (`s` is in
+# `[slug]`), so a globbing exclusion has somewhere to land.
+GLOBFIX="$WORK/bracket-glob-fixture"
+mkdir -p "$GLOBFIX/app/s" "$GLOBFIX/app/[slug]" "$GLOBFIX/refs"
+git -C "$GLOBFIX" init -q
+printf 'this page is [slug]/page\n' >"$GLOBFIX/app/[slug]/page.tsx"
+printf 'a sibling that names no stem\n' >"$GLOBFIX/app/s/page.tsx"
+printf 'links to [slug]/page from elsewhere\n' >"$GLOBFIX/refs/link.md"
+git -C "$GLOBFIX" add -A
+DER=$(cd "$GLOBFIX" && bash "$TOOL" derive "app/[slug]/page.tsx" 2>&1); RC=$?
+D_N=$(printf '%s' "$DER" | cut -f2)
+D_CMD=$(printf '%s' "$DER" | cut -f3-)
+D_HITS=$(cd "$GLOBFIX" && bash -c "$D_CMD" 2>/dev/null)
+D_REPRO=$(printf '%s\n' "$D_HITS" | grep -c .)
+if [ "$RC" -eq 0 ] && [ "${D_N:-0}" -eq 1 ] && [ "$D_REPRO" -eq 1 ] \
+   && printf '%s\n' "$D_HITS" | grep -q "refs/link.md" \
+   && ! printf '%s\n' "$D_HITS" | grep -qF "app/[slug]/page.tsx"; then
+  pass "Case 15: the bracketed path is excluded from its OWN referrer count — derive 1 with the self-reference dropped and the external referrer kept"
+else
+  fail "Case 15: expected derive 1 with the bracketed path out of its own count, got rc=$RC n='$D_N' repro='$D_REPRO' hits='$D_HITS'. Output: $DER"
+fi
+
+# The derived command exists to be re-run by the GATE, so the same description must clear
+# `check` end-to-end — otherwise the count is right and the line it produces is still refused.
+D=$(write_desc bracket-glob.md "## Delivers
+- \`app/[slug]/page.tsx\` — a tracked bracketed artifact that names its own stem
+  touchers: \`$D_CMD\` → 1 · owned by: bd-fixture-refs
+")
+OUT=$(cd "$GLOBFIX" && bash "$TOOL" check "$D" bracket-glob 2>&1); RC=$?
+if [ "$RC" -eq 0 ] && echo "$OUT" | grep -q "touchers: OK"; then
+  pass "Case 15b: touchers_check accepts the derived line for the bracketed path (exit 0)"
+else
+  fail "Case 15b: expected exit 0 for the bracketed path's derived line, got $RC. Output: $OUT"
+fi
+
 echo
 if [ "$FAILURES" -eq 0 ]; then
   echo "All touchers fixture tests passed."

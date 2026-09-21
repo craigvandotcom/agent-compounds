@@ -68,10 +68,23 @@ _touchers_stem() {
   printf '%s' "$1" | awk -F/ '{ s=$NF; sub(/\.[^.]*$/, "", s); if (NF>1) s=$(NF-1) "/" s; print s }'
 }
 
+# Glob-QUOTE a repo-relative path so rg's -g reads it as the LITERAL path. Unquoted, rg reads
+# the brackets in a Next.js dynamic route `app/[slug]/page.tsx` as a character class, so the
+# self-exclusion `!app/[slug]/page.tsx` below matches the tracked glob sibling `app/s/page.tsx`
+# in the delivered file's place and LEAVES the bracketed file in its own referrer count — a
+# bracketed path whose own body names its stem then derives a count inflated by 1, and the
+# gate refuses a line no re-derivation can make reproduce (measured: `rg -l -F needle . -g
+# "![slug]/x.md"` dropped ./s/x.md and kept ./[slug]/x.md). `[[]`-style classes are rg's own
+# escape — its parser answers a bare `{` with "(maybe escape '{' with '[{]'?)" — and every
+# glob implementation reads them, where backslash escaping is version-dependent.
+_touchers_glob_quote() {
+  printf '%s' "$1" | sed 's/[][*?{}]/[&]/g'
+}
+
 # The command a bead pastes: the gate's shape, rooted at `.` so it runs from the repo root.
 _touchers_command() {
   local _tc_q="'"
-  printf 'rg -l -F "%s" . -g %s!%s%s %s' "$2" "$_tc_q" "$1" "$_tc_q" "$(_touchers_globs)"
+  printf 'rg -l -F "%s" . -g %s!%s%s %s' "$2" "$_tc_q" "$(_touchers_glob_quote "$1")" "$_tc_q" "$(_touchers_globs)"
 }
 
 # Existence is a GIT fact, not a disk fact: a path on disk but untracked is a NEW artifact
