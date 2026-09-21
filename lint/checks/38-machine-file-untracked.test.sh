@@ -2,10 +2,12 @@
 # 38-machine-file-untracked.test.sh — the proof harness for Check 38's contract.
 #
 #   PROBE: a committed machine.json is RED naming TRACKED; a force-added (staged,
-#           uncommitted) machine.json is RED naming STAGED; an ignored machine.json
-#           sitting untracked on disk is GREEN; a checkout with no machine.json is
-#           GREEN; a non-git root is NOT-GATED (2); the declared fixture's run.sh
-#           demonstrates its own RED; the real registry is GREEN.
+#           uncommitted) machine.json is RED naming STAGED; a file tracked in HEAD whose
+#           removal is STAGED (`git rm --cached`, still uncommitted) is GREEN with a
+#           disclosed amnesty, and the commit that lands it clears the amnesty; an ignored
+#           machine.json sitting untracked on disk is GREEN; a checkout with no
+#           machine.json is GREEN; a non-git root is NOT-GATED (2); the declared fixture's
+#           run.sh demonstrates its own RED; the real registry is GREEN.
 #
 # ASSURANCE
 #   PROBE:    bash lint/checks/38-machine-file-untracked.test.sh
@@ -61,6 +63,32 @@ if [ "$rc" = 1 ] && printf '%s' "$out" | grep -q 'STAGED'; then
   ok "RED: staged machine.json -> exit 1 naming STAGED"
 else
   bad "staged case: expected 1 naming STAGED, got $rc"; printf '%s\n' "$out"
+fi
+rm -rf "$w"
+
+# --- GREEN + AMNESTY: still in HEAD, removal staged (`git rm --cached`) -----------
+# The state the check's own printed remediation leaves behind: `git rm --cached` keeps the
+# file in HEAD's tree until that commit lands, and this check gates that very commit. So
+# it passes with a DISCLOSED amnesty — and only while the removal is genuinely staged: the
+# staged-but-not-committed case above stays RED, which is what keeps this narrow.
+w="$(new_repo)"
+printf '{"org_root": "/x"}\n' > "$w/machine.json"
+git -C "$w" add -f machine.json
+git -C "$w" commit -qm "committed by accident"
+git -C "$w" rm --cached -q machine.json
+out="$(run_check "$w")"; rc=$?
+if [ "$rc" = 0 ] && printf '%s' "$out" | grep -q 'amnesty'; then
+  ok "AMNESTY: tracked in HEAD, removal staged -> exit 0, amnesty disclosed"
+else
+  bad "amnesty case: expected 0 naming amnesty, got $rc"; printf '%s\n' "$out"
+fi
+# The amnesty is one commit long: once the removal lands, the run is plainly green.
+git -C "$w" commit -qm "untrack the machine file"
+out="$(run_check "$w")"; rc=$?
+if [ "$rc" = 0 ] && ! printf '%s' "$out" | grep -q 'amnesty'; then
+  ok "AMNESTY: the untracking commit clears it — the next run is plain green"
+else
+  bad "post-amnesty case: expected plain exit 0 with no amnesty, got $rc"; printf '%s\n' "$out"
 fi
 rm -rf "$w"
 

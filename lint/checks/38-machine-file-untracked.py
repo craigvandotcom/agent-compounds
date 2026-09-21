@@ -29,8 +29,14 @@ Three git reads, in order of severity:
   HEAD:machine.json   committed — it is in the published tree and in every clone
   index               staged — a `git add -f` is one `git commit` from publishing it
 
-Exit: 0 neither tracked nor staged; 1 either; 2 not a git checkout (NOT-GATED,
-never a pass).
+and one state that is NEITHER: in HEAD's tree but ABSENT from the index. That is
+`git rm --cached` in flight — this check's own printed remediation, whose commit this
+check gates — so it passes with a DISCLOSED one-commit amnesty instead of deadlocking the
+fix. The next run reads the committed tree, where the file is gone, so the amnesty cannot
+outlive the commit it permits; a file that stays tracked keeps failing.
+
+Exit: 0 neither tracked nor staged (or the staged removal that untracks it); 1 either;
+2 not a git checkout (NOT-GATED, never a pass).
 """
 
 import os
@@ -88,6 +94,16 @@ def main():
                   f"({tree.stderr.strip() or 'no detail'}) — verified nothing", file=sys.stderr)
             return 2
         committed = bool(tree.stdout.strip())
+
+    # A tracked-in-HEAD file STAGED FOR REMOVAL is the remediation in flight, not the
+    # defect. `git rm --cached` leaves the file in HEAD's tree until that commit lands, and
+    # this check gates that very commit — so refusing here would deadlock the fix and make
+    # `git commit --no-verify` the only way to obey the gate. The amnesty is disclosed and
+    # lasts one commit: the next run reads the tree it just wrote.
+    if committed and not in_index:
+        print(f"  ok: {CHECK_ID} — {MACHINE_FILE} is in HEAD's tree but staged for removal; "
+              "the untracking commit is in flight, so amnesty holds until it lands")
+        return 0
 
     if committed:
         print(f"FAIL {CHECK_ID}: {MACHINE_FILE} is TRACKED — it holds this machine's absolute "
