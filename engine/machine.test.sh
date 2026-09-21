@@ -11,12 +11,18 @@
 #   not-configured -> 4 (both --org-root and --targets)
 #   malformed JSON, org_root missing, a missing target, a target equal to org_root,
 #     a non-directory org_root -> 2, naming the key and the path
+#   every other refusal -> 2: an unknown argument; a non-absolute org_root; targets that
+#     are not an array; a targets[] entry with no path, non-array packages, or a
+#     non-boolean public; a non-absolute target path
+#   a failed --targets validation prints no roster lines (never half a roster)
 #   --lit: a path under $HOME renders `$HOME/...`, a path outside it is unchanged,
-#          `~` and `~/...` expand first
+#          `~` and `~/...` expand first; no operand -> 2 naming the flag, promptly
 #   `~` expansion in a configured org_root
 #   public and packages round-trip through --targets
 #   --harnesses: the committed base alone (exit 0) with no file; an omitted harness
-#     still reads enabled; an agent_models override survives the merge
+#     still reads enabled; an agent_models override survives the merge; a non-object
+#     `harnesses` value -> 2 naming the key; the merge carries no org_root/targets
+#     (only the `harnesses` value is merged, never the whole machine file)
 #   the DEPTH case's reader leg: the engine copied to a path of a different depth,
 #     AC_MACHINE_FILE at a fixture, and --targets resolving exactly the fixture's
 #     targets. The checks 07/12 and `sync.sh --all -n` legs cannot be green here —
@@ -76,6 +82,18 @@ else
   bad "wrong missing-target: expected 2 naming the path, got $rc"; printf '%s\n' "$out"
 fi
 
+# A failed validation prints NOTHING. The first target here is valid and the second is
+# not: before this bead the valid one was printed before the refusal, handing half a
+# roster to the installer.
+printf '{"org_root": "%s/org", "targets": [{"path": "%s/org/software/app-one"}, {"path": "%s/org/software/ghost"}]}\n' \
+  "$W" "$W" "$W" > "$W/partial-roster.json"
+out="$(AC_MACHINE_FILE="$W/partial-roster.json" "$MACHINE" --targets 2>/dev/null)"; rc=$?
+if [ "$rc" = 2 ] && [ -z "$out" ]; then
+  ok "wrong: a failed --targets validation prints no roster lines"
+else
+  bad "partial roster: expected rc=2 and no stdout, got rc=$rc"; printf '%s\n' "$out"
+fi
+
 printf '{"org_root": "%s/org", "targets": [{"path": "%s/org", "public": false}]}\n' "$W" "$W" > "$W/target-is-org.json"
 out="$(AC_MACHINE_FILE="$W/target-is-org.json" "$MACHINE" --org-root 2>&1)"; rc=$?
 if [ "$rc" = 2 ] && printf '%s' "$out" | grep -q 'org_root'; then
@@ -92,6 +110,65 @@ else
   bad "wrong org-not-dir: expected 2, got $rc"; printf '%s\n' "$out"
 fi
 
+# --- every other refusal -> 2 (type checks and absolute-path refusals) --------------------
+# Each of these branches was deletable with the suite green before this bead.
+printf '{"org_root": "relative/org", "targets": []}\n' > "$W/org-relative.json"
+out="$(AC_MACHINE_FILE="$W/org-relative.json" "$MACHINE" --org-root 2>&1)"; rc=$?
+if [ "$rc" = 2 ] && printf '%s' "$out" | grep -q 'not an absolute path'; then
+  ok "wrong: non-absolute org_root -> 2"
+else
+  bad "wrong org-relative: expected 2, got $rc"; printf '%s\n' "$out"
+fi
+
+printf '{"org_root": "%s/org", "targets": {}}\n' "$W" > "$W/targets-not-array.json"
+out="$(AC_MACHINE_FILE="$W/targets-not-array.json" "$MACHINE" --targets 2>&1)"; rc=$?
+if [ "$rc" = 2 ] && printf '%s' "$out" | grep -q 'malformed'; then
+  ok "wrong: targets not an array -> 2"
+else
+  bad "wrong targets-not-array: expected 2, got $rc"; printf '%s\n' "$out"
+fi
+
+printf '{"org_root": "%s/org", "targets": [{"public": true}]}\n' "$W" > "$W/target-no-path.json"
+out="$(AC_MACHINE_FILE="$W/target-no-path.json" "$MACHINE" --targets 2>&1)"; rc=$?
+if [ "$rc" = 2 ] && printf '%s' "$out" | grep -q 'no path'; then
+  ok "wrong: a targets[] entry with no path -> 2"
+else
+  bad "wrong target-no-path: expected 2, got $rc"; printf '%s\n' "$out"
+fi
+
+printf '{"org_root": "%s/org", "targets": [{"path": "%s/org/software/app-one", "packages": "x"}]}\n' \
+  "$W" "$W" > "$W/target-bad-packages.json"
+out="$(AC_MACHINE_FILE="$W/target-bad-packages.json" "$MACHINE" --targets 2>&1)"; rc=$?
+if [ "$rc" = 2 ] && printf '%s' "$out" | grep -q 'must be an array'; then
+  ok "wrong: non-array packages -> 2"
+else
+  bad "wrong target-bad-packages: expected 2, got $rc"; printf '%s\n' "$out"
+fi
+
+printf '{"org_root": "%s/org", "targets": [{"path": "%s/org/software/app-one", "public": "yes"}]}\n' \
+  "$W" "$W" > "$W/target-bad-public.json"
+out="$(AC_MACHINE_FILE="$W/target-bad-public.json" "$MACHINE" --targets 2>&1)"; rc=$?
+if [ "$rc" = 2 ] && printf '%s' "$out" | grep -q 'must be a boolean'; then
+  ok "wrong: non-boolean public -> 2"
+else
+  bad "wrong target-bad-public: expected 2, got $rc"; printf '%s\n' "$out"
+fi
+
+printf '{"org_root": "%s/org", "targets": [{"path": "relative/app"}]}\n' "$W" > "$W/target-relative.json"
+out="$(AC_MACHINE_FILE="$W/target-relative.json" "$MACHINE" --targets 2>&1)"; rc=$?
+if [ "$rc" = 2 ] && printf '%s' "$out" | grep -q 'not absolute'; then
+  ok "wrong: a non-absolute target path -> 2"
+else
+  bad "wrong target-relative: expected 2, got $rc"; printf '%s\n' "$out"
+fi
+
+out="$("$MACHINE" --bogus 2>&1)"; rc=$?
+if [ "$rc" = 2 ] && printf '%s' "$out" | grep -q 'unknown argument'; then
+  ok "wrong: an unknown argument -> 2"
+else
+  bad "wrong unknown-arg: expected 2, got $rc"; printf '%s\n' "$out"
+fi
+
 # --- --lit -------------------------------------------------------------------------------
 check_lit() { # <input> <expected> <label>
   local got; got="$("$MACHINE" --lit "$1" 2>&1)"; local rc=$?
@@ -103,6 +180,15 @@ check_lit "$HOME" '$HOME' 'exactly $HOME'
 check_lit "/opt/elsewhere" '/opt/elsewhere' 'outside $HOME unchanged'
 check_lit '~' '$HOME' 'bare tilde'
 check_lit '~/z' '$HOME/z' 'tilde-slash'
+
+# No operand: exit 2 naming the flag, and PROMPTLY — before this bead the parse loop
+# span forever on `shift 2` with one argument left (rc 124 under timeout).
+out="$(timeout 3 "$MACHINE" --lit 2>&1)"; rc=$?
+if [ "$rc" = 2 ] && printf '%s' "$out" | grep -q -- '--lit'; then
+  ok "lit: no operand -> 2 naming the flag"
+else
+  bad "lit no-operand: expected 2 naming --lit, got $rc"; printf '%s\n' "$out"
+fi
 
 # --- `~` expansion in a configured path ---------------------------------------------------
 printf '{"org_root": "~", "targets": []}\n' > "$W/tilde-org.json"
@@ -174,6 +260,35 @@ if [ "$rc" = 0 ]; then
     || bad "harnesses: omitted codex read '$got', not true"
 else
   bad "harnesses merge: expected 0, got $rc"; printf '%s\n' "$out"
+fi
+
+# A `harnesses` value that is not an object must be refused naming the key, not leak jq's
+# own exit 5 out of the merge.
+printf '{"harnesses": []}\n' > "$W/harnesses-array.json"
+out="$(AC_MACHINE_FILE="$W/harnesses-array.json" "$MACHINE" --harnesses 2>&1)"; rc=$?
+if [ "$rc" = 2 ] && printf '%s' "$out" | grep -q 'harnesses'; then
+  ok "harnesses: a non-object harnesses value -> 2 naming the key"
+else
+  bad "harnesses non-object: expected 2 naming harnesses, got $rc"; printf '%s\n' "$out"
+fi
+
+printf '[]\n' > "$W/harnesses-file-array.json"
+out="$(AC_MACHINE_FILE="$W/harnesses-file-array.json" "$MACHINE" --harnesses 2>&1)"; rc=$?
+if [ "$rc" = 2 ]; then
+  ok "harnesses: a non-object machine file -> 2 (never jq's exit 5)"
+else
+  bad "harnesses non-object file: expected 2, got $rc"; printf '%s\n' "$out"
+fi
+
+# Only the `harnesses` value is merged: org_root and targets must not reach a harness.
+printf '{"org_root": "%s/org", "targets": [], "harnesses": {"droid": {"enabled": true}}}\n' \
+  "$W" > "$W/harnesses-scoped.json"
+out="$(AC_MACHINE_FILE="$W/harnesses-scoped.json" "$MACHINE" --harnesses 2>&1)"; rc=$?
+leak="$(printf '%s' "$out" | jq -r 'has("org_root") or has("targets")' 2>/dev/null)"
+if [ "$rc" = 0 ] && [ "$leak" = "false" ] && ! printf '%s' "$out" | grep -q 'org_root'; then
+  ok "harnesses: the merge carries no org_root/targets"
+else
+  bad "harnesses leak: expected 0 with no org_root/targets, got rc=$rc leak=$leak"
 fi
 
 echo "machine.test.sh: ${fails} failure(s)"

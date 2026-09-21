@@ -33,8 +33,10 @@
 #
 # `--targets` and `--org-root` run the FULL validation on every call. `--harnesses` does
 # not: it is the fallback engine/deploy.sh depends on, and giving it a precondition
-# would break it on a clean checkout (Check 08 runs deploy.sh dry there). `--lit` is a
-# pure path transform and does not read the file at all.
+# would break it on a clean checkout (Check 08 runs deploy.sh dry there). It validates
+# only that a present file is a JSON object whose `harnesses` value, if any, is an
+# object — the one key it merges. `--lit` is a pure path transform and never reads the
+# file.
 #
 # AC_MACHINE_FILE overrides the file's location — the fixture seam, and the documented
 # way a machine's file can live versioned in its owner's own infrastructure repo.
@@ -95,7 +97,9 @@ while [ $# -gt 0 ]; do
     --targets)  MODE=targets;  shift ;;
     --org-root) MODE=org_root; shift ;;
     --harnesses) MODE=harnesses; shift ;;
-    --lit)      MODE=lit; LIT_PATH="${2:-}"; shift 2 ;;
+    --lit)      MODE=lit; shift
+                [ $# -gt 0 ] || wrong "--lit needs a path"
+                LIT_PATH="$1"; shift ;;
     -h|--help)  usage; exit 0 ;;
     *)          usage; wrong "unknown argument '$1'" ;;
   esac
@@ -120,7 +124,16 @@ if [ "$MODE" = harnesses ]; then
   if ! jq_out="$(jq . "$MACHINE_FILE" 2>&1)"; then
     wrong "$MACHINE_FILE is not valid JSON: $(printf '%s' "$jq_out" | head -1)"
   fi
-  jq -s '.[0] * .[1]' "$MANIFEST" "$MACHINE_FILE"
+  # Only the `harnesses` value is this machine's override — the same value the retired
+  # harnesses.local.json WAS. Merging the whole file would leak org_root and targets into
+  # every harness's rendered config; an unvalidated key type would leak jq's own exit 5.
+  if ! jq -e 'type == "object"' "$MACHINE_FILE" >/dev/null 2>&1; then
+    wrong "$MACHINE_FILE must contain a JSON object"
+  fi
+  if ! jq -e 'if has("harnesses") then (.harnesses | type) == "object" else true end' "$MACHINE_FILE" >/dev/null 2>&1; then
+    wrong "the harnesses key in $MACHINE_FILE must be an object"
+  fi
+  jq -s '.[0] * {harnesses: (.[1].harnesses // {})}' "$MANIFEST" "$MACHINE_FILE"
   exit $?
 fi
 
@@ -143,7 +156,8 @@ esac
 [ -d "$org" ] || wrong "org_root '$org' is not a directory (in $MACHINE_FILE)"
 
 # Validate every target before printing anything: a run that names three targets and
-# then dies on the fourth has already handed half a roster to the installer.
+# then dies on the fourth has already handed half a roster to the installer. The roster
+# is buffered and only printed once every target passed, so exit 2 prints only the refusal.
 targets_tsv="$(jq -r '
   (if has("targets") then
      if (.targets | type) != "array" then error("targets is not an array") else .targets end
@@ -164,6 +178,7 @@ targets_tsv="$(jq -r '
   | @tsv' "$MACHINE_FILE" 2>&1)" \
   || wrong "targets in $MACHINE_FILE are malformed: $targets_tsv"
 
+roster=""
 while IFS=$'\t' read -r tpath tflags; do
   [ -n "$tpath" ] || continue
   tpath="$(expand_tilde "$tpath")"
@@ -175,9 +190,14 @@ while IFS=$'\t' read -r tpath tflags; do
   [ "$(canon "$tpath")" != "$(canon "$org")" ] \
     || wrong "targets[] lists org_root '$org' — the org home is synced by sync_root, and an app-mode pass over the same folder overwrites its .hooks block (in $MACHINE_FILE)"
   if [ "$MODE" = targets ]; then
-    printf '%s\t%s\n' "$tpath" "$tflags"
+    printf -v line '%s\t%s\n' "$tpath" "$tflags"
+    roster+="$line"
   fi
 done <<<"$targets_tsv"
+
+if [ "$MODE" = targets ]; then
+  printf '%s' "$roster"
+fi
 
 if [ "$MODE" = org_root ]; then
   printf '%s\n' "$org"
