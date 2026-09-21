@@ -1167,6 +1167,37 @@ if [ "$(jq -r .status "$R/.br/$BEAD.json")" = "in_progress" ]; then
   pass "AC4q: the broken-filter refusal leaves the bead open"
 else fail "AC4q filter: the bead was closed despite unreadable content"; fi
 
+# --- 4r (ac-y4c6): the extension group was LENGTH-CAPPED at six characters, so a native-app
+# delivery extracted TRUNCATED — `project.pbxproj` became `project.pbxpro`, a token no commit
+# carries. Neither leg could then see the real path: the content comparison finds no
+# `HEAD:native/project.pbxproj`, and the status leg reports nothing for a path nobody named, so
+# an UNTRACKED pbxproj closed clean. The fixture pins the full path extracting and refusing.
+# 4s is the negative pole — the same extension with the file committed must still close, so a
+# "fix" that simply refused every long-extension path cannot pass 4r.
+LONG_EXT_PATH='native/project.pbxproj'
+R="$(mk_git_green uncommitted-long-extension "$LONG_EXT_PATH")"
+git_commit_clean "$R"
+printf '// pbxproj v1\n' >"$R/$LONG_EXT_PATH"                       # on disk, never added -> ??
+out="$(gate "$R" --reason "shipped: the project landed. Delivered: $LONG_EXT_PATH")"
+GATE_RC=$(cat "$RCFILE")
+if [ "$GATE_RC" -eq 1 ] && printf '%s' "$out" | grep -q 'CLOSE-REFUSED: UNCOMMITTED' \
+   && printf '%s' "$out" | grep -qF "$LONG_EXT_PATH"; then
+  pass "AC4r: a >6-char-extension (pbxproj) Delivers path is extracted whole and refuses untracked"
+else fail "AC4r pbxproj: rc=$GATE_RC out=$out"; fi
+if [ "$(jq -r .status "$R/.br/$BEAD.json")" = "in_progress" ]; then
+  pass "AC4r: the long-extension refusal leaves the bead open"
+else fail "AC4r pbxproj: the bead was closed despite an untracked long-extension path"; fi
+
+# --- 4s: the negative pole — a COMMITTED-CLEAN >6-char-extension Delivers path still closes.
+R="$(mk_git_green uncommitted-long-extension-clean "$LONG_EXT_PATH")"
+printf '// pbxproj v1\n' >"$R/$LONG_EXT_PATH"
+git_commit_clean "$R"                                              # the pbxproj IS committed
+out="$(gate "$R" --reason "shipped: the project landed. Delivered: $LONG_EXT_PATH")"
+GATE_RC=$(cat "$RCFILE")
+if [ "$GATE_RC" -eq 0 ] && printf '%s' "$out" | grep -q 'UNCOMMITTED ok'; then
+  pass "AC4s: a committed-clean pbxproj Delivers path still closes — the fix admits the path, it does not refuse it"
+else fail "AC4s pbxproj-clean: rc=$GATE_RC out=$out"; fi
+
 # ============================================================================================
 # AC 5 — ownership immediately before the write, and the close verified as LANDED
 # ============================================================================================

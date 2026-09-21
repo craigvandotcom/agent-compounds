@@ -196,8 +196,14 @@ touchers_check() {
     # stripping one backtick from each end (the delimiter goes, a backtick inside the path
     # stays) — the same strip close-gate.sh's delivers_paths applies, so the two homes read a
     # backtick-quoted path identically.
+    #
+    # THE EXTENSION IS NOT LENGTH-CAPPED (ac-y4c6), character for character with close-gate.sh:
+    # the old `\.[A-Za-z0-9]{1,6}` truncated `project.pbxproj` to `project.pbxpro`, the
+    # owe-check saw no tracked path, and a tracked, referenced native-app delivery owed NO
+    # touchers line. A run of alphanumerics is what an extension IS; the token class and the
+    # surrounding delimiters bound the match, so no cap is needed and none may be imposed.
     paths=$(printf '%s\n' "$block" | grep -v '^[[:space:]]*touchers:' \
-      | grep -oE '(\./)?[][A-Za-z0-9_@.()+~!`-]+(/[][A-Za-z0-9_@.()+~!`-]+)*\.[A-Za-z0-9]{1,6}' \
+      | grep -oE '(\./)?[][A-Za-z0-9_@.()+~!`-]+(/[][A-Za-z0-9_@.()+~!`-]+)*\.[A-Za-z0-9]+' \
       | sed 's/^`//; s/`$//' | sort -u)
     existing=$(printf '%s\n' "$paths" | while IFS= read -r p; do
       p="${p#./}"

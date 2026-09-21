@@ -497,9 +497,16 @@ fi
 #     every backtick-quoted path extracts as an untracked nobody.
 # ---------------------------------------------------------------------------------------
 delivers_paths() { # <body-file> — path-shaped tokens under ## Delivers, touchers: lines excluded
+  # THE EXTENSION IS NOT LENGTH-CAPPED (ac-y4c6). The old `\.[A-Za-z0-9]{1,6}` truncated any
+  # extension longer than six characters, so `project.pbxproj` extracted as `project.pbxpro`
+  # and `Main.storyboard` as `Main.storyb`. The truncated token is in no commit: the CONTENT
+  # leg finds no `HEAD:<path>`, the STATUS leg reports nothing for a path nobody named, and an
+  # untracked native-app delivery closes clean. A run of alphanumerics to the end of the token
+  # is what an extension IS; the delimiter that ends it (whitespace, punctuation not in the
+  # token class) already bounds the match, so no length cap is needed and none may be imposed.
   awk '/^## Delivers/{on=1; next} /^## /{on=0} on' "$1" \
     | grep -v '^[[:space:]]*touchers:' \
-    | grep -oE '(\./)?[][A-Za-z0-9_@.()+~!`-]+(/[][A-Za-z0-9_@.()+~!`-]+)*\.[A-Za-z0-9]{1,6}' \
+    | grep -oE '(\./)?[][A-Za-z0-9_@.()+~!`-]+(/[][A-Za-z0-9_@.()+~!`-]+)*\.[A-Za-z0-9]+' \
     | sed 's/^`//; s/`$//' | sort -u
 }
 

@@ -405,6 +405,45 @@ else
   fail "Case 17b: expected exit 0, got $RC. Output: $OUT"
 fi
 
+# --- Case 18: a TRACKED, REFERENCED path with a >6-char extension is SEEN ------------------
+# ac-y4c6. The old extension group `[A-Za-z0-9]{1,6}` truncated `native/project.pbxproj` to
+# `native/project.pbxpro`, so the owe-check saw no existing path and a tracked, referenced
+# native-app delivery owed NO touchers line — an obligation that vanished exactly where the
+# gate exists to demand it (the same class Case 17 pins for `+`). The fixture is a throwaway
+# git repo: existence is a git fact, so the path must be `git add`ed for the reader to see it.
+PBX_FIX="$WORK/pbxproj-fixture"
+mkdir -p "$PBX_FIX/native" "$PBX_FIX/refs"
+git -C "$PBX_FIX" init -q
+printf 'a pbxproj artifact\n' >"$PBX_FIX/native/project.pbxproj"
+printf 'links to native/project.pbxproj from elsewhere\n' >"$PBX_FIX/refs/link.md"
+git -C "$PBX_FIX" add -A
+D=$(write_desc pbxproj.md "## Delivers
+- \`native/project.pbxproj\` — a tracked, referenced native-app artifact
+")
+OUT=$(cd "$PBX_FIX" && bash "$TOOL" check "$D" pbxproj 2>&1); RC=$?
+if [ "$RC" -eq 1 ] && echo "$OUT" | grep -q "unowned-touchers" \
+   && echo "$OUT" | grep -Fq "native/project.pbxproj"; then
+  pass "Case 18: a tracked, referenced >6-char-extension path with no touchers line is REFUSED [unowned-touchers]"
+else
+  fail "Case 18: expected exit 1 naming native/project.pbxproj, got $RC. Output: $OUT"
+fi
+
+# The negative pole: the same long-extension path WITH a reproducing line is ACCEPTED, so Case
+# 18 cannot be satisfied by an extractor that refuses anything carrying a long extension.
+DER=$(cd "$PBX_FIX" && bash "$TOOL" derive "native/project.pbxproj" 2>&1)
+PBX_CMD=$(printf '%s' "$DER" | cut -f3-)
+PBX_N=$(printf '%s' "$DER" | cut -f2)
+D=$(write_desc pbxproj-ok.md "## Delivers
+- \`native/project.pbxproj\` — a tracked, referenced native-app artifact
+  touchers: \`$PBX_CMD\` → $PBX_N · owned by: bd-fixture-refs
+")
+OUT=$(cd "$PBX_FIX" && bash "$TOOL" check "$D" pbxproj-ok 2>&1); RC=$?
+if [ "$RC" -eq 0 ] && echo "$OUT" | grep -q "touchers: OK"; then
+  pass "Case 18b: the same >6-char-extension path WITH a reproducing line is ACCEPTED (exit 0)"
+else
+  fail "Case 18b: expected exit 0, got $RC. Output: $OUT"
+fi
+
 echo
 if [ "$FAILURES" -eq 0 ]; then
   echo "All touchers fixture tests passed."
