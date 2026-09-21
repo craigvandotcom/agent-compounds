@@ -19,6 +19,14 @@ _ideas/
 # so it never rides a commit; engine/machine.sh is its only reader
 machine.json
 
+# TEMPORARY (ac-cf2b) — the RETIRED local-overlay template, kept ignored until the last
+# reader of it dies: ac-vlje.5 deletes engine/sync.sh's read and ac-vlje.7 deletes
+# engine/deploy.sh's. Until BOTH close, the engine still reads a file a machine may carry,
+# and an unignored one could ride a commit — absolute paths, possibly private facts — into
+# a public repo. Delete this line when the last reader is gone; ac-vlje.21, the closeout
+# downstream of every sibling, is the first close that is.
+harnesses.local.json
+
 # bv (beads viewer) local config and caches
 .bv/
 
