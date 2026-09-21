@@ -9,6 +9,8 @@
 #              harness layer gitignored, so it is stamped under a guard and the guard's
 #              verdict — not a list — decides. Rendered LOCKED: a human cannot edit these
 #              away, because the constraint is real and would simply reassert itself.
+#              The source is `engine/machine.sh --targets`, the one reader of this
+#              machine's facts — never a second parser of the same file.
 #   EDITORIAL  Judgement, and the only hand-maintained input: the org-only skills that
 #              operate the factory and have no job inside an app repo. They live in
 #              harness.config.json under `exceptions.org_only_skills`.
@@ -29,17 +31,10 @@ set -euo pipefail
 
 ENGINE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 AC_ROOT="$(cd "$ENGINE_DIR/.." && pwd)"
-ORG_ROOT="$(cd "$AC_ROOT/../../.." && pwd)"
 LAYOUT="$AC_ROOT/harness.config.json"
-# AC_TARGETS_LIST overrides the default sibling path — for an adopter whose org root
-# holds the deploy-targets roster under a differently named directory. Unset keeps the
-# documented default; the graceful-degradation behavior below (technical() returns 3
-# when the file is absent) is unchanged either way.
-TARGETS_LIST="${AC_TARGETS_LIST:-$ORG_ROOT/infrastructure/ac-deploy-targets.list}"
-# An override that names no file is a typo, never "no roster" (same rule as engine/sync.sh).
-if [ -n "${AC_TARGETS_LIST:-}" ] && [ ! -f "$AC_TARGETS_LIST" ]; then
-  echo "error: AC_TARGETS_LIST='$AC_TARGETS_LIST' is not a file" >&2; exit 2
-fi
+# The one reader of this machine's facts (`machine.json`, via AC_MACHINE_FILE). This
+# script parses that file NOT AT ALL: a second parser is a second copy, and the two drift.
+MACHINE_SH="$ENGINE_DIR/machine.sh"
 
 MODE="--list"
 [ $# -gt 0 ] && MODE="$1"
@@ -51,12 +46,18 @@ editorial() { jq -r '.exceptions.org_only_skills[]? // empty' "$LAYOUT"; }
 
 # --- TECHNICAL: derived, never read ------------------------------------------------
 # A target flagged `public` in the roster carries the constraint; the flag is the
-# observation, the exclusion is the consequence. If the roster is absent we say so
-# rather than reporting an empty technical set, which would read as "no constraints".
+# observation, the exclusion is the consequence — and the roster, with its flag, comes
+# from `machine.sh --targets` and nowhere else. Printed as BASENAMES: the roster's own
+# grammar is a name, and the full path is the reader's business, not this view's.
+# The reader's exit code carries its state (0 configured · 4 not configured · 2 present
+# but wrong) and PROPAGATES: a set reported empty because the reader failed would read
+# as "no constraints" when the truth is that the roster is unknown.
 technical() {
-  [ -f "$TARGETS_LIST" ] || return 3
-  grep -vE '^[[:space:]]*(#|$)' "$TARGETS_LIST" \
-    | awk '{ for (i = 2; i <= NF; i++) if ($i == "public") { print $1; break } }'
+  local out
+  out="$("$MACHINE_SH" --targets)" || return $?
+  printf '%s\n' "$out" \
+    | awk -F'\t' '{ n = split($2, f, " ")
+                    for (i = 1; i <= n; i++) if (f[i] == "public") { sub(".*/", "", $1); print $1; break } }'
 }
 
 case "$MODE" in
@@ -75,8 +76,9 @@ case "$MODE" in
     echo
     echo "TECHNICAL exclusions — derived, rendered LOCKED:"
     if ! tech="$(technical)"; then
-      echo "  UNRESOLVED: $TARGETS_LIST missing — the roster is the only source for the"
-      echo "  public flag, so the technical set is unknown here, NOT empty."
+      echo "  UNRESOLVED: engine/machine.sh --targets did not resolve the roster, and it is"
+      echo "  the only source for the public flag — so the technical set is unknown here,"
+      echo "  NOT empty."
     else
       t=0
       while IFS= read -r target; do
@@ -90,14 +92,33 @@ case "$MODE" in
     fi
     ;;
   --json)
-    jq -n \
-      --argjson editorial "$(editorial | jq -R . | jq -s .)" \
-      --argjson technical "$(technical 2>/dev/null | jq -R . | jq -s 'map(select(. != ""))')" \
-      '{policy: "full-set-everywhere",
-        editorial: {kind: "hand-maintained", reason: "org-only", skills: $editorial},
-        technical: {kind: "derived", locked: true,
-                    reason: "public repo — harness layer must stay gitignored",
-                    targets: $technical}}'
+    # The reader's state is carried TWICE — in the payload (`resolved`, `reader_exit`,
+    # `targets`) and in this script's own exit code — because the discarded form this
+    # replaces reported `targets: []` with exit 0, which reads as "configured, no
+    # constraints" when the truth is that the reader could not resolve the roster.
+    rc=0
+    tech="$(technical)" || rc=$?
+    if [ "$rc" -eq 0 ]; then
+      jq -n \
+        --argjson editorial "$(editorial | jq -R . | jq -s .)" \
+        --argjson technical "$(printf '%s\n' "$tech" | jq -R . | jq -s 'map(select(. != ""))')" \
+        '{policy: "full-set-everywhere",
+          editorial: {kind: "hand-maintained", reason: "org-only", skills: $editorial},
+          technical: {kind: "derived", locked: true, resolved: true,
+                      reason: "public repo — harness layer must stay gitignored",
+                      targets: $technical}}'
+    else
+      jq -n \
+        --argjson editorial "$(editorial | jq -R . | jq -s .)" \
+        --argjson reader_exit "$rc" \
+        '{policy: "full-set-everywhere",
+          editorial: {kind: "hand-maintained", reason: "org-only", skills: $editorial},
+          technical: {kind: "derived", locked: true, resolved: false,
+                      reason: "public repo — harness layer must stay gitignored",
+                      reader_exit: $reader_exit,
+                      targets: null}}'
+    fi
+    exit "$rc"
     ;;
   *)
     echo "usage: exceptions.sh --list | --json" >&2
