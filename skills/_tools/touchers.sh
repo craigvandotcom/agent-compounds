@@ -77,8 +77,16 @@ _touchers_command() {
 # Existence is a GIT fact, not a disk fact: a path on disk but untracked is a NEW artifact
 # that owes nothing. `derive` and `check` share this ONE home so the two readings of "exists"
 # cannot drift.
+#
+# Literal pathspecs, or the existence reading is about a DIFFERENT path than the bead named:
+# git's default pathspec reading treats `[` `]` as a glob character class, so a NEW Next.js
+# dynamic route `app/[slug]/page.tsx` reads as tracked whenever a tracked sibling like
+# `app/s/page.tsx` matches the class — and the owe-check then lands on an artifact nobody
+# shipped. close-gate.sh pins this same flag for its own guard; this is the mechanism's home
+# for touchers. Inline, not `export`: this file is SOURCED into stamp-refined.sh, and a leaked
+# global would change every later git call in the caller.
 _touchers_tracked() {
-  git -C "$1" ls-files --error-unmatch -- "$2" >/dev/null 2>&1
+  GIT_LITERAL_PATHSPECS=1 git -C "$1" ls-files --error-unmatch -- "$2" >/dev/null 2>&1
 }
 
 # touchers_derive <rel-path>

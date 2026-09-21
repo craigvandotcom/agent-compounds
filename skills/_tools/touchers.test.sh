@@ -270,6 +270,31 @@ else
   fail "Case 13: expected exit 0 — untracked is not existing, got $RC. Output: $OUT"
 fi
 
+# --- Case 14: a bracketed path is read LITERALLY, never as a glob -----------------------
+# git's default pathspec reading treats `[slug]` as a character class, so a NEW Next.js
+# dynamic route `app/[slug]/page.tsx` reads as TRACKED whenever a tracked sibling like
+# `app/s/page.tsx` exists — git answers with `app/s/page.tsx`, a file the bead never named.
+# The existence check then hands the unshipped route the owe-check, and a referrer of its
+# stem turns that into a REFUSED: the false-refusal this bead convicts. The sibling matches
+# the class on purpose (`s` is in `[slug]`), and `app/[slug]/page.tsx` is left UNTRACKED, so
+# a correct reader answers `new` and a globbing reader answers tracked-with-one-referrer.
+BRACKET_FIX="$WORK/bracket-fixture"
+mkdir -p "$BRACKET_FIX/app/s" "$BRACKET_FIX/app/[slug]" "$BRACKET_FIX/refs"
+git -C "$BRACKET_FIX" init -q
+touch "$BRACKET_FIX/app/s/page.tsx" "$BRACKET_FIX/app/[slug]/page.tsx"
+printf 'links to app/[slug]/page.tsx\n' >"$BRACKET_FIX/refs/route-link.md"
+git -C "$BRACKET_FIX" add -- app/s/page.tsx refs/route-link.md
+D=$(write_desc bracket.md "## Delivers
+- \`app/[slug]/page.tsx\` — a NEW dynamic route this bead creates
+")
+OUT=$(cd "$BRACKET_FIX" && bash "$TOOL" check "$D" bracket 2>&1); RC=$?
+DER=$(cd "$BRACKET_FIX" && bash "$TOOL" derive "app/[slug]/page.tsx" 2>&1)
+if [ "$RC" -eq 0 ] && echo "$OUT" | grep -q "touchers: OK" && [ "$DER" = "new" ]; then
+  pass "Case 14: a NEW bracketed route path is NEW, not its tracked glob sibling — check OK and derive 'new'"
+else
+  fail "Case 14: expected the bracketed path to be NEW and owe nothing, got rc=$RC derive='$DER'. Output: $OUT"
+fi
+
 echo
 if [ "$FAILURES" -eq 0 ]; then
   echo "All touchers fixture tests passed."
