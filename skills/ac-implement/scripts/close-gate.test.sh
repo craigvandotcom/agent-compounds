@@ -1198,6 +1198,74 @@ if [ "$GATE_RC" -eq 0 ] && printf '%s' "$out" | grep -q 'UNCOMMITTED ok'; then
   pass "AC4s: a committed-clean pbxproj Delivers path still closes — the fix admits the path, it does not refuse it"
 else fail "AC4s pbxproj-clean: rc=$GATE_RC out=$out"; fi
 
+# --- 4t (ac-5hg8): a BACKTICK-QUOTED Delivers path is normalised before the legs read it.
+# A bead writes its delivery as markdown code — `` `skills/demo/backtick.txt` `` — the most
+# common `## Delivers` spelling in production. Backtick is BOTH a legal path byte and the
+# code-span delimiter, so the matched token carries one delimiter at each end and
+# delivers_paths strips one backtick from each (the delimiter goes, a backtick inside the path
+# stays). DELETE that sed and the token becomes `` `skills/demo/backtick.txt` `` — a path in no
+# commit — the content leg finds no HEAD blob, the status leg reports nothing for a path nobody
+# named, and an UNTRACKED backtick-quoted delivery closes clean. That is the exact fail-open
+# ac-pa51 closed, so this fixture is the gate home's discriminator: with the strip it refuses,
+# without it the close lands and this case goes red (touchers Case 17 fixtured this class; the
+# gate home did not).
+BACKTICK_PATH='skills/demo/backtick.txt'
+R="$(mk_gitcase uncommitted-backtick-quoted "$BACKTICK_PATH")"
+write_harness "$R"; board "$R" in_progress worker
+cat >"$R/body.md" <<BODY
+## Acceptance Criteria
+- the subject file exists.
+  Probe: \`test -f subject.txt\` — tier: none
+- the harness passes.
+  Probe: \`test -x harness.test.sh && bash harness.test.sh\` — tier: none
+
+## Delivers
+- artifact: \`$BACKTICK_PATH\`
+
+## Consumes
+- none
+BODY
+board "$R" in_progress worker
+fly "$R"; fix_subject "$R"
+git_commit_clean "$R"
+printf 'artifact v1\n' >"$R/$BACKTICK_PATH"                       # on disk, never added -> ??
+out="$(gate "$R" --reason "shipped: the artifact landed. Delivered: \`$BACKTICK_PATH\`")"
+GATE_RC=$(cat "$RCFILE")
+if [ "$GATE_RC" -eq 1 ] && printf '%s' "$out" | grep -q 'CLOSE-REFUSED: UNCOMMITTED' \
+   && printf '%s' "$out" | grep -qF "$BACKTICK_PATH"; then
+  pass "AC4t: a backtick-quoted Delivers path is normalised and refuses untracked — the sed strip is load-bearing"
+else fail "AC4t backtick: rc=$GATE_RC out=$out"; fi
+if [ "$(jq -r .status "$R/.br/$BEAD.json")" = "in_progress" ]; then
+  pass "AC4t: the backtick-quoted refusal leaves the bead open"
+else fail "AC4t backtick: the bead was closed despite an untracked backtick-quoted path"; fi
+
+# --- 4u: the complement — a COMMITTED-CLEAN backtick-quoted Delivers path still closes, so
+# 4t cannot be satisfied by a reader that simply refuses anything carrying a backtick.
+R="$(mk_gitcase uncommitted-backtick-quoted-clean "$BACKTICK_PATH")"
+write_harness "$R"; board "$R" in_progress worker
+cat >"$R/body.md" <<BODY
+## Acceptance Criteria
+- the subject file exists.
+  Probe: \`test -f subject.txt\` — tier: none
+- the harness passes.
+  Probe: \`test -x harness.test.sh && bash harness.test.sh\` — tier: none
+
+## Delivers
+- artifact: \`$BACKTICK_PATH\`
+
+## Consumes
+- none
+BODY
+board "$R" in_progress worker
+fly "$R"; fix_subject "$R"
+printf 'artifact v1\n' >"$R/$BACKTICK_PATH"
+git_commit_clean "$R"                                              # the backtick-quoted path IS committed
+out="$(gate "$R" --reason "shipped: the artifact landed. Delivered: \`$BACKTICK_PATH\`")"
+GATE_RC=$(cat "$RCFILE")
+if [ "$GATE_RC" -eq 0 ] && printf '%s' "$out" | grep -q 'UNCOMMITTED ok'; then
+  pass "AC4u: a committed-clean backtick-quoted Delivers path still closes — the strip normalises, it does not refuse"
+else fail "AC4u backtick-clean: rc=$GATE_RC out=$out"; fi
+
 # ============================================================================================
 # AC 5 — ownership immediately before the write, and the close verified as LANDED
 # ============================================================================================
