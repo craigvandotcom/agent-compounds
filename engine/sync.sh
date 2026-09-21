@@ -1717,6 +1717,16 @@ if [ -f "$MEMORY_LINT" ]; then
   rm -f "$ML_LOG"
 fi
 
+# --- stance spawn probe. A projected stance is only proven by spawning it; the probe
+# runs when the stances or a harness CLI changed since its last green run, and re-runs
+# while red. Visibility only, never blocks a sync.
+STANCE_PROBE="$AC_ROOT/scripts/stance-spawn.test.sh"
+if [ "$DRY" = 0 ] && [ -f "$STANCE_PROBE" ]; then
+  echo
+  bash "$STANCE_PROBE" --if-changed || \
+    echo "# WARNING: stance spawn probe red (non-blocking) — a stance cannot spawn or write scratch on a harness above"
+fi
+
 echo "Done. changes=$CHANGES$([ "$DRY" = 1 ] && echo ' (dry-run)')"
 if [ "$FAILURES" -gt 0 ]; then
   echo "ERROR: $FAILURES target(s) skipped by the public-target guard — fix their .gitignore and re-run" >&2
