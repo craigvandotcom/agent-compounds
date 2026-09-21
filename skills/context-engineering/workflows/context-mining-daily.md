@@ -36,8 +36,17 @@ if you call it:
 ```bash
 python3 <your-deployment>/dream-cycle/reflect_gap.py --hours 24 --record
 ```
-A session re-flags only if it gained new turns since (the ledger keys on `last_ts`), so this
-is safe. Use `--remine` to deliberately re-list an already-mined session.
+A session re-flags only if it gained new turns since (the ledger keys on `last_ts`).
+Use `--remine` to deliberately re-list an already-mined session.
+
+**Run the listing pass FIRST and do not skip it.** The listing writes
+`dream-cycle/mined-pending.json` — the snapshot `--record` is held to — and `--record`
+marks only what that snapshot listed, at the listed `last_ts`, then consumes it. Without
+it, `--record` records NOTHING and says so on stderr (safe: everything re-flags tomorrow).
+This is not belt-and-braces. `--record` used to re-derive the gap set at record time,
+~30min after the listing, which marked *newly appeared* sessions mined without ever
+opening them — including this job's own subagent transcripts. On 2026-09-22 that was 5
+sessions in a single run.
 
 Each `GAP` line is a session that did work but captured nothing. **Mine those transcripts**
 (read the `.jsonl` paths printed) for lessons — do NOT try to "re-run reflect" on them, the
@@ -100,19 +109,25 @@ for home in <global-memory-home> <org-memory-home> \
             <org>/software/*/memory/auto; do
   [ -f "$home/MEMORY.md" ] || continue
   # index slugs whose target file is absent = dangling lines
-  # `command` prefixes are REQUIRED: on the operator's Mac `tr` is an alias for
-  # `tmux new-session -A -s repos` and `grep` is a Claude Code function — bare `tr`
-  # emits nothing in a non-TTY shell, which silently zeroes the left operand and makes
-  # this check report "0 drift" unconditionally. Also drop `slug.md`: it is the
-  # format-doc example on line 3 of most MEMORY.md files, not an index line.
+  # `command grep` is REQUIRED: on the operator's Mac `grep` is a Claude Code function,
+  # and a bare call emits nothing in a non-TTY shell, silently zeroing the left operand
+  # so this check reports "0 drift" unconditionally.
   # The slug class MUST be `[a-zA-Z0-9_-]`: notes use snake_case (`feedback_*`,
   # `reference_*`, `project_*`) and camelCase symbols (`...-getZoneClassifierPrompt.md`).
   # A narrower class drops them from the LEFT operand — never drift-checked, and
   # phantom "orphans" under the reverse `comm -13`.
+  # Take each bullet's FIRST link, via awk `match` (leftmost). A bare `grep -oE` over the
+  # whole line also catches an inline cross-reference in the hook text ("… see
+  # [other](other.md)"), inflating the left operand; a `\[[^]]*\]` title class instead
+  # DROPS lines whose title contains brackets — and real ones do
+  # (`[RULE: ${BASH_SOURCE[0]} …](slug.md)`, `[… `[no-bead]` …](slug.md)`). Either way the
+  # slug silently leaves the drift check. `^- \[` already excludes the `slug.md` format doc.
+  idx_slugs() { command grep '^- \[' "$1" \
+    | awk 'match($0,/\([a-zA-Z0-9_-]+\.md\)/){print substr($0,RSTART+1,RLENGTH-2); next}
+           {print "UNMATCHED"}'; }
   comm -23 \
-    <(command grep -oE '\(([a-zA-Z0-9_-]+\.md)\)' "$home/MEMORY.md" | command tr -d '()' \
-        | command grep -vx 'slug.md' | sort -u) \
-    <(ls "$home" | command grep -vE 'MEMORY|README' | sort -u)
+    <(idx_slugs "$home/MEMORY.md" | sort -u) \
+    <(ls "$home" | command grep -vE '^(MEMORY|README)' | sort -u)
 done
 ```
 Sanity-check before trusting a "0 drift" result — and make it an EXACT equality, not a
@@ -121,9 +136,11 @@ smell test. "Non-empty" is too weak: on 2026-09-15 this check read 293 slugs aga
 the same bytes. A plausible-looking undercount passes "non-empty" and silently hides real
 drift. Assert the invariant instead, and refuse the result if it fails:
 ```bash
-lines=$(command grep -c '^- \[' "$home/MEMORY.md")   # index bullets
-slugs=$(… the left operand … | wc -l)                 # slugs the pipeline extracted
-[ "$slugs" -eq "$lines" ] || echo "BROKEN: extracted $slugs of $lines index lines — do NOT trust the drift count"
+lines=$(command grep -c '^- \[' "$home/MEMORY.md")        # index bullets
+slugs=$(idx_slugs "$home/MEMORY.md" | wc -l)              # slugs the pipeline extracted
+bad=$(idx_slugs "$home/MEMORY.md" | command grep -c UNMATCHED)   # bullets it could not parse
+{ [ "$slugs" -eq "$lines" ] && [ "$bad" -eq 0 ]; } \
+  || echo "BROKEN: extracted $slugs of $lines index lines ($bad unparsed) — do NOT trust the drift count"
 ```
 
 **Before pruning, prove the content is actually gone.** A dangling index line means the
