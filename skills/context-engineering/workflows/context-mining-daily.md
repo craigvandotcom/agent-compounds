@@ -73,7 +73,7 @@ For genuinely new lessons:
 - Classify: {fact, rule, decision, skill-improvement, recipe} × {org, personal, global, app-local}
 - Write the note into its live memory home and add its `MEMORY.md` index line in the same
   step: `global`/`personal` → the global home · `org` →
-  the org home · `app-local` → the app's `factory.json` `memory.root`, committed inside that repo.
+  the org home · `app-local` → the app's own memory home, committed inside that repo.
 - Never write a lesson to `<your-deployment>/context-mining/daily/<YYYY-MM-DD>/`. Nothing reads
   it — retrieval queries the memory + wiki lobes, so a note left there never injects
   (memory `context-mining-staging-dir-is-write-only`). That dir holds `INDEX.md` only.
@@ -87,10 +87,17 @@ mechanical** checks run daily, because they are lossless and the script can re-d
 Today's Tier-0 check: **index drift** — a `MEMORY.md` line pointing at a note file that no
 longer exists. Detect it per home:
 ```bash
-# Homes are placeholders — resolve the global home, the org home, and each
-# app repo's home (its factory.json memory.root) from the deployment's instance-map first.
+# Homes are placeholders — resolve the global home, the org home, and each app
+# repo's home from the deployment's instance-map first. DO NOT resolve app homes by
+# reading a `factory.json` `memory.root` without first confirming that file exists:
+# on omarchine it does not, the convention is `<app>/memory/auto/`, and a run that
+# looks for the missing key silently sweeps ZERO app homes and still reports "0 drift"
+# across the board. Glob for the real `MEMORY.md` files and count them before trusting
+# any result:
+#   find <org>/software -maxdepth 4 -path '*/memory/auto/MEMORY.md' -not -path '*/node_modules/*'
+# Expect ~8 app homes here (2026-09-21). Zero app homes found is a BUG, not a clean sweep.
 for home in <global-memory-home> <org-memory-home> \
-            <org>/software/*/<app-memory-home>; do
+            <org>/software/*/memory/auto; do
   [ -f "$home/MEMORY.md" ] || continue
   # index slugs whose target file is absent = dangling lines
   # `command` prefixes are REQUIRED: on the operator's Mac `tr` is an alias for
