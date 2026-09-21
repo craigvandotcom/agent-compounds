@@ -9,7 +9,9 @@
 # someone else's checkout. This runs lint/checks/14-no-net-growth.py against throwaway
 # repos in /tmp: default branch `master` (so origin/HEAD resolution is proven, not
 # assumed), growth, the wrong-token near-miss, the removed `net-growth-ok` token (which
-# must NOT exempt — ec5fa64), a shrink, and a symlinked skill dir.
+# must NOT exempt — ec5fa64), a shrink, a symlinked skill dir, the two reader states
+# (leg 1 unconditional while leg 2 discloses its SKIP, ac-vlje.9), and the ac family's
+# creation-vs-growth rule.
 #
 # Runs under bash AND zsh. Exit 0 = all cases pass.
 
@@ -142,6 +144,34 @@ seq 1 800 | sed 's/^/line /' > .claude/skills/ac-polish/SKILL.md
 git add .claude/skills/ac-polish/SKILL.md
 base=$(python3 "$CHECK" --leg1-base "$W/app")
 expect "NEW ac SKILL.md BREACHING family cap -> FAILS" 1 "$base" '.claude/skills/*/SKILL.md'
+
+# --- NOT-CONFIGURED: leg 1 stays unconditional, leg 2 discloses its SKIP -------------
+# The two legs answer the reader's absence differently, and BOTH must still speak.
+# Leg 1 audits THIS registry's own skills/ and never consults the machine facts, so a
+# grown SKILL.md keeps failing; leg 2 audits the deploy-target union, which is UNKNOWN
+# without those facts, so it skips LOUDLY rather than silently ratcheting nothing. A
+# version that returned early on the reader's absence would stop the ratchet on exactly
+# the machine whose file is missing — the failure this case exists to prevent.
+# A full run needs a registry-shaped root (leg 1's spec is skills/*/SKILL.md and the
+# check-14 lists come from the manifest), so the throwaway repo gets a copy of the real
+# skills/packages.json.
+git reset -q
+mkdir -p "$W/app/skills/reg-skill"
+cp "$ROOT/skills/packages.json" "$W/app/skills/packages.json"
+printf 'line 1\n' > "$W/app/skills/reg-skill/SKILL.md"
+git add skills/packages.json skills/reg-skill/SKILL.md
+git commit -qm "registry-shaped skill, at rest"; git push -q origin master 2>/dev/null
+echo "line 2" >> "$W/app/skills/reg-skill/SKILL.md"
+out="$(AC_MACHINE_FILE=/nonexistent/machine.json python3 "$CHECK" "$W/app" 2>&1)"; rc=$?
+if [ "$rc" = 1 ] \
+   && printf '%s\n' "$out" | grep -q 'FAIL 14-no-net-growth' \
+   && printf '%s\n' "$out" | grep -q 'reg-skill' \
+   && printf '%s\n' "$out" | grep -q 'leg 2 skipped'; then
+  PASS=$((PASS+1)); printf 'ok   %-46s leg 1 still fails, leg 2 skipped\n' "not-configured machine facts"
+else
+  FAIL=$((FAIL+1)); printf 'FAIL %-46s rc=%s want=1\n' "not-configured machine facts" "$rc"
+  printf '%s\n' "$out"
+fi
 
 echo "---"
 echo "PASS=$PASS FAIL=$FAIL"
