@@ -36,7 +36,13 @@ FIXREPO="$WORK/repo"; mkdir -p "$FIXREPO/lib/db"
 printf 'export function updateFood() {}\n' >"$FIXREPO/lib/db/foods.ts"
 printf 'import { updateFood } from "../db/foods"\n' >"$FIXREPO/lib/api.ts"
 printf 'export const lonely = 1\n' >"$FIXREPO/lib/lonely.ts"
-(cd "$FIXREPO" && git init -q)
+# Existence is a GIT fact, not a disk fact (2026-09-21, ac-touchers-git-tracked-u4x1):
+# a Delivers path is owed its touchers line only when git TRACKS it, so these placeholders
+# must be staged exactly as the production pipeline persists them. Left on disk but untracked,
+# foods.ts reads as `new`, nothing is owed, and Cases 12/14/15/17 pass in the wrong direction
+# — the refusal path this fixture exists to pin becomes a STAMP. lib/new-module.ts is Case
+# 16's not-yet-existing path and is deliberately absent from the index.
+(cd "$FIXREPO" && git init -q && git add lib/db/foods.ts lib/api.ts lib/lonely.ts)
 cd "$FIXREPO" || { echo "HARNESS FAIL: cannot enter fixture repo"; exit 1; }
 
 # --- the mocked board: `show --json`, `comments add -f`, and a call log -----------------
