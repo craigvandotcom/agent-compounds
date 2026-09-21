@@ -462,6 +462,20 @@ fi
 # — an IGNORED path (a .gitignore entry) still prints nothing and still passes, because that
 # is the leg's documented shape, not a silence bought by config.
 #
+# THE VERDICT IS NOT READABLE OFF INDEX STATE EITHER (ac-jdkb): the index carries per-path
+# bits — `git update-index --assume-unchanged <path>` and `--skip-worktree <path>` — that tell
+# git to SKIP the working-tree file when it computes status. A modified Delivers path with
+# either bit set prints nothing under `git status --porcelain --untracked-files=all`, so a
+# status-derived verdict certifies committed-clean over content that differs from every commit
+# and the close LANDS. Both bits are local, silent, and cost one command to set. So for any
+# Delivers path that HEAD carries, the verdict rests on a CONTENT comparison the index cannot
+# silence: `git hash-object` of the working-tree file against `git rev-parse HEAD:<path>` — a
+# difference refuses regardless of what status says. A path HEAD does not carry (untracked,
+# gitignored, or a repo whose HEAD does not resolve) falls back to the status leg below, which
+# is the shape that decides it. Running BOTH for a tracked path is deliberate: the content
+# comparison sees through the index flags, and the status leg still catches a staged-only
+# difference; neither weakens the ignored-path carve-out.
+#
 # The path extraction is touchers.sh's own shape (skills/_tools/touchers.sh): parens and
 # square brackets are admitted, so a Next.js route-group path like `app/(auth)/page.tsx`
 # survives intact, and the `touchers:` line is dropped — its globs and reason name paths
@@ -479,8 +493,26 @@ if [ "$(git rev-parse --is-inside-work-tree 2>/dev/null)" = "true" ]; then
     [ -n "$dp" ] || continue
     dp="${dp#./}"
     [ -e "$dp" ] || continue
-    # --untracked-files=all is a command-line mode: it overrides `status.showUntrackedFiles`,
-    # so a repo or global config set to `no` cannot silence this leg's evidence (ac-fy8s).
+    # 1. CONTENT vs HEAD (ac-jdkb). Index flags cannot silence this: it reads the working-tree
+    #    bytes and the committed blob, never the index's opinion of them. Only a path HEAD
+    #    carries has a blob to compare against; a symlink's blob is its target string, which
+    #    `git hash-object <path>` would dereference, so it is hashed from readlink instead.
+    head_blob=$(git rev-parse --verify --quiet "HEAD:$dp" 2>/dev/null)
+    if [ -n "$head_blob" ]; then
+      if [ -L "$dp" ]; then
+        wt_blob=$(printf '%s' "$(readlink "$dp")" | git hash-object --stdin 2>/dev/null)
+      else
+        wt_blob=$(GIT_LITERAL_PATHSPECS=1 git hash-object --path="$dp" -- "$dp" 2>/dev/null)
+      fi
+      if [ -n "$wt_blob" ] && [ "$wt_blob" != "$head_blob" ]; then
+        UNCOMMITTED="$UNCOMMITTED $dp"
+        continue
+      fi
+    fi
+    # 2. STATUS (ac-fy8s). Decides paths HEAD does not carry — untracked, gitignored, or a
+    #    repo with no HEAD — and still catches a staged-only difference on a tracked path.
+    #    --untracked-files=all is a command-line mode: it overrides `status.showUntrackedFiles`,
+    #    so a repo or global config set to `no` cannot silence this leg's evidence.
     if [ -n "$(GIT_LITERAL_PATHSPECS=1 git status --porcelain --untracked-files=all -- "$dp" 2>/dev/null)" ]; then
       UNCOMMITTED="$UNCOMMITTED $dp"
     fi

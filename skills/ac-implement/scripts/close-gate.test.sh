@@ -993,6 +993,93 @@ if [ "$GATE_RC" -eq 0 ] && printf '%s' "$out" | grep -q 'UNCOMMITTED ok'; then
   pass "AC4h: a committed-clean Delivers path still closes under the silencing config — the fix forces the listing, not a refusal"
 else fail "AC4h silenced-clean: rc=$GATE_RC out=$out"; fi
 
+# --- 4i (ac-jdkb): INDEX STATE silences the status leg. `git update-index --assume-unchanged`
+# tells git to skip the working-tree file when computing status, so a MODIFIED Delivers path
+# prints nothing and a status-derived verdict certifies a delivery no commit carries. The
+# index flag is local and silent; the verdict must rest on a content comparison the index
+# cannot silence — git hash-object <path> against git rev-parse HEAD:<path>.
+R="$(mk_git_green uncommitted-assume-unchanged 'skills/demo/artifact.txt')"
+printf 'artifact v1\n' >"$R/skills/demo/artifact.txt"
+git_commit_clean "$R"                                              # artifact v1 IS committed
+printf 'artifact v2 — modified, hidden by the index\n' >"$R/skills/demo/artifact.txt"
+git -C "$R" update-index --assume-unchanged skills/demo/artifact.txt
+if [ -z "$(git -C "$R" status --porcelain --untracked-files=all -- skills/demo/artifact.txt)" ]; then
+  pass "AC4i: fixture precondition — --assume-unchanged really silences git status for the path"
+else fail "AC4i precondition: the assume-unchanged flag did not silence git status"; fi
+out="$(gate "$R" --reason "shipped: the artifact landed. Delivered: skills/demo/artifact.txt")"
+GATE_RC=$(cat "$RCFILE")
+if [ "$GATE_RC" -eq 1 ] && printf '%s' "$out" | grep -q 'CLOSE-REFUSED: UNCOMMITTED'; then
+  pass "AC4i: a modified Delivers path refuses even when update-index --assume-unchanged silences git status"
+else fail "AC4i assume-unchanged: rc=$GATE_RC out=$out"; fi
+if [ "$(jq -r .status "$R/.br/$BEAD.json")" = "in_progress" ]; then
+  pass "AC4i: the assume-unchanged close leaves the bead open"
+else fail "AC4i assume-unchanged: the bead was closed despite a hidden modification"; fi
+
+# --- 4j (ac-jdkb): the same bypass through the sibling index flag, `--skip-worktree`. A
+# distinct bit with the same silence, so it gets its own fixture rather than riding on 4i's.
+R="$(mk_git_green uncommitted-skip-worktree 'skills/demo/artifact.txt')"
+printf 'artifact v1\n' >"$R/skills/demo/artifact.txt"
+git_commit_clean "$R"                                              # artifact v1 IS committed
+printf 'artifact v2 — modified, hidden by skip-worktree\n' >"$R/skills/demo/artifact.txt"
+git -C "$R" update-index --skip-worktree skills/demo/artifact.txt
+if [ -z "$(git -C "$R" status --porcelain --untracked-files=all -- skills/demo/artifact.txt)" ]; then
+  pass "AC4j: fixture precondition — --skip-worktree really silences git status for the path"
+else fail "AC4j precondition: the skip-worktree flag did not silence git status"; fi
+out="$(gate "$R" --reason "shipped: the artifact landed. Delivered: skills/demo/artifact.txt")"
+GATE_RC=$(cat "$RCFILE")
+if [ "$GATE_RC" -eq 1 ] && printf '%s' "$out" | grep -q 'CLOSE-REFUSED: UNCOMMITTED'; then
+  pass "AC4j: a modified Delivers path refuses even when update-index --skip-worktree silences git status"
+else fail "AC4j skip-worktree: rc=$GATE_RC out=$out"; fi
+if [ "$(jq -r .status "$R/.br/$BEAD.json")" = "in_progress" ]; then
+  pass "AC4j: the skip-worktree close leaves the bead open"
+else fail "AC4j skip-worktree: the bead was closed despite a hidden modification"; fi
+
+# --- 4k (the complement, ac-jdkb): a COMMITTED-CLEAN Delivers path carrying an index flag
+# must still close — the content comparison forces the truth, never a blanket refusal. Without
+# this case a "fix" that refused every index-flagged path would pass 4i/4j and break honest
+# closes on a checkout that legitimately carries assume-unchanged bits.
+R="$(mk_git_green uncommitted-index-flag-clean 'skills/demo/artifact.txt')"
+printf 'artifact v1\n' >"$R/skills/demo/artifact.txt"
+git_commit_clean "$R"                                              # the artifact IS committed
+git -C "$R" update-index --assume-unchanged skills/demo/artifact.txt
+out="$(gate "$R" --reason "shipped: the artifact landed. Delivered: skills/demo/artifact.txt")"
+GATE_RC=$(cat "$RCFILE")
+if [ "$GATE_RC" -eq 0 ] && printf '%s' "$out" | grep -q 'UNCOMMITTED ok'; then
+  pass "AC4k: a committed-clean Delivers path with an index flag still closes — content comparison, never a blanket refusal"
+else fail "AC4k index-flag-clean: rc=$GATE_RC out=$out"; fi
+
+# --- 4l (ac-jdkb, the symlink branch's complement): a committed-clean SYMLINKED Delivers path
+# must still close. `git hash-object <path>` dereferences a symlink, so a naive content
+# comparison would compare the target's bytes against the link's blob and refuse every honest
+# symlink; the gate hashes the link's own target string instead.
+R="$(mk_git_green uncommitted-symlink-clean 'skills/demo/artifact.txt')"
+printf 'artifact v1\n' >"$R/skills/demo/artifact.real"
+ln -s artifact.real "$R/skills/demo/artifact.txt"
+git_commit_clean "$R"
+out="$(gate "$R" --reason "shipped: the artifact landed. Delivered: skills/demo/artifact.txt")"
+GATE_RC=$(cat "$RCFILE")
+if [ "$GATE_RC" -eq 0 ] && printf '%s' "$out" | grep -q 'UNCOMMITTED ok'; then
+  pass "AC4l: a committed-clean symlinked Delivers path still closes — the comparison hashes the link, never its target's bytes"
+else fail "AC4l symlink-clean: rc=$GATE_RC out=$out"; fi
+
+# --- 4m (ac-jdkb): the symlink branch still refuses a link whose TARGET STRING changed under
+# an index flag — --assume-unchanged silences status for a symlink exactly as for a file.
+R="$(mk_git_green uncommitted-symlink-assume-unchanged 'skills/demo/artifact.txt')"
+printf 'artifact v1\n' >"$R/skills/demo/artifact.real"
+printf 'artifact v2\n' >"$R/skills/demo/artifact.real2"
+ln -s artifact.real "$R/skills/demo/artifact.txt"
+git_commit_clean "$R"
+ln -sfn artifact.real2 "$R/skills/demo/artifact.txt"
+git -C "$R" update-index --assume-unchanged skills/demo/artifact.txt
+if [ -z "$(git -C "$R" status --porcelain --untracked-files=all -- skills/demo/artifact.txt)" ]; then
+  pass "AC4m: fixture precondition — --assume-unchanged really silences git status for the symlink"
+else fail "AC4m precondition: the index flag did not silence git status for the symlink"; fi
+out="$(gate "$R" --reason "shipped: the artifact landed. Delivered: skills/demo/artifact.txt")"
+GATE_RC=$(cat "$RCFILE")
+if [ "$GATE_RC" -eq 1 ] && printf '%s' "$out" | grep -q 'CLOSE-REFUSED: UNCOMMITTED'; then
+  pass "AC4m: a retargeted symlinked Delivers path refuses even when --assume-unchanged silences git status"
+else fail "AC4m symlink assume-unchanged: rc=$GATE_RC out=$out"; fi
+
 # ============================================================================================
 # AC 5 — ownership immediately before the write, and the close verified as LANDED
 # ============================================================================================
