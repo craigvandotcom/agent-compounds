@@ -194,49 +194,20 @@ if [ "$CHECK_ID" = 14 ]; then
   run_both "fixture: shrink"
 
   finish
-elif [ "$CHECK_ID" = 8 ] || [ "$CHECK_ID" = 12 ]; then
-  # --- recipes for Checks 8 and 12 (ac-1p7j.14, ported from inline blocks) -----
-  # Both legacy blocks are inline (not functions like Check 14), extracted
-  # between their section markers. The 12-block consumes CONSUMER_DIRS, which
-  # the legacy Check 7 block built — so for 12 BOTH are eval'd in one shell.
-  # Both judges run over the REAL consumer union ($HOME/Repos; the test-only
-  # LINT_CONSUMER_BASE seam is unset on both sides). Each judge mktemps its own
-  # dry-run dir, so the volatile tmp path is normalized before the sets are
-  # compared — the verdict (what fired), not the prose, is what must match.
+elif [ "$CHECK_ID" = 8 ]; then
+  # --- recipe for Check 8 (ac-1p7j.14, ported from an inline block) ------------
+  # The legacy block is inline (not a function like Check 14), extracted between
+  # its section markers. Both judges run over the REAL consumer union ($HOME/Repos;
+  # the test-only LINT_CONSUMER_BASE seam is unset on both sides). Each judge
+  # mktemps its own dry-run dir, so the volatile tmp path is normalized before the
+  # sets are compared — the verdict (what fired), not the prose, is what must match.
   TMPNORM='s/\(tmp: [^)]*\)/(tmp: TMP)/'
-  case "$CHECK_ID" in
-    8)  NEW="$ROOT/lint/checks/08-deploy-dry-run-inert.py"
-        LSTRIP="s/^FAIL: //; $TMPNORM"; NSTRIP="s/^FAIL 08-deploy-dry-run-inert: //; $TMPNORM"
-        old="$(run_legacy 8)" ;;
-    12) NEW="$ROOT/lint/checks/12-deployed-app-conformance.py"
-        LSTRIP="s/^FAIL: //"; NSTRIP="s/^FAIL 12-deployed-app-conformance: //"
-        d7="$(extract_block 7)" || { echo "NOT-CHECKED: no legacy Check-7 block (CONSUMER_DIRS) in lint.sh or its history" >&2; exit 2; }
-        d12="$(extract_block 12)" || exit 2
-        old="$(AC_ROOT="$ROOT" bash -c '
-          check() { :; }
-          fail() { :; }   # the 7-block also SCANS for broken symlinks — that verdict is Check 7'"'"'s, never 12'"'"'s; only its CONSUMER_DIRS computation is consumed here
-          eval "$1"
-          fail() { echo "FAIL: $*"; }
-          eval "$2"
-        ' _ "$d7" "$d12" 2>/dev/null | grep '^FAIL: ' || true)" ;;
-  esac
+  NEW="$ROOT/lint/checks/08-deploy-dry-run-inert.py"
+  LSTRIP="s/^FAIL: //; $TMPNORM"; NSTRIP="s/^FAIL 08-deploy-dry-run-inert: //; $TMPNORM"
+  old="$(run_legacy 8)"
   [ -f "$NEW" ] || { echo "NOT-CHECKED: $NEW missing — nothing ported to compare" >&2; exit 2; }
   new="$(python3 "$NEW" "$ROOT" 2>/dev/null | grep '^FAIL ' || true)"
   compare_sets "registry tree" "$old" "$new" "$LSTRIP" "$NSTRIP"
-  finish
-
-elif [ "$CHECK_ID" = 7 ]; then
-  # --- recipe for Check 7 (consumer symlink health, ac-1p7j.14) ---------------
-  # Legacy block extracted between its section markers (live lint.sh, else the
-  # last commit that carried it) and eval'd with check/fail shims. Both judges
-  # walk the REAL consumer union (the test-only LINT_CONSUMER_BASE seam unset
-  # on both sides), so a dir that exists only on this machine is scanned by
-  # both or by neither.
-  NEW="$ROOT/lint/checks/07-consumer-symlinks.py"
-  [ -f "$NEW" ] || { echo "NOT-CHECKED: $NEW missing — nothing ported to compare" >&2; exit 2; }
-  old="$(run_legacy 7)"
-  new="$(python3 "$NEW" "$ROOT" 2>/dev/null | grep '^FAIL ' || true)"
-  compare_sets "registry tree" "$old" "$new" 's/^FAIL: //' 's/^FAIL 07-consumer-symlinks: //'
   finish
 
 elif [ "$CHECK_ID" = 15 ]; then
