@@ -1058,8 +1058,8 @@ render_mcp_root() {
   local src body content
   # CANON is mcp/*.json — one file per server, filename = server name (ac-jjwx). Merged
   # here into the single {mcpServers:{...}} object every harness dialect below renders
-  # from, so adding a server is adding a file and never editing this function. The old
-  # single $ORG_ROOT/.mcp.json stays a fallback for a machine that has not migrated.
+  # from, so adding a server is adding a file and never editing this function.
+  # $ORG_ROOT/.mcp.json is an OUTPUT (the claude projection below), never a source.
   src="$(mktemp)"
   if compgen -G "$AC_ROOT/mcp/*.json" >/dev/null; then
     python3 - "$AC_ROOT/mcp" "$src" <<'PY'
@@ -1076,14 +1076,64 @@ for name in sorted(os.listdir(d)):
 with open(out, "w") as fh:
     json.dump({"mcpServers": servers}, fh, indent=2)
 PY
-  elif [ -f "$ORG_ROOT/.mcp.json" ]; then
-    cp "$ORG_ROOT/.mcp.json" "$src"
   else
     rm -f "$src"
-    echo "  WARN: no mcp/*.json canon and no $ORG_ROOT/.mcp.json — MCP projection skipped"
+    echo "  WARN: no mcp/*.json canon — MCP projection skipped"
     return 0
   fi
 
+  if [ "$EN_CLAUDE" = "true" ]; then
+    # Discovered up-tree from any cwd under $ORG_ROOT, across nested-repo boundaries —
+    # one file covers every room and app. Claude defers MCP tool schemas, so the old
+    # reason to scope this to software/ only (cold-boot tokens) no longer holds.
+    echo "  -- claude MCP ($ORG_ROOT/.mcp.json, from mcp/*.json)"
+    content="$(jq '{mcpServers: (.mcpServers | with_entries(.value |= (if .url then ({type:"http"} + .) else . end)))}' "$src")"
+    write_file_if_changed "$ORG_ROOT/.mcp.json" "$content"
+  fi
+  if [ "$EN_OPENCODE" = "true" ]; then
+    if [ -d "$OPENCODE_HOME" ]; then
+      # opencode.json is shared with opencode's own keys — merge the `mcp` key only.
+      echo "  -- opencode MCP ($OPENCODE_HOME/opencode.json .mcp, from mcp/*.json)"
+      [ -f "$OPENCODE_HOME/opencode.json" ] && body="$(cat "$OPENCODE_HOME/opencode.json")" || body='{"$schema":"https://opencode.ai/config.json"}'
+      content="$(jq --slurpfile c "$src" '.mcp = ((.mcp // {}) + ($c[0].mcpServers | with_entries(.value |=
+        (if .url then {type:"remote", url} + (if .headers then {headers} else {} end)
+         else {type:"local", command: ([.command] + (.args // []))} + (if .env then {environment: .env} else {} end) end)
+        + {enabled:true})))' <<<"$body")"
+      write_file_if_changed "$OPENCODE_HOME/opencode.json" "$content"
+    else
+      echo "  WARN: opencode home $OPENCODE_HOME missing — MCP skipped"
+    fi
+  fi
+  if [ "$EN_GROK" = "true" ]; then
+    if command -v grok >/dev/null 2>&1; then
+      # grok rewrites its own config.toml, so it writes the entry itself: `grok mcp add`
+      # is add-or-update. Called only for a server whose entry differs from the canon.
+      echo "  -- grok MCP ($GROK_HOME/config.toml [mcp_servers], via grok mcp add)"
+      # captured, not piped: a piped while-loop would lose note_change in a subshell
+      content="$(python3 - "$GROK_HOME/config.toml" "$src" <<'PY'
+import json, sys, tomllib
+try:
+    have = tomllib.load(open(sys.argv[1], "rb")).get("mcp_servers", {})
+except OSError:
+    have = {}
+for name, s in json.load(open(sys.argv[2]))["mcpServers"].items():
+    want = {k: s[k] for k in ("url", "command", "args") if k in s}
+    if {k: have.get(name, {}).get(k) for k in want} != want:
+        cmd = [name, s["url"]] if "url" in s else [name, s["command"], "--", *s.get("args", [])]
+        print("\t".join(cmd))   # tab-separated argv, read into an array below
+PY
+)"
+      local -a argv
+      while IFS=$'\t' read -r -a argv; do
+        [ "${#argv[@]}" -gt 0 ] || continue
+        if [ "$DRY" = 1 ]; then echo "  grok mcp add ${argv[*]}"
+        else grok mcp add -s user "${argv[@]}" >/dev/null && echo "  added grok MCP: ${argv[0]}"; fi
+        note_change
+      done <<<"$content"
+    else
+      echo "  WARN: grok binary missing — MCP skipped"
+    fi
+  fi
   if [ "$EN_CODEX" = "true" ]; then
     echo "  -- codex MCP (.codex/config.toml [mcp_servers], generated)"
     # assignment form (not inline in the call) so a jq failure trips `set -e`
