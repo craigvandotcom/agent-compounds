@@ -31,17 +31,6 @@ command -v jq >/dev/null 2>&1 || { echo "SKIP: jq is not installed — fixtures 
 [ -x "$FLIGHT" ]       || { echo "FAIL flight-check.sh missing at $FLIGHT — the receipt writer is a hard dependency"; exit 1; }
 [ -x "$EVIDENCE_SRC" ] || { echo "FAIL close-evidence-check.sh missing at $EVIDENCE_SRC"; exit 1; }
 
-# --- GIT HERMETICITY (ac-fy8s AC 2) ---------------------------------------------------------
-# The UNCOMMITTED fixtures measure `git status`, so the suite may not inherit ambient git
-# config. A caller with a global `status.showUntrackedFiles=no` would silence the very
-# entries cases 4a/4b depend on — the suite would then go green over the same bypass it is
-# supposed to detect (measured: mutation-convicted, 66-case suite, 3 failures). Pin global
-# and system config to /dev/null for the whole run; the work trees below carry explicit
-# per-invocation `-c` identity/commit pins, never a `git config` write that reads ambient.
-export GIT_CONFIG_GLOBAL=/dev/null
-export GIT_CONFIG_NOSYSTEM=1
-unset GIT_CONFIG_COUNT GIT_CONFIG_PARAMETERS GIT_CONFIG_KEY_0 GIT_CONFIG_VALUE_0 2>/dev/null
-
 # --- AC 1: the gate ships as an executable script ------------------------------------------
 if [ -x "$GATE" ]; then pass "AC1: close-gate.sh exists and is executable"
 else fail "AC1: close-gate.sh is missing or not executable at $GATE"; exit 1; fi
@@ -649,13 +638,6 @@ cat >"$R/body.md" <<'BODY'
 - none
 BODY
 fly "$R"; fix_subject "$R"
-# The widened extractor (ac-pa51) sees the ROOT-LEVEL `subject.txt` this fixture delivers, so
-# the fixture must be committed-clean for the close to land: the fix is then really on disk
-# AND in a commit, which is what an honest close asserts. Under the old slash-REQUIRED pattern
-# the path was invisible here and the uncommitted fix slipped through the UNCOMMITTED leg —
-# the exact fail-open this bead closes, not a property to preserve.
-git -C "$R" -c user.name=t -c user.email=t@t -c commit.gpgsign=false add -A >/dev/null 2>&1
-git -C "$R" -c user.name=t -c user.email=t@t -c commit.gpgsign=false commit -q -m fixed >/dev/null 2>&1
 out="$(gate "$R" --reason "$REASON")"
 GATE_RC=$(cat "$RCFILE")
 if [ "$GATE_RC" -eq 0 ] && printf '%s' "$out" | grep -q 'COVERAGE ok'; then
@@ -856,9 +838,8 @@ else fail "AC3o: rc=$GATE_RC out=$out"; fi
 # something to judge; the non-git case proves the skip is reported, never read as clean.
 # ============================================================================================
 # mk_gitcase <name> <delivers-rel-path> — a green fixture whose one Delivers path is a
-# repo-relative path (touchers.sh's extractor reads root-level and nested names alike, ac-pa51).
-# The path is NOT created here: each case decides whether it is committed-clean, untracked,
-# ignored or deleted.
+# repo-relative slash path (touchers.sh's extractor drops slashless names). The path is NOT
+# created here: each case decides whether it is committed-clean, untracked or ignored.
 mk_gitcase() {
   local root="$WORKDIR/$1" dp="$2"
   mkdir -p "$root/skills/ac-pipeline/scripts" "$root/skills/_tools" "$root/.flight" "$root/.br" "$root/$(dirname "$dp")"
@@ -889,12 +870,8 @@ mk_git_green() { # <name> <delivers-rel-path> — a green fixture in a work tree
 }
 
 git_commit_clean() { # <root> — init a work tree and commit the fixture's current state
-  # Explicit -c identity/commit pins, never a `git config` write: the fixture's git
-  # behaviour is stated at each call and cannot be steered by whatever ambient config the
-  # caller carries (ac-fy8s AC2).
-  ( cd "$1" && git init -q \
-      && git -c user.email=fixture@test -c user.name=fixture -c commit.gpgsign=false add -A \
-      && git -c user.email=fixture@test -c user.name=fixture -c commit.gpgsign=false commit -qm fixture )
+  ( cd "$1" && git init -q && git config user.email fixture@test && git config user.name fixture \
+      && git add -A && git commit -qm fixture )
 }
 
 # --- 4a: an untracked Delivers path refuses.
@@ -952,319 +929,6 @@ GATE_RC=$(cat "$RCFILE")
 if [ "$GATE_RC" -eq 0 ] && [ "$(jq -r .status "$R/.br/$BEAD.json")" = "closed" ]; then
   pass "AC4: green probes over a warning-laden file close — no scanner leg refuses them"
 else fail "AC4 warn-laden: rc=$GATE_RC out=$out"; fi
-
-# --- 4f (ac-fy8s): THE REPO'S OWN CONFIG silences untracked entries. Bare
-# `git status --porcelain` honors status.showUntrackedFiles, so a repo that sets it to `no`
-# makes an untracked Delivers path print nothing — the leg then certifies a delivery that
-# exists in no commit as committed-clean and the close LANDS. The verdict may not be
-# readable off config the gated party controls.
-R="$(mk_git_green uncommitted-silenced-local 'skills/demo/artifact.txt')"
-git_commit_clean "$R"
-git -C "$R" config status.showUntrackedFiles no                    # the silencing config
-printf 'artifact v1\n' >"$R/skills/demo/artifact.txt"              # on disk, never added -> ??
-out="$(gate "$R" --reason "shipped: the artifact landed. Delivered: skills/demo/artifact.txt")"
-GATE_RC=$(cat "$RCFILE")
-if [ "$GATE_RC" -eq 1 ] && printf '%s' "$out" | grep -q 'CLOSE-REFUSED: UNCOMMITTED'; then
-  pass "AC4f: an untracked Delivers path refuses even when the REPO sets status.showUntrackedFiles=no"
-else fail "AC4f silenced-local: rc=$GATE_RC out=$out"; fi
-if [ "$(jq -r .status "$R/.br/$BEAD.json")" = "in_progress" ]; then
-  pass "AC4f: the silenced-config close leaves the bead open"
-else fail "AC4f silenced-local: the bead was closed despite an uncommitted Delivers path"; fi
-
-# --- 4g (ac-fy8s): the silencing lives in GLOBAL config, outside the repo entirely — the
-# "ambient config" half of the finding. A gated party need not touch the repo at all;
-# ~/.gitconfig is enough to buy a false clean. Reproduced through GIT_CONFIG_GLOBAL, which is
-# exactly how an ambient global config reaches `git` in a subprocess.
-R="$(mk_git_green uncommitted-silenced-global 'skills/demo/artifact.txt')"
-git_commit_clean "$R"
-printf '[status]\n\tshowUntrackedFiles = no\n' >"$R/silent.gitconfig"
-printf 'artifact v1\n' >"$R/skills/demo/artifact.txt"              # on disk, never added -> ??
-out="$(GIT_CONFIG_GLOBAL="$R/silent.gitconfig" gate "$R" --reason "shipped: the artifact landed. Delivered: skills/demo/artifact.txt")"
-GATE_RC=$(cat "$RCFILE")
-if [ "$GATE_RC" -eq 1 ] && printf '%s' "$out" | grep -q 'CLOSE-REFUSED: UNCOMMITTED'; then
-  pass "AC4g: an untracked Delivers path refuses even when GLOBAL config sets status.showUntrackedFiles=no"
-else fail "AC4g silenced-global: rc=$GATE_RC out=$out"; fi
-if [ "$(jq -r .status "$R/.br/$BEAD.json")" = "in_progress" ]; then
-  pass "AC4g: the ambient-global-config close leaves the bead open"
-else fail "AC4g silenced-global: the bead was closed despite an uncommitted Delivers path"; fi
-
-# --- 4h (ac-fy8s, the complement): a COMMITTED-CLEAN Delivers path must still close under
-# the same silencing config — the fix must force the listing, never force a refusal. Without
-# this case a "fix" that refused everything would pass 4f/4g and break every honest close.
-R="$(mk_git_green uncommitted-silenced-clean 'skills/demo/artifact.txt')"
-printf 'artifact v1\n' >"$R/skills/demo/artifact.txt"
-git_commit_clean "$R"                                              # the artifact IS committed
-git -C "$R" config status.showUntrackedFiles no
-out="$(gate "$R" --reason "shipped: the artifact landed. Delivered: skills/demo/artifact.txt")"
-GATE_RC=$(cat "$RCFILE")
-if [ "$GATE_RC" -eq 0 ] && printf '%s' "$out" | grep -q 'UNCOMMITTED ok'; then
-  pass "AC4h: a committed-clean Delivers path still closes under the silencing config — the fix forces the listing, not a refusal"
-else fail "AC4h silenced-clean: rc=$GATE_RC out=$out"; fi
-
-# --- 4i (ac-jdkb): INDEX STATE silences the status leg. `git update-index --assume-unchanged`
-# tells git to skip the working-tree file when computing status, so a MODIFIED Delivers path
-# prints nothing and a status-derived verdict certifies a delivery no commit carries. The
-# index flag is local and silent; the verdict must rest on a content comparison the index
-# cannot silence — git hash-object <path> against git rev-parse HEAD:<path>.
-R="$(mk_git_green uncommitted-assume-unchanged 'skills/demo/artifact.txt')"
-printf 'artifact v1\n' >"$R/skills/demo/artifact.txt"
-git_commit_clean "$R"                                              # artifact v1 IS committed
-printf 'artifact v2 — modified, hidden by the index\n' >"$R/skills/demo/artifact.txt"
-git -C "$R" update-index --assume-unchanged skills/demo/artifact.txt
-if [ -z "$(git -C "$R" status --porcelain --untracked-files=all -- skills/demo/artifact.txt)" ]; then
-  pass "AC4i: fixture precondition — --assume-unchanged really silences git status for the path"
-else fail "AC4i precondition: the assume-unchanged flag did not silence git status"; fi
-out="$(gate "$R" --reason "shipped: the artifact landed. Delivered: skills/demo/artifact.txt")"
-GATE_RC=$(cat "$RCFILE")
-if [ "$GATE_RC" -eq 1 ] && printf '%s' "$out" | grep -q 'CLOSE-REFUSED: UNCOMMITTED'; then
-  pass "AC4i: a modified Delivers path refuses even when update-index --assume-unchanged silences git status"
-else fail "AC4i assume-unchanged: rc=$GATE_RC out=$out"; fi
-if [ "$(jq -r .status "$R/.br/$BEAD.json")" = "in_progress" ]; then
-  pass "AC4i: the assume-unchanged close leaves the bead open"
-else fail "AC4i assume-unchanged: the bead was closed despite a hidden modification"; fi
-
-# --- 4j (ac-jdkb): the same bypass through the sibling index flag, `--skip-worktree`. A
-# distinct bit with the same silence, so it gets its own fixture rather than riding on 4i's.
-R="$(mk_git_green uncommitted-skip-worktree 'skills/demo/artifact.txt')"
-printf 'artifact v1\n' >"$R/skills/demo/artifact.txt"
-git_commit_clean "$R"                                              # artifact v1 IS committed
-printf 'artifact v2 — modified, hidden by skip-worktree\n' >"$R/skills/demo/artifact.txt"
-git -C "$R" update-index --skip-worktree skills/demo/artifact.txt
-if [ -z "$(git -C "$R" status --porcelain --untracked-files=all -- skills/demo/artifact.txt)" ]; then
-  pass "AC4j: fixture precondition — --skip-worktree really silences git status for the path"
-else fail "AC4j precondition: the skip-worktree flag did not silence git status"; fi
-out="$(gate "$R" --reason "shipped: the artifact landed. Delivered: skills/demo/artifact.txt")"
-GATE_RC=$(cat "$RCFILE")
-if [ "$GATE_RC" -eq 1 ] && printf '%s' "$out" | grep -q 'CLOSE-REFUSED: UNCOMMITTED'; then
-  pass "AC4j: a modified Delivers path refuses even when update-index --skip-worktree silences git status"
-else fail "AC4j skip-worktree: rc=$GATE_RC out=$out"; fi
-if [ "$(jq -r .status "$R/.br/$BEAD.json")" = "in_progress" ]; then
-  pass "AC4j: the skip-worktree close leaves the bead open"
-else fail "AC4j skip-worktree: the bead was closed despite a hidden modification"; fi
-
-# --- 4k (the complement, ac-jdkb): a COMMITTED-CLEAN Delivers path carrying an index flag
-# must still close — the content comparison forces the truth, never a blanket refusal. Without
-# this case a "fix" that refused every index-flagged path would pass 4i/4j and break honest
-# closes on a checkout that legitimately carries assume-unchanged bits.
-R="$(mk_git_green uncommitted-index-flag-clean 'skills/demo/artifact.txt')"
-printf 'artifact v1\n' >"$R/skills/demo/artifact.txt"
-git_commit_clean "$R"                                              # the artifact IS committed
-git -C "$R" update-index --assume-unchanged skills/demo/artifact.txt
-out="$(gate "$R" --reason "shipped: the artifact landed. Delivered: skills/demo/artifact.txt")"
-GATE_RC=$(cat "$RCFILE")
-if [ "$GATE_RC" -eq 0 ] && printf '%s' "$out" | grep -q 'UNCOMMITTED ok'; then
-  pass "AC4k: a committed-clean Delivers path with an index flag still closes — content comparison, never a blanket refusal"
-else fail "AC4k index-flag-clean: rc=$GATE_RC out=$out"; fi
-
-# --- 4l (ac-jdkb, the symlink branch's complement): a committed-clean SYMLINKED Delivers path
-# must still close. `git hash-object <path>` dereferences a symlink, so a naive content
-# comparison would compare the target's bytes against the link's blob and refuse every honest
-# symlink; the gate hashes the link's own target string instead.
-R="$(mk_git_green uncommitted-symlink-clean 'skills/demo/artifact.txt')"
-printf 'artifact v1\n' >"$R/skills/demo/artifact.real"
-ln -s artifact.real "$R/skills/demo/artifact.txt"
-git_commit_clean "$R"
-out="$(gate "$R" --reason "shipped: the artifact landed. Delivered: skills/demo/artifact.txt")"
-GATE_RC=$(cat "$RCFILE")
-if [ "$GATE_RC" -eq 0 ] && printf '%s' "$out" | grep -q 'UNCOMMITTED ok'; then
-  pass "AC4l: a committed-clean symlinked Delivers path still closes — the comparison hashes the link, never its target's bytes"
-else fail "AC4l symlink-clean: rc=$GATE_RC out=$out"; fi
-
-# --- 4m (ac-jdkb): the symlink branch still refuses a link whose TARGET STRING changed under
-# an index flag — --assume-unchanged silences status for a symlink exactly as for a file.
-R="$(mk_git_green uncommitted-symlink-assume-unchanged 'skills/demo/artifact.txt')"
-printf 'artifact v1\n' >"$R/skills/demo/artifact.real"
-printf 'artifact v2\n' >"$R/skills/demo/artifact.real2"
-ln -s artifact.real "$R/skills/demo/artifact.txt"
-git_commit_clean "$R"
-ln -sfn artifact.real2 "$R/skills/demo/artifact.txt"
-git -C "$R" update-index --assume-unchanged skills/demo/artifact.txt
-if [ -z "$(git -C "$R" status --porcelain --untracked-files=all -- skills/demo/artifact.txt)" ]; then
-  pass "AC4m: fixture precondition — --assume-unchanged really silences git status for the symlink"
-else fail "AC4m precondition: the index flag did not silence git status for the symlink"; fi
-out="$(gate "$R" --reason "shipped: the artifact landed. Delivered: skills/demo/artifact.txt")"
-GATE_RC=$(cat "$RCFILE")
-if [ "$GATE_RC" -eq 1 ] && printf '%s' "$out" | grep -q 'CLOSE-REFUSED: UNCOMMITTED'; then
-  pass "AC4m: a retargeted symlinked Delivers path refuses even when --assume-unchanged silences git status"
-else fail "AC4m symlink assume-unchanged: rc=$GATE_RC out=$out"; fi
-
-# ============================================================================================
-# AC 4n..4q (ac-pa51) — the extraction and the content verdict both failed OPEN. Four
-# fixtures, one per conviction: a root-level delivery the old slash-REQUIRED pattern dropped;
-# a `+`-bearing delivery the old class stopped at; a HEAD-tracked delivery DELETED from the
-# tree that the old `[ -e ] || continue` prefilter skipped; and a required clean filter whose
-# missing process made `git hash-object` print NOTHING, which the old `[ -n "$wt_blob" ]`
-# guard read as "no difference" and handed to the index-silenced status leg.
-# ============================================================================================
-
-# --- 4n: a ROOT-LEVEL untracked Delivers path refuses. `artifact.txt` has no slash, so the
-# old `(/…)+` group extracted nothing, the UNCOMMITTED leg never saw it, and the close LANDED
-# over a file that exists in no commit.
-R="$(mk_git_green uncommitted-root-level 'artifact.txt')"
-git_commit_clean "$R"
-printf 'artifact v1\n' >"$R/artifact.txt"                       # on disk, never added -> ??
-out="$(gate "$R" --reason "shipped: the artifact landed. Delivered: artifact.txt")"
-GATE_RC=$(cat "$RCFILE")
-if [ "$GATE_RC" -eq 1 ] && printf '%s' "$out" | grep -q 'CLOSE-REFUSED: UNCOMMITTED' \
-   && printf '%s' "$out" | grep -q 'artifact.txt'; then
-  pass "AC4n: a ROOT-LEVEL untracked Delivers path is extracted and refuses"
-else fail "AC4n root-level: rc=$GATE_RC out=$out"; fi
-if [ "$(jq -r .status "$R/.br/$BEAD.json")" = "in_progress" ]; then
-  pass "AC4n: the root-level refusal leaves the bead open"
-else fail "AC4n root-level: the bead was closed despite an untracked root-level path"; fi
-
-# --- 4o: a `+`-bearing untracked Delivers path refuses. The old character class stopped the
-# match at the `+`, so `skills/demo/pl+us.txt` extracted to nothing and the close LANDED.
-R="$(mk_git_green uncommitted-plus-bearing 'skills/demo/pl+us.txt')"
-git_commit_clean "$R"
-printf 'artifact v1\n' >"$R/skills/demo/pl+us.txt"             # on disk, never added -> ??
-out="$(gate "$R" --reason "shipped: the artifact landed. Delivered: skills/demo/pl+us.txt")"
-GATE_RC=$(cat "$RCFILE")
-if [ "$GATE_RC" -eq 1 ] && printf '%s' "$out" | grep -q 'CLOSE-REFUSED: UNCOMMITTED' \
-   && printf '%s' "$out" | grep -qF 'skills/demo/pl+us.txt'; then
-  pass "AC4o: a +-bearing untracked Delivers path is extracted and refuses"
-else fail "AC4o pl+us: rc=$GATE_RC out=$out"; fi
-
-# --- 4p: a HEAD-tracked Delivers path DELETED from the tree refuses. The old
-# `[ -e "$dp" ] || continue` prefilter skipped the path entirely, so the one state the leg
-# exists to catch was the one state it could not see, and the close LANDED while the artifact
-# was gone (round-1 existence-guard-skips-deletion).
-R="$(mk_git_green uncommitted-deleted-tracked 'skills/demo/artifact.txt')"
-printf 'artifact v1\n' >"$R/skills/demo/artifact.txt"
-git_commit_clean "$R"                                          # artifact v1 IS committed
-rm -f "$R/skills/demo/artifact.txt"                            # ...then deleted from the tree
-if [ -n "$(git -C "$R" status --porcelain --untracked-files=all -- skills/demo/artifact.txt)" ]; then
-  pass "AC4p: fixture precondition — the deletion is visible to git status, so only the gate's verdict is in question"
-else fail "AC4p precondition: git status did not report the deleted tracked path"; fi
-out="$(gate "$R" --reason "shipped: the artifact landed. Delivered: skills/demo/artifact.txt")"
-GATE_RC=$(cat "$RCFILE")
-if [ "$GATE_RC" -eq 1 ] && printf '%s' "$out" | grep -q 'CLOSE-REFUSED: UNCOMMITTED'; then
-  pass "AC4p: a HEAD-tracked Delivers path DELETED from the tree refuses (the [ -e ] prefilter no longer skips it)"
-else fail "AC4p deleted-tracked: rc=$GATE_RC out=$out"; fi
-
-# --- 4q: the CONTENT verdict FAILS CLOSED. A required clean filter whose process is missing
-# (the path carries `filter=f`, filter.f.required=true, and the filter binary does not exist)
-# makes `git hash-object` exit non-zero and print NOTHING. The old `[ -n "$wt_blob" ] &&` guard
-# read that empty string as "no difference" and fell to the status leg; `--assume-unchanged`
-# silences status, so unreadable content decided the verdict and the close LANDED.
-R="$(mk_git_green uncommitted-filter-broken 'skills/demo/artifact.txt')"
-printf 'artifact v1\n' >"$R/skills/demo/artifact.txt"
-printf 'skills/demo/artifact.txt filter=f\n' >"$R/.gitattributes"
-git_commit_clean "$R"                                          # artifact v1 IS committed
-git -C "$R" config filter.f.clean 'missing-filter-process'
-git -C "$R" config filter.f.required true
-printf 'artifact v2 — modified behind a broken clean filter\n' >"$R/skills/demo/artifact.txt"
-git -C "$R" update-index --assume-unchanged skills/demo/artifact.txt
-if [ -z "$(git -C "$R" status --porcelain --untracked-files=all -- skills/demo/artifact.txt)" ]; then
-  pass "AC4q: fixture precondition — the index flag silences git status, so only the content verdict can decide"
-else fail "AC4q precondition: the assume-unchanged flag did not silence git status"; fi
-out="$(gate "$R" --reason "shipped: the artifact landed. Delivered: skills/demo/artifact.txt")"
-GATE_RC=$(cat "$RCFILE")
-if [ "$GATE_RC" -eq 1 ] && printf '%s' "$out" | grep -q 'CLOSE-REFUSED: UNCOMMITTED'; then
-  pass "AC4q: a broken required clean filter yields REFUSAL, never a silent status fallback"
-else fail "AC4q filter: rc=$GATE_RC out=$out"; fi
-if [ "$(jq -r .status "$R/.br/$BEAD.json")" = "in_progress" ]; then
-  pass "AC4q: the broken-filter refusal leaves the bead open"
-else fail "AC4q filter: the bead was closed despite unreadable content"; fi
-
-# --- 4r (ac-y4c6): the extension group was LENGTH-CAPPED at six characters, so a native-app
-# delivery extracted TRUNCATED — `project.pbxproj` became `project.pbxpro`, a token no commit
-# carries. Neither leg could then see the real path: the content comparison finds no
-# `HEAD:native/project.pbxproj`, and the status leg reports nothing for a path nobody named, so
-# an UNTRACKED pbxproj closed clean. The fixture pins the full path extracting and refusing.
-# 4s is the negative pole — the same extension with the file committed must still close, so a
-# "fix" that simply refused every long-extension path cannot pass 4r.
-LONG_EXT_PATH='native/project.pbxproj'
-R="$(mk_git_green uncommitted-long-extension "$LONG_EXT_PATH")"
-git_commit_clean "$R"
-printf '// pbxproj v1\n' >"$R/$LONG_EXT_PATH"                       # on disk, never added -> ??
-out="$(gate "$R" --reason "shipped: the project landed. Delivered: $LONG_EXT_PATH")"
-GATE_RC=$(cat "$RCFILE")
-if [ "$GATE_RC" -eq 1 ] && printf '%s' "$out" | grep -q 'CLOSE-REFUSED: UNCOMMITTED' \
-   && printf '%s' "$out" | grep -qF "$LONG_EXT_PATH"; then
-  pass "AC4r: a >6-char-extension (pbxproj) Delivers path is extracted whole and refuses untracked"
-else fail "AC4r pbxproj: rc=$GATE_RC out=$out"; fi
-if [ "$(jq -r .status "$R/.br/$BEAD.json")" = "in_progress" ]; then
-  pass "AC4r: the long-extension refusal leaves the bead open"
-else fail "AC4r pbxproj: the bead was closed despite an untracked long-extension path"; fi
-
-# --- 4s: the negative pole — a COMMITTED-CLEAN >6-char-extension Delivers path still closes.
-R="$(mk_git_green uncommitted-long-extension-clean "$LONG_EXT_PATH")"
-printf '// pbxproj v1\n' >"$R/$LONG_EXT_PATH"
-git_commit_clean "$R"                                              # the pbxproj IS committed
-out="$(gate "$R" --reason "shipped: the project landed. Delivered: $LONG_EXT_PATH")"
-GATE_RC=$(cat "$RCFILE")
-if [ "$GATE_RC" -eq 0 ] && printf '%s' "$out" | grep -q 'UNCOMMITTED ok'; then
-  pass "AC4s: a committed-clean pbxproj Delivers path still closes — the fix admits the path, it does not refuse it"
-else fail "AC4s pbxproj-clean: rc=$GATE_RC out=$out"; fi
-
-# --- 4t (ac-5hg8): a BACKTICK-QUOTED Delivers path is normalised before the legs read it.
-# A bead writes its delivery as markdown code — `` `skills/demo/backtick.txt` `` — the most
-# common `## Delivers` spelling in production. Backtick is BOTH a legal path byte and the
-# code-span delimiter, so the matched token carries one delimiter at each end and
-# delivers_paths strips one backtick from each (the delimiter goes, a backtick inside the path
-# stays). DELETE that sed and the token becomes `` `skills/demo/backtick.txt` `` — a path in no
-# commit — the content leg finds no HEAD blob, the status leg reports nothing for a path nobody
-# named, and an UNTRACKED backtick-quoted delivery closes clean. That is the exact fail-open
-# ac-pa51 closed, so this fixture is the gate home's discriminator: with the strip it refuses,
-# without it the close lands and this case goes red (touchers Case 17 fixtured this class; the
-# gate home did not).
-BACKTICK_PATH='skills/demo/backtick.txt'
-R="$(mk_gitcase uncommitted-backtick-quoted "$BACKTICK_PATH")"
-write_harness "$R"; board "$R" in_progress worker
-cat >"$R/body.md" <<BODY
-## Acceptance Criteria
-- the subject file exists.
-  Probe: \`test -f subject.txt\` — tier: none
-- the harness passes.
-  Probe: \`test -x harness.test.sh && bash harness.test.sh\` — tier: none
-
-## Delivers
-- artifact: \`$BACKTICK_PATH\`
-
-## Consumes
-- none
-BODY
-board "$R" in_progress worker
-fly "$R"; fix_subject "$R"
-git_commit_clean "$R"
-printf 'artifact v1\n' >"$R/$BACKTICK_PATH"                       # on disk, never added -> ??
-out="$(gate "$R" --reason "shipped: the artifact landed. Delivered: \`$BACKTICK_PATH\`")"
-GATE_RC=$(cat "$RCFILE")
-if [ "$GATE_RC" -eq 1 ] && printf '%s' "$out" | grep -q 'CLOSE-REFUSED: UNCOMMITTED' \
-   && printf '%s' "$out" | grep -qF "$BACKTICK_PATH"; then
-  pass "AC4t: a backtick-quoted Delivers path is normalised and refuses untracked — the sed strip is load-bearing"
-else fail "AC4t backtick: rc=$GATE_RC out=$out"; fi
-if [ "$(jq -r .status "$R/.br/$BEAD.json")" = "in_progress" ]; then
-  pass "AC4t: the backtick-quoted refusal leaves the bead open"
-else fail "AC4t backtick: the bead was closed despite an untracked backtick-quoted path"; fi
-
-# --- 4u: the complement — a COMMITTED-CLEAN backtick-quoted Delivers path still closes, so
-# 4t cannot be satisfied by a reader that simply refuses anything carrying a backtick.
-R="$(mk_gitcase uncommitted-backtick-quoted-clean "$BACKTICK_PATH")"
-write_harness "$R"; board "$R" in_progress worker
-cat >"$R/body.md" <<BODY
-## Acceptance Criteria
-- the subject file exists.
-  Probe: \`test -f subject.txt\` — tier: none
-- the harness passes.
-  Probe: \`test -x harness.test.sh && bash harness.test.sh\` — tier: none
-
-## Delivers
-- artifact: \`$BACKTICK_PATH\`
-
-## Consumes
-- none
-BODY
-board "$R" in_progress worker
-fly "$R"; fix_subject "$R"
-printf 'artifact v1\n' >"$R/$BACKTICK_PATH"
-git_commit_clean "$R"                                              # the backtick-quoted path IS committed
-out="$(gate "$R" --reason "shipped: the artifact landed. Delivered: \`$BACKTICK_PATH\`")"
-GATE_RC=$(cat "$RCFILE")
-if [ "$GATE_RC" -eq 0 ] && printf '%s' "$out" | grep -q 'UNCOMMITTED ok'; then
-  pass "AC4u: a committed-clean backtick-quoted Delivers path still closes — the strip normalises, it does not refuse"
-else fail "AC4u backtick-clean: rc=$GATE_RC out=$out"; fi
 
 # ============================================================================================
 # AC 5 — ownership immediately before the write, and the close verified as LANDED

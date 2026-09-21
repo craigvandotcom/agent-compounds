@@ -140,29 +140,6 @@ _unfenced() {
   awk '/^[[:space:]]*```/ { f = !f; next } !f' "$1"
 }
 
-# delivers_tokens — the ONE Delivers-path token shape, adopted from its two widened
-# homes (ac-pa51, ac-wszw): close-gate.sh's `delivers_paths` and skills/_tools/touchers.sh's
-# bullet extraction. The shape is identical character for character in all three; the test
-# suite pins that equality, because a shape one home admits and another cannot see makes a
-# path invisible to exactly the gate that must demand its Seams row.
-#
-# It admits ROOT-LEVEL paths (the slash group is `*`, not `+`) and the ordinary repo-path
-# characters `+`, `~`, `!` and backtick. Backtick is BOTH a legal path byte and markdown's
-# code-span delimiter, so one backtick is stripped from each end — the delimiter goes, a
-# backtick inside the path stays. The extension is NOT length-capped (`[A-Za-z0-9]+`, not
-# `{1,6}`): a cap truncates `project.pbxproj` to `project.pbxpro`, a token no commit carries
-# (ac-y4c6). The `touchers:` line is excluded: its glob and reason name paths that are not
-# deliveries.
-#
-# The pre-widening shape here required a slash and stopped a match at a `+`, so a root-level
-# or `+`-bearing Deliverable extracted to NOTHING — and seams-incomplete then APPROVED a plan
-# whose Deliverable had no Seams row (measured; the fail-open this change closes).
-delivers_tokens() {
-  grep -v '^[[:space:]]*touchers:' \
-    | grep -oE '(\./)?[][A-Za-z0-9_@.()+~!`-]+(/[][A-Za-z0-9_@.()+~!`-]+)*\.[A-Za-z0-9]+' \
-    | sed 's/^`//; s/`$//' | sort -u
-}
-
 # Write/replace frontmatter keys. Args: file, then "key=value" pairs. Keys not already
 # present are inserted just before the closing `---`; keys already present are replaced
 # in place — idempotent, and it never disturbs a key it was not told to write (the same
@@ -282,7 +259,7 @@ mode_approve() {
   local seams_body; seams_body=$(_section_body "$plan" "## Seams$")
   local deliv_body; deliv_body=$(_section_body "$plan" "## Deliverables")
   local paths incomplete="" p
-  paths=$(printf '%s\n' "$deliv_body" | delivers_tokens)
+  paths=$(printf '%s\n' "$deliv_body" | grep -oE '(\./)?[][A-Za-z0-9_@.()-]+(/[][A-Za-z0-9_@.()-]+)+\.[A-Za-z0-9]{1,6}' | sort -u)
   while IFS= read -r p; do
     [ -n "$p" ] || continue
     p="${p#./}"

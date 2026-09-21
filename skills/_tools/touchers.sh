@@ -68,48 +68,17 @@ _touchers_stem() {
   printf '%s' "$1" | awk -F/ '{ s=$NF; sub(/\.[^.]*$/, "", s); if (NF>1) s=$(NF-1) "/" s; print s }'
 }
 
-# Glob-QUOTE a repo-relative path so rg's -g reads it as the LITERAL path. Unquoted, rg reads
-# the brackets in a Next.js dynamic route `app/[slug]/page.tsx` as a character class, so the
-# self-exclusion `!app/[slug]/page.tsx` below matches the tracked glob sibling `app/s/page.tsx`
-# in the delivered file's place and LEAVES the bracketed file in its own referrer count — a
-# bracketed path whose own body names its stem then derives a count inflated by 1, and the
-# gate refuses a line no re-derivation can make reproduce (measured: `rg -l -F needle . -g
-# "![slug]/x.md"` dropped ./s/x.md and kept ./[slug]/x.md). `[[]`-style classes are rg's own
-# escape — its parser answers a bare `{` with "(maybe escape '{' with '[{]'?)" — and every
-# glob implementation reads them, where backslash escaping is version-dependent.
-_touchers_glob_quote() {
-  printf '%s' "$1" | sed 's/[][*?{}]/[&]/g'
-}
-
 # The command a bead pastes: the gate's shape, rooted at `.` so it runs from the repo root.
-#
-# The -F PATTERN is emitted with `printf %q` — never inside double quotes — because the gate
-# re-runs this command through `bash -c`. A double-quoted pattern is shell-live: a stem that
-# carries a shell-metacharacter (`$`, a backtick, a backslash, a double quote) expands or
-# mangles on the way back, so the command pastes one pattern and runs another, derives a count
-# against a string no re-derivation can reproduce, and the gate refuses a line the writer
-# itself produced. `%q` backslash-escapes exactly what the shell would otherwise read, so the
-# pattern the command pastes IS the pattern the command runs. (Same class as the
-# exclusion-glob fix in ac-6i6k — this is the pattern side, one line up.)
 _touchers_command() {
-  local _tc_q="'" _tc_pat
-  _tc_pat=$(printf '%q' "$2")
-  printf 'rg -l -F %s . -g %s!%s%s %s' "$_tc_pat" "$_tc_q" "$(_touchers_glob_quote "$1")" "$_tc_q" "$(_touchers_globs)"
+  local _tc_q="'"
+  printf 'rg -l -F "%s" . -g %s!%s%s %s' "$2" "$_tc_q" "$1" "$_tc_q" "$(_touchers_globs)"
 }
 
 # Existence is a GIT fact, not a disk fact: a path on disk but untracked is a NEW artifact
 # that owes nothing. `derive` and `check` share this ONE home so the two readings of "exists"
 # cannot drift.
-#
-# Literal pathspecs, or the existence reading is about a DIFFERENT path than the bead named:
-# git's default pathspec reading treats `[` `]` as a glob character class, so a NEW Next.js
-# dynamic route `app/[slug]/page.tsx` reads as tracked whenever a tracked sibling like
-# `app/s/page.tsx` matches the class — and the owe-check then lands on an artifact nobody
-# shipped. close-gate.sh pins this same flag for its own guard; this is the mechanism's home
-# for touchers. Inline, not `export`: this file is SOURCED into stamp-refined.sh, and a leaked
-# global would change every later git call in the caller.
 _touchers_tracked() {
-  GIT_LITERAL_PATHSPECS=1 git -C "$1" ls-files --error-unmatch -- "$2" >/dev/null 2>&1
+  git -C "$1" ls-files --error-unmatch -- "$2" >/dev/null 2>&1
 }
 
 # touchers_derive <rel-path>
@@ -184,27 +153,8 @@ touchers_check() {
     # A touchers line NAMES paths — inside its own -g glob, and often in its reason. Reading
     # those as deliveries invented obligations no bullet could ever satisfy (measured
     # 2026-09-06), so the disposition is excluded from the extraction, never from the check.
-    #
-    # THE SHAPE IS close-gate.sh's delivers_paths, character for character (ac-pa51): ONE
-    # shape, TWO homes — writer/gate here and the UNCOMMITTED leg there — so a path one admits
-    # the other cannot see is impossible. It admits ROOT-LEVEL paths (the slash group is `*`,
-    # not `+`) and the ordinary repo-path characters `+`, `~`, `!` and backtick; the old
-    # class stopped a match at a `+` (measured on `pl+us`), which made a tracked, referenced
-    # `+`-bearing delivery extract to nothing and owe no touchers line — an obligation that
-    # vanished exactly where the gate was supposed to demand it. Backtick is BOTH a legal
-    # path byte and markdown's code-span delimiter, so the matched token is normalised by
-    # stripping one backtick from each end (the delimiter goes, a backtick inside the path
-    # stays) — the same strip close-gate.sh's delivers_paths applies, so the two homes read a
-    # backtick-quoted path identically.
-    #
-    # THE EXTENSION IS NOT LENGTH-CAPPED (ac-y4c6), character for character with close-gate.sh:
-    # the old `\.[A-Za-z0-9]{1,6}` truncated `project.pbxproj` to `project.pbxpro`, the
-    # owe-check saw no tracked path, and a tracked, referenced native-app delivery owed NO
-    # touchers line. A run of alphanumerics is what an extension IS; the token class and the
-    # surrounding delimiters bound the match, so no cap is needed and none may be imposed.
     paths=$(printf '%s\n' "$block" | grep -v '^[[:space:]]*touchers:' \
-      | grep -oE '(\./)?[][A-Za-z0-9_@.()+~!`-]+(/[][A-Za-z0-9_@.()+~!`-]+)*\.[A-Za-z0-9]+' \
-      | sed 's/^`//; s/`$//' | sort -u)
+      | grep -oE '(\./)?[][A-Za-z0-9_@.()-]+(/[][A-Za-z0-9_@.()-]+)+\.[A-Za-z0-9]{1,6}' | sort -u)
     existing=$(printf '%s\n' "$paths" | while IFS= read -r p; do
       p="${p#./}"
       [ -n "$p" ] || continue

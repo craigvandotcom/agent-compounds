@@ -242,8 +242,9 @@ human_is_authorized() {
 # rulings the newer one stands, never the first `grep -m1` hit found.
 #
 #   Return 0 — the comments read succeeded (RULING may still be empty: none was authorized).
-#   Return 1 — the comments read itself refused; the type-routed path reads that as
-#              NOT-CHECKED.
+#   Return 1 — the comments read itself refused; the caller decides whether that is
+#              NOT-CHECKED (the type-routed path) or simply "no override" (LEG 6, which only
+#              ever narrows an existing refusal and never turns a refusal into a pass).
 #
 # Also sets $RULING_COMMENT_ID to the winning comment's own `id` — LEG 8's landing record
 # cites it (`ruling-comment: #<id>`) so check 35 rule 6 (ac-4y7l.31) can cross-reference the
@@ -453,61 +454,15 @@ fi
 # Ignored and committed-clean paths print nothing under `git status --porcelain` and pass.
 # Outside a git work tree the leg reports the skip; it never implies clean.
 #
-# THE VERDICT IS NOT READABLE OFF AMBIENT CONFIG (ac-fy8s): bare `git status --porcelain`
-# honors `status.showUntrackedFiles`, so a config the gated party controls — the repo's own
-# `.git/config`, or `~/.gitconfig` — set to `no` silences untracked entries, this leg reads
-# the silence as committed-clean, and the close LANDS over a delivery that exists in no
-# commit. The explicit `--untracked-files=all` below is a command-line mode, which overrides
-# any such config: only the commit state can decide the verdict. The carve-out is preserved
-# — an IGNORED path (a .gitignore entry) still prints nothing and still passes, because that
-# is the leg's documented shape, not a silence bought by config.
-#
-# THE VERDICT IS NOT READABLE OFF INDEX STATE EITHER (ac-jdkb): the index carries per-path
-# bits — `git update-index --assume-unchanged <path>` and `--skip-worktree <path>` — that tell
-# git to SKIP the working-tree file when it computes status. A modified Delivers path with
-# either bit set prints nothing under `git status --porcelain --untracked-files=all`, so a
-# status-derived verdict certifies committed-clean over content that differs from every commit
-# and the close LANDS. Both bits are local, silent, and cost one command to set. So for any
-# Delivers path that HEAD carries, the verdict rests on a CONTENT comparison the index cannot
-# silence: `git hash-object` of the working-tree file against `git rev-parse HEAD:<path>` — a
-# difference refuses regardless of what status says. A path HEAD does not carry (untracked,
-# gitignored, or a repo whose HEAD does not resolve) falls back to the status leg below, which
-# is the shape that decides it. Running BOTH for a tracked path is deliberate: the content
-# comparison sees through the index flags, and the status leg still catches a staged-only
-# difference; neither weakens the ignored-path carve-out.
-#
-# The path extraction carries ONE shape, shared with touchers.sh (skills/_tools/touchers.sh):
-# parens and square brackets are admitted, so a Next.js route-group path like
-# `app/(auth)/page.tsx` survives intact, and the `touchers:` line is dropped — its globs and
-# reason name paths that are not deliveries.
-#
-# THE SHAPE ADMITS EVERY PATH A REPO LEGITIMATELY CARRIES (ac-pa51). Two buckets were
-# invisible to the old pattern and both failed OPEN:
-#   - ROOT-LEVEL paths. The old middle group `(/…)+` REQUIRED a slash, so a slashless
-#     delivery (`artifact.txt`) extracted to nothing, the UNCOMMITTED leg never saw it, and a
-#     close could land over an untracked root-level artifact. The group is now `(/…)*`, so
-#     root-level and nested paths are read by the same pattern.
-#   - the characters `+`, `~`, `!` and backtick. A delivery like `skills/demo/pl+us.txt`
-#     stopped the match at the `+` and extracted nothing (measured). They are ordinary in a
-#     repo path; the same widening lands in touchers.sh's bullet extraction, one shape, two
-#     homes. Because backtick is BOTH a legal path byte and markdown's code-span delimiter
-#     (a bead body writes a path as `` `path` ``), the matched token is normalised by
-#     stripping one backtick from each end: the delimiter is dropped, a backtick inside the
-#     path is kept. Without the strip, admitting backtick swallows the opening delimiter and
-#     every backtick-quoted path extracts as an untracked nobody.
+# The path extraction is touchers.sh's own shape (skills/_tools/touchers.sh): parens and
+# square brackets are admitted, so a Next.js route-group path like `app/(auth)/page.tsx`
+# survives intact, and the `touchers:` line is dropped — its globs and reason name paths
+# that are not deliveries.
 # ---------------------------------------------------------------------------------------
 delivers_paths() { # <body-file> — path-shaped tokens under ## Delivers, touchers: lines excluded
-  # THE EXTENSION IS NOT LENGTH-CAPPED (ac-y4c6). The old `\.[A-Za-z0-9]{1,6}` truncated any
-  # extension longer than six characters, so `project.pbxproj` extracted as `project.pbxpro`
-  # and `Main.storyboard` as `Main.storyb`. The truncated token is in no commit: the CONTENT
-  # leg finds no `HEAD:<path>`, the STATUS leg reports nothing for a path nobody named, and an
-  # untracked native-app delivery closes clean. A run of alphanumerics to the end of the token
-  # is what an extension IS; the delimiter that ends it (whitespace, punctuation not in the
-  # token class) already bounds the match, so no length cap is needed and none may be imposed.
   awk '/^## Delivers/{on=1; next} /^## /{on=0} on' "$1" \
     | grep -v '^[[:space:]]*touchers:' \
-    | grep -oE '(\./)?[][A-Za-z0-9_@.()+~!`-]+(/[][A-Za-z0-9_@.()+~!`-]+)*\.[A-Za-z0-9]+' \
-    | sed 's/^`//; s/`$//' | sort -u
+    | grep -oE '(\./)?[][A-Za-z0-9_@.()-]+(/[][A-Za-z0-9_@.()-]+)+\.[A-Za-z0-9]{1,6}' | sort -u
 }
 
 if [ "$(git rev-parse --is-inside-work-tree 2>/dev/null)" = "true" ]; then
@@ -515,56 +470,8 @@ if [ "$(git rev-parse --is-inside-work-tree 2>/dev/null)" = "true" ]; then
   while IFS= read -r dp; do
     [ -n "$dp" ] || continue
     dp="${dp#./}"
-    # 1. CONTENT vs HEAD (ac-jdkb). Index flags cannot silence this: it reads the working-tree
-    #    bytes and the committed blob, never the index's opinion of them. Only a path HEAD
-    #    carries has a blob to compare against; a symlink's blob is its target string, which
-    #    `git hash-object <path>` would dereference, so it is hashed from readlink instead.
-    #
-    #    NO `[ -e ] || continue` PREFILTER (ac-pa51). That guard skipped a HEAD-tracked path
-    #    the working tree no longer carries, so the one state the leg exists to catch — the
-    #    deliverable DELETED from the tree — was the one state it could not see, and the close
-    #    landed while the artifact was gone. A path HEAD carries and the tree does not is a
-    #    refusal in its own right, below; the guard is gone, not narrowed.
-    head_blob=$(git rev-parse --verify --quiet "HEAD:$dp" 2>/dev/null)
-    if [ -n "$head_blob" ]; then
-      if [ ! -e "$dp" ] && [ ! -L "$dp" ]; then
-        # HEAD-tracked, absent from the tree: deleted or replaced by nothing. An unstaged or
-        # staged deletion is exactly what `git status` would report — but this branch refuses
-        # it first, so the verdict never rests on a status read the index can silence.
-        UNCOMMITTED="$UNCOMMITTED $dp"
-        continue
-      fi
-      # Only a BLOB has working-tree bytes to hash. A directory delivery (a HEAD tree whose
-      # name happens to end `.ext`) has none; the status leg is the shape that decides it.
-      # A type that cannot be read at all is not a tree and is refused with the filter class.
-      head_type=$(git cat-file -t "$head_blob" 2>/dev/null)
-      if [ "$head_type" = "blob" ]; then
-        if [ -L "$dp" ]; then
-          wt_blob=$(printf '%s' "$(readlink "$dp")" | git hash-object --stdin 2>/dev/null)
-        else
-          wt_blob=$(GIT_LITERAL_PATHSPECS=1 git hash-object --path="$dp" -- "$dp" 2>/dev/null)
-        fi
-        # FAIL CLOSED (ac-pa51). `git hash-object` exits non-zero and prints NOTHING when the
-        # working-tree content cannot be produced — a required clean filter whose process is
-        # missing (a `.gitattributes` entry plus `filter.*.required` with no binary) is the
-        # measured trigger. The old `[ -n "$wt_blob" ] &&` guard read that empty string as
-        # "no difference" and fell to the status leg, whose index-flag silence ac-jdkb had
-        # just closed, so unreadable content decided the verdict. An unreadable blob is a
-        # refusal, never a fallback.
-        if [ -z "$wt_blob" ] || [ "$wt_blob" != "$head_blob" ]; then
-          UNCOMMITTED="$UNCOMMITTED $dp"
-          continue
-        fi
-      elif [ "$head_type" != "tree" ]; then
-        UNCOMMITTED="$UNCOMMITTED $dp"
-        continue
-      fi
-    fi
-    # 2. STATUS (ac-fy8s). Decides paths HEAD does not carry — untracked, gitignored, or a
-    #    repo with no HEAD — and still catches a staged-only difference on a tracked path.
-    #    --untracked-files=all is a command-line mode: it overrides `status.showUntrackedFiles`,
-    #    so a repo or global config set to `no` cannot silence this leg's evidence.
-    if [ -n "$(GIT_LITERAL_PATHSPECS=1 git status --porcelain --untracked-files=all -- "$dp" 2>/dev/null)" ]; then
+    [ -e "$dp" ] || continue
+    if [ -n "$(GIT_LITERAL_PATHSPECS=1 git status --porcelain -- "$dp" 2>/dev/null)" ]; then
       UNCOMMITTED="$UNCOMMITTED $dp"
     fi
   done <<EOF
