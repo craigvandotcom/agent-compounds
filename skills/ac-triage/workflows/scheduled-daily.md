@@ -56,6 +56,11 @@ channel). This heartbeat is the *run skeleton*; the skill is the *behavior*.
     exit 0
   }
   cd "$TRIAGE_WT"
+  # br resolves its SQLite DB from the LIVE checkout, not the cwd — a bare `br` run here
+  # mutates $APP_ROOT/.beads and can clobber a concurrent session's uncommitted ledger.
+  # Pin every br invocation in this run to the worktree's own DB (bd-6kwqo's decided fix,
+  # mirrors ac-tidy/SKILL.md § 1; recurrence 4 tracked on bd-9xslf — the bug this line ends).
+  export BEADS_DB="$TRIAGE_WT/.beads/beads.db"
   ```
 
   From here every command runs with `cwd = $TRIAGE_WT` (a clean tree at fresh
@@ -84,7 +89,11 @@ channel). This heartbeat is the *run skeleton*; the skill is the *behavior*.
 - **Rehydrate the beads DB in the worktree — before any `br create`/`br close`.** `br`'s local
   SQLite DB is gitignored, so a fresh worktree starts with only the committed
   `.beads/issues.jsonl` and no `.db`. Run `br sync` (or `br list`) once from `$TRIAGE_WT` so br
-  rebuilds its DB from that JSONL. **Skipping this silently breaks the run's whole point:**
+  rebuilds its DB from that JSONL. **The `BEADS_DB` export above is what makes this land in the
+  worktree:** without it `br` resolves its DB from the live checkout, so this rehydrate — and
+  every later `br create`/`br comments add`/`br close` — mutates `$APP_ROOT/.beads` instead and
+  can clobber a concurrent session's uncommitted ledger (bd-9xslf). **Skipping this silently
+  breaks the run's whole point:**
   Phase-3 dedup against open beads would false-miss on an empty DB and re-file the same
   findings every single day. Keep all `br` ops in `$TRIAGE_WT`; step 4 commits the flushed
   `.beads/issues.jsonl` from there alongside the state changes, so beads + report land in one push.
