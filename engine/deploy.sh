@@ -5,7 +5,8 @@
 # ROLE (since 2026-07-04): the .claude-LAYER renderer, driven by harness-sync.sh
 # (which then mirrors .claude into the Codex/Droid/Pi homes). For full-target syncs
 # use ./harness-sync.sh --all; call deploy.sh directly only for selective one-off
-# stamps on projects outside ac-deploy-targets.list (e.g. --skills a,b on simil8).
+# stamps on projects outside the machine's configured target roster (e.g. --skills a,b
+# on simil8).
 #
 # Skills are SYMLINKS (never copies) so the canonical agent-compounds version is the
 # single source of truth. Agents are GENERATED (since model tiers, 2026-09): each
@@ -37,7 +38,8 @@
 #   --require-ignored       refuse to stamp unless the target's git repo ignores
 #                           the harness paths this script creates (guard for
 #                           PUBLIC repos — symlinks must never be committed/
-#                           published; see ac-deploy-targets.list `public` flag)
+#                           published; the `public` flag lives in the machine's
+#                           target roster)
 #   -n, --dry-run           show what would happen, change nothing
 #
 # Prune (default ON): after linking, any symlink under the target's
@@ -58,15 +60,14 @@ set -euo pipefail
 # content it stamps (skills/, agents/) still lives.
 AC_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
-# Tier->model config: same manifest deep-merge as harness-sync.sh (harnesses.json
-# committed base, harnesses.local.json machine overrides on top).
-MANIFEST="$AC_ROOT/harnesses.json"
-LOCAL="$AC_ROOT/harnesses.local.json"
-if [ -f "$LOCAL" ]; then
-  CFG="$(jq -s '.[0] * .[1]' "$MANIFEST" "$LOCAL")"
-else
-  CFG="$(cat "$MANIFEST")"
-fi
+# Tier->model config: the ONE reader (engine/machine.sh --harnesses) merges this
+# machine's overrides over the committed harnesses.json and falls back to the committed
+# base alone at exit 0 when there is no machine file — so this read adds NO precondition
+# to a clean checkout. The merge shape (`harnesses.<harness>.agent_models`) is what
+# tier_model() below resolves.
+MACHINE_SH="$AC_ROOT/engine/machine.sh"
+CFG="$(bash "$MACHINE_SH" --harnesses)" \
+  || { echo "deploy.sh: $MACHINE_SH --harnesses failed" >&2; exit 2; }
 
 # tier_model <harness> <tier> <agent-name> — resolve a tier to a concrete model id.
 # Fails loud (exit 2) on a missing map entry: silently inheriting a harness default
