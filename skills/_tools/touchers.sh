@@ -82,9 +82,19 @@ _touchers_glob_quote() {
 }
 
 # The command a bead pastes: the gate's shape, rooted at `.` so it runs from the repo root.
+#
+# The -F PATTERN is emitted with `printf %q` — never inside double quotes — because the gate
+# re-runs this command through `bash -c`. A double-quoted pattern is shell-live: a stem that
+# carries a shell-metacharacter (`$`, a backtick, a backslash, a double quote) expands or
+# mangles on the way back, so the command pastes one pattern and runs another, derives a count
+# against a string no re-derivation can reproduce, and the gate refuses a line the writer
+# itself produced. `%q` backslash-escapes exactly what the shell would otherwise read, so the
+# pattern the command pastes IS the pattern the command runs. (Same class as the
+# exclusion-glob fix in ac-6i6k — this is the pattern side, one line up.)
 _touchers_command() {
-  local _tc_q="'"
-  printf 'rg -l -F "%s" . -g %s!%s%s %s' "$2" "$_tc_q" "$(_touchers_glob_quote "$1")" "$_tc_q" "$(_touchers_globs)"
+  local _tc_q="'" _tc_pat
+  _tc_pat=$(printf '%q' "$2")
+  printf 'rg -l -F %s . -g %s!%s%s %s' "$_tc_pat" "$_tc_q" "$(_touchers_glob_quote "$1")" "$_tc_q" "$(_touchers_globs)"
 }
 
 # Existence is a GIT fact, not a disk fact: a path on disk but untracked is a NEW artifact

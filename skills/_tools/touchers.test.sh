@@ -337,6 +337,35 @@ else
   fail "Case 15b: expected exit 0 for the bracketed path's derived line, got $RC. Output: $OUT"
 fi
 
+# --- Case 16: the -F pattern is NON-expanding — a shell-metacharacter stem round-trips -----
+# ac-7k30. The derived command exists to be re-run through `bash -c`, so every character that
+# is live inside double quotes (`$`, backtick, backslash, `"`) is expanded or mangled on the
+# way back. With a double-quoted -F pattern a stem carrying a shell-metacharacter makes the
+# command paste one pattern and run another: `"$ZLUG/x"` runs as the literal `/x`. The decoy
+# file carries that POST-EXPANSION fragment (`/x`) and no part of the real stem, so the buggy
+# command counts 2 where the correct one counts 1 — the case discriminates, it cannot pass by
+# accident. The target's own body names its own stem, so the self-exclusion is exercised too.
+META_FIX="$WORK/metachar-fixture"
+mkdir -p "$META_FIX/app/\$ZLUG" "$META_FIX/refs"
+git -C "$META_FIX" init -q
+printf 'this file names its own stem $ZLUG/x here\n' >"$META_FIX/app/\$ZLUG/x.ts"
+printf 'a real referrer names $ZLUG/x\n' >"$META_FIX/refs/link.md"
+printf 'a decoy that carries only the expanded fragment /x\n' >"$META_FIX/refs/decoy.md"
+git -C "$META_FIX" add -A
+DER=$(cd "$META_FIX" && bash "$TOOL" derive 'app/$ZLUG/x.ts' 2>&1); RC=$?
+D_N=$(printf '%s' "$DER" | cut -f2)
+D_CMD=$(printf '%s' "$DER" | cut -f3-)
+D_REPRO=$(cd "$META_FIX" && bash -c "$D_CMD" 2>/dev/null | grep -c .)
+D_HITS=$(cd "$META_FIX" && bash -c "$D_CMD" 2>/dev/null)
+if [ "$RC" -eq 0 ] && [ "${D_N:-0}" -eq 1 ] && [ "$D_REPRO" -eq 1 ] \
+   && printf '%s\n' "$D_HITS" | grep -q "refs/link.md" \
+   && ! printf '%s\n' "$D_HITS" | grep -q "refs/decoy.md" \
+   && ! printf '%s\n' "$D_HITS" | grep -qF 'app/$ZLUG/x.ts'; then
+  pass "Case 16: a shell-metacharacter stem's derived -F pattern reproduces its own count (1, self excluded, decoy not matched)"
+else
+  fail "Case 16: expected derive 1 and a self-reproducing command for the metacharacter stem, got rc=$RC n='$D_N' repro='$D_REPRO' hits='$D_HITS'. Output: $DER"
+fi
+
 echo
 if [ "$FAILURES" -eq 0 ]; then
   echo "All touchers fixture tests passed."
