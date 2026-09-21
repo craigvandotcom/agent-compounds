@@ -476,15 +476,31 @@ fi
 # comparison sees through the index flags, and the status leg still catches a staged-only
 # difference; neither weakens the ignored-path carve-out.
 #
-# The path extraction is touchers.sh's own shape (skills/_tools/touchers.sh): parens and
-# square brackets are admitted, so a Next.js route-group path like `app/(auth)/page.tsx`
-# survives intact, and the `touchers:` line is dropped — its globs and reason name paths
-# that are not deliveries.
+# The path extraction carries ONE shape, shared with touchers.sh (skills/_tools/touchers.sh):
+# parens and square brackets are admitted, so a Next.js route-group path like
+# `app/(auth)/page.tsx` survives intact, and the `touchers:` line is dropped — its globs and
+# reason name paths that are not deliveries.
+#
+# THE SHAPE ADMITS EVERY PATH A REPO LEGITIMATELY CARRIES (ac-pa51). Two buckets were
+# invisible to the old pattern and both failed OPEN:
+#   - ROOT-LEVEL paths. The old middle group `(/…)+` REQUIRED a slash, so a slashless
+#     delivery (`artifact.txt`) extracted to nothing, the UNCOMMITTED leg never saw it, and a
+#     close could land over an untracked root-level artifact. The group is now `(/…)*`, so
+#     root-level and nested paths are read by the same pattern.
+#   - the characters `+`, `~`, `!` and backtick. A delivery like `skills/demo/pl+us.txt`
+#     stopped the match at the `+` and extracted nothing (measured). They are ordinary in a
+#     repo path; the same widening lands in touchers.sh's bullet extraction, one shape, two
+#     homes. Because backtick is BOTH a legal path byte and markdown's code-span delimiter
+#     (a bead body writes a path as `` `path` ``), the matched token is normalised by
+#     stripping one backtick from each end: the delimiter is dropped, a backtick inside the
+#     path is kept. Without the strip, admitting backtick swallows the opening delimiter and
+#     every backtick-quoted path extracts as an untracked nobody.
 # ---------------------------------------------------------------------------------------
 delivers_paths() { # <body-file> — path-shaped tokens under ## Delivers, touchers: lines excluded
   awk '/^## Delivers/{on=1; next} /^## /{on=0} on' "$1" \
     | grep -v '^[[:space:]]*touchers:' \
-    | grep -oE '(\./)?[][A-Za-z0-9_@.()-]+(/[][A-Za-z0-9_@.()-]+)+\.[A-Za-z0-9]{1,6}' | sort -u
+    | grep -oE '(\./)?[][A-Za-z0-9_@.()+~!`-]+(/[][A-Za-z0-9_@.()+~!`-]+)*\.[A-Za-z0-9]{1,6}' \
+    | sed 's/^`//; s/`$//' | sort -u
 }
 
 if [ "$(git rev-parse --is-inside-work-tree 2>/dev/null)" = "true" ]; then
@@ -492,19 +508,47 @@ if [ "$(git rev-parse --is-inside-work-tree 2>/dev/null)" = "true" ]; then
   while IFS= read -r dp; do
     [ -n "$dp" ] || continue
     dp="${dp#./}"
-    [ -e "$dp" ] || continue
     # 1. CONTENT vs HEAD (ac-jdkb). Index flags cannot silence this: it reads the working-tree
     #    bytes and the committed blob, never the index's opinion of them. Only a path HEAD
     #    carries has a blob to compare against; a symlink's blob is its target string, which
     #    `git hash-object <path>` would dereference, so it is hashed from readlink instead.
+    #
+    #    NO `[ -e ] || continue` PREFILTER (ac-pa51). That guard skipped a HEAD-tracked path
+    #    the working tree no longer carries, so the one state the leg exists to catch — the
+    #    deliverable DELETED from the tree — was the one state it could not see, and the close
+    #    landed while the artifact was gone. A path HEAD carries and the tree does not is a
+    #    refusal in its own right, below; the guard is gone, not narrowed.
     head_blob=$(git rev-parse --verify --quiet "HEAD:$dp" 2>/dev/null)
     if [ -n "$head_blob" ]; then
-      if [ -L "$dp" ]; then
-        wt_blob=$(printf '%s' "$(readlink "$dp")" | git hash-object --stdin 2>/dev/null)
-      else
-        wt_blob=$(GIT_LITERAL_PATHSPECS=1 git hash-object --path="$dp" -- "$dp" 2>/dev/null)
+      if [ ! -e "$dp" ] && [ ! -L "$dp" ]; then
+        # HEAD-tracked, absent from the tree: deleted or replaced by nothing. An unstaged or
+        # staged deletion is exactly what `git status` would report — but this branch refuses
+        # it first, so the verdict never rests on a status read the index can silence.
+        UNCOMMITTED="$UNCOMMITTED $dp"
+        continue
       fi
-      if [ -n "$wt_blob" ] && [ "$wt_blob" != "$head_blob" ]; then
+      # Only a BLOB has working-tree bytes to hash. A directory delivery (a HEAD tree whose
+      # name happens to end `.ext`) has none; the status leg is the shape that decides it.
+      # A type that cannot be read at all is not a tree and is refused with the filter class.
+      head_type=$(git cat-file -t "$head_blob" 2>/dev/null)
+      if [ "$head_type" = "blob" ]; then
+        if [ -L "$dp" ]; then
+          wt_blob=$(printf '%s' "$(readlink "$dp")" | git hash-object --stdin 2>/dev/null)
+        else
+          wt_blob=$(GIT_LITERAL_PATHSPECS=1 git hash-object --path="$dp" -- "$dp" 2>/dev/null)
+        fi
+        # FAIL CLOSED (ac-pa51). `git hash-object` exits non-zero and prints NOTHING when the
+        # working-tree content cannot be produced — a required clean filter whose process is
+        # missing (a `.gitattributes` entry plus `filter.*.required` with no binary) is the
+        # measured trigger. The old `[ -n "$wt_blob" ] &&` guard read that empty string as
+        # "no difference" and fell to the status leg, whose index-flag silence ac-jdkb had
+        # just closed, so unreadable content decided the verdict. An unreadable blob is a
+        # refusal, never a fallback.
+        if [ -z "$wt_blob" ] || [ "$wt_blob" != "$head_blob" ]; then
+          UNCOMMITTED="$UNCOMMITTED $dp"
+          continue
+        fi
+      elif [ "$head_type" != "tree" ]; then
         UNCOMMITTED="$UNCOMMITTED $dp"
         continue
       fi

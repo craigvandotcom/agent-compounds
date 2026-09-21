@@ -184,8 +184,21 @@ touchers_check() {
     # A touchers line NAMES paths — inside its own -g glob, and often in its reason. Reading
     # those as deliveries invented obligations no bullet could ever satisfy (measured
     # 2026-09-06), so the disposition is excluded from the extraction, never from the check.
+    #
+    # THE SHAPE IS close-gate.sh's delivers_paths, character for character (ac-pa51): ONE
+    # shape, TWO homes — writer/gate here and the UNCOMMITTED leg there — so a path one admits
+    # the other cannot see is impossible. It admits ROOT-LEVEL paths (the slash group is `*`,
+    # not `+`) and the ordinary repo-path characters `+`, `~`, `!` and backtick; the old
+    # class stopped a match at a `+` (measured on `pl+us`), which made a tracked, referenced
+    # `+`-bearing delivery extract to nothing and owe no touchers line — an obligation that
+    # vanished exactly where the gate was supposed to demand it. Backtick is BOTH a legal
+    # path byte and markdown's code-span delimiter, so the matched token is normalised by
+    # stripping one backtick from each end (the delimiter goes, a backtick inside the path
+    # stays) — the same strip close-gate.sh's delivers_paths applies, so the two homes read a
+    # backtick-quoted path identically.
     paths=$(printf '%s\n' "$block" | grep -v '^[[:space:]]*touchers:' \
-      | grep -oE '(\./)?[][A-Za-z0-9_@.()-]+(/[][A-Za-z0-9_@.()-]+)+\.[A-Za-z0-9]{1,6}' | sort -u)
+      | grep -oE '(\./)?[][A-Za-z0-9_@.()+~!`-]+(/[][A-Za-z0-9_@.()+~!`-]+)*\.[A-Za-z0-9]{1,6}' \
+      | sed 's/^`//; s/`$//' | sort -u)
     existing=$(printf '%s\n' "$paths" | while IFS= read -r p; do
       p="${p#./}"
       [ -n "$p" ] || continue

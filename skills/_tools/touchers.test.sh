@@ -366,6 +366,45 @@ else
   fail "Case 16: expected derive 1 and a self-reproducing command for the metacharacter stem, got rc=$RC n='$D_N' repro='$D_REPRO' hits='$D_HITS'. Output: $DER"
 fi
 
+# --- Case 17: a TRACKED, REFERENCED `+`-bearing path is SEEN by the extractor --------------
+# ac-pa51. The old character class stopped the match at the `+`, so `skills/demo/pl+us.txt`
+# extracted to nothing, the owe-check saw no existing path, and a delivery that is referenced
+# by another file owed NO touchers line — an obligation that vanished exactly where the gate
+# exists to demand it. The fixture is a throwaway git repo (like Cases 15/16): existence is a
+# git fact, so the path must be `git add`ed for the reader to see it at all.
+PLUS_FIX="$WORK/plus-fixture"
+mkdir -p "$PLUS_FIX/skills/demo" "$PLUS_FIX/refs"
+git -C "$PLUS_FIX" init -q
+printf 'a plus-bearing artifact\n' >"$PLUS_FIX/skills/demo/pl+us.txt"
+printf 'links to skills/demo/pl+us.txt from elsewhere\n' >"$PLUS_FIX/refs/link.md"
+git -C "$PLUS_FIX" add -A
+D=$(write_desc plus.md "## Delivers
+- \`skills/demo/pl+us.txt\` — a tracked, referenced artifact carrying a +
+")
+OUT=$(cd "$PLUS_FIX" && bash "$TOOL" check "$D" plus 2>&1); RC=$?
+if [ "$RC" -eq 1 ] && echo "$OUT" | grep -q "unowned-touchers" \
+   && echo "$OUT" | grep -Fq "skills/demo/pl+us.txt"; then
+  pass "Case 17: a tracked, referenced +-bearing path with no touchers line is REFUSED [unowned-touchers]"
+else
+  fail "Case 17: expected exit 1 naming skills/demo/pl+us.txt, got $RC. Output: $OUT"
+fi
+
+# The negative pole: the same +-bearing path WITH a reproducing line is ACCEPTED, so Case 17
+# cannot be satisfied by an extractor that simply refuses anything carrying a `+`.
+DER=$(cd "$PLUS_FIX" && bash "$TOOL" derive "skills/demo/pl+us.txt" 2>&1)
+PLUS_CMD=$(printf '%s' "$DER" | cut -f3-)
+PLUS_N=$(printf '%s' "$DER" | cut -f2)
+D=$(write_desc plus-ok.md "## Delivers
+- \`skills/demo/pl+us.txt\` — a tracked, referenced artifact carrying a +
+  touchers: \`$PLUS_CMD\` → $PLUS_N · owned by: bd-fixture-refs
+")
+OUT=$(cd "$PLUS_FIX" && bash "$TOOL" check "$D" plus-ok 2>&1); RC=$?
+if [ "$RC" -eq 0 ] && echo "$OUT" | grep -q "touchers: OK"; then
+  pass "Case 17b: the same +-bearing path WITH a reproducing line is ACCEPTED (exit 0)"
+else
+  fail "Case 17b: expected exit 0, got $RC. Output: $OUT"
+fi
+
 echo
 if [ "$FAILURES" -eq 0 ]; then
   echo "All touchers fixture tests passed."
