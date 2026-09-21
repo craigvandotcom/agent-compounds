@@ -47,7 +47,7 @@ ROSTER="$PROJECT_ROOT/.claude/skills/ac-board/scripts/agent-roster.py"      # ac
 python3 "$ROSTER" 2>/dev/null
 ```
 
-The roster script prints `name<TAB>program<TAB>model<TAB>last_active_ts`, one line per non-retired agent, or exits 2 (NOT-GATED) when the Agent Mail DB is unreadable → render `?`.
+The roster script prints `#mail<TAB>up|down` (does the Agent Mail server answer), then `name<TAB>program<TAB>model<TAB>last_active_ts`, one line per non-retired agent, or exits 2 (NOT-GATED) when the Agent Mail DB is unreadable → render `?`.
 
 ## Phase 2 — render
 
@@ -76,7 +76,7 @@ unrefined {N} · refined {N} · blocked {N}
   • {id} [{stage} · {age}] {title}
 (gate/proposal beads are counted under Human, not here)
 
-### 🤖 Agents ({N} active, last 24h)
+### 🤖 Agents ({N} active, last 24h · mail {up|down})
   • {name} [{program} · {model}] {age}
 
 ### ⚠ Flags
@@ -89,7 +89,7 @@ board-truth {N} shipped-uncited · {N} gates w/o memo · {N} reason-less · {N} 
 - **Age is required** on every gate, blocked bead, and plan — `created_at`/`touched` is already in the scan; derive, never separately query.
 - **Classify gates by `issue_type`** (`board-scan` § Gate kind): `decision` → decisions (forks, approvals, proposals); `task` → actions. A canonical title prefix (`DECISION:`/`HUMAN:` vs `ACTION:`) decides only when the type is absent. Ungroupable gate beads render under decisions with their raw title.
 - **Never drop what you cannot classify** — an out-of-vocabulary plan status, or a bead with no lifecycle label, renders under `other`/`unrefined` with its raw value; a dropped item is indistinguishable from one that does not exist.
-- **CI health always prints**, `ok` included — a probe computed and not shown is a probe that protects nothing.
+- **CI health and mail status always print**, `ok`/`up` included — a probe computed and not shown is a probe that protects nothing.
 - **A gate without a memo** (no `evidence:` / `consequence:` / `recommendation:`) increments the flags count; never fake options for it.
 - **`?` over a guess** — a failed read names the failing command in the flags line.
 

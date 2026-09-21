@@ -6,6 +6,10 @@ human_key is this repo:
 
     name<TAB>program<TAB>model<TAB>last_active_ts
 
+preceded by one `#mail<TAB>up|down` line: whether the Agent Mail SERVER answers.
+The roster reads the DB file, which outlives the server — without this line a dead
+coordination channel renders as a healthy list of agents.
+
 "Active" is the authoritative DB fact `retired_at IS NULL` — not a marker's
 absence, which cannot tell a retired agent from a never-registered one — plus a
 recency window: agents idle longer than AC_BOARD_AGENT_WINDOW_H hours (default
@@ -56,7 +60,18 @@ def slugify(path):
     return re.sub(r"-+", "-", re.sub(r"[^a-z0-9]+", "-", path.lower())).strip("-")
 
 
+def mail_status():
+    import urllib.request
+    url = os.environ.get("MCP_AGENT_MAIL_URL", "http://127.0.0.1:8765").rstrip("/")
+    try:
+        with urllib.request.urlopen(url + "/health/liveness", timeout=3) as resp:
+            return "up" if b"alive" in resp.read() else "down"
+    except Exception:
+        return "down"
+
+
 def main():
+    print(f"#mail\t{mail_status()}")
     root = project_root()
     if not root:
         print("agent-roster: NOT-GATED — no project root", file=sys.stderr)
