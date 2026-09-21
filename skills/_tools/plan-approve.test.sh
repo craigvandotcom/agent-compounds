@@ -166,6 +166,47 @@ cap "$SCRIPT" approve "$W/p5.md" "Alex"
 expect "$RC" 1 "existing path with no Seams row -> exit 1"
 expect "$(grep -c "REFUSED seams-incomplete $REAL_PATH" <<<"$OUT")" 1 "existing path with no Seams row -> REFUSED seams-incomplete"
 
+# 6a — a ROOT-LEVEL and a +-bearing Deliverable with no ## Seams row are both refused
+# (ac-wszw): the pre-widening extractor here required a slash and stopped a match at a
+# `+`, so both paths extracted to NOTHING and seams-incomplete APPROVED a plan whose
+# Deliverables had no Seams rows — the fail-open this fixture pins. Both paths sort
+# (artifact.txt before skills/...), so the refusal names them in that order.
+ROOTLEVEL_PATH="artifact.txt"
+PLUSBARING_PATH="skills/demo/pl+us.txt"
+mk_plan "$W/p5root.md" "- **D1 \`$ROOTLEVEL_PATH\`** — a root-level thing.
+- **D2 \`$PLUSBARING_PATH\`** — a plus-bearing thing." "$SETTLED_CARD" "| object | finding | disposition |
+| --- | --- | --- |
+| \`unrelated-name\` | x | -> D1 |"
+cap "$SCRIPT" approve "$W/p5root.md" "Alex"
+expect "$RC" 1 "root-level / +-bearing Deliverable with no Seams row -> exit 1"
+expect "$(grep -c "REFUSED seams-incomplete $ROOTLEVEL_PATH $PLUSBARING_PATH" <<<"$OUT")" 1 "root-level / +-bearing Deliverable with no Seams row -> REFUSED seams-incomplete"
+expect "$(grep -c '^status: draft$' "$W/p5root.md")" 1 "refused root-level plan is not re-stamped"
+
+# 6a2 — the same two paths WITH matching ## Seams rows approve (exit 0): the widened
+# extractor reads them, and the Seams match is by FULL path, so the refusal above is the
+# missing rows, not an over-broad pattern.
+mk_plan "$W/p5root-ok.md" "- **D1 \`$ROOTLEVEL_PATH\`** — a root-level thing.
+- **D2 \`$PLUSBARING_PATH\`** — a plus-bearing thing." "$SETTLED_CARD" "| object | finding | disposition |
+| --- | --- | --- |
+| \`$ROOTLEVEL_PATH\` | x | -> D1 |
+| \`$PLUSBARING_PATH\` | y | -> D2 |"
+cap "$SCRIPT" approve "$W/p5root-ok.md" "Alex"
+expect "$RC" 0 "root-level / +-bearing Deliverables with Seams rows -> exit 0"
+expect "$(grep -c '^APPROVED:' <<<"$OUT")" 1 "root-level / +-bearing Deliverables with Seams rows -> APPROVED"
+
+# 6a3 — the shape-equality pin (ac-wszw): the Delivers-path token pattern is ONE shape in
+# three homes, and this test fails the moment one drifts. Extract the `grep -oE` pattern line
+# from each home, strip indentation and the trailing continuation backslash, and compare.
+TOUCHERS="$HERE/touchers.sh"
+CLOSE_GATE="$HERE/../ac-implement/scripts/close-gate.sh"
+shape_line() { grep -m1 -F "(\./)?[][A-Za-z0-9_@.()" "$1" | sed 's/^[[:space:]]*//; s/[[:space:]]*\\$//'; }
+PA_SHAPE=$(shape_line "$SCRIPT")
+TOUCHERS_SHAPE=$(shape_line "$TOUCHERS")
+CLOSE_GATE_SHAPE=$(shape_line "$CLOSE_GATE")
+expect "$([ -n "$PA_SHAPE" ] && echo present)" "present" "plan-approve carries the Delivers-path shape"
+expect "$TOUCHERS_SHAPE" "$PA_SHAPE" "touchers.sh carries the same shape as plan-approve"
+expect "$CLOSE_GATE_SHAPE" "$PA_SHAPE" "close-gate.sh carries the same shape as plan-approve"
+
 # 6b — a seams-mode hand-off's reader-diagnosis header ("## Seams — seen by more than one
 # lens" and its kin) must never satisfy the no-seams refusal by PREFIX (ac-4y7l.3): a plan
 # carrying only a look-alike header, and no exact ## Seams section, is still refused.
