@@ -51,12 +51,12 @@
 #        plan-approve.sh check   <plan-path>
 set -u
 
+die_notgated() { printf 'NOT-GATED: %s\n' "$*"; exit 2; }
+
 # The Delivers-path extraction pattern has ONE home (skills/_tools/delivers-paths.sh).
 _DP_HOME="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/delivers-paths.sh"
 [ -f "$_DP_HOME" ] || die_notgated "delivers-paths.sh missing at $_DP_HOME — the extraction pattern cannot be resolved"
 . "$_DP_HOME"
-
-die_notgated() { printf 'NOT-GATED: %s\n' "$*"; exit 2; }
 
 # Fail-closed digest guard: `set -u` is on but there is no pipefail, so an exit
 # inside `$( ... | _sha )` never reaches the caller — the error text would become
