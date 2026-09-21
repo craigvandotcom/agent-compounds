@@ -453,6 +453,15 @@ fi
 # Ignored and committed-clean paths print nothing under `git status --porcelain` and pass.
 # Outside a git work tree the leg reports the skip; it never implies clean.
 #
+# THE VERDICT IS NOT READABLE OFF AMBIENT CONFIG (ac-fy8s): bare `git status --porcelain`
+# honors `status.showUntrackedFiles`, so a config the gated party controls — the repo's own
+# `.git/config`, or `~/.gitconfig` — set to `no` silences untracked entries, this leg reads
+# the silence as committed-clean, and the close LANDS over a delivery that exists in no
+# commit. The explicit `--untracked-files=all` below is a command-line mode, which overrides
+# any such config: only the commit state can decide the verdict. The carve-out is preserved
+# — an IGNORED path (a .gitignore entry) still prints nothing and still passes, because that
+# is the leg's documented shape, not a silence bought by config.
+#
 # The path extraction is touchers.sh's own shape (skills/_tools/touchers.sh): parens and
 # square brackets are admitted, so a Next.js route-group path like `app/(auth)/page.tsx`
 # survives intact, and the `touchers:` line is dropped — its globs and reason name paths
@@ -470,7 +479,9 @@ if [ "$(git rev-parse --is-inside-work-tree 2>/dev/null)" = "true" ]; then
     [ -n "$dp" ] || continue
     dp="${dp#./}"
     [ -e "$dp" ] || continue
-    if [ -n "$(GIT_LITERAL_PATHSPECS=1 git status --porcelain -- "$dp" 2>/dev/null)" ]; then
+    # --untracked-files=all is a command-line mode: it overrides `status.showUntrackedFiles`,
+    # so a repo or global config set to `no` cannot silence this leg's evidence (ac-fy8s).
+    if [ -n "$(GIT_LITERAL_PATHSPECS=1 git status --porcelain --untracked-files=all -- "$dp" 2>/dev/null)" ]; then
       UNCOMMITTED="$UNCOMMITTED $dp"
     fi
   done <<EOF

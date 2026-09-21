@@ -31,6 +31,17 @@ command -v jq >/dev/null 2>&1 || { echo "SKIP: jq is not installed — fixtures 
 [ -x "$FLIGHT" ]       || { echo "FAIL flight-check.sh missing at $FLIGHT — the receipt writer is a hard dependency"; exit 1; }
 [ -x "$EVIDENCE_SRC" ] || { echo "FAIL close-evidence-check.sh missing at $EVIDENCE_SRC"; exit 1; }
 
+# --- GIT HERMETICITY (ac-fy8s AC 2) ---------------------------------------------------------
+# The UNCOMMITTED fixtures measure `git status`, so the suite may not inherit ambient git
+# config. A caller with a global `status.showUntrackedFiles=no` would silence the very
+# entries cases 4a/4b depend on — the suite would then go green over the same bypass it is
+# supposed to detect (measured: mutation-convicted, 66-case suite, 3 failures). Pin global
+# and system config to /dev/null for the whole run; the work trees below carry explicit
+# per-invocation `-c` identity/commit pins, never a `git config` write that reads ambient.
+export GIT_CONFIG_GLOBAL=/dev/null
+export GIT_CONFIG_NOSYSTEM=1
+unset GIT_CONFIG_COUNT GIT_CONFIG_PARAMETERS GIT_CONFIG_KEY_0 GIT_CONFIG_VALUE_0 2>/dev/null
+
 # --- AC 1: the gate ships as an executable script ------------------------------------------
 if [ -x "$GATE" ]; then pass "AC1: close-gate.sh exists and is executable"
 else fail "AC1: close-gate.sh is missing or not executable at $GATE"; exit 1; fi
@@ -870,8 +881,12 @@ mk_git_green() { # <name> <delivers-rel-path> — a green fixture in a work tree
 }
 
 git_commit_clean() { # <root> — init a work tree and commit the fixture's current state
-  ( cd "$1" && git init -q && git config user.email fixture@test && git config user.name fixture \
-      && git add -A && git commit -qm fixture )
+  # Explicit -c identity/commit pins, never a `git config` write: the fixture's git
+  # behaviour is stated at each call and cannot be steered by whatever ambient config the
+  # caller carries (ac-fy8s AC2).
+  ( cd "$1" && git init -q \
+      && git -c user.email=fixture@test -c user.name=fixture -c commit.gpgsign=false add -A \
+      && git -c user.email=fixture@test -c user.name=fixture -c commit.gpgsign=false commit -qm fixture )
 }
 
 # --- 4a: an untracked Delivers path refuses.
@@ -929,6 +944,54 @@ GATE_RC=$(cat "$RCFILE")
 if [ "$GATE_RC" -eq 0 ] && [ "$(jq -r .status "$R/.br/$BEAD.json")" = "closed" ]; then
   pass "AC4: green probes over a warning-laden file close — no scanner leg refuses them"
 else fail "AC4 warn-laden: rc=$GATE_RC out=$out"; fi
+
+# --- 4f (ac-fy8s): THE REPO'S OWN CONFIG silences untracked entries. Bare
+# `git status --porcelain` honors status.showUntrackedFiles, so a repo that sets it to `no`
+# makes an untracked Delivers path print nothing — the leg then certifies a delivery that
+# exists in no commit as committed-clean and the close LANDS. The verdict may not be
+# readable off config the gated party controls.
+R="$(mk_git_green uncommitted-silenced-local 'skills/demo/artifact.txt')"
+git_commit_clean "$R"
+git -C "$R" config status.showUntrackedFiles no                    # the silencing config
+printf 'artifact v1\n' >"$R/skills/demo/artifact.txt"              # on disk, never added -> ??
+out="$(gate "$R" --reason "shipped: the artifact landed. Delivered: skills/demo/artifact.txt")"
+GATE_RC=$(cat "$RCFILE")
+if [ "$GATE_RC" -eq 1 ] && printf '%s' "$out" | grep -q 'CLOSE-REFUSED: UNCOMMITTED'; then
+  pass "AC4f: an untracked Delivers path refuses even when the REPO sets status.showUntrackedFiles=no"
+else fail "AC4f silenced-local: rc=$GATE_RC out=$out"; fi
+if [ "$(jq -r .status "$R/.br/$BEAD.json")" = "in_progress" ]; then
+  pass "AC4f: the silenced-config close leaves the bead open"
+else fail "AC4f silenced-local: the bead was closed despite an uncommitted Delivers path"; fi
+
+# --- 4g (ac-fy8s): the silencing lives in GLOBAL config, outside the repo entirely — the
+# "ambient config" half of the finding. A gated party need not touch the repo at all;
+# ~/.gitconfig is enough to buy a false clean. Reproduced through GIT_CONFIG_GLOBAL, which is
+# exactly how an ambient global config reaches `git` in a subprocess.
+R="$(mk_git_green uncommitted-silenced-global 'skills/demo/artifact.txt')"
+git_commit_clean "$R"
+printf '[status]\n\tshowUntrackedFiles = no\n' >"$R/silent.gitconfig"
+printf 'artifact v1\n' >"$R/skills/demo/artifact.txt"              # on disk, never added -> ??
+out="$(GIT_CONFIG_GLOBAL="$R/silent.gitconfig" gate "$R" --reason "shipped: the artifact landed. Delivered: skills/demo/artifact.txt")"
+GATE_RC=$(cat "$RCFILE")
+if [ "$GATE_RC" -eq 1 ] && printf '%s' "$out" | grep -q 'CLOSE-REFUSED: UNCOMMITTED'; then
+  pass "AC4g: an untracked Delivers path refuses even when GLOBAL config sets status.showUntrackedFiles=no"
+else fail "AC4g silenced-global: rc=$GATE_RC out=$out"; fi
+if [ "$(jq -r .status "$R/.br/$BEAD.json")" = "in_progress" ]; then
+  pass "AC4g: the ambient-global-config close leaves the bead open"
+else fail "AC4g silenced-global: the bead was closed despite an uncommitted Delivers path"; fi
+
+# --- 4h (ac-fy8s, the complement): a COMMITTED-CLEAN Delivers path must still close under
+# the same silencing config — the fix must force the listing, never force a refusal. Without
+# this case a "fix" that refused everything would pass 4f/4g and break every honest close.
+R="$(mk_git_green uncommitted-silenced-clean 'skills/demo/artifact.txt')"
+printf 'artifact v1\n' >"$R/skills/demo/artifact.txt"
+git_commit_clean "$R"                                              # the artifact IS committed
+git -C "$R" config status.showUntrackedFiles no
+out="$(gate "$R" --reason "shipped: the artifact landed. Delivered: skills/demo/artifact.txt")"
+GATE_RC=$(cat "$RCFILE")
+if [ "$GATE_RC" -eq 0 ] && printf '%s' "$out" | grep -q 'UNCOMMITTED ok'; then
+  pass "AC4h: a committed-clean Delivers path still closes under the silencing config — the fix forces the listing, not a refusal"
+else fail "AC4h silenced-clean: rc=$GATE_RC out=$out"; fi
 
 # ============================================================================================
 # AC 5 — ownership immediately before the write, and the close verified as LANDED
