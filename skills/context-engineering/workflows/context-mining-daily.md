@@ -90,7 +90,7 @@ longer exists. Detect it per home:
 # Homes are placeholders — resolve the global home, the org home, and each app
 # repo's home from the deployment's instance-map first. DO NOT resolve app homes by
 # reading a `factory.json` `memory.root` without first confirming that file exists:
-# on omarchine it does not, the convention is `<app>/memory/auto/`, and a run that
+# when it does not exist, the convention is `<app>/memory/auto/`, and a run that
 # looks for the missing key silently sweeps ZERO app homes and still reports "0 drift"
 # across the board. Glob for the real `MEMORY.md` files and count them before trusting
 # any result:
