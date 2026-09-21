@@ -22,6 +22,7 @@
 |---|---|
 | **Sync ALL harness homes (root + apps)** | `./engine/sync.sh --all` (drift check: `--check`) |
 | **List deployables** | `./engine/deploy.sh --list` |
+| **Write this machine's settings** | copy `machine.example.json` to `machine.json` (gitignored) and edit by hand — this machine's org root, deploy targets and harness overrides; reader: `engine/machine.sh` |
 | **Selective one-off stamp (non-target project)** | `./engine/deploy.sh <target> --skills a,b --agents x,y` (or `--all`) |
 | **Dry run** | `./engine/sync.sh --all -n` / `./engine/deploy.sh <target> --all -n` |
 | Dev/test/lint/build | N/A (content repo — no build pipeline) |
@@ -48,8 +49,10 @@ in your own deploy-targets manifest (a plain list of project paths — this regi
 ship one; keep it wherever your other scheduled-job config lives) it runs `deploy.sh --all`
 (the `.claude/` layer) and then projects that layer into every other harness home —
 `.agents/skills` (Codex+Pi), `.factory/` (Droid, skills+droids+hooks+MCP), `.codex/`
-(generated agent TOMLs, hooks.json, MCP toml). Manifest: `harnesses.json` (+ gitignored
-`harnesses.local.json`); hook wiring canon: `engine/hooks.wiring.json`. A newly added
+(generated agent TOMLs, hooks.json, MCP toml). Manifest: `harnesses.json`, plus this
+machine's gitignored `machine.json` (copy `machine.example.json` and edit by hand — the
+same file carries the org root and the deploy targets); hook wiring canon:
+`engine/hooks.wiring.json`. A newly added
 registry skill therefore lands in every project AND every harness on the next sync with
 **no manual re-stamp** (idempotent: creates/refreshes symlinks only, never clobbers a real
 file — so a project's local customizations to a skill survive; generated files are
@@ -65,6 +68,12 @@ skills stay published. harness-sync.sh verifies the ignore rules before stamping
 they're missing — the invariant is enforced, not conventional. To add/remove a target, edit
 your deploy-targets manifest (not deploy.sh).
 
+**Machine facts live in `machine.json`.** This machine's org root, deploy targets and
+harness overrides sit in one gitignored file at the repo root — copy `machine.example.json`
+to `machine.json` and edit it by hand (there is no writer). It is never committed because
+it names absolute paths, and `engine/machine.sh` is its only reader: every tool asks the
+reader rather than working a path out from folder depth.
+
 ## Architecture
 
 ```
@@ -76,6 +85,9 @@ agent-compounds/
 │                  #   forbids the engine spelling a canon path instead of deriving it.
 ├── templates/     # project-AGENTS.md (new-project L0 template) + ci-build-guards.md
 │                  #   (required-NEXT_PUBLIC_* build assert + dep-removed CI gate, copy-paste)
+├── machine.example.json
+│                  #   the committed template for this machine's machine.json — copy,
+│                  #   edit by hand; machine.json itself is gitignored (absolute paths)
 └── _plans/        # working plans — local-only, untracked (.gitignored; this repo is public)
 ```
 

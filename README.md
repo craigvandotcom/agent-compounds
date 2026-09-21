@@ -126,6 +126,20 @@ Portable agent definitions. Each declares a semantic `tier:` (orchestrator | coo
 
 ## Quick Start
 
+### Machine settings (`machine.json`)
+
+This repo reads this machine's facts from one gitignored file at its root: `machine.json`
+— the org root, the app targets the installer stamps, and any harness overrides merged
+over `harnesses.json`. It is edited by hand (there is no writer) and `engine/machine.sh`
+is its only reader; copy the committed example and edit it:
+
+```bash
+cp machine.example.json machine.json
+```
+
+`engine/machine.sh` exits 4 (NOT-CONFIGURED) when the file is absent and 2
+(CONFIGURED-BUT-WRONG) naming the key and the path when it is present but wrong.
+
 ### Deploy with `deploy.sh` (selective one-offs)
 
 > For the standard full sync — all targets, all harnesses (Claude/Codex/Droid/Pi skills,
