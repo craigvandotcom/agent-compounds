@@ -15,9 +15,9 @@
 
 Ported from the legacy Check 7 bash block in lint.sh (proven by lint/parity.sh
 against the extracted legacy block before the block was removed). Same verdicts:
-walk each consumer dir in the union (lib.consumers — org-level dirs ∪ the
-ac-deploy-targets.list apps), flag every symlink whose target
-does not exist, naming the link.
+walk each consumer dir in the union (lib.consumers — the org root's `.claude` ∪ the
+deploy targets' `.claude`, both asked of engine/machine.sh), flag every symlink whose
+target does not exist, naming the link.
 
 scope: LIVE_TEXT is the nearest standing set — the audited files live OUTSIDE
 this repo (consumer dirs), which no lib.scope set can name. A `--changed` skip
@@ -25,8 +25,10 @@ window is lost, never a false pass on a bare run.
 
 Exit: 0 every symlink resolves, or no consumer dir resolves at all (SKIP,
 disclosed — the audited dirs live OUTSIDE this repo and a fresh/consumer-less
-checkout has none); 1 broken symlink(s). A skip is reported as a skip and
-never prints a pass claim — it gated nothing, so it verified nothing.
+checkout has none); 1 broken symlink(s); 2 the machine's facts are unresolved-or-
+refused (NOT-CHECKED — a human must fix the machine file, so a green here would be a
+claim nobody made). A skip is reported as a skip and never prints a pass claim — it
+gated nothing, so it verified nothing.
 """
 
 import os
@@ -44,14 +46,23 @@ def fail(msg):
 
 
 def scan():
-    if not consumers.base_present():
+    try:
+        dirs = consumers.consumer_dirs()
+    except consumers.MachineNotConfigured as exc:
+        print(f"SKIP 07-consumer-symlinks: {exc} — the consumer union is unknown here, "
+              "so nothing was walked and nothing was verified", file=sys.stderr)
+        return 0
+    except consumers.MachineWrong as exc:
+        print(f"07-consumer-symlinks: {exc}", file=sys.stderr)
+        return 2
+    if not any(os.path.isdir(d) for d in dirs):
         print(f"SKIP 07-consumer-symlinks: no consumer dir resolves under "
-              f"{consumers.base()} (a consumer-less checkout, e.g. a fresh clone "
+              f"{consumers.org_root()} (a consumer-less checkout, e.g. a fresh clone "
               "with no deployed harness layer); nothing to walk, nothing verified",
               file=sys.stderr)
         return 0
     scanned = 0
-    for d in consumers.consumer_dirs():
+    for d in dirs:
         if not os.path.isdir(d):
             continue  # skip non-existent dirs silently — the legacy verdict
         scanned += 1
@@ -69,10 +80,10 @@ def scan():
                     fail(f"broken symlink: {p}")
 
     if scanned == 0:
-        # base_present() found at least one consumer dir a moment ago; this branch
-        # should be unreachable outside a race (a dir removed mid-scan). Either
-        # way, a scan that touched zero dirs proved nothing — skip, never claim a
-        # pass and never NOT-GATE (exit 2 blocks a suite this check cannot fix).
+        # A consumer dir resolved a moment ago; this branch should be unreachable
+        # outside a race (a dir removed mid-scan). Either way, a scan that touched
+        # zero dirs proved nothing — skip, never claim a pass and never NOT-GATE
+        # (exit 2 blocks a suite this check cannot fix).
         print("SKIP 07-consumer-symlinks: no consumer dir resolved on scan; "
               "nothing to walk, nothing verified", file=sys.stderr)
         return 0

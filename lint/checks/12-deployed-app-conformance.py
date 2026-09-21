@@ -21,6 +21,8 @@ block built, before both blocks were removed). Same verdicts: probe each
 consumer's hooks/workflow-reminder.md (C1 dead pipeline commands), its
 .codex/hooks twin where present, hooks/delegation-reminder.md (C2 dead
 delegation tools), and the app-root AGENTS.md (C3 dead pipeline stage names).
+The union itself — the org root's `.claude` ∪ the deploy targets' `.claude` — is
+asked of engine/machine.sh through lib.consumers, never derived here.
 
 Scope is deliberately narrow — only the named every-prompt files — so the check
 never fires on documentation that legitimately mentions these strings as
@@ -32,8 +34,10 @@ window is lost, never a false pass on a bare run.
 
 Exit: 0 clean, or no consumer dir resolves at all (SKIP, disclosed — the check
 audits files OUTSIDE this repo and a fresh/consumer-less checkout has none);
-1 dead names. A skip is reported as a skip and never prints a pass claim — it
-gated nothing, so it verified nothing.
+1 dead names; 2 the machine's facts are unresolved-or-refused (NOT-CHECKED — a
+human must fix the machine file, so a green here would be a claim nobody made).
+A skip is reported as a skip and never prints a pass claim — it gated nothing,
+so it verified nothing.
 """
 
 import os
@@ -63,15 +67,23 @@ def disp(path):
 
 
 def scan():
-    base = consumers.base()
-    if not consumers.base_present():
+    try:
+        dirs = consumers.consumer_dirs()
+    except consumers.MachineNotConfigured as exc:
+        print(f"SKIP 12-deployed-app-conformance: {exc} — the consumer union is unknown "
+              "here, so nothing was conformed and nothing was verified", file=sys.stderr)
+        return 0
+    except consumers.MachineWrong as exc:
+        print(f"12-deployed-app-conformance: {exc}", file=sys.stderr)
+        return 2
+    if not any(os.path.isdir(d) for d in dirs):
         print(f"SKIP 12-deployed-app-conformance: no consumer dir resolves "
-              f"under {base} (a consumer-less checkout, e.g. a fresh clone with "
+              f"under {consumers.org_root()} (a consumer-less checkout, e.g. a fresh clone with "
               "no deployed harness layer); nothing to conform, nothing verified",
               file=sys.stderr)
         return 0
     scanned = 0
-    for d in consumers.consumer_dirs():
+    for d in dirs:
         if not os.path.isdir(d):
             continue  # skip non-existent dirs silently — the legacy verdict
         scanned += 1
@@ -88,10 +100,10 @@ def scan():
             fail(f"C3: {disp(agents_md)} still contains dead pipeline stage name(s)")
 
     if scanned == 0:
-        # base_present() found at least one consumer dir a moment ago; this branch
-        # should be unreachable outside a race (a dir removed mid-scan). Either
-        # way, a scan that touched zero dirs proved nothing — skip, never claim a
-        # pass and never NOT-GATE (exit 2 blocks a suite this check cannot fix).
+        # A consumer dir resolved a moment ago; this branch should be unreachable
+        # outside a race (a dir removed mid-scan). Either way, a scan that touched
+        # zero dirs proved nothing — skip, never claim a pass and never NOT-GATE
+        # (exit 2 blocks a suite this check cannot fix).
         print("SKIP 12-deployed-app-conformance: no consumer dir resolved on "
               "scan; nothing to conform, nothing verified", file=sys.stderr)
         return 0

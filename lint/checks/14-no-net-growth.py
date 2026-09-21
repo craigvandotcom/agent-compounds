@@ -177,19 +177,12 @@ def scan(repo, label, base, spec, cfg, staged=False):
 
 
 def consumer_dirs(root):
-    """The union Check 7 builds: org dirs ∪ ac-deploy-targets.list.
+    """The union checks 07 and 12 build — the ONE copy of that fact lives in lib.consumers.
 
-    Delegates to lib.consumers (07/12's own consumer-dir union) instead of
-    carrying a second, independently-hardcoded copy of the same org/app-name
-    list — two copies of one fact is a drift risk (this copy hardcoded a
-    stale 'Repos/<domain>/...' layout that does not resolve on every
-    supported checkout layout, while lib.consumers derives the domain name
-    from this checkout's own real path). `root` is accepted for call-site
-    compatibility but not otherwise used: lib.consumers.base() derives the
-    org root from its own file location (or the LINT_CONSUMER_BASE test
-    seam), exactly as it did
-    before this delegation — the legacy copy above also never keyed its own
-    home-relative dirs off `root`, only the deploy-list lookup did.
+    `root` is accepted for call-site compatibility but not otherwise used: the union is
+    asked of engine/machine.sh (the one reader of this machine's facts), never derived
+    here. This function is the seam the two reader states surface through, so leg 2
+    answers them the same way checks 07 and 12 do.
     """
     del root  # kept for call-site compatibility; see docstring
     return consumers.consumer_dirs()
@@ -231,7 +224,19 @@ def run_full(root, cfg):
         return 1
     else:
         scan(root, "agent-compounds", base, "skills/*/SKILL.md", cfg)
-    for d in consumer_dirs(root):
+    # Leg 2's two reader states, the same two checks 07 and 12 answer: a NOT-CONFIGURED
+    # machine is a disclosed skip (a fresh clone has no deploy targets to walk), a WRONG
+    # one is NOT-CHECKED — nobody's green, because only a human can fix the machine file.
+    leg2_dirs = ()
+    leg2_wrong = None
+    try:
+        leg2_dirs = consumer_dirs(root)
+    except consumers.MachineNotConfigured as exc:
+        notices.append(f"Check 14 leg 2 skipped — {exc} — no deploy-target union to walk, so "
+                       "other repos' local SKILL.md files are NOT net-growth checked this run.")
+    except consumers.MachineWrong as exc:
+        leg2_wrong = exc
+    for d in leg2_dirs:
         skills = os.path.join(d, "skills")
         if not os.path.isdir(skills):
             continue
@@ -268,9 +273,13 @@ def run_full(root, cfg):
               + " — core is loaded every invocation, so it holds or shrinks. Move the content to "
                 "references/, or delete an equivalent amount from THIS file. A written justification "
                 "is not a payment, and a shrink in another file does NOT offset it. (An "
-                "'ac-family-cap' entry is a CREATION over the family total — diet the family, do not "
-                "raise the cap.)")
+                  "'ac-family-cap' entry is a CREATION over the family total — diet the family, do not "
+                  "raise the cap.)")
         return 1
+    if leg2_wrong is not None:
+        print(f"14-no-net-growth: {leg2_wrong} — leg 2 could not resolve the deploy-target union; "
+              "NOT-CHECKED, nothing verified there")
+        return 2
     return 0
 
 

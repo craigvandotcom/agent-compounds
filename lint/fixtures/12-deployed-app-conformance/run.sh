@@ -1,21 +1,24 @@
 #!/usr/bin/env bash
-# RED fixture for lint/checks/12-deployed-app-conformance: builds a consumer
-# tree whose workflow-reminder.md and app-root AGENTS.md still carry dead
-# pipeline names, points LINT_CONSUMER_BASE at it, and runs the REAL check.
-# Exits 0 only when the check went RED naming both C1 and C3 (the run.sh
-# contract is inverted: 0 = the required RED was demonstrated).
+# RED fixture for lint/checks/12-deployed-app-conformance: builds a configured machine
+# whose org root carries a workflow-reminder.md and an app-root AGENTS.md with dead
+# pipeline names, points the reader's AC_MACHINE_FILE at it, and runs the REAL check.
+# Exits 0 only when the check went RED naming both C1 and C3 (the run.sh contract is
+# inverted: 0 = the required RED was demonstrated).
 set -uo pipefail
 HERE="$(cd "$(dirname "$0")" && pwd)"
 REPO="$(cd "$HERE/../../.." && pwd)"
 STATE="$(mktemp -d)"
 trap 'rm -rf "$STATE"' EXIT
 
-mkdir -p "$STATE/.claude/hooks" "$STATE/infrastructure"
-: > "$STATE/infrastructure/ac-deploy-targets.list"
+# The consumer union comes from engine/machine.sh, so the fixture supplies a machine
+# file: one existing target, and an org root whose every-prompt files carry dead names.
+mkdir -p "$STATE/.claude/hooks" "$STATE/app-target"
+printf '{"org_root": "%s", "targets": [{"path": "%s/app-target", "public": false}]}\n' \
+  "$STATE" "$STATE" > "$STATE/machine.json"
 printf 'Claim beads with /ac/bead-work.\n' > "$STATE/.claude/hooks/workflow-reminder.md"
 printf 'Stages: bead-work then wave-merge.\n' > "$STATE/AGENTS.md"
 
-out="$(LINT_CONSUMER_BASE="$STATE" python3 "$REPO/lint/checks/12-deployed-app-conformance.py" 2>&1)"
+out="$(AC_MACHINE_FILE="$STATE/machine.json" python3 "$REPO/lint/checks/12-deployed-app-conformance.py" 2>&1)"
 rc=$?
 if [ "$rc" = 1 ] && printf '%s\n' "$out" | grep -q 'C1:' && printf '%s\n' "$out" | grep -q 'C3:'; then
   exit 0

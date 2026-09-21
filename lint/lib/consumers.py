@@ -1,130 +1,85 @@
-"""consumers — the consumer-dir union for the deployed-surface checks (07, 12).
+"""consumers — the consumer-dir union for the deployed-surface checks (07, 12, 14).
 
-Org-level consumers are paths under the repos root; app consumers come from
-`infrastructure/ac-deploy-targets.list` — the single source of truth
-infra-sync.sh uses to propagate the full registry (see AGENTS.md
-"Auto-propagation"). Reading it here means a newly added deploy target is
-automatically covered with no manual re-stamp of either check. Falls back to
-a glob-discovered app list if the file is unreachable (e.g. a standalone
-checkout), so coverage degrades gracefully instead of silently dropping to
-zero — see `_fallback_apps()`.
+The union is the ORG root's own `.claude` plus every deploy target's `.claude`. Both
+facts are ASKED of `engine/machine.sh` — the one reader of this machine's facts
+(`machine.json`) — and neither is derived here. Nothing in this file parses that file,
+counts parents from its own location, or spells a roster path: a second parser is a
+second copy, and the two drift. A per-machine file names only what this machine has, so
+a dir this union produces that does not exist is skipped downstream by the callers
+(they only keep `isdir()` hits) — guessing a room or an app that does not apply costs
+nothing.
 
-Nothing here spells an org or domain-repo name as a literal: `_domain_name()`
-reads this checkout's own real position on disk (this repo sits at
-`<org>/<domain>/software/agent-compounds`, so the domain segment is a path
-component, not a fact to hardcode), and `_fallback_apps()` reads
-`harness.config.json`'s own `targets` glob (already generic — see its `_doc`)
-to discover sibling app dirs by walking the filesystem instead of naming them.
-A dir this produces that does not exist for a given adopter is silently
-skipped downstream (every caller only keeps `isdir()` hits), so guessing a
-room/app that does not apply costs nothing.
+The reader's exit code carries its state, and it PROPAGATES as an exception, because
+the callers answer the two failure states differently (a NOT-CONFIGURED machine is a
+disclosed SKIP — a fresh clone legitimately has no consumer layer; a WRONG one is
+NOT-CHECKED, exit 2, because only a human can fix it):
 
-A roster line is `<app> [public] [packages=a,b]`: the app is the FIRST token, the rest
-are flags. A flagged app is walked like any other.
+    0  configured      -> `consumer_dirs()` returns the union
+    4  NOT-CONFIGURED  -> MachineNotConfigured (no machine.json)
+    2  WRONG           -> MachineWrong (unparseable, or a named key/path the reader
+                          refuses, or the reader itself is missing)
 
-LINT_CONSUMER_BASE (default: the derived org root) is a TEST-ONLY seam: the fixture
-harnesses point it at a temp consumer tree. Unset in production every path is
-identical to the legacy bash block's.
+`AC_MACHINE_FILE` is the reader's own fixture seam and is inherited by the subprocess,
+so a test points it at a fixture and every path here follows.
 """
 
-import glob
-import json
 import os
+import subprocess
+
+_AC_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+READER = os.path.join(_AC_ROOT, "engine", "machine.sh")
 
 
-def _ac_root():
-    """This registry's own root (agent-compounds/) — this file's grandparent.
-    Always this checkout's REAL location, never LINT_CONSUMER_BASE: that seam
-    relocates where consumer dirs are SEARCHED for (tests/adopters point it at
-    an isolated tree), not where this code itself actually lives."""
-    return os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+class MachineNotConfigured(Exception):
+    """The reader found no machine settings file — its exit 4."""
 
 
-def base():
-    # Derived, not spelled: this file sits at <org>/<domain>/software/agent-compounds/
-    # lint/lib/, so the org root is five parents up — ~/Repos on the Mac monorepo, ~ in
-    # the three-repo split. The old hardcoded default named one machine's layout and
-    # returned a path that does not exist anywhere else.
-    here = os.path.dirname(os.path.abspath(__file__))
-    derived = os.path.normpath(os.path.join(here, *([os.pardir] * 5)))
-    return os.environ.get("LINT_CONSUMER_BASE") or derived
+class MachineWrong(Exception):
+    """The reader has a machine settings file it refuses, or cannot run — its exit 2."""
 
 
-def _domain_name():
-    """The domain-repo directory name this checkout's AC_ROOT sits two levels
-    under (mirrors engine/sync.sh's DOMAIN_REPO = AC_ROOT's second parent) —
-    whatever an adopter's own layout calls it. A real filesystem fact read off
-    this checkout's own path, never a literal org/product name."""
-    return os.path.basename(os.path.dirname(os.path.dirname(_ac_root())))
+_answered = {}
 
 
-def _org_subpaths():
-    """Org-root-relative dirs that may carry their own deployed harness layer:
-    the org root's own '.claude', plus '<domain>/<room>/.claude' for this
-    checkout's derived domain name across the room convention this factory
-    ships (content/books/software — AGENTS.md "Rooms in this repo"). Any of
-    these that does not exist for a given adopter is silently skipped by
-    every caller."""
-    domain = _domain_name()
-    return (
-        ".claude",
-        os.path.join(domain, "content", ".claude"),
-        os.path.join(domain, "books", ".claude"),
-        os.path.join(domain, "software", ".claude"),
-    )
-
-
-def _fallback_apps():
-    """Sibling app names discovered via harness.config.json's own `targets`
-    glob (the layout manifest's already-agnostic deploy-target search path —
-    see AGENTS.md / engine/sync.sh's resolved_targets()), used only when
-    infrastructure/ac-deploy-targets.list is unreachable. Replaces a
-    hardcoded app-name tuple: the glob already knows how to find app siblings
-    on any layout, so nothing needs spelling here. Never raises — a missing
-    or malformed harness.config.json degrades to no fallback apps (still
-    safe: every caller skips a dir that does not exist)."""
-    cfg_path = os.path.join(_ac_root(), "harness.config.json")
+def _ask(flag):
+    """Run the reader once and return its stdout; raise its state as an exception."""
     try:
-        with open(cfg_path, encoding="utf-8") as fh:
-            cfg = json.load(fh)
-    except (OSError, ValueError):
-        return ()
-    apps = []
-    for pattern in cfg.get("targets") or ():
-        for d in sorted(glob.glob(os.path.join(_ac_root(), pattern))):
-            name = os.path.basename(os.path.normpath(d))
-            if name != "agent-compounds" and os.path.isdir(d) and name not in apps:
-                apps.append(name)
-    return tuple(apps)
+        proc = subprocess.run([READER, flag], capture_output=True, text=True, timeout=60)
+    except OSError as exc:
+        raise MachineWrong(f"{READER} is not runnable: {exc}") from exc
+    if proc.returncode == 0:
+        return proc.stdout
+    lines = [line for line in proc.stderr.splitlines() if line.strip()]
+    message = lines[0] if lines else f"{READER} {flag} exited {proc.returncode}"
+    if proc.returncode == 4:
+        raise MachineNotConfigured(message)
+    raise MachineWrong(message)
 
 
-def base_present():
-    """True when at least one consumer dir actually resolves on disk. This is
-    the question the callers (07, 12) need answered — "is there a consumer
-    tree to audit" — not "does base() happen to name an existing directory":
-    base() derives an ancestor by counting parent hops from this file, and on
-    a shallow/unusual clone that ancestor is often just some other directory
-    that happens to exist (a home dir, a drive root) even when no consumer
-    layer was ever deployed under it. Checking base() alone false-positived,
-    which is what made 07/12 exit 2 (NOT-CHECKED) instead of skipping on a
-    fresh clone: a bare-existing ancestor let the checks think they had a
-    tree to walk, then they found zero actual consumer dirs under it."""
-    return any(os.path.isdir(d) for d in consumer_dirs())
+def org_root():
+    """The org root, as the reader resolved and validated it."""
+    if "org_root" not in _answered:
+        _answered["org_root"] = _ask("--org-root").strip()
+    return _answered["org_root"]
+
+
+def target_paths():
+    """Every deploy target's absolute path, in the order the machine's file names them."""
+    if "targets" not in _answered:
+        _answered["targets"] = tuple(
+            line.split("\t", 1)[0] for line in _ask("--targets").splitlines() if line.strip()
+        )
+    return _answered["targets"]
 
 
 def consumer_dirs():
-    root = base()
-    dirs = {os.path.join(root, sub) for sub in _org_subpaths()}
-    deploy_list = os.path.join(root, "infrastructure", "ac-deploy-targets.list")
-    apps = []
-    if os.path.isfile(deploy_list):
-        with open(deploy_list, encoding="utf-8") as fh:
-            for line in fh:
-                line = line.split("#", 1)[0].strip()
-                if line:
-                    apps.append(line.split()[0])
-    else:
-        apps = list(_fallback_apps())
-    domain = _domain_name()
-    dirs.update(os.path.join(root, domain, "software", app, ".claude") for app in apps)
-    return sorted(dirs)
+    """The union: org root's `.claude` ∪ every target path's `.claude`, sorted.
+
+    Raises MachineNotConfigured / MachineWrong rather than returning a smaller union:
+    an empty list here would read as "no consumer layer" when the truth is that the
+    machine's facts could not be resolved at all.
+    """
+    return sorted(
+        {os.path.join(org_root(), ".claude")}
+        | {os.path.join(path, ".claude") for path in target_paths()}
+    )
