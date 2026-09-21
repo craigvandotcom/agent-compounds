@@ -21,9 +21,13 @@ domain repo (a separate input, not an ordering). Lanes are resolved HERE, so the
 never learns a layout again; the two sync call sites still pass their old arguments
 until ac-vlje.5 switches them, and those arguments are ignored.
 
-No list (absent, unreadable or empty) -> one digest line saying no memory lanes are
-configured, exit 0. A missing list is a legitimate adopter state, never an error: the
-generated file must still render.
+No list (absent, unreadable or empty) -> the DOMAIN lane still renders, and a one-line
+disclosure says no memory lanes are configured (naming whether the list is absent or
+empty), exit 0. The domain repo is a separate input,
+not an ordering: it is read from `MISSION_ROOT`, which falls back to this checkout's own
+location (the engine's `AC_ROOT/../..`) rather than to a hardcoded home. An env value still
+wins, and a disagreement between the two is warned about — the two can silently diverge, and
+a domain lane that renders nothing because of it is the failure this exists to prevent.
 
 Priority when the cap bites: domain rules > app rules > domain facts/project notes.
 Never truncates silently — an overflow line names the count omitted.
@@ -35,29 +39,45 @@ import sys
 CAP = 60
 DESC_MAX = 220
 
+_HERE = os.path.dirname(os.path.abspath(__file__))
+_AC_ROOT = os.path.dirname(_HERE)
+# Where the engine derives the domain repo from: this checkout's own second parent. Used as
+# the FALLBACK, never spelled as a hardcoded home path — one silently rendered an empty
+# domain lane on any layout that is not this machine's.
+DERIVED_DOMAIN = os.path.dirname(os.path.dirname(_AC_ROOT))
+
 # The same two knobs `hooks/memory-retrieval.py` reads, so the digest and the recall
 # hook cannot disagree about which lanes exist. INFRA_ROOT locates the list; MISSION_ROOT
 # is both the domain repo and the parent of the software/ lanes.
 INFRA_ROOT = os.environ.get("INFRA_ROOT", os.path.expanduser("~/infrastructure"))
-MISSION_ROOT = os.environ.get("MISSION_ROOT", os.path.expanduser("~/mission"))
+MISSION_ROOT = os.environ.get("MISSION_ROOT") or DERIVED_DOMAIN
 APPS_LIST = os.environ.get(
     "MEMORY_HOOK_APPS_LIST", os.path.join(INFRA_ROOT, "apps.list")
 )
 
 
 def lane_dirs():
-    """Each list entry resolved under MISSION_ROOT/software/, in file order.
+    """`(lanes, note)`: each list entry resolved under MISSION_ROOT/software/, in file order.
 
     Parsed exactly as memory-retrieval.py's `_app_dir_lobe_pairs()` parses it (strip,
-    skip blanks) — one grammar for one source. Absent/unreadable -> [] (the caller
-    prints the no-lanes line and exits 0).
+    skip blanks) — one grammar for one source. `note` is None when lanes were resolved,
+    and otherwise the one-line disclosure naming which state the list is in. Those states
+    are DIFFERENT and must read differently: an absent list is a legitimate adopter
+    default, an empty one is a list nobody filled in — reporting the second as the first
+    claims an existing file is missing.
     """
     try:
         with open(APPS_LIST, encoding="utf-8") as fh:
             names = [a.strip() for a in fh if a.strip()]
     except OSError:
-        return []
-    return [os.path.join(MISSION_ROOT, "software", name) for name in names]
+        return [], (f"no memory lanes are configured — no apps list at {APPS_LIST}; "
+                    f"point MEMORY_HOOK_APPS_LIST at one (one app dir per line, resolved "
+                    f"under {MISSION_ROOT}/software)")
+    if not names:
+        return [], (f"no memory lanes are configured — the apps list at {APPS_LIST} is "
+                    f"empty; list one app dir per line (resolved under "
+                    f"{MISSION_ROOT}/software)")
+    return [os.path.join(MISSION_ROOT, "software", name) for name in names], None
 
 
 def parse_frontmatter(path):
@@ -129,15 +149,21 @@ def collect(domain_repo, target_dirs):
 
 def main():
     # No arguments: the lanes are the memory side's own list, resolved here.
-    lanes = lane_dirs()
-    if not lanes:
-        print(f"- *no memory lanes are configured — no apps list at {APPS_LIST}; "
-              "point MEMORY_HOOK_APPS_LIST at one (one app dir per line, resolved under "
-              f"{MISSION_ROOT}/software)*")
-        return
+    env_root = os.environ.get("MISSION_ROOT")
+    if env_root and os.path.normpath(env_root) != os.path.normpath(DERIVED_DOMAIN):
+        print(f"build_memory_digest: WARNING: MISSION_ROOT={env_root} disagrees with this "
+              f"checkout's own location ({DERIVED_DOMAIN}); the env value wins and the "
+              "domain lane renders from it", file=sys.stderr)
+    lanes, note = lane_dirs()
+    # The domain lane is UNCONDITIONAL: MISSION_ROOT is a separate input, not an ordering,
+    # so an absent or empty apps list leaves it untouched. Dropping it because the APP
+    # lanes are unconfigured published a digest with no memories while exiting 0 — the
+    # engine's failure branch never fired, because nothing failed.
     domain_rules, app_rules, domain_rest = collect(MISSION_ROOT, lanes)
     ordered = domain_rules + app_rules + domain_rest
     shown, omitted = ordered[:CAP], len(ordered) - min(len(ordered), CAP)
+    if note:
+        print(f"- *{note}*")
     for name, scope, desc in shown:
         desc = " ".join(desc.split())
         if len(desc) > DESC_MAX:
