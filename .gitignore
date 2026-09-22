@@ -9,8 +9,13 @@ build/
 # Plans and research (local only, not shipped)
 _plans/
 
-# Agent-local scratch memory — not shared-repo content
-.claude/agent-memory/
+# The harness layer. This repo is public, and AGENTS.md's own rule for public targets is
+# that .claude/ (with .agents/ .factory/ .codex/) stays out of the published tree: it holds
+# generated agents, session state, review ceremonies and machine-local settings. Ignored
+# WHOLESALE, not path by path — the per-subpath list used to miss each new subdir (agents/
+# sat unignored until 2026-09-22). One deliberate exception: settings.json is shared config.
+.claude/*
+!.claude/settings.json
 
 # Idea inbox — local only, same convention as _plans/
 _ideas/
@@ -39,10 +44,6 @@ tools/dcg/fixtures/
 # ac-polish run state (round digests + receipt) — scratch; the durable receipt is on the
 # beads / plan frontmatter, so this is disposable and must never be committed
 .polish/
-# ...and the path ac-polish ACTUALLY writes to. The .polish/ rule above states the intent
-# ("must never be committed") but never matched, so every polish run left .claude/state/
-# showing as untracked and a `git add -A` would have committed it.
-.claude/state/
 
 # ---------------------------------------------------------------------------
 # Adopter-local content (2026-09-20, agnosticism pass)
@@ -67,10 +68,6 @@ FRICTIONS.md
 
 # Retired skills — local history, not shipped doctrine
 _archive/
-
-# Past session artifacts: review ceremonies and swarm run reports
-.claude/reviews/
-.claude/reports/
 
 # Generated analysis + reports (regenerable; they bake in host and paths)
 _docs/seams/
