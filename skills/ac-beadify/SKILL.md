@@ -57,10 +57,10 @@ has yet to create keeps the guarded form `test -x <path> && bash <path>`, honest
 3. **Write each bead to the four-section schema, exactly.** `## Intent` · `## Acceptance
    Criteria` · `## Delivers` · `## Consumes` — first header per type: `bug` → `## Steps to
    Reproduce`, `epic` → `## Success Criteria` (`br lint` compiles those in). Nothing else.
-   **Line numbers are banned in Intent** — a `file:line` anchor decays before the claim does.
-   **The epic's `## Success Criteria` opens with the plan's `## Vision` verbatim** — inside
-   the section, since the schema allows nothing outside the four — so every implement
-   worker decides against the human's own words, not a paraphrase of them.
+   **Line numbers are banned in Intent.** The epic's AC is the plan's silver bullet verbatim,
+   and `## Success Criteria` still opens with the plan's `## Vision` verbatim. Every child AC
+   quotes its plan "Done when:" verbatim and adds only the probe; a split deliverable has each
+   child quote the parent line and add its own slice's values. "a test named X passes" is not an AC.
 4. **Apply the refusal** (§ above) to every bead before any of them is created. Refuse the
    bead, not the batch — but do not create a partial graph around a refused node.
 5. **Wire Delivers/Consumes as the graph.** `## Delivers` names artifacts; a dependent's

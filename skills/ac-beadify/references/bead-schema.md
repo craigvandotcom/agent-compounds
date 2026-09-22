@@ -14,7 +14,8 @@ commit discipline in `ac-pipeline/references/` (`commit-discipline.md`, `run-led
 `title` · `type` · `priority` · deps (`blocks` / parent-child / `discovered-from`) ·
 `labels` (risk tags as needed: `migration` · `native`).
 - Epic beads (`type: epic`) carry `## Success Criteria` plus probe-bearing
-  `## Acceptance Criteria` — the probes are what a worker pick closes against (D3).
+  `## Acceptance Criteria` — the epic's AC is the plan's silver bullet verbatim;
+  the probes are what a worker pick closes against (D3).
 
 - An epic reaches its children by **parent-child** (containment) only — containment alone
   already keeps the epic from being picked before its children close. Any `blocks` edge
@@ -40,6 +41,11 @@ commit discipline in `ac-pipeline/references/` (`commit-discipline.md`, `run-led
 | `## Acceptance Criteria` | 3–7 falsifiable behavioural ACs, EACH naming its executable probe and tier (see below). Observable outcomes only. The header phrase is load-bearing for `br lint`: its matcher is case-insensitive and tolerates trailing text, but both words must appear. |
 | `## Delivers` | The named artifacts this bead promises — the exact strings a dependent's `## Consumes` will cite. Paths, script names, receipts. **One path per bullet** (one `touchers:` line cannot own two), and a delivered path that git ALREADY TRACKS owes that line beneath its bullet: trigger, shape and rationale in `beads-standards/reference/bead-create-contract.md` § Touchers — derive it with `skills/_tools/touchers.sh derive <path>`, never by hand. **Path-shaped Delivers is REQUIRED for `task`/`feature`/`epic` beads**: every bullet must carry a path-shaped token (`name.ext`) — a dotted child bead id (`<epic-id>.3`) is not one, and an epic's paths must exist at close — because close-evidence-check cross-references the close reason against exactly those tokens. A prose-only Delivers line is refused at compile — ac-beadify's refusal step applies this schema to every bead before creation, and a prose-only Delivers is a schema violation — because one that slips through makes every close of that bead unverified forever (`UNVERIFIABLE-DELIVERS`; audit the backlog with `skills/ac-pipeline/scripts/close-evidence-check.sh --list-unverifiable`). |
 | `## Consumes` | One `<blocker-id> -> <artifact>` per line, or the single word `none`. Every line needs a matching dependency edge and every edge a matching line (parity is graded). |
+
+A compiled epic's AC is the plan's silver bullet verbatim. Every child AC quotes its plan
+"Done when:" verbatim and adds only the probe. A deliverable split across several beads has
+each child quote the parent line and add its own slice's values. "a test named X passes"
+is not an AC — it names a test, not a behaviour.
 
 Nothing else. There is no Scope, Proof, Notes or Discussion section — that content is either
 `## Intent` or it is not durable.
