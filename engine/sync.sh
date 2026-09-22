@@ -22,8 +22,10 @@
 #     touched. Pi has no declarative agent surface: skipped with a warning.
 #
 # Invariants (inherited from deploy.sh):
-#   idempotent · never clobber a real file · never touch foreign symlinks ·
-#   prune only DANGLING symlinks that point inside managed roots · relative links ·
+#   idempotent · never clobber a real file · never touch a live foreign symlink ·
+#   prune DANGLING symlinks that point inside managed roots, and dangling symlinks
+#   under a configured retired root (a migration leftover, not a user link) ·
+#   relative links ·
 #   unattended-safe (no service restarts, no interactive prompts).
 #
 # Config: harnesses.json (committed, portable) deep-merged with
@@ -48,7 +50,7 @@ set -euo pipefail
 ENGINE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 AC_ROOT="$(cd "$ENGINE_DIR/.." && pwd)"
 
-DRY=0; CHECK=0; PRUNE=1; DO_ROOT=0; DO_ALL=0; VERIFY_AGY=0; REPORT=0; OPENCODE_HOME_OVERRIDE=""; PRINT_OPENCODE_EDIT_PERM=0; PRINT_OPENCODE_EDIT_TOOLS=""; TARGETS=()
+DRY=0; CHECK=0; PRUNE=1; DO_ROOT=0; DO_ALL=0; VERIFY_AGY=0; REPORT=0; OPENCODE_HOME_OVERRIDE=""; PRINT_OPENCODE_EDIT_PERM=0; PRINT_OPENCODE_EDIT_TOOLS=""; RECLAIM_RETIRED_DIR=""; TARGETS=()
 while [ $# -gt 0 ]; do
   case "$1" in
     --verify-antigravity) VERIFY_AGY=1; shift ;;
@@ -59,6 +61,10 @@ while [ $# -gt 0 ]; do
     --print-opencode-edit-perm)
       PRINT_OPENCODE_EDIT_PERM=1
       PRINT_OPENCODE_EDIT_TOOLS="${2-}"
+      shift 2
+      ;;
+    --reclaim-retired-dangling)
+      RECLAIM_RETIRED_DIR="${2:-}"
       shift 2
       ;;
     -n|--dry-run) DRY=1; shift ;;
@@ -74,7 +80,7 @@ done
 if [ "$DRY" = 1 ] && [ "$DO_ROOT" = 0 ] && [ ${#TARGETS[@]} -eq 0 ] && [ "$VERIFY_AGY" = 0 ] && [ "$REPORT" = 0 ]; then
   DO_ROOT=1
 fi
-[ "$DO_ROOT" = 1 ] || [ ${#TARGETS[@]} -gt 0 ] || [ "$VERIFY_AGY" = 1 ] || [ "$REPORT" = 1 ] || [ "$PRINT_OPENCODE_EDIT_PERM" = 1 ] || { echo "error: need --root, --all, --report, a target dir, or --verify-antigravity" >&2; exit 2; }
+[ "$DO_ROOT" = 1 ] || [ ${#TARGETS[@]} -gt 0 ] || [ "$VERIFY_AGY" = 1 ] || [ "$REPORT" = 1 ] || [ "$PRINT_OPENCODE_EDIT_PERM" = 1 ] || [ -n "$RECLAIM_RETIRED_DIR" ] || { echo "error: need --root, --all, --report, a target dir, or --verify-antigravity" >&2; exit 2; }
 
 CHANGES=0
 note_change() { CHANGES=$((CHANGES + 1)); }
@@ -194,9 +200,42 @@ is_managed() { # <normalized-path> <target-base>
   return 1
 }
 
+# Retired canons. A dangling symlink under one is a migration leftover, never a
+# deliberate user link. A live link under the same prefix stays foreign.
+# RETIRED_ROOTS (colon-separated) wins, so a test can name a fixture root.
+# Otherwise the merged manifest's retired_roots array — a machine records a canon
+# it migrated off in harnesses.local.json, not in this file (a spelled home path
+# here is the layout bug check 37 exists to catch). The historical Mac canon was
+# ~/Repos/.claude.
+retired_roots() {
+  local p
+  if [ -n "${RETIRED_ROOTS:-}" ]; then
+    while IFS= read -r p; do
+      [ -n "$p" ] || continue
+      expand_tilde "$p"
+    done <<EOF
+$(printf '%s\n' "$RETIRED_ROOTS" | tr ':' '\n')
+EOF
+    return
+  fi
+  while IFS= read -r p; do
+    [ -n "$p" ] || continue
+    expand_tilde "$p"
+  done < <(echo "$CFG" | jq -r '.retired_roots // [] | .[]')
+}
+
+is_retired_root() { # <normalized-path>
+  local p="$1" r
+  while IFS= read -r r; do
+    [ -n "$r" ] || continue
+    case "$p" in "$r"|"$r"/*) return 0 ;; esac
+  done < <(retired_roots)
+  return 1
+}
+
 # link <src-abs> <dest-abs> <target-base>  — create/refresh a relative symlink
 link() {
-  local src="$1" dest="$2" base="$3" destdir rel
+  local src="$1" dest="$2" base="$3" destdir rel tgt
   destdir="$(dirname "$dest")"
   rel="$(relpath "$destdir" "$src")"
 
@@ -206,9 +245,13 @@ link() {
   fi
   if [ -L "$dest" ]; then
     if [ "$(readlink "$dest")" = "$rel" ]; then return; fi   # already aligned
-    if ! is_managed "$(norm_link_target "$dest")" "$base"; then
-      echo "  SKIP (foreign symlink): ${dest/#$HOME/~} -> $(readlink "$dest")"
-      return
+    tgt="$(norm_link_target "$dest")"
+    # Live foreign links stay. A dangling link into a retired canon is replaced.
+    if ! is_managed "$tgt" "$base"; then
+      if [ -e "$dest" ] || ! is_retired_root "$tgt"; then
+        echo "  SKIP (foreign symlink): ${dest/#$HOME/~} -> $(readlink "$dest")"
+        return
+      fi
     fi
   fi
   if [ "$DRY" = 1 ]; then
@@ -223,13 +266,16 @@ link() {
 
 # prune_dangling <dir> <target-base> — remove dangling managed symlinks
 prune_dangling() {
-  local dir="$1" base="$2" l
+  local dir="$1" base="$2" l tgt
   [ "$PRUNE" = 1 ] || return 0
   [ -d "$dir" ] || return 0
   while IFS= read -r l; do
     [ -n "$l" ] || continue
     [ -e "$l" ] && continue
-    is_managed "$(norm_link_target "$l")" "$base" || continue
+    tgt="$(norm_link_target "$l")"
+    if ! is_managed "$tgt" "$base"; then
+      is_retired_root "$tgt" || continue
+    fi
     if [ "$DRY" = 1 ]; then
       echo "  prune (dangling) ${l/#$HOME/~} -> $(readlink "$l")"
     else
@@ -239,6 +285,16 @@ prune_dangling() {
     note_change
   done < <(/usr/bin/find "$dir" -maxdepth 1 -type l)
 }
+
+# Query path for engine/retired-root.test.sh: prune one directory and stop
+# before any projection. The directory is seeded by the caller.
+if [ -n "$RECLAIM_RETIRED_DIR" ]; then
+  [ -d "$RECLAIM_RETIRED_DIR" ] || { echo "error: not a directory: $RECLAIM_RETIRED_DIR" >&2; exit 2; }
+  DRY=0
+  PRUNE=1
+  prune_dangling "$RECLAIM_RETIRED_DIR" "$(dirname "$RECLAIM_RETIRED_DIR")"
+  exit 0
+fi
 
 # mirror_skills <src-skills-dir> <dest-dir> <target-base>
 # every skill in src (dir with SKILL.md, or _-prefixed shared dir) -> relative symlink in dest
