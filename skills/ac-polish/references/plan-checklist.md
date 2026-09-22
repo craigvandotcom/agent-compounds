@@ -25,6 +25,11 @@ newly found.
 
 - Is every deliverable named as an artifact — a path, a script, a receipt — rather than an
   intention?
+- Does every `## Deliverables` bullet carry a "Done when:" — what goes in, what comes out,
+  with real values? A missing Done when, or one with no values, is class (c).
+- Does that Done when name a behaviour, never a file? A path token in it is class (c):
+  `plan-approve.sh` extracts paths from the whole `## Deliverables` body and refuses
+  `seams-incomplete` for any path `## Seams` does not row.
 - Is the work partitioned with no gap between parts: does something own each seam, each
   caller, each trigger, each write-path the plan disturbs? The oracle is MECHANICAL: for every
   object the plan's `## Seams` table names (`references/plan-seams-reader.md`'s output), re-run
@@ -37,10 +42,14 @@ newly found.
 
 ## 2. falsifiable success criterion
 
-- Does the plan state ONE success criterion, and can it come out FALSE? Write the observed
-  result that would falsify it. If none exists, the criterion is a slogan.
-- Who or what evaluates it, when, and on what artifact?
-- Is it already true today? Then the plan asserts nothing.
+- Is the success criterion one Silver Bullet — one command and the result it must print, not
+  prose? Prose is class (c): nothing can run it.
+- Was that command run while the plan was written, with its failing output pasted under the
+  criterion? No pasted failing output is class (c): the bullet was never seen to fail.
+- Does the pasted run already pass? An already-green Silver Bullet is class (a): the plan
+  asserts nothing.
+- Does the command run the thing the plan delivers, not a mock of it? A mocked deliverable
+  is class (c): a green mock does not prove the work.
 
 ## 3. assumptions that change the plan if wrong
 
