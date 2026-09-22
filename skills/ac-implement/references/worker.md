@@ -10,15 +10,21 @@ There is no second mode in which those become yours.
 Five scripts decide on your behalf. **Call them; do not re-check what they already refuse.**
 A hand-check beside a script is a second copy of the rule, and the two will drift.
 
-    skills/ac-implement/scripts/pick.sh            at pick    — eligibility + the prod-write gate
-    skills/ac-implement/scripts/require-minted-actor.sh  before claim — no minted name, hand back, no claim
-    skills/ac-implement/scripts/flight-check.sh    at claim   — premises + the RED receipt
-    skills/ac-implement/scripts/swarm-commit.sh    at commit  — the repo-global commit lane
-    skills/ac-implement/scripts/close-gate.sh      at close   — the temporal causal probe
+    <scripts>/pick.sh            at pick    — eligibility + the prod-write gate
+    <scripts>/require-minted-actor.sh  before claim — no minted name, hand back, no claim
+    <scripts>/flight-check.sh    at claim   — premises + the RED receipt
+    <scripts>/swarm-commit.sh    at commit  — the repo-global commit lane
+    <scripts>/close-gate.sh      at close   — the temporal causal probe
 
 ## ONCE, at session start
 
     BURNED=""                                   # ids whose claim was refused THIS pass
+
+`<scripts>` below stands for the absolute path the conductor appended to this prompt as a
+literal `SCRIPTS=<path>` line — substitute it exactly as you do `<id>`. **No `SCRIPTS=` line
+in this prompt → write the hand-back receipt and stop (§9).** Never fall back to a
+repo-relative guess: these scripts are symlinked into consumer repos, and a repo-relative
+path resolves inside the skills checkout, not the calling repo.
 
 **In a swarm**, register with Agent Mail first — `macro_start_session`, `task_description`
 naming the run id the conductor appended to this prompt, so the coordinator's roster can find
@@ -38,12 +44,12 @@ A worker under a fallback name is invisible to the roster's registered-since-run
 so its claims are orphans the sweep cannot see. Missing Agent Mail tools is a mint failure,
 not a license to keep going.
 
-Read the epic and the constitution (`skills/ac-pipeline/SKILL.md`) once. Do not re-read them
-per bead.
+Read the epic and the constitution (`<scripts>/../../ac-pipeline/SKILL.md`) once. Do not
+re-read them per bead.
 
 ## 1 — PICK
 
-    NEXT=$(bash skills/ac-implement/scripts/pick.sh --actor "$ACTOR" --burned "$BURNED")
+    NEXT=$(bash <scripts>/pick.sh --actor "$ACTOR" --burned "$BURNED")
 
 - **an id** — claim it (§2).
 - **`EPIC <id>`** — the terminal pick: no child is left to claim. Route it to §8, never §2's
@@ -70,7 +76,7 @@ only when its blocker closes, so a cached pool reports dry while work is waiting
 The claim refuses a worker that never minted. Exit non-zero → the script wrote the hand-back
 receipt. Do not claim. Go to §9.
 
-    bash skills/ac-implement/scripts/require-minted-actor.sh --actor "$ACTOR"
+    bash <scripts>/require-minted-actor.sh --actor "$ACTOR"
     RUST_LOG=error br update <id> --claim --actor "$ACTOR" --json
 
 Exit non-zero, or `VALIDATION_FAILED` → someone else has it. `BURNED="$BURNED <id>"`, go to §1.
@@ -83,7 +89,7 @@ Gate the comment on the claim's exit status. A lost race must not comment.
 
 ## 3 — FLIGHT CHECK
 
-    bash skills/ac-implement/scripts/flight-check.sh <id>
+    bash <scripts>/flight-check.sh <id>
 
 - **exit 0** — premises hold, a RED was observed, the receipt is banked. Continue.
 - **exit 1** — `PREMISE-FAILED: <CLASS>`. This is a ROUTING decision, not an error: the script
@@ -126,7 +132,7 @@ ALREADY EXISTS at HEAD closes `obsolete:`, and the gate — never your judgement
 that claim: every AC probe must exit 0 at HEAD with no Consumes blocker open, and the reason
 must name a `## Delivers` artifact the evidence core resolves.
 
-    bash skills/ac-implement/scripts/close-gate.sh <id> \
+    bash <scripts>/close-gate.sh <id> \
       --reason "obsolete: the defect is resolved at HEAD by other work (<sha>). Delivered: <a Delivers path>" \
       --actor "$ACTOR"
 
@@ -144,7 +150,7 @@ coordinator's refly sweep, not yours; never chase a bead you do not hold.
 
 **First, the reverse closure — before you read your own diff:**
 
-    bash skills/ac-implement/scripts/diff-closure.sh --bead <id>
+    bash <scripts>/diff-closure.sh --bead <id>
 
 It greps the callers, outside your diff, of every export you changed or file you deleted, and
 compares them to the bead's `touchers:` line. `REFUSED [unowned-callers]` names a caller the
@@ -199,7 +205,7 @@ holder and go back to §1 — never broadcast, never wait on a reply.
 
 ## 6 — COMMIT
 
-    f=$(mktemp) && printf '%s\n' "<subject>" "" "<body naming the failure this commit prevents>" > "$f" && bash skills/ac-implement/scripts/swarm-commit.sh \
+    f=$(mktemp) && printf '%s\n' "<subject>" "" "<body naming the failure this commit prevents>" > "$f" && bash <scripts>/swarm-commit.sh \
       --identity "$ACTOR" --message-file "$f" \
       --path <file> --path <file>
 
@@ -217,7 +223,7 @@ publishes every other writer's board state under its own bead's message.
 
 ## 7 — CLOSE
 
-    bash skills/ac-implement/scripts/close-gate.sh <id> \
+    bash <scripts>/close-gate.sh <id> \
       --reason "shipped: <what landed>. Delivered: <paths>" \
       --actor "$ACTOR"
 
