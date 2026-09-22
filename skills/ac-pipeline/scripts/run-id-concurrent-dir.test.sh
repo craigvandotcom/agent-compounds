@@ -10,8 +10,7 @@
 #
 # REPO: agent-compounds (skills/ac-pipeline/scripts/) — reused across every app that
 # threads the `ac-pipeline/references/run-id.md` contract. Exercises the formula from
-# `ac-pipeline/references/run-id.md` / `ac-implement/SKILL.md` Phase 0 "Configuration" block
-# VERBATIM (not a paraphrase):
+# `ac-pipeline/references/run-id.md` (§ The key + § RUN_ID) VERBATIM (not a paraphrase):
 #   CLAIM_ID="${CLAIM_ID:-<first-candidate-bead-id>-$(date +%Y%m%d)}"
 #   RUN_ID="${RUN_ID:-$(date +%Y%m%d-%H%M%S)-$$}"
 #   ARTIFACTS_DIR="/tmp/bead-work-${CLAIM_ID}${RUN_ID:+-$RUN_ID}"
@@ -68,8 +67,7 @@ fail() {
   FAILURES=$((FAILURES + 1))
 }
 
-# The formula, exactly as `ac-implement/SKILL.md` Phase 0 "Configuration" states it
-# (and as `ac-pipeline/references/run-id.md` "The key" + "RUN_ID" sections document it) — a single
+# The formula, exactly as `ac-pipeline/references/run-id.md` "The key" + "RUN_ID" sections document it — a single
 # function so both simulated conductors run byte-identical logic, never two
 # independently-retyped copies that could silently drift from the real contract.
 derive_artifacts_dir() {
