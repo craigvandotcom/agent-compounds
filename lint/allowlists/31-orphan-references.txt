@@ -25,7 +25,6 @@ skills/jef-prompts/references/git-committer.md
 skills/jef-prompts/references/headless-webview-crumb-debugging.md
 skills/jef-prompts/references/hundred-to-ten-filter.md
 skills/jef-prompts/references/idea-wizard.md
-skills/jef-prompts/references/land.md
 skills/jef-prompts/references/multi-model-synthesis.md
 skills/jef-prompts/references/peer-code-reviewer.md
 skills/jef-prompts/references/plan-enhancer-alien.md

@@ -76,7 +76,7 @@ Variant suffixes: **`-genius`** = multi-disciplinary first-principles depth; **`
 | Prompt | Use when |
 | --- | --- |
 | `git-committer` | Craft clean, well-structured commits |
-| `land` | Land work / close out a session (flywheel) |
+| [`land`](references/land.md) | Land work / close out a session (flywheel) |
 | `agent-swarm-launcher` | Launch a multi-agent swarm on a task |
 | `robot-mode-maker` | Turn a workflow into a deterministic "robot mode" |
 
