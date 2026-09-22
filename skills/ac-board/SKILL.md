@@ -20,80 +20,27 @@ description: 'Read-only pipeline board — the whole factory in one glance: huma
 
 - `br` installed — verify with `which br`
 - `_plans/` (optional — empty renders as `—`)
-- Active-agent roster: sqlite / Agent Mail DB unavailable renders `?`; never fatal.
 
 ---
 
-## Phase 0 — init
+## Phase 1 — render (one call)
 
 ```bash
-PROJECT_ROOT=$(git rev-parse --show-toplevel)
+BOARD="$(git rev-parse --show-toplevel)/.claude/skills/ac-board/scripts/board.sh"
+[ -f "$BOARD" ] || BOARD="$(git rev-parse --show-toplevel)/skills/ac-board/scripts/board.sh"
+"$BOARD"
 ```
 
-Inside a project → that repo. Asked "org-wide" → repeat per `.beads/` repo and render one compact block per repo (header line + gate counts only).
+Print its stdout verbatim — it is the board. `board.sh` runs every read of
+`ac-pipeline/references/board-scan.md` (Scans A · B · E · F + docket-health, no loop-boundary
+filter) plus waves, PRs and the agent roster in parallel, and renders counts first, lists capped
+at ~10, a `?` plus the failing command for any read that cannot answer. Never re-derive a count
+it printed; never run the scans by hand.
 
-## Phase 1 — scan (read-only, parallel)
+Asked "org-wide" → run `board.sh --compact` inside each `.beads/` repo (in parallel) and print
+one block per repo.
 
-**Read the board per `ac-pipeline/references/board-scan.md`** — scans **A** beads · **B** plans · **E** scheduled-CI health · **F** board-truth. Apply **no loop-boundary filter**: keep both sides (ready beads, `bead-ready` / `beadified` plans, in-progress work).
-
-Two reads board-scan does not carry:
-
-```bash
-git fetch --prune --quiet 2>/dev/null
-git branch -r | grep -E 'wave/'                                             # in-flight waves
-gh pr list --state open --json number,title --jq 'length' 2>/dev/null       # open PRs
-ROSTER="$PROJECT_ROOT/.claude/skills/ac-board/scripts/agent-roster.py"      # active agents
-[ -f "$ROSTER" ] || ROSTER="$PROJECT_ROOT/skills/ac-board/scripts/agent-roster.py"
-python3 "$ROSTER" 2>/dev/null
-```
-
-The roster script prints `#mail<TAB>up|down` (does the Agent Mail server answer), then `name<TAB>program<TAB>model<TAB>last_active_ts`, one line per non-retired agent, or exits 2 (NOT-GATED) when the Agent Mail DB is unreadable → render `?`.
-
-## Phase 2 — render
-
-One shot, top-down. Omit an empty section with a single `—` so the human sees the stage exists. Never itemize closed work.
-
-```
-## Board — {project} · {date}
-
-🤖 loop: {ready} ready · {bead_ready} bead-ready plans · {in_progress} in-progress · {waves}w · {prs}PR
-🧑 you: {decisions} decisions · {actions} actions
-{ci-gates / ci_health line — ALWAYS, ok included}
-
-### 🧑 Human — {decisions+actions} gates
-decisions ({N})          # issue_type decision: forks, approvals, proposals
-  • {id} {age} {title}
-actions ({N})            # issue_type task + human-gate: do-in-the-world tasks
-  • {id} {age} {title}
-
-### 📋 Plans ({N} live)
-draft {N} · refined {N} · approved {N} · bead-ready {N} · beadified {N} · other {N}
-  • {plan} [{stage} · touched {date}]
-(refined = ac-polish stamp · bead-ready = loop-owned, awaiting beadify · beadified = compiled into an epic · other = out-of-vocabulary, raw status shown)
-
-### 🧿 Beads ({N} open, loop-side)
-unrefined {N} · refined {N} · blocked {N}
-  • {id} [{stage} · {age}] {title}
-(gate/proposal beads are counted under Human, not here)
-
-### 🤖 Agents ({N} active, last 24h · mail {up|down})
-  • {name} [{program} · {model}] {age}
-
-### ⚠ Flags
-board-truth {N} shipped-uncited · {N} gates w/o memo · {N} reason-less · {N} orphans
-```
-
-**Rendering rules**
-
-- **Counts first.** The three header lines are the board in a glance; sections are drill-down.
-- **Age is required** on every gate, blocked bead, and plan — `created_at`/`touched` is already in the scan; derive, never separately query.
-- **Classify gates by `issue_type`** (`board-scan` § Gate kind): `decision` → decisions (forks, approvals, proposals); `task` → actions. A canonical title prefix (`DECISION:`/`HUMAN:` vs `ACTION:`) decides only when the type is absent. Ungroupable gate beads render under decisions with their raw title.
-- **Never drop what you cannot classify** — an out-of-vocabulary plan status, or a bead with no lifecycle label, renders under `other`/`unrefined` with its raw value; a dropped item is indistinguishable from one that does not exist.
-- **CI health and mail status always print**, `ok`/`up` included — a probe computed and not shown is a probe that protects nothing.
-- **A gate without a memo** (no `evidence:` / `consequence:` / `recommendation:`) increments the flags count; never fake options for it.
-- **`?` over a guess** — a failed read names the failing command in the flags line.
-
-## Phase 3 — routing footer
+## Phase 2 — routing footer
 
 Pointers, never prompts — no `AskUserQuestion`:
 
