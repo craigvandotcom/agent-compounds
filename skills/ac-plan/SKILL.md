@@ -58,10 +58,10 @@ a line to cut — the plan is graded on whether its claims are checkable, never 
 
 ## The success criterion — a refusal, not a suggestion
 
-**REFUSE to emit a plan whose success criterion cannot come out FALSE.** Write the observed falsifier beside it. Three ways a criterion fails, each sends it back:
+**REFUSE to emit a plan whose success criterion cannot come out FALSE.** Under the heading `## Success criterion` it is the Silver Bullet: one command, its expected result, run while planning, its failing output pasted in. Three ways it fails, each sends it back:
 
-- **Unfalsifiable** — no observation could contradict it. It is a slogan.
-- **Already true today** — the plan asserts nothing, satisfied by an empty diff; measure now, and if it passes the criterion is not the plan's criterion.
-- **Unowned** — nobody and nothing is named to evaluate it, on what artifact, and when.
+- **Unfalsifiable** — prose, not a command; no observation could contradict it. It is a slogan.
+- **Already true today** — it passes now, so nothing was asserted; paste the failing output, or it is not this plan's criterion.
+- **Unowned** — nobody is named to run the command, on what artifact, and when.
 
-One criterion, not three. A plan with several success criteria has not decided what it is for.
+One Silver Bullet, not three. Every `## Deliverables` bullet carries a "Done when:" line with concrete values: what goes in, what comes out.

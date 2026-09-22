@@ -11,18 +11,20 @@ attention before the question is asked.
 
 ## What approval commits to
 
-The human sees this brief, taps once, and that tap is the whole gate: the plan's beads get
-cut and implemented with no further contact — unless a later polish round moves a section the
+The human sees this brief, taps once, and that tap is the whole gate: it commits to the
+Silver Bullet and every Done when line shown here, and the plan's beads get cut and
+implemented with no further contact — unless a later polish round moves a section the
 approval digest covers (`plan-approve.sh ready` then reports `regate <sections>` and the
 changed sections come back for a one-tap re-approve). Saying so, in these words, on the brief
 itself, is what makes the tap informed rather than a formality.
 
-## The seven lines, and where each is read from
+## The eight lines, and where each is read from
 
 | line | source | rule |
 | --- | --- | --- |
 | what changes | `## Vision` | two lines, plain prose — never the raw section, which may run long |
-| deliverables | `## Deliverables` | as paths, one per line — an artifact, never an intention |
+| deliverables | `## Deliverables` | as paths, one per line, each with its Done when: line — concrete values, what goes in and what comes out; an artifact, never an intention. A path with no Done when renders "no Done when" |
+| silver bullet | `## Success criterion` | the Silver Bullet: the one command and its expected result. The pasted failing output stays in the plan. A missing command renders "no silver bullet" |
 | seams + tests | `## Seams` | rows whose disposition is not `no seam`, ordered by toucher count (highest first); a `must update` test row renders beside its object, not in a separate list |
 | biggest risk | `## Risk + sequence` | the risk plus the assumption it rests on — one pair, not the whole risk list |
 | open cards | `## Decisions` | every card still `needs-human`, question + recommended option + its default tag (`[default: <option>]` or `[no default]`, read from the card — a design question with a default is not a vision question with none); a plan with none renders "none open" |
@@ -53,8 +55,10 @@ still works" belong on one line.
 **What changes:** <two lines from ## Vision>
 
 **Deliverables:**
-- <path>
-- <path>
+- <path> — Done when: <what goes in → what comes out, with concrete values>
+- <path> — Done when: <what goes in → what comes out, with concrete values>
+
+**Silver Bullet:** `<command>` — expected: <result>
 
 **Seams + tests** (ordered by toucher count, `no seam` rows dropped):
 - <object> — <finding> → <disposition> · tests: <unchanged | must update | none exists>
@@ -68,8 +72,9 @@ still works" belong on one line.
 - <improvement or trade, one line>
 | "none offered"
 
-**Approving commits to:** beads cut and implemented with no further contact, unless a later
-polish round changes a gated section — then only the changed sections come back for a re-approve.
+**Approving commits to:** the Silver Bullet and every Done when line above — then beads cut
+and implemented with no further contact, unless a later polish round changes a gated section —
+then only the changed sections come back for a re-approve.
 
 **Approve / Change / Park / Show me the plan** — Show me the plan prints the whole plan
 file and re-asks; Approve is never taken sight-unseen.
