@@ -320,6 +320,9 @@ def pr_ci(p):
 
 out = [f"{name} · {NOW.astimezone():%Y-%m-%d %H:%M}", VERDICT]
 line3 = [f"closed 7d {spark_s}", ci_s]
+tg, ok = lines_of("triage", "triage-gate.sh --status")  # empty = the repo declares no gate
+if tg: line3.append(tg[0])
+elif not ok: line3.append("triage: ?")
 if waves: line3.append(f"{waves} wave branch" + ("" if waves == 1 else "es"))
 elif waves is None: line3.append("waves ?")
 out.append("  ·  ".join(line3))

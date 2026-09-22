@@ -21,26 +21,30 @@
 #     recovery. It never starts the model and never touches the seen-set.
 #   - Every run rewrites $STATE/heartbeat.json — its age is the gate's proof of life.
 #
-# Usage:  triage-gate.sh [--no-escalate] [--seed]
+# Usage:  triage-gate.sh [--no-escalate] [--seed | --status]
 #           --no-escalate  dry run: print new items; no model, no ops bead, nothing marked seen
 #           --seed         baseline: mark every current item seen; no model, no ops bead
+#           --status       one line from heartbeat.json (`triage: ✓ 7m ago` · `⚠ silent 3h` · down
+#                          sources), nothing when the repo declares no gate; reads only, exits 0
 # Env:    TRIAGE_GATE_CONFIG (default .claude/skills/CORE/triage.md)
 #         TRIAGE_GATE_STATE  (default ${XDG_STATE_HOME:-~/.local/state}/ac-triage/<repo>)
 #         TRIAGE_GATE_MODEL  command run as `$TRIAGE_GATE_MODEL <items-file>` (default: claude -p
 #                            on workflows/scheduled-daily.md at TRIAGE_GATE_MODEL_NAME, sonnet)
 #         TRIAGE_GATE_COMMENT_EVERY_H (default 24) · AC2_BR_CMD (default br)
+#         TRIAGE_GATE_STALE_H (default 2) — --status calls a heartbeat older than this silent
 # Exit:   0  every source handled (clean · escalated and landed · down with its ops bead current)
 #         1  the model run failed — its items stay unseen and resurface next run
 #         2  a down source could not be recorded on its ops bead (br failed); wins over 1
 #         3  skipped — another gate run holds the lock
 #         64 usage or config error
 
-NO_ESCALATE=0; SEED=0
+NO_ESCALATE=0; SEED=0; STATUS=0
 for a in "$@"; do
   case "$a" in
     --no-escalate) NO_ESCALATE=1 ;;
     --seed) SEED=1 ;;
-    *) echo "usage: triage-gate.sh [--no-escalate] [--seed]" >&2; exit 64 ;;
+    --status) STATUS=1 ;;
+    *) echo "usage: triage-gate.sh [--no-escalate] [--seed | --status]" >&2; exit 64 ;;
   esac
 done
 
@@ -51,6 +55,23 @@ STATE="${TRIAGE_GATE_STATE:-${XDG_STATE_HOME:-$HOME/.local/state}/ac-triage/$(ba
 BR="${AC2_BR_CMD:-br}"
 EVERY_H="${TRIAGE_GATE_COMMENT_EVERY_H:-24}"
 WORKFLOW=".claude/skills/ac-triage/workflows/scheduled-daily.md"
+
+if [ "$STATUS" = 1 ]; then  # proof of life for the board — never takes the lock, never writes
+  grep -q '^```triage-gate$' "$CONFIG" 2>/dev/null || exit 0
+  HB="$STATE/heartbeat.json"
+  [ -f "$HB" ] || { echo "triage: ⚠ never ran"; exit 0; }
+  jq -r --argjson now "$(date -u +%s)" --argjson stale "${TRIAGE_GATE_STALE_H:-2}" '
+    (($now - (.ts | fromdateiso8601)) / 60 | floor) as $m
+    | (if $m < 60 then "\($m)m" else "\($m / 60 | floor)h" end) as $age
+    | [.sources[]? | select(test("✗")) | split(":")[0]] as $down
+    | "triage: "
+      + (if $m > $stale * 60 then "⚠ silent \($age)"
+         elif .exit != 0 then "⚠ last run exit \(.exit) · \($age) ago"
+         else "✓ \($age) ago" end)
+      + (if ($down | length) > 0 then " · down: " + ($down | join(", ")) else "" end)
+  ' "$HB" 2>/dev/null || echo "triage: ⚠ unreadable heartbeat"
+  exit 0
+fi
 . "$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/../../_tools" && pwd)/br-call.sh" || exit 64
 command -v flock >/dev/null || { echo "triage-gate: flock not found" >&2; exit 64; }
 mkdir -p "$STATE/seen" "$STATE/down" || exit 64

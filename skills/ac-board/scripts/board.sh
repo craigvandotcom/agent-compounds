@@ -49,6 +49,7 @@ if [ "$COMPACT" = 0 ]; then
      git branch -r --list '*wave/*'"
   job prs    15 'gh pr list --state open --json number,title,createdAt,isDraft,statusCheckRollup'
 fi
+job triage  5 "'$SKILLS/ac-triage/scripts/triage-gate.sh' --status"
 job roster 15 "python3 '$SELF/agent-roster.py'"   # compact too: the verdict needs live agents
 wait
 

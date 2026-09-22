@@ -23,7 +23,7 @@ d=$(dirname "$0"); s=$1
 exit 0
 SH
   chmod +x "$W/src.sh"
-  rm -f "$W"/alpha.* "$W"/beta.*
+  find "$W" -maxdepth 1 \( -name 'alpha.*' -o -name 'beta.*' \) -delete  # never a glob: zsh aborts on no match
   printf '# fixture\n```triage-gate\n# name timeout command\nalpha 5 %s alpha\nbeta 2 %s beta\n```\n' \
     "$W/src.sh" "$W/src.sh" >"$W/triage.md"
   # br stub: one file per bead in $W/beads; logs every call.
@@ -133,6 +133,18 @@ setup
 echo "no fence" >"$W/triage.md"
 rc=$(gate)
 if [ "$rc" = 64 ]; then ok; else bad "missing fence exits 64 (got $rc)"; fi
+
+# 11. --status: silent without a fence, never-ran, fresh, silent, down source; never writes
+st() { gate --status >/dev/null; cat "$W/gate.out"; }
+if [ -z "$(st)" ]; then ok; else bad "--status prints nothing when no gate is declared"; fi
+setup
+if [ "$(st)" = "triage: ⚠ never ran" ] && [ ! -e "$W/state/lock" ]; then ok; else bad "--status: never ran, no lock taken"; fi
+gate >/dev/null
+case "$(st)" in "triage: ✓ 0m ago") ok ;; *) bad "--status fresh (got '$(st)')" ;; esac
+jq '.ts = "2000-01-01T00:00:00Z"' "$W/state/heartbeat.json" >"$W/hb" && mv "$W/hb" "$W/state/heartbeat.json"
+case "$(st)" in "triage: ⚠ silent "*) ok ;; *) bad "--status stale → silent (got '$(st)')" ;; esac
+echo 2 >"$W/beta.rc"; gate >/dev/null; rm -f "$W/beta.rc"
+case "$(st)" in *"down: beta") ok ;; *) bad "--status names a down source (got '$(st)')" ;; esac
 
 echo "PASS=$PASS FAIL=$FAIL"
 [ "$FAIL" = 0 ]
