@@ -94,7 +94,10 @@ LENSES = {
     "boundary": {"cols": ["interface", "side", "path:line", "producer", "assumes", "asserts", "found-by"], "path_col": 2},
 }
 DIAG_COLS = 4
-PATH_RE = re.compile(r"[A-Za-z0-9_@\-\[\]().]+(?:/[A-Za-z0-9_@\-\[\]().]+)+\.[A-Za-z0-9]{1,6}")
+# Extension group is unbounded: a 6-char cap truncated ios/project.pbxproj to
+# ios/project.pbxpro (and storyboard, gitattributes). A bare filename and a
+# leading-dot segment still do not match — only the extension width changed.
+PATH_RE = re.compile(r"[A-Za-z0-9_@\-\[\]().]+(?:/[A-Za-z0-9_@\-\[\]().]+)+\.[A-Za-z0-9]+")
 FENCE_KEYS = {"object": "object", "flow": "flows", "boundary": "boundaries", "files": "files"}
 WORD = r"[A-Za-z0-9_]"
 

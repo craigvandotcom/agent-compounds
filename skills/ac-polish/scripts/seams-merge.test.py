@@ -19,6 +19,7 @@ missing / unknown stage / wrong shape / no marker -> NOT-GATED, nothing written 
 consecutive · no spawn, assurance block present. Exit 0 = all pass.
 """
 import hashlib
+import importlib.util
 import json
 import os
 import subprocess
@@ -514,6 +515,29 @@ src = open(SCRIPT).read()
 ok("seams-merge spawns nothing") if not any(t in src for t in ("subagent", "claude ", "codex ")) else fail("spawn")
 missing = [f for f in ("PROBE:", "SCHEDULE:", "MODE:", "ON-FAILURE:") if f not in src]
 ok("4-field assurance declaration present") if not missing else fail("assurance", str(missing))
+
+# --- 8. extension group admits >6-char extensions whole (ac-2i76) -------------------------
+# The old [A-Za-z0-9]{1,6} cap returned ios/project.pbxpro for ios/project.pbxproj.
+# A bare filename and a dotfile path stay unmatched: the widening is the extension only.
+_spec = importlib.util.spec_from_file_location("seams_merge_mod", SCRIPT)
+_sm = importlib.util.module_from_spec(_spec)
+_spec.loader.exec_module(_sm)
+for _cell, _want in (
+    ("`ios/project.pbxproj`", "ios/project.pbxproj"),
+    ("`App/Main.storyboard`", "App/Main.storyboard"),
+    ("`foo/bar.gitattributes`", "foo/bar.gitattributes"),
+):
+    _got = _sm.norm_path(_cell)
+    if _got == _want:
+        ok(f"extractor keeps {_want}")
+    else:
+        fail(f"extractor keeps {_want}", f"got {_got!r}")
+for _cell in ("`project.pbxproj`", "`dir/.gitattributes`"):
+    _got = _sm.norm_path(_cell)
+    if _got is None:
+        ok(f"extractor still skips {_cell}")
+    else:
+        fail(f"extractor still skips {_cell}", f"got {_got!r}")
 
 print("---"); print(f"PASS={PASS} FAIL={FAIL}")
 sys.exit(0 if FAIL == 0 else 1)
