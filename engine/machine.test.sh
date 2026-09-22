@@ -291,5 +291,42 @@ else
   bad "harnesses leak: expected 0 with no org_root/targets, got rc=$rc leak=$leak"
 fi
 
+# --- --memory: lane/link lines, the memory key alone validated ---------------------------
+printf '{"memory": {"lanes": ["~/lane-a", "/lane-b"], "link_roots": ["/wiki"]}}\n' > "$W/memory.json"
+out="$(AC_MACHINE_FILE="$W/memory.json" "$MACHINE" --memory 2>&1)"; rc=$?
+want="$(printf 'lane\t%s/lane-a\nlane\t/lane-b\nlink\t/wiki' "$HOME")"
+if [ "$rc" = 0 ] && [ "$out" = "$want" ]; then
+  ok "memory: lane and link lines, ~ expanded, existence not checked"
+else
+  bad "memory: expected rc 0 and the three lines, got rc=$rc"; printf '%s\n' "$out"
+fi
+
+printf '{"org_root": "/nowhere"}\n' > "$W/memory-absent.json"
+out="$(AC_MACHINE_FILE="$W/memory-absent.json" "$MACHINE" --memory 2>&1)"; rc=$?
+if [ "$rc" = 0 ] && [ -z "$out" ]; then
+  ok "memory: absent key -> 0 and nothing printed (org_root not validated)"
+else
+  bad "memory absent: expected 0 and no output, got rc=$rc"; printf '%s\n' "$out"
+fi
+
+printf '{"memory": {"link_roots": "/wiki"}}\n' > "$W/memory-bad.json"
+out="$(AC_MACHINE_FILE="$W/memory-bad.json" "$MACHINE" --memory 2>&1)"; rc=$?
+if [ "$rc" = 2 ] && printf '%s' "$out" | grep -q 'link_roots'; then
+  ok "memory: a non-array key -> 2 naming it"
+else
+  bad "memory bad: expected 2 naming link_roots, got $rc"; printf '%s\n' "$out"
+fi
+
+printf '{"memory": {"lanes": ["relative/lane"]}}\n' > "$W/memory-rel.json"
+out="$(AC_MACHINE_FILE="$W/memory-rel.json" "$MACHINE" --memory 2>/dev/null)"; rc=$?
+if [ "$rc" = 2 ] && [ -z "$out" ]; then
+  ok "memory: a relative lane -> 2 and no lines printed"
+else
+  bad "memory relative: expected 2 and no stdout, got rc=$rc"; printf '%s\n' "$out"
+fi
+
+rc=0; AC_MACHINE_FILE="$W/does-not-exist.json" "$MACHINE" --memory >/dev/null 2>&1 || rc=$?
+if [ "$rc" = 4 ]; then ok "not-configured: --memory -> 4"; else bad "not-configured --memory: expected 4, got $rc"; fi
+
 echo "machine.test.sh: ${fails} failure(s)"
 [ "$fails" -eq 0 ]

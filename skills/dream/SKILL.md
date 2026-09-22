@@ -1,6 +1,6 @@
 ---
 name: dream
-description: Run the dream session — the org's deliberate self-improvement review, human-run and unscheduled. Use when asked to "run the dream cycle", "dream", "synthesize the week's lessons", "lint the memory substrate", "review dream proposals", "review the dream dockets", or "what did the dream cycle find"; also when a docket-review bead is open. The session reads both ranked dockets (your deployment's dream-cycle proposals dir: MEMORIES-DOCKET.md — knowledge substrate, FRICTIONS-DOCKET.md — friction ledger), rules each item with the human, and emits approved work as task beads; the mechanical sweep keeps the dockets fresh. NOT for capturing one session's lessons (that is reflect) or saving a single item (that is context-engineering routing).
+description: Run the dream session — the org's deliberate self-improvement review, human-run and unscheduled. Use when asked to "run the dream cycle", "dream", "synthesize the week's lessons", "lint the memory substrate", "review dream proposals", "review the dream dockets", or "what did the dream cycle find"; also when a docket-review bead is open. The session reads both ranked dockets (memory-rollup — knowledge substrate, friction-rollup — friction ledger, both computed live), rules each item with the human, and emits approved work as task beads. NOT for capturing one session's lessons (that is reflect) or saving a single item (that is context-engineering routing).
 ---
 
 # dream — human judgment over the ranked docket
@@ -9,10 +9,9 @@ description: Run the dream session — the org's deliberate self-improvement rev
 session. Not scheduled.
 **Constitution:** `../context-engineering/SKILL.md` (load it first — taxonomy, homes,
 hygiene rules all come from there).
-**Dockets (input):** `<your-deployment>/dream-cycle/proposals/MEMORIES-DOCKET.md`
-(knowledge substrate) + `FRICTIONS-DOCKET.md` (friction ledger) — maintained by
-the sweep (`docket-sweep.py`), never by the session. **Status:** MANUAL (2026-09-08).
-Only automated artifacts: the two dockets + one idempotent docket-review bead.
+**Dockets (input):** `scripts/memory-rollup.py --json` (knowledge substrate) +
+`../skill-builder/scripts/friction-rollup.py --view dream` (friction ledger) — computed
+live on every read, never stored; ac-human's cards read the same two. **Status:** MANUAL.
 
 ---
 
@@ -34,9 +33,7 @@ write your own) does four things, and nothing else:
 
 1. **Verifies premises live** — every pending proposal memo and open dream bead gets
    a verdict against HEAD: `LIVE` / `ANSWERED` / `UNJUDGED` / `STALE-EVIDENCE`.
-2. **Ranks the survivors** into two dockets: `MEMORIES-DOCKET.md` (knowledge substrate
-   — memory-lint findings, wiki refinements, pending-memo opportunities) and
-   `FRICTIONS-DOCKET.md` (friction ledger + machinery/process proposals).
+2. **Leaves ranking to the two rollups** (above) — it writes no docket file.
 3. **Mints the single combined docket-review bead** ('review dream dockets') if none
    is open (idempotent — the session's handle on the board; it never closes it).
 4. **Never decides anything.** Findings only.
@@ -48,8 +45,7 @@ rules on what remains. Judgment is the session's, not the sweep's.
 
 ### Phase 1 — GATHER
 
-Read both dockets (`MEMORIES-DOCKET.md`, `FRICTIONS-DOCKET.md` — paths above) — the
-ranked survivors and the flagged re-entries. Scan fresh ledgers since the last session
+Run both rollups (above) — the ranked rows and the flagged re-entries. Scan fresh ledgers since the last session
 — friction logs, memory homes, wiki, pending proposals — so nothing the sweep's last
 pass predates is missed. The dockets are the input; the fresh scan is the check.
 

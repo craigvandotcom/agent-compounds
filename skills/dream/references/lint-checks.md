@@ -175,8 +175,8 @@ python3 <your-deployment>/scripts/health/memory-lint.py --check --json
 Run `memory-lint.py --check --json` in the lint phase; **tolerate absence / not-armed** — a
 not-armed run reports `not armed: collecting since <date>; arms <date>` in the decay
 context and emits no decay findings, which goes into the cycle `INDEX.md` as-is (it is a
-status, not a failure). Decay candidates and dedupe pairs surface through `docket-sweep.py`
-(memory-hygiene rows) — the docket is their only consumer; never self-authored proposals.
+status, not a failure). Dedupe pairs, dead paths, retired markers and stale notes surface
+through `../scripts/memory-rollup.py` (ranked rows, no decay) — never self-authored proposals.
 
 Semantic checks (contradiction, staleness, duplication) need reading + `qmd search` —
 budget most lint time there; the mechanical ones are seconds.

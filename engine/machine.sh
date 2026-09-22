@@ -17,6 +17,11 @@
 #                                 over it; the committed base alone (exit 0) when there
 #                                 is no file, because harness settings HAVE a committed
 #                                 default and targets DO NOT
+#   machine.sh --memory           one `lane\t<abs-path>` line per memory lane and one
+#                                 `link\t<abs-path>` line per extra wikilink root, from
+#                                 `memory.lanes` / `memory.link_roots`; nothing when the
+#                                 key is absent. Paths must be absolute; their existence
+#                                 is the consumer's to report, lane by lane
 #   machine.sh --lit <abs-path>   the form a rendered config carries: `$HOME`-relative
 #                                 under $HOME, absolute otherwise — the literal `$HOME`
 #                                 is deliberate, one rendered file works for any user
@@ -50,11 +55,12 @@ EXAMPLE_FILE="$AC_ROOT/machine.example.json"
 
 usage() {
   cat >&2 <<'EOF'
-usage: machine.sh --targets | --org-root | --harnesses | --lit <abs-path>
+usage: machine.sh --targets | --org-root | --harnesses | --memory | --lit <abs-path>
 
   --targets        one `<abs-path>\t<flags>` line per target (flags: public, packages=a,b)
   --org-root       the org root, validated
   --harnesses      harnesses.json with this machine's overrides merged
+  --memory         `lane\t<path>` / `link\t<path>` lines from the memory key
   --lit <abs-path> a path rendered $HOME-relative under $HOME, absolute otherwise
 
 Exit: 0 configured · 4 NOT-CONFIGURED (no file) · 2 CONFIGURED-BUT-WRONG
@@ -97,6 +103,7 @@ while [ $# -gt 0 ]; do
     --targets)  MODE=targets;  shift ;;
     --org-root) MODE=org_root; shift ;;
     --harnesses) MODE=harnesses; shift ;;
+    --memory)   MODE=memory; shift ;;
     --lit)      MODE=lit; shift
                 [ $# -gt 0 ] || wrong "--lit needs a path"
                 LIT_PATH="$1"; shift ;;
@@ -135,6 +142,38 @@ if [ "$MODE" = harnesses ]; then
   fi
   jq -s '.[0] * {harnesses: (.[1].harnesses // {})}' "$MANIFEST" "$MACHINE_FILE"
   exit $?
+fi
+
+# --- --memory: only the memory key is validated ------------------------------------------
+if [ "$MODE" = memory ]; then
+  [ -f "$MACHINE_FILE" ] || not_configured
+  if ! jq_out="$(jq . "$MACHINE_FILE" 2>&1)"; then
+    wrong "$MACHINE_FILE is not valid JSON: $(printf '%s' "$jq_out" | head -1)"
+  fi
+  mem_tsv="$(jq -r '
+    (.memory // {}) as $m
+    | if ($m | type) != "object" then error("memory is not an object") else . end
+    | [["lane", "lanes"], ["link", "link_roots"]][] as [$k, $key]
+    | ($m[$key] // [])
+    | if type != "array" then error("memory.\($key) must be an array")
+      else .[] end
+    | if type != "string" or length == 0 then error("memory lists a non-string path")
+      else [$k, .] end
+    | @tsv' "$MACHINE_FILE" 2>&1)" \
+    || wrong "the memory key in $MACHINE_FILE is malformed: $mem_tsv"
+  out=""
+  while IFS=$'\t' read -r kind mpath; do
+    [ -n "$mpath" ] || continue
+    mpath="$(expand_tilde "$mpath")"
+    case "$mpath" in
+      /*) ;;
+      *)  wrong "memory $kind path '$mpath' is not absolute (in $MACHINE_FILE)" ;;
+    esac
+    printf -v line '%s\t%s\n' "$kind" "$mpath"
+    out+="$line"
+  done <<<"$mem_tsv"
+  printf '%s' "$out"
+  exit 0
 fi
 
 # --- --targets / --org-root: full validation on every call -------------------------------
