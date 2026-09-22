@@ -1,0 +1,1 @@
+- [spawn-prompt-is-a-snapshot-spawn-after-sweep](spawn-prompt-is-a-snapshot-spawn-after-sweep.md) — spawned prompts are snapshots: spawn after the refly sweep; workers re-read the live worker.md once
