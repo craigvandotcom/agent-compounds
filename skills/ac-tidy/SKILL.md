@@ -25,11 +25,9 @@ Skill files resolve only through $APP_ROOT/.claude/… (relative symlinks); if t
 
 Read the board per `ac-pipeline/references/board-scan.md` (closed beads: Scan A's
 `br_call list --all --status closed --json`, never a raw `br list`). Print the docket-health line,
-then the **`post-merge` tail** — open beads still labelled `post-merge` (excluded by
-`beads-closed-gate.sh`, stripped only at claim: `beads-standards/reference/bead-conventions.md`
-§ Claim semantics), so one no claim ever takes stays invisible to every close-out — as
-`post-merge-tail: <n>` (a failed read is an error, never a `0`); reclaiming it is judgment, so it
-routes to step 4.
+then `post-merge-tail: <n>` — open beads still labelled `post-merge` (`beads-standards/reference/bead-conventions.md`
+§ Claim semantics; a failed read is an error, never a `0`); reclaiming one is judgment: step 4.
+Then run `scripts/tidy-scan.sh` — read-only; its rows are the baseline for steps 3–4: decide each yourself, record skips and additions in step 5.
 
 ### 2b. Surviving-gate verify
 
@@ -65,7 +63,8 @@ fails its row above · duplicate or mergeable items · a `post-merge` tail bead 
 
 Commit the exact paths touched, per `ac-pipeline/references/commit-discipline.md`: `AGENT_NAME=FoggyCreek git commit -m "chore(tidy): <what>" -- <paths>`, then push (NIGHTLY: `git push --no-verify origin HEAD:main`, then verify from the live checkout that `git -C "$APP_ROOT" rev-parse origin/main` equals HEAD — rejected means degraded, do not retry).
 Slack card via `slack-send --card --status <healthy|degraded>` on the app's ops channel, one line of counts (`drift-skipped:` — § 2b gates skipped on ledger-copy disagreement — plus `post-merge-tail:` (§ 2) and the since-last-run app-board counts `foreign status:` / `off-canon receipts:` / `unrecorded closes:` against D4/D1's canon grammar).
-Write `$APP_ROOT/.claude/skills/ac-tidy/workflows/last-run.json` with date, counts, pushed_sha, status; remove the worktree and prune. Teardown runs on every exit path, abort included.
+Before committing, append one line to `.claude/state/tidy-runs.jsonl` at the repo root you commit from (history — never rewrite a line): `{date, mode, machine, counts, scan, applied, match}` — `scan` the tidy-scan mechanical rows, `applied` the step-3 actions taken, `match` whether they are equal. It rides the commit unless the project ignores `.claude/state/`.
+Remove the worktree and prune. Teardown runs on every exit path, abort included.
 
 ---
 

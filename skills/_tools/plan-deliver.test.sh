@@ -146,6 +146,17 @@ if [ "$RC" -eq 0 ] && printf '%s' "$OUT" | grep -q '^DELIVERED:' \
   pass "closed epic + open closeout only -> DELIVERED with ISO stamp"
 else fail "all-closed -> rc=$RC out=$OUT"; fi
 
+# --- 4c: --check on a deliverable plan -> WOULD-DELIVER, file untouched -------------------
+S4C="$W/s4c"; mkdir -p "$S4C/.br"
+mkplan "beadified: FIXEPIC" >"$S4C/plan.md"
+board_add "$S4C/.br" "FIXEPIC.1" closed "shipping work" task null "body"
+BEFORE="$(cat "$S4C/plan.md")"
+export PLAN_DELIVER_BR_STATE="$S4C/.br"
+OUT=$("$SCRIPT" --check "$S4C/plan.md" 2>&1); RC=$?
+[ "$RC" -eq 0 ] && printf '%s' "$OUT" | grep -q '^WOULD-DELIVER:' && [ "$(cat "$S4C/plan.md")" = "$BEFORE" ] \
+  && pass "--check on a deliverable plan -> WOULD-DELIVER (exit 0), file untouched" \
+  || fail "--check deliverable -> rc=$RC out=$OUT"
+
 # --- 5: missing plan -> NOT-GATED ----------------------------------------------------------
 export PLAN_DELIVER_BR_STATE="$S4/.br"
 OUT=$("$SCRIPT" "$S4/absent.md" 2>&1); RC=$?

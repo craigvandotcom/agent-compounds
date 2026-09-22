@@ -10,11 +10,13 @@
 # On success it writes delivered: <UTC-ISO> into the frontmatter — nothing else.
 #
 # Verdict tokens (one greppable line each):
-#   DELIVERED · REFUSED not-beadified · REFUSED children-open N · NOOP · NOT-GATED
+#   DELIVERED · WOULD-DELIVER (--check) · REFUSED not-beadified · REFUSED children-open N
+#   · NOOP · NOT-GATED
 #
-# Usage: plan-deliver.sh <plan-path>
+# Usage: plan-deliver.sh [--check] <plan-path>   (--check runs the same checks, never writes)
 # Env:   AC2_BR_CMD (the br binary br_call reads through; default: br)
 set -u
+CHECK=0; [ "${1:-}" = --check ] && { CHECK=1; shift; }
 PLAN="${1:-}"
 
 # The ONE br_call invocation shape (ac-heyt.3): a raw br --json read turns a dead
@@ -80,6 +82,11 @@ done < <(printf '%s' "$RAW" | jq -r \
 if [ "$OPEN_COUNT" -gt 0 ]; then
   echo "REFUSED children-open $OPEN_COUNT: $OPEN_COUNT non-closeout child(ren) of $EPIC still open"
   exit 1
+fi
+
+if [ "$CHECK" = 1 ]; then
+  echo "WOULD-DELIVER: $PLAN — every non-closeout child of $EPIC closed"
+  exit 0
 fi
 
 TS="$(date -u +%Y-%m-%dT%H:%M:%SZ)"

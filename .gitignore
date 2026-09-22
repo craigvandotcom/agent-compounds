@@ -82,7 +82,3 @@ _reports/
 # Absent -> the check skips. Template: lint/instance-tokens.example.txt
 lint/instance-tokens.local.txt
 
-# Machine-written workflow run receipts. The nightly scheduler rewrites these with
-# the live host, app scope, pushed SHA and notification channel — so a tracked one
-# re-leaks on every run. scope.py already classes them as STATE, not doctrine.
-skills/*/workflows/last-run.json

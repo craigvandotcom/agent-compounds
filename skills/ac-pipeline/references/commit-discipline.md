@@ -175,7 +175,7 @@ Cheapest first — stop at the first that applies. **Never an unscoped `git stas
 
 4. **Foreign ledger churn blocking rebase → a pathspec-scoped stash-push over that one
    machine-local generated file, never the whole tree.** Only for a file you did NOT edit
-   this session (e.g. `.beads/issues.jsonl`, `skills/*/workflows/last-run.json`): in words —
+   this session (e.g. `.beads/issues.jsonl`, `.claude/state/tidy-runs.jsonl`): in words —
    `stash push --` that ONE path only (never a bare, unscoped `git stash`), rebase, pop,
    verify by arithmetic, then push. The same scoped-stash-push recipe for
    `.beads/issues.jsonl` is documented at `skills/jef-flywheel/lessons/10_dcg.md`.

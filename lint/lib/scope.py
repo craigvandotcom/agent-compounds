@@ -11,16 +11,7 @@ Sets:
              NEVER live text — they are dated sensor logs, not doctrine.
              .github/ is excluded outright: `_in_dir` matches "workflows" as a
              bare path component, and .github/workflows/*.yml (CI config, not
-             skill doctrine) matched it before this carve-out existed. A
-             generated `.json` file under a `workflows/` dir (e.g.
-             ac-tidy's nightly `last-run.json` receipt) is likewise excluded
-             (2026-09-12 lint audit, item 4): it is machine-written STATE (a
-             run receipt necessarily naming real scope/notes, e.g.
-             "example-app"), not doctrine a human authored, so Check 27's
-             shrink-only instance-token allowlist is the wrong fix — the
-             carrier itself is out of scope. `dedup-drift-audit.js` under the
-             same kind of dir stays IN LIVE_TEXT (cited by prose elsewhere);
-             only the generated `.json` receipts are carved out.
+             skill doctrine) matched it before this carve-out existed.
   LEDGER     FRICTIONS.md and MAINTENANCE.md — exactly those two filenames,
              anywhere, including under _archive/. The FORMAT docs that teach
              their shape (skill-builder/references/maintenance-ledger.md,
@@ -186,11 +177,7 @@ for p in sorted(_paths):
        and (p.endswith(".sh") or p.endswith(".py")) \
        and not p.endswith(".test.sh") and not p.endswith(".test.py"):
         _scripts.add(p)
-    # A generated `.json` receipt under a workflows/ dir (e.g. ac-tidy's nightly
-    # last-run.json) is machine-written STATE, not doctrine — see the LIVE_TEXT
-    # docstring above. Everything else workflows/ carries (prose, scripts) stays.
-    is_workflow_json_receipt = p.endswith(".json") and _in_dir(p, "workflows")
-    if not p.startswith(".github/") and not is_workflow_json_receipt \
+    if not p.startswith(".github/") \
        and (base == "SKILL.md" or _in_dir(p, "references") or _in_dir(p, "reference") or _in_dir(p, "workflows")):
         _live.add(p)
 
