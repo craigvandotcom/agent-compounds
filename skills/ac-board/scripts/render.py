@@ -323,6 +323,13 @@ line3 = [f"closed 7d {spark_s}", ci_s]
 tg, ok = lines_of("triage", "triage-gate.sh --status")  # empty = the repo declares no gate
 if tg: line3.append(tg[0])
 elif not ok: line3.append("triage: ?")
+try:  # tidy shadow streak: trailing `match: true` runs — 7 means tidy-scan may apply for real
+    with open(os.path.join(ROOT, ".claude/state/tidy-runs.jsonl")) as fh:
+        runs = [json.loads(l) for l in fh if l.strip()]
+    streak = next((i for i, r in enumerate(reversed(runs)) if r.get("match") is not True), len(runs))
+    line3.append("tidy: ready to apply (7/7)" if streak >= 7 else f"tidy shadow: {streak}/7 agree")
+except FileNotFoundError: pass
+except (OSError, ValueError): line3.append("tidy shadow: ?")
 if waves: line3.append(f"{waves} wave branch" + ("" if waves == 1 else "es"))
 elif waves is None: line3.append("waves ?")
 out.append("  ·  ".join(line3))
