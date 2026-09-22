@@ -29,8 +29,8 @@ by the ceremonies that need them and carried outside the core's bound. The famil
    verification performed at refine time and already stale when the work starts.
 3. **A close goes through a gate that can refuse; silence is never success.** (L2) Prevents:
    NOT-GATED greens. Sustained 0% refusal is an alarm, not a triumph.
-4. **Specs get a checklist to fixpoint; code gets independent eyes. Depth by risk.** (L2) Prevents:
-   committees reviewing prose while code correctness rests on the author's own self-audit.
+4. **Specs get a checklist to fixpoint; code is proven by its own probes and the full proof.** (L2) Independent review
+   is a deliberate, hand-run tool. Prevents: committees reviewing prose while code correctness rests on the author's own self-audit.
 5. **One engine per pattern; scripts, not scar prose.** (L3) Prevents: the consensus machine copied
    5x plus a mirror, and scars accumulating where a script belongs.
 6. **Exhaust to the board (`discovered-from`) — discovered PRODUCT work only.** (L3) Process observations go to

@@ -12,7 +12,7 @@ description: 'Work an ac2 epic''s bead queue as a SWARM — you coordinate, spaw
 | **Input**        | `<epic>` — its refined beads on the board. Optional: `--width N`, `--cap N`     |
 | **Output**       | Commits on trunk, beads closed through a gate that can refuse                 |
 | **Artifacts**    | Flight receipts (`<git-common-dir>/ac-flight/`), the run ledger, close receipts |
-| **Verification** | `close-gate.sh` per bead; the batch CI run + `ac-review` per batch            |
+| **Verification** | `close-gate.sh` per bead; the batch CI run per batch                        |
 
 **The prompt IS the skill.** `references/worker.md` (mandatory load) is the executable loop; this file is its frame. Doctrine: `skills/ac-pipeline/SKILL.md`; bead + commit canon by pointer.
 
@@ -59,7 +59,7 @@ spawn a replacement only when ready beads outnumber live workers. **The pool is 
 source — `br`'s filter, never tree text** (a `br create` line in a file is a template, not a
 task; canon: `ac-pipeline/references/work-derivation.md`).
 
-**Phase 2 — close-out, then review to a bound of three rounds.** Close-out leaves NO TRACE
+**Phase 2 — close-out, then batch CI, then telemetry.** Close-out leaves NO TRACE
 when it goes wrong — script plus checklist, not prose:
 
     git fetch origin                                    # yours; the gate never fetches
@@ -72,18 +72,11 @@ hands the commit itself to `swarm-commit.sh`, so there is still exactly one comm
 
 Then, and only after it exits 0:
 
-1. **Batch CI on the committed tree, then `ac-review`** on the batch range — the post-batch
-   reviewer panel (a DIFFERENT model from the implement workers, read-only;
-   `skills/ac-review/SKILL.md`). The repo-wide gates are authoritative HERE — only here is the
-   tree free of half-finished sibling edits. Rounds 2–3 review from the last receipt's range head.
-2. **If review filed P0/P1 children, wave again:** `ac-polish bead` on them, then spawn a further
-   wave of workers on the new children — the coordinator never picks a bead and never edits a
-   file — then review again. At most three rounds; the epic closes only through the worker's
-   terminal pick (worker.md §8), once every child is closed and the `REVIEW: APPROVED` receipt
-   is on the epic.
-3. **Telemetry.** Report width, wall time, and gate-wait vs work time — the constitution drops
+1. **Batch CI on the committed tree.** The repo-wide gates are authoritative HERE — only here is
+   the tree free of half-finished sibling edits.
+2. **Telemetry.** Report width, wall time, and gate-wait vs work time — the constitution drops
    the width to 1 if two tuning sessions show no throughput over width 1, and this number decides.
-4. **Release reservations and deregister** every worker identity, including any you swept.
+3. **Release reservations and deregister** every worker identity, including any you swept.
 
 **Shell divergence.** A pasted bash snippet is bash-authored by default and silently diverges
 under the org's zsh instead of erroring when it hits an offender like `tr` shadowed by a tmux

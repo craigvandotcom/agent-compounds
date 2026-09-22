@@ -1,8 +1,7 @@
 # Anti-Pattern Lenses — evidence destruction, coordinated workaround, unproven seam
 
-Shared by `ac-review` (correctness + architecture reviewers) and `ac-hygiene`
-(bug-hunter + structural lenses). Method only — zero app facts. Reference it as
-`ac-pipeline/references/anti-patterns.md`.
+Shared by `ac-review` and `ac-hygiene` (bug-hunter + structural lenses). Method only —
+zero app facts. Reference it as `ac-pipeline/references/anti-patterns.md`.
 
 > Origin: an anonymized App Store resubmission post-mortem — four rejections, ~10 days,
 > five silent layers, all green under static checks (full narrative kept in the
@@ -40,7 +39,7 @@ in more than one layer, the toolchain is telling you the design is wrong — not
 that the symptom is minor enough to route around three times.
 
 **On hit:** escalate to a human — never auto-fix by adding a third evasion.
-File as `DESIGN_DECISION` / `SCOPE_ESCALATION` (ac-review Phase 7 / ac-hygiene
+File as `DESIGN_DECISION` / `SCOPE_ESCALATION` (ac-review / ac-hygiene
 Phase 5 categories), never as an auto-fixable finding.
 
 ## 3. Unproven seam
@@ -62,8 +61,8 @@ diff → file it as a finding, not a nit.
 
 ## Where these apply
 
-- **ac-review:** correctness + architecture reviewers hunt all three alongside
-  their existing checklist (`references/review-dimensions.md`).
+- **ac-review:** its reviewers hunt all three alongside their existing checklist
+  (`references/review-dimensions.md`).
 - **ac-hygiene:** bug-hunter + structural lenses hunt all three alongside their
   existing method (`references/reviewers.md`).
 

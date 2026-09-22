@@ -9,7 +9,7 @@ description: 'The ac2 ship gate — obtain a proof via ac-prove, assert its REQU
 
 |                  |                                                                                  |
 | ---------------- | -------------------------------------------------------------------------------- |
-| **Input**        | A reviewed ac2 batch on the committed tree, and the ref `R` it ends at             |
+| **Input**        | A closed ac2 batch on the committed tree, and the ref `R` it ends at             |
 | **Output**       | A tagged, promoted release at a PROVEN SHA — or an explicit refusal and no ship    |
 | **Artifacts**    | The tag · the release report · beads for escapes, each catch-stage-labelled        |
 | **Verification** | `ac-prove ensure --fix-forward`; executed-jobs; `needs-device-gate.sh --range`      |
