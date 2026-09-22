@@ -5,8 +5,9 @@
 #           path is RED naming the field; a live reference resolves GREEN;
 #           file names (ac-x.js) and bead ids (ac-x.y) are never read as
 #           skill references; structured PENDING-DECISION fields are out of
-#           scope; an empty scan is NOT-GATED (exit 2); the real wiring manifest
-#           is green.
+#           scope; an assurance.PROBE case count that the suite does not have
+#           is RED naming the mismatch (and matching is quiet); an empty scan
+#           is NOT-GATED (exit 2); the real wiring manifest is green.
 #
 # ASSURANCE
 #   PROBE:    bash lint/checks/32-hooks-doc-names.test.sh
@@ -28,8 +29,8 @@ run_check() { # <tmp-root> <out-file> -> exit code
   echo $?
 }
 
-write_manifest() { # <root> <doc-text> <backstop-text> <pending-text>
-  local root="$1" doc="$2" backstop="$3" pending="$4"
+write_manifest() { # <root> <doc-text> <backstop-text> <pending-text> [<probe-text>]
+  local root="$1" doc="$2" backstop="$3" pending="$4" probe="${5:-p}"
   mkdir -p "$root/hooks" "$root/engine" "$root/skills/real"
   printf -- '---\nname: real\ndescription: "the one live skill"\n---\n\n# real\n' > "$root/skills/real/SKILL.md"
   printf '%s' "$(cat <<EOF
@@ -38,7 +39,7 @@ write_manifest() { # <root> <doc-text> <backstop-text> <pending-text>
     {
       "id": "demo",
       "_doc": "$doc",
-      "assurance": {"PROBE": "p", "SCHEDULE": "s", "MODE": "advisory", "ON-FAILURE": "open", "BACKSTOP": "$backstop", "PENDING-DECISION": "$pending"}
+      "assurance": {"PROBE": "$probe", "SCHEDULE": "s", "MODE": "advisory", "ON-FAILURE": "open", "BACKSTOP": "$backstop", "PENDING-DECISION": "$pending"}
     }
   ]
 }
@@ -76,6 +77,32 @@ if [ "$rc" = 1 ] && grep -q "'skills/nope/SKILL.md' does not exist" /tmp/32hd-ou
   ok "RED: dead skills/ path -> exit 1"
 else
   bad "PATH case: expected 1, got $rc"; cat /tmp/32hd-out.txt
+fi
+rm -rf "$w"
+
+# --- RED: assurance.PROBE stating a suite case count the suite lacks -----------
+w="$(mktemp -d)"
+write_manifest "$w" "All live references here." "the live backstop." "ac-on0y.5" \
+  "hooks/bead-capture-guard.test.py (7 cases)"
+printf 'cases = [1, 2, 3]\n' > "$w/hooks/bead-capture-guard.test.py"
+rc=$(run_check "$w" /tmp/32hd-out.txt)
+if [ "$rc" = 1 ] && grep -q "states 7 case(s)" /tmp/32hd-out.txt; then
+  ok "RED: stated case count != live suite -> exit 1"
+else
+  bad "COUNT case: expected 1 naming the mismatch, got $rc"; cat /tmp/32hd-out.txt
+fi
+rm -rf "$w"
+
+# --- GREEN: a stated count that DOES match the suite stays quiet ---------------
+w="$(mktemp -d)"
+write_manifest "$w" "All live references here." "the live backstop." "ac-on0y.5" \
+  "hooks/bead-capture-guard.test.py (3 cases)"
+printf 'cases = [1, 2, 3]\n' > "$w/hooks/bead-capture-guard.test.py"
+rc=$(run_check "$w" /tmp/32hd-out.txt)
+if [ "$rc" = 0 ]; then
+  ok "GREEN: stated count matching the live suite -> exit 0"
+else
+  bad "COUNT-GREEN case: expected 0, got $rc"; cat /tmp/32hd-out.txt
 fi
 rm -rf "$w"
 

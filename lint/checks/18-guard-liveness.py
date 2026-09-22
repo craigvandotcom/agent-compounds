@@ -21,8 +21,9 @@ stays SILENT on a negative one.
   - skill-edit-guard.py must fire (exit 2) on both entry points — an Edit
     file_path under skills/, and a Bash command writing into skills/ — and
     stay silent (exit 0) on both negatives (non-skill file, read-only command)
-  - bead-capture-guard is a HARD gate, so its own 25-case behaviour suite is
-    driven rather than duplicated probes that would drift from it
+  - bead-capture-guard is a HARD gate, so its own full behaviour suite is
+    driven rather than duplicated probes that would drift from it (its stated
+    case count is asserted against the live suite by Check 32)
   - wiring lives in the harness settings, not this repo, so a missing or
     partial matcher is reported as a NOTICE, never failed — but it is ALWAYS
     printed: an unwired guard is exactly as dead as a non-executable one

@@ -4,12 +4,14 @@
 # prevents: engine/hooks.wiring.json documentation text (the `_doc` fields and `assurance` entries) naming
 #   skills that do not exist — prose pointing operators and agents at archived or never-built skills,
 #   the way the fail-open rationale once justified itself by naming the retired ac-loop and
-#   ac-bead-refine
+#   ac-bead-refine — and an assurance.PROBE stating a case count its suite no longer has, the figure
+#   an operator reads for orientation otherwise decaying silently every time a case is added
 # scope: LIVE_TEXT
 # severity: fail
 # fixture: lint/fixtures/32-hooks-doc-names
 # ---
-"""32-hooks-doc-names — every skill named in hooks.json prose must resolve.
+"""32-hooks-doc-names — every skill named in hooks.json prose must resolve, and
+every case count it states must match the live suite.
 
 The hook WIRING manifest's `_doc` fields and `assurance` entries are the
 doctrine an operator or agent reads to understand why a hook behaves as it
@@ -39,10 +41,19 @@ single named config input (the lint/config.json precedent in Check 14), read
 directly; scope declares LIVE_TEXT because the roster it resolves against is
 the live skill population.
 
-Exit: 0 every reference resolves (and the manifest exists), 1 findings,
-2 nothing verified (no manifest).
+A second, narrow surface is asserted too: an `assurance.PROBE` text shaped
+`<suite>.test.py (<N> cases)` must state that suite's real case count. The live
+figure is parsed from the suite's own module-level `cases` list, so the stated
+number cannot drift as cases are added (hooks/bead-capture-guard.test.py was
+stated as 38 and 25 in two places while the suite already held 86). A suite
+that is missing or unparseable is skipped, not failed: the prose is then
+unverifiable, not wrong.
+
+Exit: 0 every reference resolves and every stated count matches (and the
+manifest exists), 1 findings, 2 nothing verified (no manifest).
 """
 
+import ast
 import json
 import os
 import re
@@ -88,6 +99,45 @@ def resolvable_ac_tokens(text):
     return out
 
 
+def walk_strings(node, path=""):
+    """Every string value in the manifest, with its JSON path."""
+    if isinstance(node, dict):
+        for k, v in node.items():
+            yield from walk_strings(v, path + "/" + k)
+    elif isinstance(node, list):
+        for i, v in enumerate(node):
+            yield from walk_strings(v, f"{path}[{i}]")
+    elif isinstance(node, str):
+        yield path, node
+
+
+CASE_COUNT_RE = re.compile(r"([A-Za-z0-9_./-]+\.test\.py)\s*\((\d+)\s+cases?\)")
+
+
+def live_case_count(root, test_rel):
+    """A suite's real case count: the summed length of its module-level
+    `cases` lists. None when the file is missing or unparseable."""
+    path = os.path.join(root, test_rel)
+    if not os.path.isfile(path):
+        return None
+    try:
+        with open(path, encoding="utf-8") as fh:
+            tree = ast.parse(fh.read(), filename=test_rel)
+    except (OSError, SyntaxError):
+        return None
+    total = 0
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Assign):
+            named = any(isinstance(t, ast.Name) and t.id == "cases" for t in node.targets)
+            if named and isinstance(node.value, ast.List):
+                total += len(node.value.elts)
+        elif isinstance(node, ast.AugAssign):
+            if isinstance(node.target, ast.Name) and node.target.id == "cases" \
+                    and isinstance(node.value, ast.List):
+                total += len(node.value.elts)
+    return total
+
+
 def main():
     root = sys.argv[1] if len(sys.argv) > 1 else scope.ROOT
     if os.path.abspath(root) != scope.ROOT:
@@ -125,14 +175,31 @@ def main():
             if name not in roster:
                 findings.append(f"{path}: skill reference '{name}' names no live skills/{name}/ directory")
 
+    # An assurance.PROBE stating `<suite>.test.py (<N> cases)` must match the
+    # suite's live `cases` list; the figure decays silently as cases are added.
+    counts_scanned = 0
+    for path, text in walk_strings(hooks):
+        if not path.endswith("/PROBE"):
+            continue
+        for m in CASE_COUNT_RE.finditer(text):
+            test_rel, stated = m.group(1), int(m.group(2))
+            live = live_case_count(root, test_rel)
+            if live is None:
+                continue
+            counts_scanned += 1
+            if live != stated:
+                findings.append(
+                    f"{path}: states {stated} case(s) for {test_rel} but the suite has {live}")
+
     findings = sorted(set(findings))
     if findings:
-        print("FAIL 32-hooks-doc-names: hooks.json prose names unresolvable skill reference(s):")
+        print("FAIL 32-hooks-doc-names: hooks.json prose has an unresolvable skill reference or a stale case count:")
         for f in findings:
             print(f"    {f}")
         return 1
     print(f"  ok: 32-hooks-doc-names — every skill reference in {scanned} _doc/BACKSTOP prose field(s) of "
-          f"{MANIFEST} resolves against the live roster ({len(roster)} skills)")
+          f"{MANIFEST} resolves against the live roster ({len(roster)} skills); "
+          f"{counts_scanned} stated case count(s) match the live suite")
     return 0
 
 
