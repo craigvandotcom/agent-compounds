@@ -41,8 +41,8 @@ vision_line='writes the vision back in plain prose'
     "$vision_line" "$vision_line"
 } >"$WORK/plan.md"
 bash "$APPROVE" approve "$WORK/plan.md" "Alex" >/dev/null
-sed -i '2a polish_rounds: 2\npolish_fixpoint_sha256: deadbeef' "$WORK/plan.md"
-sed -i 's/Some criterion\./Some amended criterion./' "$WORK/plan.md"
+awk 'NR==2{print; print "polish_rounds: 2"; print "polish_fixpoint_sha256: deadbeef"; next}1' "$WORK/plan.md" > "$WORK/plan.md.tmp" && mv "$WORK/plan.md.tmp" "$WORK/plan.md"
+sed -i.bak 's/Some criterion\./Some amended criterion./' "$WORK/plan.md"; rm -f "$WORK/plan.md.bak"
 OUT=$(bash "$APPROVE" ready "$WORK/plan.md" 2>&1); RC=$?
 if [ "$RC" -eq 1 ] && printf '%s\n' "$OUT" | grep -q 'REFUSED regate' \
    && printf '%s\n' "$OUT" | grep -q 'SuccessCriterion'; then
