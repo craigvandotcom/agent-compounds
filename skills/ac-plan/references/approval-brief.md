@@ -7,7 +7,9 @@ only what the brief contains and where each line comes from.
 
 **If the brief does not fit one screen, the plan is too big — never the brief too short.** A
 brief that needs scrolling to show what approval commits to has already lost the human's
-attention before the question is asked.
+attention before the question is asked. The `## Vision` is the one section never trimmed to
+fit: it is the human's intent, read once here before the tap freezes it — a Vision too long
+for the brief is a Vision too long for the plan, cut in ac-plan step 3, never on the brief.
 
 ## What approval commits to
 
@@ -22,7 +24,7 @@ itself, is what makes the tap informed rather than a formality.
 
 | line | source | rule |
 | --- | --- | --- |
-| what changes | `## Vision` | two lines, plain prose — never the raw section, which may run long |
+| what changes | `## Vision` | the whole section, verbatim — plain prose, never a summary; the Vision is the human's own intent and is read in full once, here, before the tap freezes it |
 | deliverables | `## Deliverables` | as paths, one per line, each with its Done when: line — concrete values, what goes in and what comes out; an artifact, never an intention. A path with no Done when renders "no Done when" |
 | silver bullet | `## Success criterion` | the Silver Bullet: the one command and its expected result. The pasted failing output stays in the plan. A missing command renders "no silver bullet" |
 | seams + tests | `## Seams` | rows whose disposition is not `no seam`, ordered by toucher count (highest first); a `must update` test row renders beside its object, not in a separate list |
@@ -52,7 +54,7 @@ still works" belong on one line.
 
 **Plan:** <plan-path> — the file, open it any time; the question below never stands in for it.
 
-**What changes:** <two lines from ## Vision>
+**What changes:** <the full ## Vision, verbatim>
 
 **Deliverables:**
 - <path> — Done when: <what goes in → what comes out, with concrete values>
