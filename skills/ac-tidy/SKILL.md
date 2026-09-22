@@ -19,20 +19,23 @@ Do NOT reconcile in the live checkout. `APP_ROOT=$(git rev-parse --show-toplevel
 app checkout. Fetch `origin/main`, `git worktree add --detach "$WT" origin/main`, `cd "$WT"`, then
 `export BEADS_DB="$WT/.beads/beads.db"` and `br sync` to rebuild the beads DB from `issues.jsonl`
 (`br` auto-discovery ignores worktree cwd, bd-6kwqo — the exported var directs every `br` call).
-Skill files resolve only through $APP_ROOT/.claude/… (relative symlinks). If the worktree cannot be
-created: Slack degraded, exit, nothing written.
+Skill files resolve only through $APP_ROOT/.claude/… (relative symlinks); if the worktree cannot be created, Slack degraded, exit, nothing written.
 
 ## 2. Scan
 
 Read the board per `ac-pipeline/references/board-scan.md` (closed beads: Scan A's
-`br_call list --all --status closed --json`, never a raw `br list`). Print the docket-health line.
+`br_call list --all --status closed --json`, never a raw `br list`). Print the docket-health line,
+then the **`post-merge` tail** — open beads still labelled `post-merge` (excluded by
+`beads-closed-gate.sh`, stripped only at claim: `beads-standards/reference/bead-conventions.md`
+§ Claim semantics), so one no claim ever takes stays invisible to every close-out — as
+`post-merge-tail: <n>` (a failed read is an error, never a `0`); reclaiming it is judgment, so it
+routes to step 4.
 
 ### 2b. Surviving-gate verify
 
-For each open `human-gate` bead: `br show`, confirm it is still blocked on a human. If
-`$APP_ROOT/.beads/issues.jsonl` and the worktree's copy disagree on its status, skip it: the
-live checkout disagrees, and a newer `updated_at` is not newer semantics. On every other bead
-Stamp a comment `verified: <date>`. Never de-gate, close, or edit the body.
+For each open `human-gate` bead: `br show` and confirm it is still blocked on a human. If
+`$APP_ROOT/.beads/issues.jsonl` and the worktree's copy disagree on its status, skip it (the live
+checkout disagrees; a newer `updated_at` is not newer semantics). Stamp the others `verified: <date>`; never de-gate, close, or edit a body.
 
 ## 3. Reconcile — provable, apply
 
@@ -47,9 +50,7 @@ Stamp a comment `verified: <date>`. Never de-gate, close, or edit the body.
 | label `beads-standards` does not name | correct or remove, report it |
 | open `pipeline-proposal` bead whose target epic is closed | record `DECISION (ac-tidy): moot — target <epic> closed`, then `close-gate.sh <id> --reason "obsolete: moot — target closed"` |
 
-Open `human-gate` and `qa-blocker` beads are untouchable except by the last row. A condition
-that needs a judgment call ("looks done", "probably a duplicate") is not provable: step 4.
-A `task`-typed proposal skips the ruling path (routed by `issue_type`) and LEG-2 NOT-CHECKs; report that exit as the skip, not a failure.
+Open `human-gate` and `qa-blocker` beads are untouchable except by the last row. A condition needing a judgment call ("looks done", "probably a duplicate") is not provable: step 4. A `task`-typed proposal skips the ruling path (routed by `issue_type`) and LEG-2 NOT-CHECKs; report that exit as the skip, not a failure.
 
 ## 4. Findings — judgment, never apply
 
@@ -58,13 +59,12 @@ body with a `Gate-reason:` line per `beads-standards/reference/bead-create-contr
 target an open bead already names. Findings: an epic with zero open children and no `Probe:`
 line · a `blocks` edge touching an epic (I2, `board-scan.md`) · a `_done/` plan whose
 `beadified:` and `delivered:` disagree with its epic's state · an item that looks done but
-fails its row above · duplicate or mergeable items.
+fails its row above · duplicate or mergeable items · a `post-merge` tail bead (§ 2) — strip the label or re-queue it by ruling here, never by applying step 3.
 
 ## 5. Land
 
-Commit the exact paths touched, per `ac-pipeline/references/commit-discipline.md`: `AGENT_NAME=FoggyCreek git commit -m "chore(tidy): <what>" -- <paths>`, then push (NIGHTLY: `git push --no-verify origin HEAD:main`).
-NIGHTLY also: verify from the live checkout that `git -C "$APP_ROOT" rev-parse origin/main` equals HEAD — rejected means degraded, do not retry.
-Slack card via `slack-send --card --status <healthy|degraded>` on the app's ops channel, one line of counts (`drift-skipped:` — § 2b gates skipped on ledger-copy disagreement — plus the since-last-run app-board counts `foreign status:` / `off-canon receipts:` / `unrecorded closes:` against D4/D1's canon grammar).
+Commit the exact paths touched, per `ac-pipeline/references/commit-discipline.md`: `AGENT_NAME=FoggyCreek git commit -m "chore(tidy): <what>" -- <paths>`, then push (NIGHTLY: `git push --no-verify origin HEAD:main`, then verify from the live checkout that `git -C "$APP_ROOT" rev-parse origin/main` equals HEAD — rejected means degraded, do not retry).
+Slack card via `slack-send --card --status <healthy|degraded>` on the app's ops channel, one line of counts (`drift-skipped:` — § 2b gates skipped on ledger-copy disagreement — plus `post-merge-tail:` (§ 2) and the since-last-run app-board counts `foreign status:` / `off-canon receipts:` / `unrecorded closes:` against D4/D1's canon grammar).
 Write `$APP_ROOT/.claude/skills/ac-tidy/workflows/last-run.json` with date, counts, pushed_sha, status; remove the worktree and prune. Teardown runs on every exit path, abort included.
 
 ---
