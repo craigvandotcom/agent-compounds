@@ -1,0 +1,479 @@
+#!/usr/bin/env python3
+"""render.py — the ac-board render (read-only), fed by the reads board.sh ran.
+
+Usage:  render.py <reads-dir> <project-root> <compact 0|1>
+        Each read left <name>.out / .err / .rc in <reads-dir>; the beads jsonl is read in
+        place for edges, holders and closure dates (br list carries none of those).
+Env:    AC_BOARD_NOW (ISO timestamp) pins "now" — the test seam; unset = the real clock.
+
+Counts come from code, never from a model bucketing raw JSON. A read that cannot answer
+renders `?` and is named in the flags block; nothing is guessed.
+"""
+import datetime as dt, json, math, os, re, sys
+
+T, ROOT, COMPACT = sys.argv[1], sys.argv[2], sys.argv[3] == "1"
+NOW = (dt.datetime.fromisoformat(os.environ["AC_BOARD_NOW"]) if os.environ.get("AC_BOARD_NOW")
+       else dt.datetime.now(dt.timezone.utc))
+W = 100                # every line fits a terminal or a Slack message
+LIVE_MIN = 60          # an agent active within this many minutes is live
+STALE_H = 24           # an in-progress bead untouched this long is stale
+GATE_LABELS = {"human-gate", "pipeline-proposal", "dream-proposal"}
+failed = []            # reads that could not answer — each renders `?` and is named in flags
+
+
+def slurp(path, **kw):
+    with open(path, **kw) as f: return f.read()
+
+
+def read(name, cmd):
+    """(stdout, ok) for a background read; a failure is recorded, never read as empty."""
+    try:
+        rc = int(slurp(f"{T}/{name}.rc").strip())
+        out = slurp(f"{T}/{name}.out")
+    except (OSError, ValueError):
+        failed.append(f"{cmd}: did not run"); return "", False
+    if rc != 0:
+        err = slurp(f"{T}/{name}.err").strip().splitlines()
+        why = "timed out" if rc == 124 else (err[0] if err else f"exit {rc}")
+        failed.append(f"{cmd}: {why}"); return out, False
+    return out, True
+
+
+def ts(s):
+    if not s: return None
+    s = re.sub(r"(\.\d{6})\d+", r"\1", str(s).strip().replace(" ", "T")).replace("Z", "+00:00")
+    try: t = dt.datetime.fromisoformat(s)
+    except ValueError: return None
+    return t if t.tzinfo else t.replace(tzinfo=dt.timezone.utc)
+
+
+def mins(s):
+    t = ts(s)
+    return None if t is None else (NOW - t).total_seconds() / 60
+
+
+def age(s):
+    m = mins(s)
+    if m is None: return "?"
+    m = int(m)
+    return f"{m}m" if m < 60 else f"{m // 60}h" if m < 48 * 60 else f"{m // 1440}d"
+
+
+def clip(s, w):
+    """Cut at a word boundary with an ellipsis — never mid-word."""
+    s = " ".join((s or "").split())
+    if len(s) <= w: return s
+    cut = s[:w - 1]
+    sp = cut.rfind(" ")
+    if sp > w * 0.6: cut = cut[:sp]
+    return cut.rstrip(" ,:;—-(") + "…"
+
+
+def plural(n, word):
+    return f"{n} {word}" + ("" if n == 1 else "s")
+
+
+def spark(counts):
+    top = max(counts) or 1
+    return "".join("▁" if c == 0 else "▂▃▄▅▆▇█"[max(0, math.ceil(c / top * 7) - 1)] for c in counts)
+
+
+def rows_of(raw):
+    data = json.loads(raw)
+    rows = data["issues"] if isinstance(data, dict) else data
+    if not all(r.get("id") and r.get("status") and r.get("created_at") for r in rows):
+        raise ValueError("row shape")
+    return rows
+
+
+# ── beads (Scan A categories) ─────────────────────────────────────────────
+beads = ready_ids = None
+raw, ok = read("beads", "br_call list")
+if ok:
+    try: beads = rows_of(raw)
+    except (ValueError, KeyError, TypeError) as e: failed.append(f"br_call list: {e}")
+raw, ok = read("ready", "br_call ready")
+if ok:
+    try: ready_ids = {r["id"] for r in rows_of(raw)}
+    except (ValueError, KeyError, TypeError) as e: failed.append(f"br_call ready: {e}")
+
+# The jsonl is the only source of edges, holders and closure dates.
+recs = jsonl = None
+try:
+    jsonl = slurp(os.path.join(ROOT, ".beads/issues.jsonl"))
+    recs = {r["id"]: r for r in (json.loads(l) for l in jsonl.splitlines() if l.strip())}
+except OSError:
+    failed.append(".beads/issues.jsonl: unreadable")
+except (ValueError, KeyError) as e:
+    failed.append(f".beads/issues.jsonl: {e}")
+
+labels = lambda b: set(b.get("labels") or [])
+is_open = lambda r: r.get("status") not in ("closed", "tombstone") and not r.get("closed_at")
+rec = lambda i: (recs or {}).get(i, {})
+
+
+def deferred(b):
+    u = ts(b.get("defer_until"))
+    return b["status"] == "deferred" or bool(u and u > NOW)
+
+
+def gate_kind(b):
+    t, title = b.get("issue_type"), b.get("title", "")
+    if t in ("task", "decision"): return "action" if t == "task" else "decision"
+    return "action" if title.startswith("ACTION:") else "decision"
+
+
+gates, epics = [], []
+loop = {k: [] for k in ("in_progress", "blocked", "ready", "unrefined", "deferred", "other")}
+if beads is not None:
+    for b in beads:
+        if labels(b) & GATE_LABELS:
+            if not deferred(b) and b["status"] in ("open", "blocked", "in_progress"): gates.append(b)
+        elif b.get("issue_type") == "epic":
+            epics.append(b)
+        elif deferred(b):
+            loop["deferred"].append(b)
+        elif b["status"] == "in_progress":
+            loop["in_progress"].append(b)
+        elif b["status"] in ("open", "blocked") and ready_ids is not None and b["id"] not in ready_ids:
+            loop["blocked"].append(b)
+        elif b["status"] not in ("open", "blocked"):
+            loop["other"].append(b)
+        else:
+            loop["ready" if "refined" in labels(b) else "unrefined"].append(b)
+gate_ids = {b["id"] for b in gates}
+live = [b for k in ("in_progress", "blocked", "ready", "unrefined", "other") for b in loop[k]]
+
+
+def blockers(bid):
+    """Open `blocks` targets of a bead — what it is waiting on. None when edges are unreadable."""
+    if recs is None: return None
+    return sorted(d["depends_on_id"] for d in rec(bid).get("dependencies") or []
+                  if d.get("type") == "blocks" and is_open(rec(d["depends_on_id"])))
+
+
+def blocks_count(gid):
+    """How many open beads wait directly on this one."""
+    if recs is None: return None
+    return sum(1 for r in recs.values() if is_open(r) and gid in (blockers(r["id"]) or []))
+
+
+def epic_progress(eid):
+    kids = [r for r in (recs or {}).values()
+            if any(d.get("type") == "parent-child" and d.get("depends_on_id") == eid
+                   for d in r.get("dependencies") or [])]
+    return sum(1 for r in kids if not is_open(r)), len(kids)
+
+
+closed7 = None
+if recs is not None:
+    today = NOW.astimezone().date()
+    closed7 = [0] * 7
+    for r in recs.values():
+        t = ts(r.get("closed_at"))
+        if t:
+            d = (today - t.astimezone().date()).days
+            if 0 <= d < 7: closed7[6 - d] += 1
+
+# ── plans (Scan B) ────────────────────────────────────────────────────────
+STAGES = ("draft", "refined", "approved", "bead-ready", "beadified")
+plans = []
+pdir = os.path.join(ROOT, "_plans")
+if os.path.isdir(pdir):
+    for f in sorted(os.listdir(pdir)):
+        p = os.path.join(pdir, f)
+        if not f.endswith(".md") or f == "README.md" or not os.path.isfile(p): continue
+        text = slurp(p, errors="replace")
+        fm = re.match(r"---\n(.*?)\n---", text, re.S)
+        st = None
+        if fm:
+            m = re.search(r"^status:\s*['\"]?([^'\"\n]+?)['\"]?\s*$", fm.group(1), re.M)
+            st = m.group(1).strip() if m else None
+        if st is None:  # the Scan B fallback ladder
+            st = ("refined" if "## Refinement Log" in text else
+                  "approved" if "Status: Approved" in text else
+                  "beadified" if jsonl and f in jsonl else "draft")
+        plans.append((f[:-3], st, os.path.getmtime(p)))
+
+# ── agents: who is live, and which bead each holds ────────────────────────
+agents = mail = None
+out, ok = read("roster", "agent-roster.py")
+ros = out.strip().splitlines()
+if ros and ros[0].startswith("#mail"): mail = ros[0].split("\t")[1]
+if ok: agents = [l.split("\t") for l in ros[1:] if l.strip()]
+live_names = None if agents is None else {
+    a[0] for a in agents if len(a) > 3 and (mins(a[3]) or LIVE_MIN) < LIVE_MIN}
+holder = lambda b: b.get("assignee") or rec(b["id"]).get("assignee")
+held = None if live_names is None else [b for b in loop["in_progress"] if holder(b) in live_names]
+
+# ── verdict: one of four states, derived — never asserted ─────────────────
+n_ready, n_unref, n_gates = len(loop["ready"]), len(loop["unrefined"]), len(gates)
+n_blocked, n_ip = len(loop["blocked"]), len(loop["in_progress"])
+
+
+def verdict():
+    if beads is None or ready_ids is None: return "? verdict unknown — the bead reads failed"
+    tail = lambda *parts: " · ".join(p for p in parts if p)
+    you = plural(n_gates, "gate") + " on you" if n_gates else ""
+    if (n_ready or n_ip) and live_names is None:
+        return f"? {n_ready} ready · {n_ip} in progress · agent roster unreadable"
+    if n_ready and not live_names:
+        return tail(f"🥵 STARVED · {n_ready} ready · 0 agents taking", you)
+    if n_ready or held:
+        return tail(f"✅ FLOWING · {n_ready} ready · {plural(len(held), 'agent')} working", you)
+    rest = (f"{n_unref} awaiting refinement" if n_unref else  # the lead cause only
+            f"{n_blocked} blocked" if n_blocked else f"{n_ip} in progress, unheld" if n_ip else "")
+    if n_gates:
+        return tail(f"⛔ STALLED on you · 0 ready · {plural(n_gates, 'gate')}", rest)
+    if live:
+        return tail("⛔ STALLED · 0 ready", rest)
+    return "⏸ EMPTY · 0 open"
+
+
+VERDICT = verdict()
+spark_s = "?" if closed7 is None else f"{spark(closed7)} {sum(closed7)}"
+name = os.path.basename(ROOT)
+
+if COMPACT:
+    print(f"{name:<18} {VERDICT}  ·  closed 7d {spark_s}")
+    if failed: print("  ? " + " · ".join(failed))
+    sys.exit(0)
+
+# ── the remaining reads (full board only) ─────────────────────────────────
+def lines_of(nm, cmd):
+    o, k = read(nm, cmd)
+    return o.strip().splitlines(), k
+
+
+waves = None
+lines, ok = lines_of("waves", "git branch -r")
+if ok:
+    waves = len([l for l in lines if l.strip()])
+    err = slurp(f"{T}/waves.err").strip()
+    if err: failed.append(err.splitlines()[-1])
+
+prs = None
+o, ok = read("prs", "gh pr list")
+if ok:
+    try: prs = json.loads(o or "[]")
+    except ValueError as e: failed.append(f"gh pr list: {e}")
+
+ci, _ = lines_of("ci", "Scan E (gh run list)")
+ci_line = next((l for l in ci if l.startswith("ci-gates:")), None)
+if ci_line is None: ci_s = "CI gates: ?"
+elif re.match(r"ci-gates:\s*0 scheduled", ci_line): ci_s = "CI gates: none scheduled"
+else: ci_s = "CI gates: " + ci_line.split(":", 1)[1].strip()
+
+dk, _ = lines_of("docket", "Scan A docket-health")
+docket_line = next((l for l in dk if l.startswith("docket-health:")), "")
+
+
+def docket(key):
+    """A docket-health count — `2 reason-less` or `plan-gap: 0` — or `?`."""
+    m = re.search(rf"(\d+) {key}|{key}:\s*(\d+)", docket_line)
+    return (m.group(1) or m.group(2)) if m else "?"
+
+
+tr, ok = lines_of("truth", "board-truth.sh")
+m = re.search(r"board-truth:\s*(\d+)", tr[0]) if ok and tr else None
+truth = m.group(1) if m else "?"
+
+# ── render ────────────────────────────────────────────────────────────────
+new = lambda b: " •" if (mins(b.get("created_at")) or 1e9) < 24 * 60 else "  "
+
+
+def row(indent, lead, b, note="", nw=0):
+    """One row shape everywhere: <lead> id · age · title, then a note in a column nw wide."""
+    head = f"{indent}{lead}{b['id']:<12} {age(b['created_at']):>4}{new(b)}  "
+    room = W - len(head) - (nw + 2 if nw else 0)
+    return (head + clip(b.get("title", ""), room).ljust(room) + "  " + note).rstrip() if nw else \
+        head + clip(b.get("title", ""), room)
+
+
+def rows(indent, lead, items, note=lambda b: ""):
+    """Rows sharing one note column, as wide as the widest note."""
+    notes = [note(b) for b in items]
+    nw = max(map(len, notes), default=0)
+    return [row(indent, lead, b, t, nw) for b, t in zip(items, notes)]
+
+
+def short(dep, bid):
+    """A sibling of the same epic prints as `.5`; a human gate is marked as yours."""
+    stem = bid.rsplit(".", 1)[0] + "." if "." in bid else None
+    s = "." + dep[len(stem):] if stem and dep.startswith(stem) else dep
+    return s + (" (you)" if dep in gate_ids else "")
+
+
+def pr_ci(p):
+    checks = p.get("statusCheckRollup") or []
+    bad = sum(1 for c in checks if (c.get("conclusion") or c.get("state") or "").upper()
+              in ("FAILURE", "ERROR", "TIMED_OUT", "CANCELLED", "ACTION_REQUIRED"))
+    pend = sum(1 for c in checks if (c.get("status") or "COMPLETED").upper() != "COMPLETED"
+               or (c.get("state") or "").upper() == "PENDING")
+    if bad: return f"✗ {bad} failing"
+    if pend: return f"… {pend} running"
+    return "✓" if checks else "no checks"
+
+
+out = [f"{name} · {NOW.astimezone():%Y-%m-%d %H:%M}", VERDICT]
+line3 = [f"closed 7d {spark_s}", ci_s]
+if waves: line3.append(f"{waves} wave branch" + ("" if waves == 1 else "es"))
+elif waves is None: line3.append("waves ?")
+out.append("  ·  ".join(line3))
+if prs is None: out.append("PR ?")
+for p in (prs or [])[:3]:
+    tail = f"{age(p.get('createdAt'))} · {pr_ci(p)}" + (" · draft" if p.get("isDraft") else "")
+    head = f"PR #{p.get('number')}  "
+    out.append(head + clip(p.get("title", ""), W - len(head) - len(tail) - 2) + "  " + tail)
+if prs and len(prs) > 3: out.append(f"   + {len(prs) - 3} more PRs")
+out.append("")
+
+# YOU — gates, decisions first, then by what each one holds up
+out.append(f"🧑 YOU — {'?' if beads is None else plural(n_gates, 'gate')}")
+if beads is not None:
+    gates.sort(key=lambda b: (gate_kind(b) != "decision", -(blocks_count(b["id"]) or 0), b["created_at"]))
+    def gate_note(b):
+        k = blocks_count(b["id"])
+        return "→ blocks ?" if k is None else f"→ blocks {k}" if k else ""
+    out += [r for kind in ("decision", "action") for r in
+            rows("  ", f"{kind:<9} ", [b for b in gates[:10] if gate_kind(b) == kind], gate_note)]
+    if len(gates) > 10: out.append(f"    + {len(gates) - 10} more")
+    no_memo = [b["id"] for b in gates if not re.search(
+        r"(evidence|consequence|recommendation):", b.get("description") or "", re.I)]
+    foot = []
+    if no_memo: foot.append(f"{len(no_memo)} without a memo: " + ", ".join(no_memo[:4])
+                            + (" …" if len(no_memo) > 4 else ""))
+    for key, label in (("reason-less", "reason-less"), ("gate-incomplete", "incomplete")):
+        if docket(key) not in ("0", "?"): foot.append(f"{docket(key)} {label}")
+    if foot: out.append("            " + " · ".join(foot))
+out.append("")
+
+# BEADS — flow strip, then groups in urgency order, one row shape
+if beads is None:
+    out += ["🧿 BEADS — ?", ""]
+else:
+    orphans = "?"
+    if recs is not None:
+        epic_ids = {i for i, r in recs.items() if r.get("issue_type") == "epic"}
+        orphans = str(sum(1 for b in live if not any(
+            d.get("type") == "parent-child" and d.get("depends_on_id") in epic_ids
+            for d in rec(b["id"]).get("dependencies") or [])))
+    hdr = [f"🧿 BEADS — {len(live)} open", f"{orphans} without an epic"]
+    if loop["deferred"]: hdr.append(f"{len(loop['deferred'])} deferred")
+    out.append(" · ".join(hdr))
+    for e in epics[:3]:
+        if recs is None: out.append(f"  EPIC {e['id']}  ?"); continue
+        done, total = epic_progress(e["id"])
+        fill = round(10 * done / total) if total else 0
+        out.append(f"  EPIC {e['id']:<12} {'▓' * fill}{'░' * (10 - fill)} {done}/{total} closed  "
+                   + clip(e.get("title", ""), W - 46))
+    if len(epics) > 3: out.append(f"  + {len(epics) - 3} more epics")
+    out.append("")
+
+    stages = [("unrefined", n_unref), ("ready", n_ready), ("in progress", n_ip),
+              ("closed 7d", "?" if closed7 is None else sum(closed7))]
+    strip = "  " + " ─▶ ".join(f"{s} {c}" for s, c in stages)
+    if n_blocked: strip += f"    · blocked {n_blocked}"
+    out.append(strip)
+    if not n_ready and n_unref:
+        out.append("  ▲ jammed here: nothing refined, so nothing ready")
+    elif not n_ready and not n_ip and n_blocked:
+        out.append("  jammed: every open bead is waiting on another")
+
+    def group(title, items, note, n, route=""):
+        if not items: return
+        head = f"  {title}"
+        out.append(head + (route.rjust(W - len(head)) if route else ""))
+        out.extend(rows("    ", "", items[:n], note))
+        if len(items) > n: out.append(f"    + {len(items) - n} more")
+
+    def ip_note(b):
+        h, notes = holder(b), []
+        if h and live_names is not None and h in live_names: notes.append(h)
+        elif h and re.fullmatch(r"[A-Z][a-z]+[A-Z][a-z]+", h): notes.append(f"{h} gone")
+        else: notes.append("no live holder")
+        if (mins(rec(b["id"]).get("updated_at") or b.get("updated_at")) or 0) > STALE_H * 60:
+            notes.append("⚠ stale")
+        return " · ".join(notes)
+
+    def blk_note(b):
+        bs = blockers(b["id"])
+        if bs is None: return "← ?"
+        if not bs: return "← (no open edge)"
+        bs.sort(key=lambda d: (d not in gate_ids, d))  # your gates first
+        return "← " + " ".join(short(d, b["id"]) for d in bs[:3]) + (f" +{len(bs) - 3}" if len(bs) > 3 else "")
+
+    out.append("")
+    by_age = lambda xs: sorted(xs, key=lambda b: b["created_at"])
+    group(f"IN PROGRESS · {n_ip}", loop["in_progress"], ip_note, 10)
+    group(f"READY · {n_ready}", by_age(loop["ready"]), lambda b: "", 10, "→ /ac-implement")
+    group(f"BLOCKED · {n_blocked}", by_age(loop["blocked"]), blk_note, 5)
+    unref = by_age(loop["unrefined"])
+    if unref:
+        fresh = sum(1 for b in unref if new(b) == " •")
+        t = f"UNREFINED · {n_unref} · oldest {age(unref[0]['created_at'])}" + (f" · {fresh} new •" if fresh else "")
+        group(t, unref, lambda b: "", 3, "→ /ac-polish")
+    group(f"OTHER · {len(loop['other'])}", loop["other"], lambda b: b["status"], 5)
+    out.append("")
+
+# PLANS — one line unless something is actionable
+if not plans:
+    out += ["📋 PLANS — none", ""]
+else:
+    counts = [f"{s} {c}" for s in STAGES if (c := sum(1 for _, st, _ in plans if st == s))]
+    other = sum(1 for _, st, _ in plans if st not in STAGES)
+    if other: counts.append(f"other {other}")
+    oldest = min(plans, key=lambda p: p[2])
+    o_age = age(dt.datetime.fromtimestamp(oldest[2], dt.timezone.utc).isoformat())
+    head = f"📋 PLANS — {len(plans)} live: {' · '.join(counts)} · oldest {o_age} "
+    out.append(head + f"({clip(oldest[0], W - len(head) - 2)})")
+    if docket("plan-gap") not in ("0", "?"): out.append(f"  {docket('plan-gap')} approved plans with no beads")
+    act = sorted((p for p in plans if p[1] in ("approved", "bead-ready")), key=lambda p: -p[2])
+    for p, st, _ in act[:10]:
+        out.append(f"    {clip(p, 66):<66}  {st:<10}  → /ac-beadify")
+    out.append("")
+
+# AGENTS — live ones itemized with what they hold; idle ones on one line
+if agents is None:
+    out += [f"🤖 AGENTS — ? · mail {mail or '?'}", ""]
+else:
+    holds = {}
+    for b in loop["in_progress"]:
+        if holder(b): holds.setdefault(holder(b), []).append(b["id"])
+    lv = [a for a in agents if a[0] in live_names]
+    idle = [a for a in agents if a[0] not in live_names]
+    last = lambda a: age(a[3]) if len(a) > 3 else "?"
+    out.append(f"🤖 AGENTS — {len(lv)} live · {len(idle)} idle >1h · mail {mail or '?'}")
+    for a in lv[:10]:
+        model = a[2] if len(a) > 2 else "?"
+        out.append(f"  {a[0]:<15} {a[1]:<12} {clip(model, 22):<22} {last(a):>4}  → "
+                   + (" ".join(holds.get(a[0], [])) or "—"))
+    if len(lv) > 10: out.append(f"    + {len(lv) - 10} more")
+    if idle:
+        out.append("  idle: " + " · ".join(f"{a[0]} {last(a)}" for a in idle[:6])
+                   + (f" +{len(idle) - 6}" if len(idle) > 6 else ""))
+    out.append("")
+
+# FLAGS — only what is non-zero or unreadable
+flags = []
+if truth != "0": flags.append(f"board-truth {truth} cited-but-open")
+if not docket_line: flags.append("docket-health ?")
+if flags or failed:
+    out.append("⚠ FLAGS")
+    if flags: out.append("  " + " · ".join(flags))
+    out.extend(f"  ? {f}" for f in failed)
+    out.append("")
+
+# next — one pointer, derived from the verdict
+if beads is None or ready_ids is None: nxt = "next → fix the failed reads above"
+elif VERDICT.startswith("🥵"): nxt = f"next → {n_ready} ready, no agent taking · /ac-implement"
+elif gates and not VERDICT.startswith("✅"):
+    g = max(gates, key=lambda b: (blocks_count(b["id"]) or 0, mins(b["created_at"]) or 0))
+    k = blocks_count(g["id"])
+    nxt = f"next → {g['id']} ({gate_kind(g)}" + (f", blocks {k}" if k else "") + ") · /ac-human"
+elif n_unref and not n_ready: nxt = f"next → refine {plural(n_unref, 'bead')} · /ac-polish"
+elif VERDICT.startswith("⏸"): nxt = "next → nothing open · plan the next wave with /ac-align"
+elif gates: nxt = f"next → the loop is running · {plural(n_gates, 'gate')} when you're ready · /ac-human"
+else: nxt = "next → the loop is running · nothing needs you"
+out.append(nxt)
+print("\n".join(out))

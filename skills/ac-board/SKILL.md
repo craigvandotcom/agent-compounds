@@ -12,7 +12,7 @@ description: 'Read-only pipeline board — the whole factory in one glance: huma
 |                  |                                                                    |
 | ---------------- | ------------------------------------------------------------------ |
 | **Input**        | None (reads project state directly). Optional: "org-wide".          |
-| **Output**       | One board render, top-down, then a routing footer. No prompts.      |
+| **Output**       | One board render: verdict first, a `next →` pointer last. No prompts. |
 | **Artifacts**    | NONE — never writes, closes, promotes, archives, labels, or asks.   |
 | **Verification** | Every count traces to a scan; an unreadable read renders `?`, never a guessed number. |
 
@@ -33,20 +33,13 @@ BOARD="$(git rev-parse --show-toplevel)/.claude/skills/ac-board/scripts/board.sh
 
 Print its stdout verbatim — it is the board. `board.sh` runs every read of
 `ac-pipeline/references/board-scan.md` (Scans A · B · E · F + docket-health, no loop-boundary
-filter) plus waves, PRs and the agent roster in parallel, and renders counts first, lists capped
-at ~10, a `?` plus the failing command for any read that cannot answer. Never re-derive a count
-it printed; never run the scans by hand.
+filter) plus waves, PRs and the agent roster in parallel; `render.py` derives the verdict
+(FLOWING · STALLED · STARVED · EMPTY), caps every list, and renders `?` plus the failing command
+for any read that cannot answer. Never re-derive a count it printed; never run the scans by hand.
+Its `next →` line is the routing pointer — add nothing after it.
 
 Asked "org-wide" → run `board.sh --compact` inside each `.beads/` repo (in parallel) and print
-one block per repo.
-
-## Phase 2 — routing footer
-
-Pointers, never prompts — no `AskUserQuestion`:
-
-```
-Act: gates/decisions → /ac-human · reconcile → /ac-tidy · re-prioritize → /ac-align · ship ready work → /ac-implement
-```
+its one verdict line per repo.
 
 ## Principles
 
@@ -54,4 +47,4 @@ Act: gates/decisions → /ac-human · reconcile → /ac-tidy · re-prioritize �
 2. **A glance, not an audit** — cheap reads only, counts over prose, one screen if possible. Depth belongs to `ac-human` (drive the docket), `ac-tidy` (reconcile) and `ac-align` (strategy).
 3. **No loop-boundary filter** — the loop side is the answer to "is the factory running". Show it.
 4. **Never guess a count** — `?` plus the failing command beats a plausible number.
-5. **Exit silently** — render and stop. The routing footer is the hand-off.
+5. **Exit silently** — render and stop. The `next →` line is the hand-off.
