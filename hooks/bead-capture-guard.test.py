@@ -8,6 +8,8 @@ import json
 import os
 import subprocess
 import sys
+import tempfile
+
 G = os.path.join(os.path.dirname(os.path.abspath(__file__)), "bead-capture-guard.py")
 BLOCK, ALLOW = 2, 0
 cases = [
@@ -142,6 +144,41 @@ cases = [
           "glued separator inside quotes is not a command"),
   (ALLOW, 'br create "x" -t epic -l "origin:manual" -d "a;b && c || d | e"',
           "separators inside a description stay data"),
+]
+
+# --- probe axis: file bodies and the dollar hatch (ac-6ian) ---
+# `<body>` / `$VAR` stay a skip. `$(...)` does not: a command substitution the guard
+# cannot reduce to one file is refused, and `$(cat path)` / `--description-file` are
+# read so a real Probe line passes and a probe-less body does not.
+_labelled = 'br create "x" -t task -l "origin:ac-triage,unrefined,impact:data" '
+def _body_file(text):
+    fh = tempfile.NamedTemporaryFile("w", suffix=".md", delete=False)
+    fh.write(text)
+    fh.close()
+    return fh.name
+_with_probe = _body_file("- AC: x. Probe: `true` - tier: none\n")
+_without_probe = _body_file("a body with no probe line\n")
+cases += [
+  (ALLOW, _labelled + '-d "$BODY"',
+          "unsubstituted $VAR body still skips the probe axis"),
+  (ALLOW, _labelled + "-d '${BODY}'",
+          "unsubstituted ${VAR} body still skips the probe axis"),
+  (BLOCK, _labelled + '-d "$(printf no-probe)"',
+          "command substitution is not waved through"),
+  (ALLOW, _labelled + '-d "$(cat <file>)"',
+          "unsubstituted cat <file> template still skips"),
+  (ALLOW, _labelled + '-d "$(cat ' + _with_probe + ')"',
+          "cat substitution with a Probe line is inspected and admitted"),
+  (BLOCK, _labelled + '-d "$(cat ' + _without_probe + ')"',
+          "cat substitution without a Probe line is refused"),
+  (ALLOW, _labelled + '--description-file ' + _with_probe,
+          "description-file with a Probe line is inspected and admitted"),
+  (BLOCK, _labelled + '--description-file ' + _without_probe,
+          "description-file without a Probe line is refused"),
+  (BLOCK, _labelled + '--description-file ' + _with_probe + '.missing',
+          "description-file that cannot be read is refused"),
+  (BLOCK, _labelled + '--description-file -',
+          "description-file from stdin cannot be verified and is refused"),
 ]
 fails = 0
 for case in cases:

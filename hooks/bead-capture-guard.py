@@ -426,8 +426,91 @@ def has_origin(cmd):
 
 
 def description(cmd):
-    """The -d/--description/--body VALUE, or None when absent."""
+    """The -d/--description/--body VALUE, or None when absent.
+
+    Does not read `--description-file`. That flag is a path, not the body; `has_probe`
+    opens it. Callers that want the inline text (the template lint's human-gate check)
+    must keep seeing the flag value, not the file.
+    """
     return flag_value(cmd, {"-d", "--description", "--body"}, ("--description=", "--body="))
+
+
+# Unsubstituted template tokens. `$VAR` / `${VAR}` are the deliberate hatch (a skill
+# template the caller has not filled in yet). `$(...)` is command substitution and is
+# NOT in this set — a body the guard has not read is not a probe.
+_VAR = re.compile(r"^\$[A-Za-z_][A-Za-z0-9_]*$")
+_BRACE_VAR = re.compile(r"^\$\{[A-Za-z_][A-Za-z0-9_]*\}$")
+# The one substitution the fleet actually files with: `-d "$(cat <path>)"`. Reduced to
+# a file read so the probe axis sees the body. Anything else that starts with `$` is
+# refused rather than waved through.
+_CAT_SUB = re.compile(r"^\$\(\s*cat\s+(?:--\s+)?(.+?)\s*\)$", re.DOTALL)
+_BODY_CAP = 1_048_576
+
+
+def _template_token(val):
+    return val.startswith("<") or bool(_VAR.match(val) or _BRACE_VAR.match(val))
+
+
+def _plain_path(raw):
+    """A single literal path inside `$(cat ...)`, or None when it is not one file."""
+    path = raw.strip()
+    if len(path) >= 2 and path[0] == path[-1] and path[0] in ("'", '"'):
+        path = path[1:-1]
+    if not path or any(c in path for c in "$`;|&<>\n"):
+        return None
+    return path
+
+
+def _read_body_file(path):
+    """File text, or None when the path cannot be read. None refuses — never fail-open."""
+    if not path or path == "-" or "\x00" in path:
+        return None
+    try:
+        with open(path, "r", encoding="utf-8", errors="replace") as fh:
+            return fh.read(_BODY_CAP)
+    except OSError:
+        return None
+
+
+def probe_body(cmd):
+    """The text `has_probe` searches.
+
+    True  — unsubstituted template; skip, same doctrine as `bead_type`.
+    str   — the body, whether it came from `-d` or from a file.
+    None  — no body, an unreadable file, stdin (`--description-file -`), or a `$...`
+            value this guard cannot reduce to a file. All of those refuse.
+    """
+    file_flag = flag_value(cmd, {"--description-file"}, ("--description-file=",))
+    if file_flag is not None:
+        if _template_token(file_flag):
+            return True
+        # A command-substituted path, or `-` (stdin). The hook's stdin is the tool
+        # payload, not the description, so neither form can be verified.
+        if file_flag.startswith("$") or file_flag == "-":
+            return None
+        return _read_body_file(file_flag)
+
+    d = description(cmd)
+    if d is None:
+        return None
+    if _template_token(d):
+        return True
+    cat = _CAT_SUB.match(d)
+    if cat:
+        raw = cat.group(1).strip()
+        if len(raw) >= 2 and raw[0] == raw[-1] and raw[0] in ("'", '"'):
+            raw = raw[1:-1]
+        # `$(cat <file>)` is the unsubstituted template the docs ship. A real path
+        # never has that shape; refusing it would block the template before substitution.
+        if raw.startswith("<") and raw.endswith(">"):
+            return True
+        path = _plain_path(cat.group(1))
+        if path is None:
+            return None
+        return _read_body_file(path)
+    if d.startswith("$"):
+        return None
+    return d
 
 
 def has_probe(cmd):
@@ -437,13 +520,19 @@ def has_probe(cmd):
     to refuse). An unsubstituted template placeholder skips, the same doctrine as
     `bead_type`: it could stand for anything, ac-tidy repairs nightly, and lint Check 19
     catches stale templates statically.
+
+    `--description-file` is read and inspected — `br create --help` recommends it for
+    the multi-paragraph body a probe block is. `-d "$(cat <path>)"` is the same read.
+    A `$...` body that is not that `cat` (and not a bare `$VAR`) is not admitted: the
+    old `startswith("$")` hatch waved every command substitution through without seeing
+    a Probe line.
     """
-    d = description(cmd)
-    if d is None:
-        return False
-    if d.startswith("<") or d.startswith("$"):
+    body = probe_body(cmd)
+    if body is True:
         return True
-    return bool(PROBE.search(d))
+    if not body:
+        return False
+    return bool(PROBE.search(body))
 
 
 def origin_skill(cmd):
