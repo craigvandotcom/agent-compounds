@@ -7,28 +7,35 @@ batch boundary, the CI and review trigger, the ledger and the telemetry rollup. 
 the batch boundary, never touch the ledger, never trigger CI — at any width, including one.
 There is no second mode in which those become yours.
 
-Three scripts refuse on your behalf. **Call them; do not re-check what they already refuse.**
+Four scripts refuse on your behalf. **Call them; do not re-check what they already refuse.**
 A hand-check beside a script is a second copy of the rule, and the two will drift.
 
+    skills/ac-implement/scripts/require-minted-actor.sh  before claim — no minted name, hand back, no claim
     skills/ac-implement/scripts/flight-check.sh    at claim   — premises + the RED receipt
     skills/ac-implement/scripts/swarm-commit.sh    at commit  — the repo-global commit lane
     skills/ac-implement/scripts/close-gate.sh      at close   — the temporal causal probe
 
 ## ONCE, at session start
 
-    ACTOR="ac-$(date -u +%Y%m%d-%H%M%S)-$$"   # one identity signs --actor AND the commit
     BURNED=""                                   # ids whose claim was refused THIS pass
 
 **In a swarm**, register with Agent Mail first — `macro_start_session`, `task_description`
 naming the run id the conductor appended to this prompt, so the coordinator's roster can find
 this registration among agents registered since the run started — and make `ACTOR` carry the
-name it returns. Never let the identity come from the static `AGENT_NAME` env: a static
+name it returns. There is no other assignment. Never let the identity come from the static
+`AGENT_NAME` env, from `ac-<ts>-<pid>`, from `$(whoami)`, or from the git user: a static
 fallback shadows the live session name, and the guard then compares your reservation's holder
 against the fallback and rejects your OWN commit as a foreign conflict. The live name is the
 identity; the env fallback is a trap that fails in the direction of looking like someone else.
-**If registration fails, do not fall back to the static `ac-<ts>-<pid>` form and keep going** —
-a worker under the fallback name is invisible to the roster's registered-since-run-start query,
-so its claims are orphans the sweep cannot see. Hand back immediately (§9), claiming nothing.
+**If registration fails, hand back.** Do not invent a fallback actor and do not claim. Write
+the hand-back receipt so the failure is a file, not silence, then go to §9:
+
+    d="$(git rev-parse --git-common-dir)/ac-flight/"
+    mkdir -p "$d" && printf 'HAND-BACK: mint failed; claiming nothing\n' > "${d}hand-back"
+
+A worker under a fallback name is invisible to the roster's registered-since-run-start query,
+so its claims are orphans the sweep cannot see. Missing Agent Mail tools is a mint failure,
+not a license to keep going.
 
 Read the epic and the constitution (`skills/ac-pipeline/SKILL.md`) once. Do not re-read them
 per bead.
@@ -89,6 +96,10 @@ next bead only when its blocker closes, so a cached pool reports dry while work 
 
 ## 2 — CLAIM
 
+The claim refuses a worker that never minted. Exit non-zero → the script wrote the hand-back
+receipt. Do not claim. Go to §9.
+
+    bash skills/ac-implement/scripts/require-minted-actor.sh --actor "$ACTOR"
     RUST_LOG=error br update <id> --claim --actor "$ACTOR" --json
 
 Exit non-zero, or `VALIDATION_FAILED` → someone else has it. `BURNED="$BURNED <id>"`, go to §1.
