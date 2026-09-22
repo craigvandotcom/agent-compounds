@@ -29,8 +29,8 @@ already maps to a bead, and exclude triage-authored issues from outbound syncs s
 can't feed itself.
 
 **The method** (per-run ledger, Phases 0–4: scope+watermark · fetch · cluster+dedupe ·
-route by shape · report) lives in `references/method.md`. The workflow
-`workflows/scheduled-daily.md` is the headless heartbeat skeleton that runs it.
+route by shape · report) lives in `references/method.md`. `scripts/triage-gate.sh` runs the
+fetches and starts `workflows/scheduled-daily.md` only for items it has not handed off before.
 
 ## Sources (pluggable adapters — enable per app in CORE/triage.md)
 
@@ -63,7 +63,7 @@ recurrence updates the existing bead/candidate, it never creates a duplicate.
 
 ## Cadence
 
-Designed to run **scheduled + headless** (pure API work, no Mac); also on demand
+Runs **hourly + headless** through `scripts/triage-gate.sh` — zero tokens when nothing is new; also on demand
 ("triage crashes"). Defect findings land as beads the loop picks up; theme findings land as
 backlog candidates the human approves in `/ac-human`'s 🟢 hopper. The high-leverage
 automation in the pipeline: the only step that manufactures work from *real users* instead

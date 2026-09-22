@@ -125,6 +125,9 @@ channel). This heartbeat is the *run skeleton*; the skill is the *behavior*.
 
 ### 1. Run the skill (Phases 0–4, exactly per SKILL.md)
 
+- **Gate mode** (the prompt names a gate items file, one `source<TAB>key<TAB>summary` per line):
+  the fetch already ran — triage exactly those items, fetch nothing else. Run a source's live
+  pass only where CORE/triage.md § Gate says its gate read is a dry count.
 - Watermarks from `.claude/state/triage-watermarks.json`; advance a source's watermark
   ONLY after its successful fetch.
 - Fetch every source CORE/triage.md marks live. **Configured-but-failing → escalate**

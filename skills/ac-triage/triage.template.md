@@ -1,5 +1,5 @@
 ---
-template_version: 2
+template_version: 3
 ---
 
 # Triage — {{APP_NAME}} (per-app facts for `ac-triage`)
@@ -59,7 +59,16 @@ otherwise).
 
 ## Cadence
 
-{{Headless / VM-hosted; schedule once source #1 is live; run on demand until then.}}
+{{Hourly via `ac-triage/scripts/triage-gate.sh` once source #1 is live; on demand until then.}}
+
+## Gate
+
+`triage-gate.sh`'s sources, in run order. Each command prints one `<key>\t<summary>` line per
+current item (key = the source's record id) and exits 0/1 when it checked, 2 when it could not.
+
+```triage-gate
+{{name}} {{timeout-s}} {{command}}
+```
 
 ## Maintaining this file
 
