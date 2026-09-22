@@ -193,7 +193,10 @@ case "$ITYPE" in
     fi
 
     # Path-shaped tokens only. Prose in Delivers is not a checkable promise.
+    # A touchers: line's command carries path-shaped search stems (`-F "_tools/touchers.test"`)
+    # that are not artifacts — the same exclusion both sibling Delivers readers apply.
     ARTIFACTS=$(printf '%s' "$DELIVERS" \
+      | grep -v '^[[:space:]]*touchers:' \
       | grep -oE '[A-Za-z0-9_.][A-Za-z0-9_./-]*\.[A-Za-z0-9]+' \
       | grep -vE '^\.+$' | LC_ALL=C sort -u)
 
@@ -235,7 +238,10 @@ case "$ITYPE" in
     # whose nine Delivers bullets each name their owner bead. Board ids are dropped
     # before the on-disk check; a real path carries a `/`, or an extension that is not
     # a run of digits.
+    # A touchers: line's command carries path-shaped search stems (`-F "_tools/touchers.test"`)
+    # that are not artifacts — the same exclusion both sibling Delivers readers apply.
     ARTIFACTS=$(printf '%s' "$DELIVERS" \
+      | grep -v '^[[:space:]]*touchers:' \
       | grep -oE '[A-Za-z0-9_.][A-Za-z0-9_./-]*\.[A-Za-z0-9]+' \
       | grep -vE '^\.+$' \
       | grep -vE '^[a-z0-9]+(-[a-z0-9]+)+(\.[0-9]+)+$' \
