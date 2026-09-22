@@ -36,6 +36,10 @@ for f in "$TOOL" "$TARGET" "$REFONE" "$REFTWO"; do
   [ -f "$ROOT/$f" ] || [ -f "$f" ] || { echo "HARNESS FAIL: missing $f"; exit 1; }
 done
 
+# Sourced (not just invoked as a subprocess) so Case 14 below can call _touchers_stem
+# directly — the sourced form is a documented usage in touchers.sh's own header.
+. "$TOOL"
+
 # The declared commands, scoped to the fixture dir so their counts cannot drift with the
 # registry: the target is referenced by both siblings (2), ref-one by ref-two alone (1).
 CMD_TARGET="rg -l -F \"touchers/tchr-target\" $FIXDIR_REL -g \"!$TARGET\""
@@ -268,6 +272,41 @@ if [ "$RC" -eq 0 ] && echo "$OUT" | grep -q "touchers: OK"; then
   pass "Case 13: a Delivers path on disk but UNTRACKED by git is still NEW and owes no line (exit 0)"
 else
   fail "Case 13: expected exit 0 — untracked is not existing, got $RC. Output: $OUT"
+fi
+
+# --- Case 14: _touchers_stem widens the container so two packages don't collapse --------
+# `packages/a/src/index.ts` and `packages/b/src/index.ts` used to both reduce to `src/index`
+# (last two path segments), inflating one count for two distinct artifacts. The stem must
+# widen for a `packages/`/`apps/` path with a generic container directly above the file, and
+# stay narrow (last two segments) everywhere else — including a container-named directory
+# that is NOT directly above the file (`packages/a/src/sub/x.ts`).
+STEM_FAILS=0
+check_stem() {
+  local path="$1" want="$2" got noext
+  got=$(_touchers_stem "$path")
+  if [ "$got" != "$want" ]; then
+    echo "  FAIL: Case 14: _touchers_stem '$path' => '$got', want '$want'"
+    STEM_FAILS=$((STEM_FAILS + 1))
+  fi
+  noext="${path%.*}"  # extension dropped, same as the stem itself drops it
+  case "$noext" in
+    *"$got") ;;
+    *)
+      echo "  FAIL: Case 14: stem '$got' is not a contiguous suffix of path '$path' (ext-dropped: '$noext')"
+      STEM_FAILS=$((STEM_FAILS + 1))
+      ;;
+  esac
+}
+check_stem "packages/a/src/index.ts"     "a/src/index"
+check_stem "apps/w/lib/x.ts"             "w/lib/x"
+check_stem "packages/a/b/src/x.ts"       "b/src/x"
+check_stem "packages/a/src/sub/x.ts"     "sub/x"
+check_stem "src/index.ts"                "src/index"
+check_stem "lib/db/foods.ts"             "db/foods"
+if [ "$STEM_FAILS" -eq 0 ]; then
+  pass "Case 14: _touchers_stem widens the container above a packages/apps file, and every stem is a contiguous suffix of its path"
+else
+  fail "Case 14: $STEM_FAILS stem mismatch(es) above"
 fi
 
 echo

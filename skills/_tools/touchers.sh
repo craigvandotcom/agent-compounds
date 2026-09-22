@@ -69,9 +69,33 @@ _touchers_globs() {
 
 # The stem is the last TWO path segments with the extension dropped — narrow enough that
 # `foods` does not match every food in the tree, wide enough to catch an import written as
-# `../db/foods`.
+# `../db/foods`. A monorepo container directory (`src`, `lib`, `test`, `tests`, `dist`) is
+# generic by design — `packages/a/src/index.ts` and `packages/b/src/index.ts` both reduce to
+# `src/index`, collapsing two distinct artifacts into one touchers count. When the path opens
+# `packages/` or `apps/` and a container segment sits directly above the file, the stem is
+# widened by one more segment: the one directly above the container (`$(NF-2)`, computed from
+# the END of the path, never a fixed `$2` — deeper nesting must still read a CONTIGUOUS suffix
+# of the path, not an arbitrary early segment). Invariant: the stem is always a contiguous
+# suffix of the path with the extension dropped. Trade-off accepted: a relative import written
+# from INSIDE the package itself, like `../src/event`, no longer matches the widened stem at
+# stamp time — it is not lost, it surfaces at close as diff-closure `[unowned-callers]`.
 _touchers_stem() {
-  printf '%s' "$1" | awk -F/ '{ s=$NF; sub(/\.[^.]*$/, "", s); if (NF>1) s=$(NF-1) "/" s; print s }'
+  printf '%s' "$1" | awk -F/ '
+    {
+      s = $NF
+      sub(/\.[^.]*$/, "", s)
+      if (NF > 2 && ($1 == "packages" || $1 == "apps")) {
+        container = $(NF - 1)
+        if (container == "src" || container == "lib" || container == "test" || \
+            container == "tests" || container == "dist") {
+          print $(NF - 2) "/" container "/" s
+          next
+        }
+      }
+      if (NF > 1) s = $(NF - 1) "/" s
+      print s
+    }
+  '
 }
 
 # The command a bead pastes: the gate's shape, rooted at `.` so it runs from the repo root.
