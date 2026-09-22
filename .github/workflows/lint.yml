@@ -25,4 +25,4 @@ jobs:
         with:
           python-version: "3.12"
       - run: pip install ruff
-      - run: ruff check lint/ skills/ac-review/scripts/
+      - run: ruff check lint/

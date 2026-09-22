@@ -51,11 +51,15 @@ EXAMPLE_FILE = "lint/instance-tokens.example.txt"
 EXEMPT_PATHS = {
     "LICENSE": "the copyright holder's name is a deliberate authorship claim",
     "lint/checks/37-engine-canon-literals.py": "its detection regex names the domain segments it forbids",
-    "skills/_tools/journey-stamp-check.sh": "its classifier default names this deployment's brand scope (BRAND_NPM_SCOPE overrides)",
+    "skills/_tools/journey-stamp-check.sh": (
+        "its classifier default names this deployment's brand scope (BRAND_NPM_SCOPE overrides)"
+    ),
     "lint/checks/1-dead-patterns.py": "hunts retired names, one of which contains a banned word",
     "lint/checks/1-dead-patterns.test.sh": "asserts on the retired name 1-dead-patterns hunts",
     "lint/fixtures/1-dead-patterns/skills/legacy-skill/SKILL.md": "the RED fixture must carry the retired name",
-    "memory/spawn-prompt-is-a-snapshot-spawn-after-sweep.md": "its domain field names this deployment; the fact is about that domain",
+    "memory/spawn-prompt-is-a-snapshot-spawn-after-sweep.md": (
+        "its domain field names this deployment; the fact is about that domain"
+    ),
 }
 
 # Files whose bytes are not text we can meaningfully search.
