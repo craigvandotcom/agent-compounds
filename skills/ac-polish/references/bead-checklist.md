@@ -122,3 +122,16 @@ is the reader doing its job; reaching for a finding to justify the round is not.
 - Does `## Delivers` name a real path, present at HEAD? A child bead id or prose is not one.
 - Does the epic carry the review receipt its close path requires? A missing receipt is the
   first blocker, named first.
+
+## 11. plan trace
+
+Grade the quote the schema requires (`bead-schema.md`: a child AC quotes its plan
+"Done when:" verbatim and adds only the probe; the epic's AC is the silver bullet
+verbatim). A NO below is a correctness finding — never DECLINED.
+
+- Does every child AC quote a plan "Done when:" verbatim, and add only the probe?
+  An AC that quotes no plan "Done when:" did not carry the approved line.
+- Does every AC state a behaviour, never a test's name? "a test named X passes" is not an AC.
+- A deliverable split across several beads: does each child quote the parent line and
+  add its own slice's values, and do the children together cover the parent line?
+  A split whose children leave part of the parent line uncovered is a correctness finding.
