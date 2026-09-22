@@ -25,9 +25,9 @@ STUB
 chmod +x "$W/bin/br"
 export AC2_BR_CMD="$W/bin/br" BOARD="$W/board.json"
 
-bead() {  # bead <id> <status> <type> <labels-csv> [description]
-  jq -nc --arg id "$1" --arg st "$2" --arg ty "$3" --arg l "$4" --arg d "${5:-}" \
-    '{id:$id,status:$st,issue_type:$ty,title:("t " + $id),description:$d,
+bead() {  # bead <id> <status> <type> <labels-csv> [description] [title]
+  jq -nc --arg id "$1" --arg st "$2" --arg ty "$3" --arg l "$4" --arg d "${5:-}" --arg t "${6:-t $1}" \
+    '{id:$id,status:$st,issue_type:$ty,title:$t,description:$d,
       created_at:"2026-09-01T00:00:00Z",labels:($l|split(",")|map(select(. != "")))}'
 }
 {
@@ -50,6 +50,10 @@ bead() {  # bead <id> <status> <type> <labels-csv> [description]
   bead EPIDLE     open   epic  "refined"
   bead EPD        open   epic  "refined"           "Probe: y"
   bead EPD.1      closed task  "refined"
+  bead ac-dtask   open   task     "refined" "" "DECISION: pick one"
+  bead ac-aact    open   decision "refined" "" "ACTION: rotate the key"
+  bead ac-dok     open   decision "refined" "" "DECISION: fine as typed"
+  bead ac-dshut   closed task     "refined" "" "DECISION: closed, ignored"
 } | jq -s '.' >"$BOARD"
 jq -c '.[]' "$BOARD" | jq -c 'if .id == "ac-e1" then .dependencies = [{issue_id:"ac-e1",depends_on_id:"EPA",type:"blocks"}]
   elif .id == "ac-e2" then .dependencies = [{issue_id:"ac-e2",depends_on_id:"EPA",type:"blocks"}]
@@ -93,6 +97,11 @@ cell() { printf '%s\n' "$OUT" | awk -F'\t' -v r="$1" -v t="$2" '$1==r && $2==t {
 [ -z "$(cell label-review origin:manual)" ] && pass "origin:<family> label named → none" || fail "origin family flagged"
 ! printf '%s\n' "$OUT" | awk -F'\t' '$3 ~ /remove/ && $1 == "label-review"' | grep -q . \
   && pass "no label-review row ever removes" || fail "label-review proposes removal"
+
+[ "$(cell type-review ac-dtask)" = review ] && pass "DECISION: typed task → type-review" || fail "ac-dtask: $(cell type-review ac-dtask)"
+[ "$(cell type-review ac-aact)" = review ]  && pass "ACTION: typed decision → type-review" || fail "ac-aact missed"
+[ -z "$(cell type-review ac-dok)$(cell type-review ac-dshut)" ] \
+  && pass "matching type, or closed → no type-review" || fail "type-review over-flags"
 
 [ "$(cell finding-i2-edge 'ac-e1→EPA')" = "suppressed ac-ruled" ] && pass "I2 edge a closed ac-tidy finding named → suppressed" || fail "e1: $(cell finding-i2-edge 'ac-e1→EPA')"
 [ "$(cell finding-i2-edge 'ac-e2→EPA')" = file ] && pass "I2 edge named only by a non-tidy closed bead → file" || fail "e2: $(cell finding-i2-edge 'ac-e2→EPA')"

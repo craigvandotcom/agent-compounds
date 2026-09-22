@@ -9,6 +9,9 @@
 #   add-unrefined     open non-epic bead with no lifecycle label  → label-add unrefined
 #   label-review      label beads-standards never names           → review (flag only — the
 #                     label vocabulary is open; never remove mechanically)
+#   type-review       open bead whose title prefix contradicts its issue_type (DECISION:/HUMAN:
+#                     typed task, ACTION: typed decision) → review (flag only — which side is
+#                     wrong is a judgment; the docket files by issue_type)
 #   finding-<kind>    a step-4 finding, deduped: skip-open <id> (an open ac-tidy / proposal /
 #                     human-gate bead names the target) · suppressed <id> (a closed ac-tidy
 #                     finding named it) · file
@@ -120,6 +123,12 @@ for b in filter(is_open, beads):
 for l, ids in sorted(unnamed.items()):
     row("label-review", l, "review", f"{len(ids)} open bead(s), e.g. {ids[0]}")
 
+# ── type-review: title prefix contradicts issue_type (flag only) ─────────
+for b in filter(is_open, beads):
+    t, title = b.get("issue_type"), b.get("title", "")
+    if (t == "task" and re.match(r"(DECISION|HUMAN)\b", title)) or (t == "decision" and title.startswith("ACTION:")):
+        row("type-review", b["id"], "review", f"typed {t}, titled {title.split(':')[0]}:")
+
 # ── step-4 findings, deduped against every bead that names the target ────
 by_id = {b["id"]: b for b in beads}
 rec_type = {r["id"]: r.get("issue_type") for r in recs}
@@ -157,7 +166,7 @@ MECH = ("backlog-archive", "plan-deliver", "plan-move", "strip-unrefined", "add-
 for r in rows: print("\t".join(map(str, r)))
 fnd = [r for r in rows if r[0].startswith("finding-")]
 print(f"# tidy-scan: {sum(r[0] in MECH for r in rows)} mechanical · "
-      f"{sum(r[0] == 'label-review' for r in rows)} review · {len(fnd)} findings "
+      f"{sum(r[2] == 'review' for r in rows)} review · {len(fnd)} findings "
       f"({sum(r[2] == 'file' for r in fnd)} file, "
       f"{sum(r[2].startswith('suppressed') for r in fnd)} suppressed, "
       f"{sum(r[2].startswith('skip-open') for r in fnd)} skip-open)")
