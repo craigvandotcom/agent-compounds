@@ -72,6 +72,21 @@ else
   FAIL=$((FAIL + 1)); echo "FAIL PARITY: journey-stamp-check.sh not found at $JOURNEY_SH — parity is unassertable"
 fi
 
+# --- PAT_WEBUI_TOKENS carries no dead brand-scope alternative (the deleted
+# BRAND_NPM_SCOPE var matched no real path — brand arrives as package.json via
+# PAT_DEPS, never a file path) ---
+if [ -f "$JOURNEY_SH" ]; then
+  JOURNEY_WEBUI_TOKENS=$(grep -m1 '^PAT_WEBUI_TOKENS=' "$JOURNEY_SH" | sed 's/^PAT_WEBUI_TOKENS="//; s/"$//')
+  case "$JOURNEY_WEBUI_TOKENS" in
+    *BRAND_NPM_SCOPE*|*'/brand'*)
+      FAIL=$((FAIL + 1)); echo "FAIL PAT_WEBUI_TOKENS still carries a brand-scope alternative: $JOURNEY_WEBUI_TOKENS" ;;
+    *)
+      PASS=$((PASS + 1)); echo "ok   PAT_WEBUI_TOKENS carries no BRAND_NPM_SCOPE / /brand alternative" ;;
+  esac
+else
+  FAIL=$((FAIL + 1)); echo "FAIL PAT_WEBUI_TOKENS: journey-stamp-check.sh not found at $JOURNEY_SH"
+fi
+
 # --- native doc exclusion (bd-55f7a) stays fixed ---
 run_case "native README only (bd-55f7a)"        'ios/App/fastlane/README.md'                  '' '0,0,0,0,0'
 run_case "review_notes.txt alone"               'ios/App/fastlane/review_notes.txt'           '' '0,0,0,0,0'

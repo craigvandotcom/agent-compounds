@@ -78,7 +78,7 @@ NATIVE_PATH_RE="${AC_RISK_NATIVE_PATH_RE:-^ios/|^android/|capacitor\.config|cap-
 NATIVE_PKG_RE="${AC_RISK_NATIVE_PKG_RE:-@capacitor|capacitor}"
 WEBUI_EXT_RE="${AC_RISK_WEBUI_EXT_RE:-\.(tsx|jsx|css)$}"
 WEBUI_DIR_RE="${AC_RISK_WEBUI_DIR_RE:-app/|components/|features/}"
-WEBUI_TOKEN_RE="${AC_RISK_WEBUI_TOKEN_RE:-globals\.css|design\.md|tailwind\.config|@<org>/brand|tokens}"
+WEBUI_TOKEN_RE="${AC_RISK_WEBUI_TOKEN_RE:-globals\.css|design\.md|tailwind\.config|tokens}"
 
 # Native shell — plugins, native projects, capacitor config/deps. The package.json content
 # check is deliberately OUTSIDE the exclusion (deps classify by content, not path).
