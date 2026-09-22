@@ -114,12 +114,14 @@ chmod +x "$MOCK/br"
 
 # An ac-schema description: four sections, every AC naming an executable probe. element4-check
 # accepts this shape (ac-4y92), so anything refused below is refused by the RECEIPT gate.
+# `&& true` is what survives the runs-something leg (grep / rg / test -e|-f|-x are stripped).
+# Without it these fixtures never reach the receipt or touchers case they exist to pin.
 SCHEMA_DESC='## Intent
 Why this matters, with no line numbers.
 
 ## Acceptance Criteria
 - The gate ships as an executable script.
-  Probe: `test -x skills/ac-implement/scripts/close-gate.sh` — tier: none
+  Probe: `test -x skills/ac-implement/scripts/close-gate.sh && true` — tier: none
 
 ## Delivers
 - gate: skills/ac-implement/scripts/close-gate.sh
@@ -135,7 +137,7 @@ Test `x` must FAIL before the fix; assert exit 1.
 
 ## Acceptance Criteria
 - The fix lands.
-  Probe: `grep -q "the fix" src/x.ts` — tier: none
+  Probe: `grep -q "the fix" src/x.ts && true` — tier: none
 '
 
 write_board() {
@@ -322,7 +324,7 @@ Guard updateFood against zero-row updates.
 
 ## Acceptance Criteria
 - The guard lands.
-  Probe: `grep -q count lib/db/foods.ts` — tier: none
+  Probe: `grep -q count lib/db/foods.ts && true` — tier: none
 
 ## Delivers
 - `lib/db/foods.ts` — updateFood row-count guard
@@ -335,7 +337,7 @@ Guard updateFood against zero-row updates.
 
 ## Acceptance Criteria
 - The guard lands.
-  Probe: `grep -q count lib/db/foods.ts` — tier: none
+  Probe: `grep -q count lib/db/foods.ts && true` — tier: none
 
 ## Delivers
 - `lib/db/foods.ts` — updateFood row-count guard
@@ -459,7 +461,7 @@ Guard updateFood against zero-row updates.
 
 ## Acceptance Criteria
 - The guard lands.
-  Probe: `grep -q count lib/db/foods.ts` — tier: none
+  Probe: `grep -q count lib/db/foods.ts && true` — tier: none
 
 ## Delivers
 - `lib/db/foods.ts` — updateFood row-count guard
@@ -474,7 +476,7 @@ Guard updateFood against zero-row updates.
 
 ## Acceptance Criteria
 - The guard lands.
-  Probe: `grep -q count lib/db/foods.ts` — tier: none
+  Probe: `grep -q count lib/db/foods.ts && true` — tier: none
 
 ## Delivers
 - scope note: the consumer set is tracked by the line beneath
@@ -491,7 +493,7 @@ Guard updateFood against zero-row updates.
 
 ## Acceptance Criteria
 - The guard lands.
-  Probe: `grep -q count lib/db/foods.ts` — tier: none
+  Probe: `grep -q count lib/db/foods.ts && true` — tier: none
 
 ## Delivers
 - caller-inventory note
