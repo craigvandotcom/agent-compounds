@@ -183,19 +183,22 @@ landed; otherwise unclaim, go to §1. `PASS` means the plan knew its callers. Te
 outside the diff are reported, never refused — they break loudly.
 
 Re-read your diff against the bead's ACs with fresh eyes: every AC, does the change actually
-do what it describes, or only what its probe measures? Then run the project's gates — for this
-registry:
+do what it describes, or only what its probe measures? Then run the project's gates. Which
+commands those are is a property of the repository you are in, not of this loop: read its
+`AGENTS.md` Project Commands table and run the names it lists. This registry's are below; they
+do not exist in an app repo, and an absent script is never a skip — run what the repo lists,
+and when its table is silent, say so in your hand-back rather than borrowing these.
 
-    bash lint.sh                        # compare FAILING CHECK NAMES to the known baseline;
-                                        # never pin or assert an absolute failure count
-    bash scripts/run-all-proofs.sh   # or your own new/changed *.test.sh directly
-    ubs "<file>" "<file>"               # ONE call, every path quoted; read the DETAIL lines
+    bash lint.sh                        # registry-only; compare FAILING CHECK NAMES to the
+                                        # known baseline; never pin an absolute count
+    bash scripts/run-all-proofs.sh      # registry-only; or your own new/changed *.test.sh
+    ubs "<file>" "<file>"               # universal; ONE call, every path quoted; read DETAIL
 
 `ubs` has no shell or markdown scanner: over those it prints *"nothing was checked (this is NOT
 a pass)"*. Report that verbatim as an unverified tier.
 
-**IN A SWARM, THE TWO REPO-WIDE GATES ABOVE ARE ADVISORY TO YOU AND AUTHORITATIVE TO NOBODY.**
-`lint.sh` and `run-all-proofs.sh` measure the WORKING TREE, which holds every sibling's
+**IN A SWARM, THE REPO-WIDE GATES ABOVE ARE ADVISORY TO YOU AND AUTHORITATIVE TO NOBODY.**
+They measure the WORKING TREE, which holds every sibling's
 uncommitted edits as well as yours. Measured: `lint.sh` returned a clean baseline that was
 produced ENTIRELY by a sibling's uncommitted change while committed HEAD was still red — a
 bead would have closed on a green that existed in no commit. So at N>1: run them to catch your
