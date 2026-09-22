@@ -47,7 +47,9 @@ on its own line after any other statement lands mid-token-stream and is never se
 unparseable heredoc body fails open by design. Both are resolved while the raw line
 structure still exists: heredoc bodies are stripped (they are DATA, never a command
 position — the `br create` text inside one must keep passing), and every remaining bare
-newline becomes a `;` separator. Quoted newlines stay intact.
+newline becomes a `;` separator. The same pre-pass space-pads `;`, `&&`, `||` and `|`,
+glued or not — shlex keeps `true;` and `true&&br` as one token, so CONTROL never saw
+the `br create` after them. Quoted newlines and quoted separators stay intact.
 
 FAIL-OPEN on any parse failure. A guard that cannot understand a command must not wedge an
 unattended ac-loop run at 3am; a missed stamp is caught by ac-tidy.
@@ -246,39 +248,60 @@ def strip_heredoc_bodies(command):
 
 
 def newlines_to_separators(command):
-    """Turn unquoted command *inlining* into separators, so the tokenizer sees the inner
-    command in command position.
+    """Space-pad unquoted shell separators so the tokenizer sees each command.
 
-    A bare newline is a command separator, like ';'. So are the delimiters of command
-    substitution — `$(`, its closed `)`, and a backtick pair — because `out=$(br create …)`
-    and `` `br create …` `` run the inner `br create` as a real command. Without this the
-    inner `br create` lands mid-token-stream (e.g. as `out=$(br`) and is never inspected,
-    which is exactly the evasion this guard exists to block. All separators are
-    space-padded: shlex only splits on whitespace, so a glued delimiter would hide the
-    boundary from CONTROL. Never touched inside a quoted string, so a description that
-    quotes `br create` keeps passing.
+    A bare newline is a command separator, like ';'. So are `;`, `&&`, `||`, `|`, and
+    the delimiters of command substitution — `$(`, its closed `)`, and a backtick pair.
+    `out=$(br create …)`, `` `br create …` `` and `true;br create` all run `br create`
+    as a real command. Without the pad the inner `br create` lands mid-token-stream
+    (e.g. as `out=$(br` or `true;`) and is never inspected. shlex splits only on
+    whitespace, so a glued delimiter must be space-padded or CONTROL never sees it.
+    Never touched inside a quoted string, so a description that quotes `br create`
+    keeps passing. An escaped separator stays literal.
     """
     out = []
     quote = None
     esc = False
-    for ch in command:
+    i = 0
+    n = len(command)
+    while i < n:
+        ch = command[i]
         if esc:
             out.append(ch)
             esc = False
-        elif ch == "\\" and quote != "'":
+            i += 1
+            continue
+        if ch == "\\" and quote != "'":
             out.append(ch)
             esc = True
-        elif quote:
+            i += 1
+            continue
+        if quote:
             out.append(ch)
             if ch == quote:
                 quote = None
-        elif ch in "'\"":
+            i += 1
+            continue
+        if ch in "'\"":
             quote = ch
             out.append(ch)
-        elif ch == "\n" or ch == "`" or ch == "(" or ch == ")":
+            i += 1
+            continue
+        two = command[i:i + 2]
+        if two in ("&&", "||"):
+            out.append(" " + two + " ")
+            i += 2
+            continue
+        if ch == "|":
+            out.append(" | ")
+            i += 1
+            continue
+        if ch in ("\n", "`", "(", ")", ";"):
             out.append(" ; ")
-        else:
-            out.append(ch)
+            i += 1
+            continue
+        out.append(ch)
+        i += 1
     return "".join(out)
 
 

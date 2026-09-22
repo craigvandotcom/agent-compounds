@@ -126,6 +126,22 @@ cases = [
           "subagent via AC_SUBAGENT, decision fork -> refused", {}, {"AC_SUBAGENT": "1"}),
   (BLOCK, 'br create "x" -t task -l "origin:ac-review,unrefined,impact:data" -d "- AC: x. Probe: `true` - tier: none"',
           "subagent via AC_SUBAGENT, non-gate create -> refused", {}, {"AC_SUBAGENT": "1"}),
+  # --- glued separators (ac-48vu): shlex keeps `;` / `&&` / `||` / `|` stuck to the
+  # previous word, so the following `br create` was never a command of its own.
+  (BLOCK, 'true; br create x -t task -l origin:x,refined',
+          "glued semicolon, refined create is still inspected"),
+  (BLOCK, 'cd /tmp; br create "y" -t task',
+          "glued semicolon after cd, no origin"),
+  (BLOCK, 'true&&br create "x" -t task',
+          "glued && before br create, no origin"),
+  (BLOCK, 'true||br create "x" -t task',
+          "glued || before br create, no origin"),
+  (BLOCK, 'true|br create "x" -t task',
+          "glued pipe before br create, no origin"),
+  (ALLOW, 'echo "true; br create foo"',
+          "glued separator inside quotes is not a command"),
+  (ALLOW, 'br create "x" -t epic -l "origin:manual" -d "a;b && c || d | e"',
+          "separators inside a description stay data"),
 ]
 fails = 0
 for case in cases:
