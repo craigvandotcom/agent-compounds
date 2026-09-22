@@ -90,7 +90,7 @@ grep -o 'Probe: `[^`]*`' <bead-file> | sed 's/^Probe: `//; s/`$//'
   `test -x <path> && bash <path>` — the leading word exists today, the probe is honestly
   red until the artifact lands, and it becomes the real suite run the moment it does.
 - **Tier** is one slug from the *Test-tier slugs* table
-  (below): `standing-vitest` · `supabase-integration` · `e2e` · `none`.
+  (below): `standing-vitest` · `standing-harness` · `supabase-integration` · `e2e` · `none`.
 - Prose fragments (`wc -l`, "diff the file", "grep for it") are NOT probes and `ac-beadify`
   refuses the bead.
 
@@ -105,6 +105,7 @@ cannot run is a probe nobody ran.
 | Slug | Meaning |
 |------|---------|
 | `standing-vitest` | The repo's default unit/component gate (`pnpm test` / `pnpm test:all`) |
+| `standing-harness` | The repo's bash proof harnesses (`*.test.sh`) named in its AGENTS.md Project Commands |
 | `supabase-integration` | Local-stack DB suite (`pnpm test:integration:local` or the repo equivalent) |
 | `e2e` | Playwright / device / browser journey suite |
 | `none` | Docs, config, or prose — no executable suite applies |
@@ -154,7 +155,7 @@ from a git hook — a hook cannot see a DB-only close.
   Probe: `test -x skills/ac-implement/scripts/close-gate.sh` — tier: none
 - A close on a bead carrying no probe receipt is refused, and the refusal names the missing
   receipt rather than exiting silently.
-  Probe: `test -x skills/ac-implement/scripts/close-gate.test.sh && bash skills/ac-implement/scripts/close-gate.test.sh` — tier: none
+  Probe: `test -x skills/ac-implement/scripts/close-gate.test.sh && bash skills/ac-implement/scripts/close-gate.test.sh` — tier: standing-harness
 - The refusal emits the exact string the worker loop greps for, so the loop can branch on it.
   Probe: `grep -q 'CLOSE-REFUSED:' skills/ac-implement/scripts/close-gate.sh` — tier: none
 - The close step of the skill invokes the gate, so the gate is on the write path and not
