@@ -95,7 +95,8 @@ not exist". That is a real RED but a weak one. Write the harness, **see it fail 
 the AC names, before any fix**, and re-run flight-check so the receipt anchors that stronger
 moment. Nothing refuses you if you skip it — `close-gate` stopped hash-locking the test — but
 ac-review reads the diff against the receipt for causal sufficiency, and "the file did not
-exist yet" is the weakest possible answer to what the diff caused.
+exist yet" is the weakest possible answer to what the diff caused. This re-run does not
+re-gate the `refined` stamp again within the same claim — flight-check says so on its output.
 
 ## 4 — WORK
 

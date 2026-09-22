@@ -370,7 +370,20 @@ fi
 # Not run in --check-only mode (this leg MUTATES the board) and not on a bead that does not
 # currently hold `refined` (nothing to re-gate); a gate that cannot run is NOT-GATED, never
 # a pass.
+#
+# CLAIM-TIME, NOT EVERY-CALL: worker.md §3 tells a bead that delivers its own harness to
+# write that harness, then re-run this script so the receipt anchors the stronger RED. That
+# second run would otherwise re-gate `refined` against a tree that now has one more untracked
+# file (the harness), and a toucher check keyed on "did the referrer set change" bounces
+# STALE-STAMP for obeying the loop. The premise this gate holds is CLAIM-TIME, not call-time:
+# the stamp is re-gated once per claim. "a receipt exists" is the WRONG key on its own — a
+# PRIOR claim's leftover receipt (receipts APPEND and are never cleared) would let a brand
+# new claim skip a gate it has never actually run. The right key pairs the receipt against
+# THIS claim: skip only when the last receipt is no older than the latest `CLAIM:` comment.
+FLIGHT_DIR="${AC2_FLIGHT_DIR:-$(git rev-parse --git-common-dir 2>/dev/null || echo .)/ac-flight}"
+RECEIPT_FILE="$FLIGHT_DIR/${BEAD}.flight-receipt"
 STAMP_GATE="${STAMP_GATE:-$(cd "$(dirname "${BASH_SOURCE[0]}")/../../_tools" 2>/dev/null && pwd)/stamp-refined.sh}"
+STAMP_SKIPPED=0
 if [ -z "$FAIL_CLASS" ] && [ "$CHECK_ONLY" -eq 0 ]; then
   if [ ! -f "$STAMP_GATE" ]; then
     echo "NOT-GATED: stamp gate not found at '$STAMP_GATE' — the refined stamp cannot be re-gated; refusing rather than trusting it" >&2
@@ -380,24 +393,44 @@ if [ -z "$FAIL_CLASS" ] && [ "$CHECK_ONLY" -eq 0 ]; then
     echo "NOT-GATED: br/jq unavailable — the refined stamp cannot be re-gated; refusing rather than trusting it" >&2
     exit 2
   fi
-  holds_refined=$(br_call show "$BEAD" --json </dev/null \
+  BEAD_JSON=$(br_call show "$BEAD" --json </dev/null) \
+    || { echo "NOT-GATED: br_call show refused — the refined stamp cannot be re-gated; refusing rather than trusting it" >&2; exit 2; }
+  holds_refined=$(printf '%s' "$BEAD_JSON" \
     | jq -r 'if type == "array" then .[0] else . end
-             | [ .labels // [] | .[] | select(. == "refined") ] | length' 2>/dev/null) \
-  || { echo "NOT-GATED: br_call show refused — the refined stamp cannot be re-gated; refusing rather than trusting it" >&2; exit 2; }
+             | [ .labels // [] | .[] | select(. == "refined") ] | length' 2>/dev/null)
   if [ "${holds_refined:-0}" -gt 0 ]; then
-    STAMP_OUT=$(bash "$STAMP_GATE" "$BEAD" </dev/null 2>&1); STAMP_RC=$?
-    if [ "$STAMP_RC" -eq 2 ]; then
-      printf '%s\n' "$STAMP_OUT" >&2
-      echo "NOT-GATED: the stamp gate could not run (rc 2) — the refined stamp is unverified; never a pass" >&2
-      exit 2
-    elif [ "$STAMP_RC" -ne 0 ]; then
-      printf '%s\n' "$STAMP_OUT" >&2
-      STAMP_WHY=$(printf '%s\n' "$STAMP_OUT" | grep -m1 'stamp_refined: REFUSED' | sed 's/^stamp_refined: REFUSED[^—]*— //')
-      premise_failed STALE-STAMP "the \`refined\` stamp is stale under the current gate — ${STAMP_WHY:-refused}. The gate's downgrade leg has stripped it; the bead returns to the refine lane."
+    # CLAIM_TS: latest `created_at` among comments whose text starts `CLAIM:` (same JSON
+    # this leg already fetched — no extra `br` call). LAST_AT: the last receipt's `at:`
+    # (same awk close-gate.sh uses to read the last receipt block). norm_ts matches
+    # swarm-commit.sh's rule so the two compare the same way everywhere they're compared.
+    CLAIM_TS=$(printf '%s' "$BEAD_JSON" \
+      | jq -r 'if type == "array" then .[0] else . end
+               | [ .comments[]? | select(.text | startswith("CLAIM:")) | .created_at ] | max // ""' 2>/dev/null)
+    LAST_AT=""
+    if [ -f "$RECEIPT_FILE" ]; then
+      LAST_AT=$(awk '/^FLIGHT-RECEIPT v1/{buf=""} {buf = buf $0 "\n"} END{printf "%s", buf}' "$RECEIPT_FILE" \
+        | grep -m1 '^at:' | sed 's/^at:[[:space:]]*//')
+    fi
+    norm_ts() { printf '%s' "$1" | sed -E 's/\.[0-9]+//; s/Z$//'; }
+    if [ -n "$CLAIM_TS" ] && [ -n "$LAST_AT" ] \
+       && ! [ "$(norm_ts "$LAST_AT")" \< "$(norm_ts "$CLAIM_TS")" ]; then
+      STAMP_SKIPPED=1
+      echo "flight-check[$BEAD] STAMP skipped — re-run within this claim (receipt $LAST_AT ≥ claim $CLAIM_TS); gated at claim, never implies fresh"
+    else
+      STAMP_OUT=$(bash "$STAMP_GATE" "$BEAD" </dev/null 2>&1); STAMP_RC=$?
+      if [ "$STAMP_RC" -eq 2 ]; then
+        printf '%s\n' "$STAMP_OUT" >&2
+        echo "NOT-GATED: the stamp gate could not run (rc 2) — the refined stamp is unverified; never a pass" >&2
+        exit 2
+      elif [ "$STAMP_RC" -ne 0 ]; then
+        printf '%s\n' "$STAMP_OUT" >&2
+        STAMP_WHY=$(printf '%s\n' "$STAMP_OUT" | grep -m1 'stamp_refined: REFUSED' | sed 's/^stamp_refined: REFUSED[^—]*— //')
+        premise_failed STALE-STAMP "the \`refined\` stamp is stale under the current gate — ${STAMP_WHY:-refused}. The gate's downgrade leg has stripped it; the bead returns to the refine lane."
+      fi
     fi
   fi
 fi
-[ -z "$FAIL_CLASS" ] && echo "flight-check: STAMP ok (refined re-gated or absent)"
+[ -z "$FAIL_CLASS" ] && [ "$STAMP_SKIPPED" -eq 0 ] && echo "flight-check: STAMP ok (refined re-gated or absent)"
 
 # --- Refusal 4: RED, and the receipt ----------------------------------------------------
 
@@ -439,9 +472,8 @@ if [ "$CHECK_ONLY" -eq 1 ]; then
   exit 0
 fi
 
-FLIGHT_DIR="${AC2_FLIGHT_DIR:-$(git rev-parse --git-common-dir 2>/dev/null || echo .)/ac-flight}"
+# FLIGHT_DIR/RECEIPT_FILE: derived once, above the STALE-STAMP leg (Refusal 5) — one home.
 mkdir -p "$FLIGHT_DIR" 2>/dev/null || { echo "NOT-GATED: cannot create receipt dir '$FLIGHT_DIR'" >&2; exit 2; }
-RECEIPT_FILE="$FLIGHT_DIR/${BEAD}.flight-receipt"
 
 RECEIPT=$(cat <<EOF
 FLIGHT-RECEIPT v1

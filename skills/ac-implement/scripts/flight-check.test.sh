@@ -487,6 +487,81 @@ grep -q 'add ac-l7xt-fix refined' "$WORK/labels2.log" && ok "stale stamp: the re
   || bad "stale stamp: re-gate did not stamp: $(cat "$WORK/labels2.log")"
 
 # ---------------------------------------------------------------------------------------
+echo "flight-check.test: case 8b — the refined stamp is re-gated at CLAIM time, not on every re-run"
+# ---------------------------------------------------------------------------------------
+# Reuses case 8's stub br (B2), root (R2) and the stale-contract body (fix-desc1.md, no
+# touchers line — the body that made the stamp gate downgrade in case 8). Each sub-case
+# adds a `comments` array to the fixture JSON and pre-seeds a flight receipt directly, so
+# the skip decision can be driven without a prior flight-check run writing it.
+mk_json_c() { jq -n --arg d "$(cat "$1")" --argjson c "$2" \
+  '{id:"ac-l7xt-fix",issue_type:"task",labels:["refined","refine-full"],description:$d,comments:$c}'; }
+write_receipt() { mkdir -p "$(dirname "$1")"; cat >"$1" <<EOF
+FLIGHT-RECEIPT v1
+bead: ac-l7xt-fix
+at: $2
+tree: deadbeef
+premise: PASS consumes=0 environment=0 perishable=0
+red-probe: test -f fixture-absent.md
+red-exit: 1
+red-green-siblings: 2 of 3 probe(s) already green
+
+EOF
+}
+
+# 8b(a) — CLAIM before the receipt: the prior run in THIS claim already re-gated it. A
+# stale-contract body must NOT bounce; the stamp leg is skipped, not re-run.
+: >"$WORK/labels8b-a.log"
+write_receipt "$WORK/receipts8b-a/ac-l7xt-fix.flight-receipt" "2024-01-02T00:00:00Z"
+mk_json_c "$WORK/fix-desc1.md" '[{"text":"CLAIM: someone","created_at":"2024-01-01T00:00:00Z"}]' >"$WORK/fix8b-a.json"
+RUN_OUT=$(env AC2_DRY_RUN=1 AC2_FLIGHT_DIR="$WORK/receipts8b-a" PATH="$B2:$PATH" \
+  AC_FIXTURE_JSON="$WORK/fix8b-a.json" AC_LABEL_LOG="$WORK/labels8b-a.log" \
+  bash "$GATE" ac-l7xt-fix --body-file "$WORK/fix-desc1.md" --root "$R2" 2>&1)
+RUN_RC=$?
+[ "$RUN_RC" -eq 0 ] && ok "8b(a): receipt after claim -> a stale-contract body does not bounce" \
+  || bad "8b(a): expected exit 0, got $RUN_RC: $RUN_OUT"
+printf '%s' "$RUN_OUT" | grep -q 'STAMP skipped' && ok "8b(a): output names the skip" \
+  || bad "8b(a): no STAMP skipped line: $RUN_OUT"
+printf '%s' "$RUN_OUT" | grep -q 'STAMP ok' && bad "8b(a): STAMP ok printed after a skip: $RUN_OUT" \
+  || ok "8b(a): STAMP ok does not print after a skip"
+grep -q 'remove ac-l7xt-fix refined' "$WORK/labels8b-a.log" \
+  && bad "8b(a): the stamp gate ran anyway (label log): $(cat "$WORK/labels8b-a.log")" \
+  || ok "8b(a): the stamp gate never ran — no downgrade in the label log"
+
+# 8b(b) — receipt OLDER than a newer CLAIM: the receipt predates this claim, so it is not
+# evidence of a re-gate within it. STALE-STAMP must fire and the stamp must downgrade.
+: >"$WORK/labels8b-b.log"
+write_receipt "$WORK/receipts8b-b/ac-l7xt-fix.flight-receipt" "2024-01-01T00:00:00Z"
+mk_json_c "$WORK/fix-desc1.md" '[{"text":"CLAIM: someone","created_at":"2024-01-02T00:00:00Z"}]' >"$WORK/fix8b-b.json"
+RUN_OUT=$(env AC2_DRY_RUN=1 AC2_FLIGHT_DIR="$WORK/receipts8b-b" PATH="$B2:$PATH" \
+  AC_FIXTURE_JSON="$WORK/fix8b-b.json" AC_LABEL_LOG="$WORK/labels8b-b.log" \
+  bash "$GATE" ac-l7xt-fix --body-file "$WORK/fix-desc1.md" --root "$R2" 2>&1)
+RUN_RC=$?
+[ "$RUN_RC" -eq 1 ] && ok "8b(b): receipt older than the claim -> STALE-STAMP fires" \
+  || bad "8b(b): expected exit 1, got $RUN_RC: $RUN_OUT"
+printf '%s' "$RUN_OUT" | grep -q 'STALE-STAMP' && ok "8b(b): the refusal names its class" \
+  || bad "8b(b): STALE-STAMP not named: $RUN_OUT"
+grep -q 'remove ac-l7xt-fix refined' "$WORK/labels8b-b.log" \
+  && ok "8b(b): the stamp downgraded refined" \
+  || bad "8b(b): no downgrade in the label log: $(cat "$WORK/labels8b-b.log")"
+
+# 8b(c) — a receipt is present but there is no CLAIM comment at all: the skip's other key
+# is empty, so the gate runs exactly as it does today (fail closed on the stale contract).
+: >"$WORK/labels8b-c.log"
+write_receipt "$WORK/receipts8b-c/ac-l7xt-fix.flight-receipt" "2024-01-01T00:00:00Z"
+mk_json_c "$WORK/fix-desc1.md" '[]' >"$WORK/fix8b-c.json"
+RUN_OUT=$(env AC2_DRY_RUN=1 AC2_FLIGHT_DIR="$WORK/receipts8b-c" PATH="$B2:$PATH" \
+  AC_FIXTURE_JSON="$WORK/fix8b-c.json" AC_LABEL_LOG="$WORK/labels8b-c.log" \
+  bash "$GATE" ac-l7xt-fix --body-file "$WORK/fix-desc1.md" --root "$R2" 2>&1)
+RUN_RC=$?
+[ "$RUN_RC" -eq 1 ] && ok "8b(c): no CLAIM comment -> the gate runs" \
+  || bad "8b(c): expected exit 1, got $RUN_RC: $RUN_OUT"
+printf '%s' "$RUN_OUT" | grep -q 'STALE-STAMP' && ok "8b(c): the refusal names its class" \
+  || bad "8b(c): STALE-STAMP not named: $RUN_OUT"
+grep -q 'remove ac-l7xt-fix refined' "$WORK/labels8b-c.log" \
+  && ok "8b(c): the stamp gate ran and downgraded refined" \
+  || bad "8b(c): no downgrade in the label log: $(cat "$WORK/labels8b-c.log")"
+
+# ---------------------------------------------------------------------------------------
 echo "flight-check.test: case 9 — a refused resolved-blocker show is NOT-GATED, never a fabricated status"
 # ---------------------------------------------------------------------------------------
 # consumes-prefix.md already proves list resolves the prefix to exactly one id and
