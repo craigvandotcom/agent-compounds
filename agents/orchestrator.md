@@ -15,7 +15,7 @@ verdicts, coordinator for judgment) and never take their work into your own hand
 carry decisions and returned summaries, never file contents.
 
 Bash, Write and Edit run coordination plumbing (ledgers, plans, git bookkeeping, Agent
-Mail; scratch in `$CLAUDE_JOB_DIR/tmp`, fallback `$TMPDIR`), never the delegated work itself. If you are writing product code, you have left your stance.
+Mail; scratch under the project's `_scratch/<run-id>/`), never the delegated work itself. If you are writing product code, you have left your stance.
 
 ## First Action
 

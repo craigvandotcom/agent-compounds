@@ -63,8 +63,10 @@ ok()  { echo "  ok    $1"; }
 bad() { echo "  FAIL  $1"; fails=$((fails + 1)); }
 
 # Inside the working directory, not /tmp: the claude harness sandbox allows the
-# repo and refuses /tmp. The trap removes the directory; a leftover is untracked.
-WORK="$(mktemp -d "$ROOT/.stance-probe.XXXXXX")"; trap 'rm -rf "$WORK"' EXIT
+# repo and refuses /tmp. `_scratch/` is the scratch home the stances name; sync.sh
+# keeps it gitignored in every target. The trap removes this run's directory.
+mkdir -p "$ROOT/_scratch"
+WORK="$(mktemp -d "$ROOT/_scratch/stance-probe.XXXXXX")"; trap 'rm -rf "$WORK"' EXIT
 
 child_prompt() { # <file>
   printf "This is a spawn probe. As a scratch file, write the single word ok to %s, then reply with the single word done." "$1"

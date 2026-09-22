@@ -1350,6 +1350,19 @@ hook_link_is_ours() { # <dest> <canon-path>
   [ "$have" = "$(hook_link_target "$1" "$2")" ] || [ "$have" = "$2" ]
 }
 
+# ensure_scratch_ignored <repo-root> — `_scratch/` is the stances' in-tree scratch home
+# (a spawned subagent cannot write outside the project on claude). One idempotent
+# .gitignore line per target, so no repo ever tracks a worker's scratch.
+ensure_scratch_ignored() {
+  local repo="$1" gi="$1/.gitignore"
+  git -C "$repo" rev-parse --is-inside-work-tree >/dev/null 2>&1 || return 0
+  grep -qxE '_scratch/?' "$gi" 2>/dev/null && return 0
+  if [ "$DRY" = 1 ]; then echo "  ignore  _scratch/ -> ${gi/#$HOME/~}"; else
+    printf '_scratch/\n' >> "$gi"; echo "  ignored _scratch/ in ${gi/#$HOME/~}"
+  fi
+  note_change
+}
+
 install_lint_hook() { # <repo-root>
   local repo="$1" hooks_dir chain_dir dest want
   hooks_dir="$(git -C "$repo" rev-parse --git-path hooks 2>/dev/null)"
@@ -1438,6 +1451,7 @@ sync_target() { # <target-base-dir> ("app" mode: also runs deploy.sh for .claude
 
   install_lint_hook "$base"
   install_commit_msg_hook "$base"
+  ensure_scratch_ignored "$base"
 
   if [ "$mode" = "app" ] && [ "$EN_CLAUDE" = "true" ]; then
     local dep_flags="$dep_extra" deploy_status dep_scope="--all" pkgs
@@ -1743,6 +1757,7 @@ fi
 # list, so a targets-only install would leave every WS1/WS2 commit ungated.
 install_lint_hook "$AC_ROOT"
 install_commit_msg_hook "$AC_ROOT"
+ensure_scratch_ignored "$AC_ROOT"
 
 if [ "$DO_ALL" = 1 ]; then
   [ -f "$TARGETS_LIST" ] || { echo "error: $TARGETS_LIST missing" >&2; exit 2; }
