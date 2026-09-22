@@ -54,7 +54,7 @@ con.execute("CREATE TABLE events (id INTEGER PRIMARY KEY, issue_id TEXT, event_t
 con.execute("INSERT INTO comments (issue_id,author,text,created_at) VALUES ('g-p0','x',?, '2026-01-01')", (f"verified: {TODAY}",))
 con.execute("INSERT INTO comments (issue_id,author,text,created_at) VALUES ('g-p1-old','x','verified: 2020-01-01','2020-01-01')")
 for i, (et, cm) in enumerate([("label_added", "Added label human-gate"), ("label_removed", "Removed label human-gate"),
-                              ("commented", "DECISION (Craig): ship it"), ("label_added", "Added label human-gate")]):
+                              ("commented", "DECISION (operator): ship it"), ("label_added", "Added label human-gate")]):
     con.execute("INSERT INTO events (issue_id,event_type,actor,comment,created_at) VALUES ('g-p1-new',?,'x',?,?)",
                 (et, cm, f"2026-01-0{i + 1}"))
 con.commit()
