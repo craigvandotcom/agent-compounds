@@ -79,3 +79,4 @@ _reports/
 # Absent -> the check skips. Template: lint/instance-tokens.example.txt
 lint/instance-tokens.local.txt
 
+_scratch/
