@@ -100,6 +100,16 @@ immediately (same as drain step 1); if `in_flight` non-empty → append `risk_qu
 FIFO. Mixed range = union(`in_flight` ranges ∪ risk `pre_sha..close_sha`). Failure
 re-merges only `in_flight`; risk never re-enters `pending`.
 
+## Run end — a non-empty `risk_queue` must not strand
+
+A run may exit (conductor exit) with `risk_queue` still non-empty. Those IDs exist only in
+`/tmp/loop-pool-<RUN_ID>.json`; the drain sequence that would have fired their close ceremony
+never runs, the OS eventually sweeps `/tmp`, and the beads carry no evidence their ceremony was
+skipped — the loss is silent. So a `risk_queue` left non-empty at run end is **stranded**, and
+must be surfaced rather than abandoned: drained before exit, or its IDs flagged where a later
+ceremony can see them. The mechanism — a synchronous loop-exit drain, a durable (non-`/tmp`)
+pool path, or a nightly stranded-ID sensor — is deliberately left open.
+
 ## Bug lane reconciled
 
 Folding bug drain into the next cycle's **close ceremony** (CI + review-mark + report
@@ -154,5 +164,6 @@ ownership protocol on a file that cannot be staged per line. Memory:
 | Failure re-merge | restores `closed_at` window |
 | Line-floor | union of members' `pre_sha..close_sha` |
 | Risk | sidecar — never in `pending`/`in_flight` |
+| Run ends with `risk_queue` non-empty | stranded — drained or flagged, never left silent |
 | Per-close classify | bead's own `pre_sha..close_sha`, not `..HEAD` |
 | `features/**/__tests__/**`-only | ZERO-RUNTIME / not RISK-TOUCH (Item 0 test-path exclusion) |
