@@ -27,10 +27,13 @@
 #   task/feature  -> the reason names >=1 artifact from THIS bead's own ## Delivers
 #   investigation -> the reason cites a spawned bead id or a documented-answer marker
 #   epic          -> the reason cites the probe receipt close-gate.sh ran from, AND
-#                    every ## Delivers path exists on disk (exit-0 itself is
-#                    close-gate.sh's GREEN leg, which runs before this core). An
-#                    epic closes when its children are closed; there is no review
-#                    receipt to demand (ac-ac-review-narrowing-aq10.1)
+#                    every ## Delivers path exists on disk, EXCEPT those declared
+#                    under a `deleted-*:` label (`deleted-script:`, `deleted-test:`,
+#                    …): their absence is the deliverable, so they are skipped and
+#                    never required on disk (exit-0 itself is close-gate.sh's GREEN
+#                    leg, which runs before this core). An epic closes when its
+#                    children are closed; there is no review receipt to demand
+#                    (ac-ac-review-narrowing-aq10.1, .10)
 #   human-gate    -> exempt (closure is a recorded human decision)
 #
 # HISTORICAL CLOSES ARE NEVER SWEPT: this runs at close time, on the bead being closed.
@@ -232,6 +235,22 @@ case "$ITYPE" in
       verdict "NOT-CHECKED" "epic has no populated '## Delivers' section — there is no declared artifact to cross-reference. Give the bead a Delivers section, or bypass explicitly" 2
     fi
 
+    # A `deleted-*:` declaration (`deleted-script:`, `deleted-test:`, …) promises the
+    # artifact's ABSENCE: the deletion IS the deliverable, verified by the closing child's
+    # own `test ! -e` probes and the closeout's delivered-marker — never by a file on disk.
+    # Read as a promised path it refuses every deletion epic, and no close reason can
+    # satisfy it (naming the path requires it to exist; omitting it trips the cross-
+    # reference above). Measured live on ac-ac-review-narrowing-aq10: 9/9 children closed,
+    # 6/6 probes green, refused on the two files its own D6 deleted. Strip them in the
+    # same pass that already drops `touchers:` lines; they still COUNT as declared
+    # artifacts, so a deletion-only epic is not UNVERIFIABLE-DELIVERS either.
+    DELETED_ARTIFACTS=$(printf '%s' "$DELIVERS" \
+      | grep -E '^[[:space:]]*-[[:space:]]*deleted-[A-Za-z0-9_-]+:' \
+      | grep -oE '[A-Za-z0-9_.][A-Za-z0-9_./-]*\.[A-Za-z0-9]+' \
+      | grep -vE '^\.+$' \
+      | grep -vE '^[a-z0-9]+(-[a-z0-9]+)+(\.[0-9]+)+$' \
+      | LC_ALL=C sort -u)
+
     # A dotted CHILD BEAD ID (`ac-4y7l.5`, which a touchers line's `owned by:` clause
     # names) is path-shaped to this regex but is not a file, so reading it as an artifact
     # refuses the epic for a path that can never exist on disk — measured on ac-4y7l,
@@ -242,12 +261,13 @@ case "$ITYPE" in
     # that are not artifacts — the same exclusion both sibling Delivers readers apply.
     ARTIFACTS=$(printf '%s' "$DELIVERS" \
       | grep -v '^[[:space:]]*touchers:' \
+      | grep -vE '^[[:space:]]*-[[:space:]]*deleted-[A-Za-z0-9_-]+:' \
       | grep -oE '[A-Za-z0-9_.][A-Za-z0-9_./-]*\.[A-Za-z0-9]+' \
       | grep -vE '^\.+$' \
       | grep -vE '^[a-z0-9]+(-[a-z0-9]+)+(\.[0-9]+)+$' \
       | LC_ALL=C sort -u)
 
-    if [ -z "$ARTIFACTS" ]; then
+    if [ -z "$ARTIFACTS" ] && [ -z "$DELETED_ARTIFACTS" ]; then
       verdict "UNVERIFIABLE-DELIVERS" "epic bead $BEAD_ID carries a prose-only '## Delivers' — no path-shaped artifact exists to cross-reference, so NO close of this bead can ever pass evidence check. Fix the bead (give Delivers a path) or bypass explicitly. Audit siblings: close-evidence-check.sh --list-unverifiable" 2
     fi
 

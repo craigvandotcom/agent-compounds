@@ -169,6 +169,23 @@ whatever
 ## Consumes
 - none'
 bead bd-epic-owned epic '[]' "$EPIC_OWNED_DELIVERS"
+# A `deleted-*:` declaration promises the artifact's ABSENCE — the deletion itself is the
+# deliverable. Read as a path it refuses every deletion epic; no close reason can satisfy it.
+EPIC_DELETED_DELIVERS='## Intent
+whatever
+## Delivers
+- script: epicship/thing.sh
+- deleted-script: epicship/gone.sh
+## Consumes
+- none'
+bead bd-epic-deleted epic '[]' "$EPIC_DELETED_DELIVERS"
+EPIC_DELONLY_DELIVERS='## Intent
+whatever
+## Delivers
+- deleted-test: epicship/gone.sh
+## Consumes
+- none'
+bead bd-epic-delonly epic '[]' "$EPIC_DELONLY_DELIVERS"
 run_epic() { # <expected exit> <label> -- <gate args...>
   local want="$1" label="$2"; shift 3
   CASES=$((CASES + 1))
@@ -191,6 +208,12 @@ run_epic 1 "epic with a promised path missing on disk -> REFUSE" -- bd-epic-gone
 # A touchers line's `owned by: <child bead id>` is path-shaped but is not a file: read as an
 # artifact it refuses every epic whose Delivers names its owner beads (measured on ac-4y7l).
 run_epic 0 "epic whose touchers name a dotted child bead id -> PASS (ids are not artifacts)" -- bd-epic-owned "shipped: probe receipt green 6/6. Delivered: epicship/thing.sh"
+# The deletion IS the deliverable: a `deleted-*:` declaration is skipped and never required
+# on disk (the closing child's own `test ! -e` probes are the verification). The surviving
+# non-deleted artifact is still cross-referenced; a missing NON-deleted path still refuses
+# (bd-epic-gone, above) — that leg is unchanged.
+run_epic 0 "epic with a deleted-* declaration not on disk -> PASS" -- bd-epic-deleted "shipped: epic landed. Delivered: epicship/thing.sh. probe receipt: FLIGHT-RECEIPT v1 exit 0"
+run_epic 0 "epic whose only deliverable is a deletion -> PASS (not UNVERIFIABLE)" -- bd-epic-delonly "shipped: the deletion landed. probe receipt: FLIGHT-RECEIPT v1 exit 0"
 
 echo "--- audit mode: --list-unverifiable names the never-verifiable population ---"
 jq -s '.' "$FIXTURE_DIR/bd-prose.json" "$FIXTURE_DIR/bd-task.json" "$FIXTURE_DIR/bd-epic.json" \
