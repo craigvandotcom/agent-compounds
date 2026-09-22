@@ -6,11 +6,11 @@ between-session sweep (`PANEL=light`). For feature-specific review before merge,
 
 **Standing weekly review of `main` (trunk-direct duty, C2).** Because fixes now land directly
 on `main` with no PR diff to gate them, the weekly `PANEL=full` run doubles as the standing
-review of `main`: **if no batch has shipped (no `.claude/reviews/batch/` commit) in >7 days,
-the weekly hygiene run is the review of everything on `main` since the last `v*` tag** — it is
-not optional in that window. This is the trunk-direct analogue of the pre-merge review a PR used
-to force; when batches ship regularly, the verification gate covers `main` and
-this weekly pass is the ordinary quality sweep on top.
+review of `main`: **if nothing has shipped (the newest `v*` tag is >7 days old), the weekly
+hygiene run is the review of everything on `main` since that tag** — it is not optional in that
+window. This is the trunk-direct analogue of the pre-merge review a PR used to force; when
+releases ship regularly, the verification gate covers `main` and this weekly pass is the ordinary
+quality sweep on top.
 
 **Baseline pointer only — `ac-prove` `probe` mode (Consumer Roster row (e)).** The weekly
 review-main run consumes the latest `ac-prove` receipt in **`probe` mode ONLY** — a read-only

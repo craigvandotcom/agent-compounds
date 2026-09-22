@@ -106,12 +106,8 @@ route through a branch-merge path (dependabot, human PRs). `ac-publish` owns the
 fix-forward → tag → deploy verification. Delegation prompt:
 
 > "Run ac-publish for this hygiene run's commits on `main`. Version bump = patch (existing
-> hygiene-bumps-patch policy — accept without asking); the 5-lens panel already served as this
-> batch's review — **pass the panel run report as the pre-supplied review artifact for Phase 1
-> path (a)** (it carries an explicit `VERDICT:` line; stage it in `.claude/reviews/pending/` and
-> carry it into `.claude/reviews/batch/` via your Act 3 commit — never write to `batch/` outside
-> that single commit, bd-kudrb), so do NOT re-run `ac-review` on this same diff; uncertain CI feedback →
-> decision beads (Exhaust Rule); no 'what's next?' after."
+> hygiene-bumps-patch policy — accept without asking); do NOT re-run `ac-review` on this same
+> diff; uncertain CI feedback → decision beads (Exhaust Rule); no 'what's next?' after."
 
 **Hand `ac-publish` the "Also carried (not hygiene fixes)" disclosure.** With no PR diff to
 eyeball, foreign work that rode along is easy to miss — diff `main` since this run's first
@@ -155,18 +151,9 @@ implement-ready for the loop.
 
 Produce the summary using the template in **`references/report-template.md`** (convergence table, resolution breakdown, areas reviewed, health assessment).
 
-**Commit the run report to `.claude/reviews/` root** (the standalone/mid-batch review
-destination — same rule as any non-batch-close `ac-review` invocation). *Hygiene itself* **must
-NOT** write to `.claude/reviews/batch/`: that directory is the review-mark, and under the
-single-writer invariant (bd-kudrb) **only `ac-publish`'s Act 3 commit may touch it** — not
-hygiene, not `ac-review`. A hygiene run on its own is not a batch close; writing there would
-spuriously advance the review-mark and make the next standing-review-of-`main` skip real commits,
-and a write landing mid-ceremony would be returned by the anchor probe as a commit inside its own
-range (silent under-scoping). (When this run *did* land fixes and closes them through
-`ac-publish`, the panel report is handed to that ceremony as its Phase 1 review artifact —
-path (a) — staged in `.claude/reviews/pending/`, and `ac-publish`, not hygiene, carries it
-into `.claude/reviews/batch/` in its Act 3 commit; advancing the mark is then correct, because a
-batch genuinely shipped and was reviewed.)
+**Commit the run report to `.claude/reviews/` root** — the one destination a hand-run
+`ac-review <range>` writes to. A hygiene run is not a batch close, reviews nothing by existing,
+and advances no mark.
 
 **Headless run:** post the summary via `slack-send` — this is a MANDATORY step, not optional
 polish (confirm exit 0) — then skip the question below and proceed to Cleanup.

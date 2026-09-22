@@ -44,25 +44,16 @@ time, and standing code quality is `ac-hygiene`'s lane on its own cadence.
 
 ## Step 1 — classify the diff
 
-Run against the batch's range: everything since the review-mark (the last commit that
-touched `.claude/reviews/batch/` — the batch mark the batch boundary advances;
-bootstrap fallback when no batch commit exists yet: the last `v*` tag).
+Run against the batch's range: everything since the last `v*` tag — the release tag
+`ac-publish` writes. A repo with no `v*` tag yet falls back to its root commit.
 Fail-safe: a class flips on when **any** file matches; ambiguity counts as a match,
 never a skip.
 
 ```bash
-# Batch-mark anchor (the range every batch consumer shares).
-# Single-writer invariant (bd-kudrb): ONLY the batch boundary's Act 2 commits to
-# .claude/reviews/batch/. Any second writer would land a commit inside the very
-# range this probe bounds — which is exactly the under-scoping it exists to stop; otherwise the
-# probe returns a commit inside the range it is meant to bound and the gate silently
-# under-scopes (no error, just fewer files classified).
-REVIEW_MARK=$(git log -1 --format=%H -- .claude/reviews/batch/)
-if [ -n "$REVIEW_MARK" ]; then
-  RANGE="$REVIEW_MARK..HEAD"              # batch vs review-mark
-else
-  RANGE="$(git describe --tags --match 'v*' --abbrev=0)..HEAD"   # bootstrap: last v* tag
-fi
+# Release anchor (the range every batch consumer shares): the last `v*` tag — the
+# release `ac-publish` tags — or the root commit when the repo has no tag yet. There
+# is no second boundary and no second writer: nothing else marks where a batch ends.
+RANGE="$(git describe --tags --match 'v*' --abbrev=0 2>/dev/null || git rev-list --max-parents=0 HEAD | tail -1)..HEAD"
 FILES=$(git diff "$RANGE" --name-only)
 NFILES=$(printf '%s\n' "$FILES" | grep -c . || true)
 
