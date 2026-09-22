@@ -1,60 +1,48 @@
 # Docket queue lanes — collapse the flood, never the emergency
 
-Extracted from the spine 2026-09-10. The spine carries the pointer; this file carries the
-rule. A **queue lane** is one machine-filed batch of `human-gate` beads from a single
-upstream source (today: `curator-escalation`, filed 80+ at a time). Detect it mechanically:
-**any label carrying >5 open `human-gate` beads.**
+A **queue lane** is one machine-filed batch of gate beads from a single upstream source.
+`scripts/docket.sh` detects and renders lanes; this file carries the rules it implements and
+the declaration format an app uses.
 
-## Three rules, in order
+## Three rules, in order (computed)
 
-### 1. Collapse >5 to ONE line — presentation only
+1. **Collapse >5 to ONE line.** Any non-lifecycle label carrying >5 on-docket gate beads renders
+   as `🔁 {lane} — {N} queued (oldest {age})` and its P2+ members are never itemized. Collapse is
+   presentation, not deferral: the lane line **is work in this sitting** — after the independent
+   P0/P1s, auto-advance into it. `{N} remaining` and `~{est} min` never count a lane.
+2. **P0/P1 are NEVER collapsed.** They are itemized above the lane line and excluded from its
+   count. A lane label is a *filing* channel, not a statement of importance.
+3. **Elevate at `>=20` members OR oldest `>21` days** → `🔁 Run the {lane} sitting …
+   [ELEVATED]`, a first-class tap above 🟢. Collapse and elevation are independent thresholds.
 
-Render the lane as `lane · count · oldest age · its batch action` and **never itemize its
-P2+ members**. Collapse is presentation, not deferral: the lane line **is work in this
-sitting** — after independent P0/P1s, auto-advance into it.
+## Declared lanes — the app's batch card
 
-### 2. P0/P1 are NEVER collapsed
+An app declares its own batch lanes in `<project>/.claude/docket-lanes.json`. The registry never
+names an app's lane; an app without the file sees only the three rules above.
 
-Itemize P0/P1 members individually **above** the lane line, then **subtract them from its
-count**. A lane label is a *filing* channel, not a statement of importance: the same label
-lands both a bulk batch and the P0 that batch was filed to fix. Caught live: a naive
-whole-label collapse would have hidden `bd-8yhvb` (**P0**, the frozen-lane bug) plus three
-P1s inside an 82-bead flood — strictly worse than the flood itself.
-
+```json
+{ "lanes": [ {
+    "label": "<bead label>",
+    "name": "<short lane name>",
+    "fields": { "<field>": [ { "from": "title|description", "re": "<regex, group 1 = value>" } ] },
+    "line": ["{field}", "{other}"],
+    "unanimous": [ { "from": "description", "re": "<regex that matches only a unanimous recommendation>" } ]
+} ] }
 ```
-• bd-8yhvb 4d P0 Curator escalations UNRELEASABLE — …   → decide   (P0/P1 stay itemized)
-🔁 curator-escalation — 89 more queued (oldest 4d)      → work the queue
-```
 
-### 3. Elevated tap — SERVING POLICY (additive to rule 1, never a replacement)
+- A declared lane always renders as ONE card, whatever its size: members one per line, built
+  from `line` segments (a segment whose field does not match is dropped), unanimous members
+  marked `✓`, split members `·`. Extractors are tried in order; the first match wins.
+- `unanimous` must match ONLY a structured marker the filer writes — never free prose. A missed
+  unanimous costs one manual tap; a false one applies a ruling nobody made.
+- The card offers **Accept all N unanimous recommendations** (`references/action-loop.md`), then
+  walks the split members one by one.
 
-Two thresholds answer different questions. `>5` decides whether the lane **collapses** to one
-line. **`>=20` open members OR oldest member older than 21 days** decides whether that one
-line is **elevated to a first-class tap** (Phase 4, above 🟢). A 30-bead lane is both
-collapsed *and* elevated; a 7-bead lane is collapsed and plain. One threshold never rewrites
-the other.
+## Lane-health checks
 
-Over the line, render the elevated tap (`Run the curator sitting — {N} queued`) and nudge
-**`bd-8yhvb`** — the supervised batch-sitting bead that owns working a curator lane down — so
-the human taps into the supervised flow instead of grinding rows one at a time.
-
-## Two lane-health checks
-
-A flood hides its own defects — run both when you render the line:
-
-- **Unreadable titles are a FILING DEFECT.** A docket bead whose title carries a raw
-  uuid/hash instead of its human subject (`Legacy escalation: hold 6f390127-…`) cannot be
-  triaged by a human at all. If >5 in a lane look like this, say so on the line and offer a
-  re-title pass — the subject is usually recoverable from the body or the source system.
-  **Fix the FILER too, not just the rows.**
-- **A lane filed before a governing policy was ratified is STALE BY CONSTRUCTION.** If a
-  rule landed after the lane was filed, some members are now auto-resolvable and do not
-  belong on the docket. State the fraction expected to survive re-triage rather than
-  presenting the raw count as all real human work.
-
-## Why
-
-A single supervised conversion took the docket from 61 to 143 in one command (2026-07-30).
-Itemised, the ~15 real gates became unfindable. The beads were legitimate — they made
-invisible work visible — so suppressing them is wrong and itemising them is also wrong.
-**Collapsing is the only honest option.**
+- **Unreadable titles are a FILING DEFECT.** >5 members whose title carries a raw uuid/hash →
+  docket.sh flags it; offer a re-title pass (the subject is usually in the body or the source
+  system) and fix the filer too.
+- **A lane filed before its governing policy was ratified is STALE BY CONSTRUCTION** — some
+  members are now auto-resolvable. Judge the fraction expected to survive re-triage and state
+  it, rather than presenting the raw count as all real human work.

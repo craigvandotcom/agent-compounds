@@ -45,48 +45,26 @@ The board is the **session opener**: before any question, invoke **`ac-board`** 
 
 ## Phase 0–1: Initialize, then render first
 
-Inside a project → that repo (`PROJECT_ROOT=$(git rev-parse --show-toplevel)`). At org level or asked "across everything" → the org-wide sweep (`references/session-scan.md` § Extend the docket org-wide).
+**Show the board before asking anything.** Invoke **`ac-board`**, then run the docket — one call:
 
-**Show the board before asking anything** — the human came to see what needs them, not to answer a setup question. Invoke **`ac-board`** → then the docket. Freshen (`/ac-tidy` housekeeping, `/ac-align` strategy) is a *write*, so it is offered as an **option inside the action loop** (Phase 5), never an upfront gate. Surface a one-line hint (`⚠ {N} pipeline proposals pending — review Docket`) whenever open `pipeline-proposal` beads exist. Headless runs skip freshen entirely.
-
----
-
-## Phase 2: Scan (parallel), then apply the loop boundary
-
-**Reuse the board's read, never re-scan** (`ac-pipeline/references/board-scan.md` — scans A beads · B plans · C backlog), add the docket-only reads, then **filter out everything past the loop boundary before presenting**:
-
-- **🔴 Decision Docket (PRIMARY)** = open board beads matching `human-gate` OR `pipeline-proposal` OR `dream-proposal`, pre-staged with a memo; agents enrich but **never** close them. Applying a proposal: invoke the owning skill's INTERACTIVE flow, then `status: applied` + close through `close-gate.sh` (`references/action-loop.md`'s idiom). Discarding: `status: rejected` + close through `close-gate.sh`, no skill. **Verify before presenting** — ~1 read of live state, the bead's own `events` table FIRST, freshness bound on `(tap-ready)`. Full lens: `references/session-scan.md`.
-- **🟡 Plans awaiting sign-off** = board plans `status: draft | refined` (needs approve) OR `status: approved` with polish keys present (needs ready), NOT `bead-ready` / `beadified`. Most-invested first.
-- **🟢 Hopper** = `active/` captured → `/ac-plan`; `candidate` → approve into pool / discard; thin `active/` → promote the pool (`/ac-align`).
-- **Loop awareness (count only)** → the board's `🤖` line, never itemized.
-- **Queue lanes** = any label with >5 open `human-gate` beads. Collapse, elevate, lane-health: `references/docket-lanes.md`.
-- **Group the docket by gate kind** — `issue_type` (`decision` vs `task`), title prefix as fallback.
-
----
-
-## Phase 3: Situational-awareness header
-
-The board render is the header. Below it, add the human's line — the whole sit-down in one glance (lead with it):
-
-```
-## Command Center — {project | org-wide}
-
-Needs you: {N} remaining · {ci_state} · {plans_pending} plan(s) to approve · {hopper} to plan — ~{est} min  {⚠ N proposals pending, if any}
-{🔁 {lane}: {N} queued — collapsed; still this sitting · omit line if no queue lane}
-⚡ {one-line sequence note IF reordering is warranted; omit if order is fine}
+```bash
+DOCKET="$(git rev-parse --show-toplevel)/.claude/skills/ac-human/scripts/docket.sh"
+[ -f "$DOCKET" ] || DOCKET="$(git rev-parse --show-toplevel)/skills/ac-human/scripts/docket.sh"
+"$DOCKET"            # at org level or asked "across everything": "$DOCKET" --org
 ```
 
-Rough the `~{est} min` from item counts (decision ≈ 1–2 min, plan approve ≈ 2 min, CI ≈ 5). No analysis theater — the `⚡` line appears only when there's a real sequencing call.
+Print it verbatim — it is the header and the three tiers. Freshen (`/ac-tidy`, `/ac-align`) is a *write*, offered inside the action loop (Phase 5), never an upfront gate; headless runs skip it.
 
-**`{N} remaining` EXCLUDES collapsed lane members, and `~{est} min` never prices a lane.**
+## Phase 2–4: What the script computes, what you judge
 
----
+`docket.sh` applies the loop boundary and computes every mechanical fact: the 🔴 Decision Docket (`human-gate` ∪ `pipeline-proposal` ∪ `dream-proposal`, board-scan's on-docket rules), kind (`issue_type`, prefix fallback), P0→P4-then-oldest order, memo completeness, the anti-rot freshness tag from `events` + `verified:` stamps, queue lanes (`references/docket-lanes.md`), 🟡 plans awaiting sign-off, 🟢 the hopper, and the 🧰 frictions + 🧠 memory cards. Never recompute a fact it printed; a `?` is a failed read — name it, never guess.
 
-## Phase 4: The three tiers (silver platter, exit-first)
+You own the judgment:
 
-Order = distance from a stall (tier-first); **within a tier, P0→P4 then oldest** — urgency first, then the longest-stalled so an aging blocker can't hide behind newer arrivals. Omit any empty tier. Age is **derived, never separately queried**: every board pull carries `created_at` per bead — compute `now − created_at` as a compact age token (e.g. `12d`). Add no new `br` invocation. Render per `references/tiers-template.md`.
-
----
+- **Verify before presenting.** `⚠ stale` / `⚠ never verified` → spend ~1 read on live state, present the *verified* scope, re-stamp `verified: <today>`. `⚠ released ×N` → read the bead's `events` before anything else; never re-gate a released bead (`references/docket-anti-rot.md`).
+- **Verify the memo's HARM, not only its facts** — what consumes this, what breaks if nothing is done.
+- **Apply a proposal** through the owning skill's INTERACTIVE flow, then `status: applied` + close through `close-gate.sh`; **discard** = `status: rejected` + close, no skill (`references/action-loop.md`).
+- **Sequence note** — add one `⚡` line under the header only when reordering is warranted. Prod health (`$PROD_URL`, resolved per project — `references/session-scan.md`) and CI/PRs come from the board render.
 
 ## Phase 5: Drive the action loop (interactive · exit-first · auto-advance)
 
