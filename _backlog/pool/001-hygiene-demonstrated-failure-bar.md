@@ -21,7 +21,7 @@ and once the ac-review plan lands it is the only routine independent read of cod
 - A verify-only pass on serious findings BEFORE any fix lands; a fix is checked by its own probe and never
   returns to the panel.
 - Fix order delete > simplify > tighten an instruction > add code; a fix that adds a guard, mode or option
-  waits for Craig's yes.
+  waits for a human yes.
 - Observed machinery misbehaviour → `FRICTIONS.md`; imagined problems die in the report.
 - Revisit the round count ("minimum 3 rounds for cross-round consensus") and trunk-direct fixes against
   that bar — each round's fix is new diff for the next round.
@@ -30,7 +30,7 @@ and once the ac-review plan lands it is the only routine independent read of cod
 
 ## Notes
 
-- Origin: Craig, in conversation 2026-09-21 — out-of-scope item from the ac-review plan, asked to be
+- Origin: the operator, in conversation 2026-09-21 — out-of-scope item from the ac-review plan, asked to be
   backlogged.
 - Recorded failure of this shape: epic ac-gates-ask-git-eiwk — `close-gate.sh` grew +93 lines over four
   review rounds defending hypothetical bypasses; the round-4 fix caused regression ac-1kfh.

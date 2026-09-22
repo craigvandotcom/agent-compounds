@@ -55,6 +55,7 @@ EXEMPT_PATHS = {
     "lint/checks/1-dead-patterns.py": "hunts retired names, one of which contains a banned word",
     "lint/checks/1-dead-patterns.test.sh": "asserts on the retired name 1-dead-patterns hunts",
     "lint/fixtures/1-dead-patterns/skills/legacy-skill/SKILL.md": "the RED fixture must carry the retired name",
+    "memory/spawn-prompt-is-a-snapshot-spawn-after-sweep.md": "its domain field names this deployment; the fact is about that domain",
 }
 
 # Files whose bytes are not text we can meaningfully search.
