@@ -1,13 +1,13 @@
 ---
 name: ac-review
-description: 'The batch boundary''s independent review: a post-batch verdict over the committed batch range, invoked by the batch boundary (trigger: ''review the batch''), plus the same contract run targeted at any range the operator names (`ac-review <range>`). Reviewers run the validator stance — a different stance from the implement workers, read-only on the shared tree, and every finding carries ACCEPT/FIX/DEFER plus a catch-stage label; only a named impact: makes a bead. The batch boundary and ac-publish route its report via report_dest. Triggers: ''/ac-review'', ''review the batch'', ''review this range''.'
+description: 'The hand-run independent review: `ac-review <range>` over a range the operator names — nothing triggers it and no batch runs it. Three lenses (correctness against the plan and the bead ACs, test-quality, and one risk lens the diff chooses) report against one bar: a demonstrated failure in ordinary operation, or a violated acceptance criterion, with a reproducing command. Every finding routes to Defect (a bead), Hardening (one report line, never a bead) or Nothing; a fresh verifier re-runs each Critical/High before any fix. Reviewers run the validator stance, read-only on the shared tree; reports land in `.claude/reviews/`. Triggers: ''/ac-review'', ''review the batch'', ''review this range''.'
 ---
 
-# ac-review — the post-batch review
+# ac-review — the hand-run review
 
-**One contract, two entry points.** Batch-boundary over the just-closed batch ("review the
-batch"); same contract at any range the operator names (`ac-review <range>`). No phase ladder
-(Phases 0–8 gone): verdict + findings; fixing is the implement lane (§ Findings).
+**One entry point: `ac-review <range>`.** A range the operator names, and nothing else.
+Nothing triggers a review — no batch boundary, no epic close, no scheduled job. Review is
+a deliberate tool, run when the operator asks for one.
 
 ## Who reviews
 
@@ -17,61 +17,61 @@ batch"); same contract at any range the operator names (`ac-review <range>`). No
 - **READ-ONLY on the shared tree.** No write/mutation tooling, no "just fixing it while I'm
   here" — a reviewer that can edit is a second author (H-impact incident). Sole carve-out:
   sabotage probes in a **disposable worktree**; the result is a finding, never a diff.
-- **Depth by risk, not habit.** A batch touching a gate, an auth path, a migration or a
-  destructive operation gets the deep panel; prose and config get one pass.
+- **Depth by risk, not habit.** A range touching a gate, an auth path, a migration or a
+  destructive operation gets all three lenses; prose and config may take correctness alone.
 
 ## The contract
 
-1. **Scope.** Batch boundary: the committed batch range plus its bead ids. Manual: the named
-   range. Diff pathspec everywhere: `:(exclude).beads/`.
-2. **Panel.** Spawn reviewers in parallel — one per dimension from
-   `references/review-dimensions.md` (core four always; test-quality/contracts per their SKIP
-   rules), each prompt built from `references/reviewer-prompt-template.md`. Write the panel
-   manifest (`panel-round-1.json`: spawned/skipped) BEFORE spawning — `consensus.py` refuses
-   to run without it (exit 3), and a spawned dimension with no output file is a partial
-   failure, never a silent pass. A reviewer that dies is re-spawned ONCE.
-3. **Consensus.** `python3 scripts/consensus.py --artifacts-dir <dir> --round 1`. Exit 3 (PANEL UNKNOWN) is a hard stop — reconstruct the manifest, never default the panel. A
-   `reviewers_missing` that survives the re-spawn → file the un-reviewed dimension as an honest harness-failure bead: `br create -t task --labels origin:ac-review,qa-blocker,review-finding,unrefined,impact:<class>`; then `VERDICT: NEEDS_DECISION` — never `-t bug` with no catch-stage (a harness failure is not a shipped defect).
-4. **Report.** `references/report-template.md` — the `**Range:**` line (full SHAs, machine-parsed coverage) and the `**Panel:**` line (copied from
-   `consensus-round-1.json`: the panel that ACTUALLY ran) are mandatory. Destination: `.claude/reviews/pending/` when the boundary passes `report_dest`, `.claude/reviews/`
-   root otherwise — never `.claude/reviews/batch/` (that dir is the review-mark).
-5. **Verdict.** `VERDICT: APPROVED` only if every manifest dimension reported, findings are dispositioned, and no qa-blocker remains; else `VERDICT: NEEDS_DECISION` —
-   the boundary stops instead of closing. The panel/conductor writes the verdict; the implementer whose diff is under review never does (the party optimising against the measure cannot record the verdict).
+1. **Scope.** The named range, diff pathspec `:(exclude).beads/`.
+2. **The lenses.** One reviewer per lens in `references/review-dimensions.md` —
+   correctness, test-quality, and the one risk lens the diff chooses (security or
+   contracts) — each prompt built from `references/reviewer-prompt-template.md`, all in a
+   single message (parallel). A reviewer that dies is re-spawned ONCE.
+3. **The verify round.** Before any fix, one fresh verifier per Critical/High finding runs
+   each probe and tries to refute it (`reviewer-prompt-template.md` § The verify round).
+   No Critical/High → no verify round.
+4. **Report and verdict.** `references/report-template.md`, written to `.claude/reviews/`.
+   `VERDICT: APPROVED` when every lens reported and every finding is dispositioned; else
+   `VERDICT: NEEDS_DECISION`. The conductor writes the verdict, never the reviewer.
 
 ## What the review judges
 
-- The dimensions in `references/review-dimensions.md`, plus two a green suite cannot see: **fixture-shape validity** — could each test's fixtures EXIST in production?
-  a test over an impossible input asserts nothing — and **causal sufficiency** — for every bead the batch closed, does THIS diff produce that GREEN? (The token is
-  not the thing; and the probe may have flipped for another cause — a sibling's commit, an already-green AC.)
-- **Review surface:** code a user reaches in production, or code that writes what a user
-  reads (`review-dimensions.md` § Review surface). Factory findings (scripts, tests, CI,
-  `.claude/`, docs) are report-only; sole exception: a mutation-probe-convicted test finding.
+- **The one bar** (`references/review-dimensions.md`): a demonstrated failure in ordinary
+  operation, or a violated acceptance criterion, with a reproducing command. "Could be
+  bypassed" counts only against a real adversary — user input, auth, external data, PII,
+  money — never our own worker, and the probe may not set up state a cooperative worker or
+  a real user would not produce.
+- Two things a green suite cannot see: **fixture-shape validity** — could each test's
+  fixtures EXIST in production? A test over an impossible input asserts nothing — and
+  **causal sufficiency** — for every bead the range closed, does THIS diff produce that
+  GREEN? (The token is not the thing; a probe may have flipped for another cause.)
+- **Plan fidelity** — the correctness lens reads the plan's `## Vision` and `## Out of
+  scope` and flags any diff in range that breaks them, with one mechanical probe: the net
+  line change on the epic's named files after the plan's last deliverable commit.
 
 ## Findings
 
-- Every finding carries **ACCEPT / FIX / DEFER** (DEFER names what would make it now) and a
-  **catch-stage label** — the stage that SHOULD have caught it (plan · beadify · flight ·
-  implement · close · review) — **even when the fix lands in-batch**: the bead is still filed
-  and carries the catch-stage record; a FIX with no bead fails the run's checklist.
-- **Closed epics accept no child (D6).** A late finding against a closed epic opens a
-  follow-up epic — never a new child of the closed one, never a silent reopen. The
-  follow-up carries its own `discovered-from:` trail back to the finding; the closed epic
-  stays closed.
+- **Three bins replace ACCEPT/FIX/DEFER.** **Defect** → a bead, and the `impact:` label
+  carries its demonstration. **Hardening** → one line in the report, never a bead.
+  **Nothing** → ACCEPT with one line saying what was checked.
+- A confirmed defect becomes a bead whose acceptance-criterion probe IS the finding's
+  reproducing command; its fix is checked by re-running that command, never by a second
+  review. Fix order: delete > simplify > tighten an instruction > add code. A fix that adds
+  a guard, mode or option asks the operator through the existing human-gate DECISION bead;
+  a deleting fix does not ask.
+- **Closed epics accept no child.** A late finding against a closed epic opens a follow-up
+  epic — never a new child of the closed one, never a silent reopen. The follow-up carries
+  its own `discovered-from:` trail back to the finding; the closed epic stays closed.
 - **Severity orders the report; only a named `impact:` makes a bead**
-  (`bead-create-contract.md` § Required axes). Else DEFER with a reason. In batch mode each
-  Critical is filed at P0 and each High at P1 — Medium and below are report-only. Shipped
-  defect → `-t bug`; mutation-probe-convicted test → `-t task`; unverified → `-t investigation`;
-  labels `origin:ac-review,impact:<class>,review-finding,unrefined`, `discovered-from: <bead>`,
-  a `Probe:` line carrying the reviewer's reproducing command, and a parent-child edge to the
-  open epic — never `post-merge`: these beads block the epic's close. FIX → bead or `ac-polish code` —
-  never in-place. A round filing no P0/P1 writes `REVIEW: APPROVED <range>` on the epic
-  (`br comments add <epic> ...`). **Conductor confirm:** dedupe · confirm · file · record
-  `proposed-by:`/`confirmed-by:`; consumes workers' **PROPOSED-BEAD** blocks and reviewers'
-  findings. Forks: one decision bead per distinct fork, re-verified against HEAD before
-  filing (`human-gate-template.md` § Before filing) — never per finding. A reasoned
-  **"checked, no finding"** per dimension is a deliverable; silence is not coverage.
+  (`bead-create-contract.md` § Required axes). A shipped defect → `-t bug`;
+  mutation-probe-convicted test → `-t task`; labels
+  `origin:ac-review,impact:<class>,review-finding,unrefined`, plus a `Probe:` line carrying
+  the reviewer's reproducing command. A confirmed defect is never re-reviewed.
+- **Friction route.** Machinery that actually misbehaved or cost time in the run goes to
+  the skill's `FRICTIONS.md`, deduplicated and recurrence-counted, and is ruled in the
+  dream session. Imagined problems die in the report — never a bead.
 
 ## Not this skill
 
-Standing code quality between batches is `ac-hygiene`; doctrine-delta over `skills/` prose is
-lint's; the stage map is `ac-pipeline/references/stage-table.md` (Review row).
+Standing code quality between reviews is `ac-hygiene`; doctrine-delta over `skills/` prose
+is lint's; the stage map is `ac-pipeline/references/stage-table.md` (Housekeeping row).

@@ -29,8 +29,8 @@ Every candidate finding routes to exactly one bin:
 
 A finding that survives the verify round becomes a bead whose acceptance-criterion probe
 IS the reproducing command, and its fix is checked by re-running that command — never by
-a second review. A fix that adds a guard, mode or option waits for Craig through the
-existing human-gate DECISION bead; a fix that deletes does not ask.
+a second review. A fix that adds a guard, mode or option waits for the operator through
+the existing human-gate DECISION bead; a fix that deletes does not ask.
 
 ## The lenses
 
