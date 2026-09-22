@@ -194,7 +194,8 @@ those read your territory, so the shared tree cannot forge them. If one of your 
 file OUTSIDE your `## Territory`, that is a spec defect: it
 makes your evidence a sibling's to break. **This step is NOT independent eyes** —
 you are reviewing your own work, and the party optimising against the measure cannot also be
-the one who records the verdict. Independent eyes are `ac-review`, post-batch, different model.
+the one who records the verdict. Independent eyes are `ac-review`, a hand-run tool a human
+invokes on a range they name — it is not a step of this run.
 
 ## 5b — ALONGSIDE SIBLINGS (swarm only)
 
@@ -259,10 +260,6 @@ fails. Comment the epic, unclaim, go to §1. The bounce adds NO `PREMISE-FAILED:
 prefix — that prefix is flight-check's alone — so a bounced epic re-enters §1
 cleanly; a repeat claim→unclaim loop on one epic in a single run is the falsity
 detector, surfaced by the run ledger.
-
-When every child is closed but the epic carries no `REVIEW: APPROVED` comment, comment
-`review-pending`, unclaim, go to §1. This bounce is not the falsity detector above — the
-epic is waiting on review, not wrongly picked.
 
 Then run every `Probe:` in the epic's own ACs at HEAD. All green → CLOSE through
 close-gate.sh with the probe receipt as the close evidence (the reason cites it, per
