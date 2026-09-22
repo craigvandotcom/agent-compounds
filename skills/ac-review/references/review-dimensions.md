@@ -1,277 +1,167 @@
 # Review Dimensions
 
-The six-dimension panel. Each dimension fills the placeholders in
-`reviewer-prompt-template.md`. The **core four** (security, performance, architecture,
-correctness) ALWAYS spawn. The **two diff-conditional lenses** (test-quality, contracts)
-spawn by default and are skipped only when provably irrelevant — see each SKIP rule.
-Gating is negative on purpose: the failure mode of a wrong gate is one wasted reviewer,
-never a silent coverage gap.
+Three lenses, one bar, three bins. A review runs by hand over a range the operator
+names (`ac-review <range>`) — one reviewer per lens: **correctness**, **test-quality**,
+and one **risk** lens the diff chooses (security or contracts). A reviewer that cannot
+clear the bar reports nothing; an empty report is the expected result.
 
-Spawn the whole panel in parallel (one message, one Task call per spawned dimension),
-and record what was spawned/skipped in the **panel manifest**
-(`$ARTIFACTS_DIR/panel-round-{ROUND}.json` — see SKILL.md Phase 2). `consensus.py` reads
-the manifest to know which reviewers to expect; a spawned dimension with no output file
-is a partial failure, never a silent pass.
+## The bar
 
-**SLUGS** are the suggested `category` values — the consensus key. Reviewers may coin a
-slug for an unlisted defect class, but should prefer these when they fit so same-round
-and cross-round consensus can match.
+A finding is reportable only as a **demonstrated failure in ordinary operation**, or a
+**violated acceptance criterion**, with a **reproducing command** anyone can re-run.
 
----
+- **"Could be bypassed" counts only against a real adversary** — user input, auth,
+  external data, PII, money. Never our own worker, never a cooperative operator, never
+  a state only a hostile setup reaches.
+- **The probe may not set up state a cooperative worker or a real user would not
+  produce.** A precondition nobody reaches in ordinary operation is not a defect.
+- Everything else — a hypothetical, a hardening idea, a preference — is not a finding.
 
-## Review surface
+## The three bins
 
-**Review code a user reaches in production.** Everything else is out of scope: do not hunt
-it, and a finding anchored there is **report-only, never a bead**.
+Every candidate finding routes to exactly one bin:
 
-| IN — hunt and file | OUT — report only |
-|---|---|
-| `app/` · `components/` · `features/` | `scripts/` with no data effect (CI, build, dev tooling) |
-| `lib/` on a request path · `middleware.ts` | `__tests__/` · `e2e/` · `*.test.*` · `*.spec.*` |
-| `supabase/migrations/` (mutates prod data) | `.github/` (CI) |
-| shipped native plugin code | `.claude/` · `_plans/` · docs |
-| **data pipelines that populate what a user reads** (the curator/research lane: `scripts/curate-foods/`, `lib/research/`, catalog writers) | |
+| bin | what it is | where it goes |
+|---|---|---|
+| **Defect** | the bar is met — a demonstrated failure or a violated AC, with the reproducing command | a bead; the `impact:` label carries the demonstration |
+| **Hardening** | real but not demonstrated, or reachable only through a contrived precondition | one line in the report — **never** a bead |
+| **Nothing** | the lens checked and found nothing | ACCEPT, one line saying what was checked |
 
-**Tiebreak** when a path is ambiguous — much of `lib/` is: *does a user reach this line,
-**or read what it writes**?* Either answer yes means product. A pipeline invoked only by a
-cron still writes the catalog a user browses, so it is product; a script that touches no
-user-visible data is not.
+A finding that survives the verify round becomes a bead whose acceptance-criterion probe
+IS the reproducing command, and its fix is checked by re-running that command — never by
+a second review. A fix that adds a guard, mode or option waits for Craig through the
+existing human-gate DECISION bead; a fix that deletes does not ask.
 
-**Carve-out — mutation-probe-convicted test findings.** `test-quality` MAY file a bead
-anchored on a test or guard **if and only if** its `evidence` carries a probe showing the
-guard cannot fail: revert the fix, or delete the guarded line, and the suite still passes.
-No probe, no bead. File it `-t task`. This is the one defect class CI cannot catch, because
-the defect is that CI stays green.
+## The lenses
 
-Applies to the code panel. The docs-lens set on a docs-only diff is a different mission and
-is unaffected.
-
-**A range touching no product surface yields APPROVED with zero findings** — a clean
-result, not a degraded run.
+Each lens fills the `{...}` placeholders in `reviewer-prompt-template.md` from its block
+below. A reviewer that dies is re-spawned ONCE; a spawned lens with no output file is a
+partial failure, never a silent pass.
 
 ---
 
-## security
-
-- **ROLE:** `security`
-- **SKILL_HINT:** *If project has security skills:* `Read .claude/skills/<security-skill>/SKILL.md for security patterns.`
-- **EVIDENCE:** The trust boundary, the concrete attack path (actor → entry point → what they gain)
-
-**METHOD:**
-
-Map the trust boundaries this diff touches FIRST — where user input enters, where
-external data (APIs, webhooks, AI responses, file uploads) crosses into the system,
-where authentication becomes authorization — then walk them like an attacker with
-source access. Follow the data, not the checklist: the real finding is usually the
-boundary nobody thought of as a boundary.
-
-Discipline: a finding must be exploitable-in-principle with a concrete path — name the
-actor, the entry point, and what they get. No speculative best-practice nits.
-
-**SLUGS:** `sql-injection`, `xss`, `csrf`, `ssrf`, `authz-bypass`, `secret-exposure`,
-`pii-leak`, `unvalidated-input`, `insecure-default`, `vulnerable-dependency`
-
----
-
-## performance
-
-- **ROLE:** `performance`
-- **SKILL_HINT:** *If project has performance skills:* `Read .claude/skills/<perf-skill>/SKILL.md for optimization patterns.`
-- **EVIDENCE:** What you measured/traced, the quantified impact (N × unit cost weighed against the operation's real budget)
-
-**METHOD:**
-
-Estimate before you rate. For each suspected hotspot, quantify the impact: N × unit
-cost, weighed against the operation's real budget (hot request path? one-time build
-step? nightly cron?). An O(n²) over a bounded n of 12 is not a finding.
-
-Discipline: **a Critical/High rating REQUIRES a quantified impact estimate in the
-evidence — without one, rate it Medium.** The conductor downgrades unquantified
-Critical/High performance findings anyway, so supply the estimate or the honest
-severity.
-
-**CHECKLIST:**
-
-- Inefficient algorithms (O(n^2) where O(n) suffices — on unbounded n)
-- Missing pagination or unbounded queries
-
-**SLUGS:** `n+1-query`, `waterfall-await`, `missing-cache`, `rerender-storm`,
-`heavy-import`, `unbounded-query`, `missing-pagination`, `inefficient-algorithm`,
-`bundle-bloat`, `missing-index`
-
----
-
-## architecture
-
-- **ROLE:** `architecture`
-- **SKILL_HINT:** *If project has architecture/coding skills:* `Read .claude/skills/<arch-skill>/SKILL.md for patterns.`
-- **EVIDENCE:** What pattern is broken or what propagation you traced — how it deviates from codebase conventions, or what happens at layer N+1 when N fails
-
-**METHOD:**
-
-Check the diff against the codebase's existing patterns first — convention alignment
-beats abstract ideals. Then trace **failure propagation** across every boundary the
-diff crosses: when layer N fails, what actually happens at N+1 and N+2 — does the
-failure surface, or silently corrupt? The error path that doesn't exist at a boundary
-is an architecture finding, not a style note.
-
-**CHECKLIST:**
-
-- Pattern misalignment with existing codebase
-- Single Responsibility Principle violations
-- YAGNI violations (over-engineering, premature abstraction)
-- Tight coupling between modules
-- Circular dependencies or import cycles
-- Wrong abstraction level (under/over-abstraction)
-- Missing error handling at system boundaries (trace the propagation, don't just note the absence)
-- Naming inconsistencies
-
-Also hunt the three named anti-patterns in `ac-pipeline/references/anti-patterns.md` (evidence
-destruction, coordinated workaround, unproven seam) — shared with ac-hygiene's
-structural lens.
-
-**SLUGS:** `pattern-drift`, `srp-violation`, `premature-abstraction`, `tight-coupling`,
-`circular-dependency`, `wrong-abstraction`, `missing-boundary-error-handling`,
-`naming-inconsistency`
-
----
-
-## correctness
+## correctness — against the plan and the bead ACs
 
 - **ROLE:** `correctness`
 - **SKILL_HINT:** *If project has testing skills:* `Read .claude/skills/<testing-skill>/SKILL.md for test patterns.`
-- **EVIDENCE:** What you traced, the scenario that breaks, expected vs actual behavior
+- **EVIDENCE:** What you traced, the scenario that breaks, expected vs actual — or the plan clause the diff contradicts
 
 **METHOD:**
 
-Two moves that pay off: (1) **invariant analysis** — list what must ALWAYS be true for
-the modules this diff touches, then try to construct the scenario that violates it; an
-unenforced invariant is a bug waiting to happen. (2) **boundary probing** — empty,
-null, zero, negative, huge, concurrent, out-of-order.
+Two moves. (1) **Plan fidelity and causal sufficiency.** Read the plan's `## Vision`
+and `## Out of scope`; flag any diff in range that breaks them, with one mechanical
+probe — net line change on the epic's named files after the plan's last deliverable
+commit. Then, for every bead the range closes, ask whether THIS diff produces that
+GREEN: a token meeting its grep is not the thing the AC describes, and the probe may
+have flipped for another cause (a sibling's commit, an already-green AC). (2)
+**Invariant analysis and absence.** List what must ALWAYS be true for the modules this
+diff touches, then build the scenario that violates it; hunt the code that doesn't
+exist — the error path never written, the cleanup never triggered, the rollback that
+isn't there.
 
-Also hunt **absence** — the code that doesn't exist is often the bug: the error path
-never written, the cleanup never triggered, the validation never imagined, the
-rollback that isn't there, in the code this diff introduces.
+**YAGNI (moved here from the retired architecture lens):** does the diff add machinery
+the plan did not ask for and no caller needs? A plan to remove things cannot quietly
+grow. Fix order is delete > simplify > tighten an instruction > add code.
 
-**CHECKLIST:**
+**LOOK FOR:**
 
-- Logic errors and off-by-one mistakes
-- Silent failures (wrong results without errors)
-- Race conditions on shared state
-- Null/undefined hazards
-- Error paths that swallow exceptions
-- Type assertions hiding real issues (as any, ! operator abuse)
+- Logic errors and off-by-one mistakes; silent failures (wrong results, no error)
+- Race conditions on shared state; null/undefined hazards
+- Error paths that swallow exceptions; missing cleanup, stale closures
 - Edge cases not handled (empty arrays, zero values, unicode)
-- State management issues (stale closures, missing cleanup)
-- Missing test coverage for new functionality
-
-Also hunt the three named anti-patterns in `ac-pipeline/references/anti-patterns.md` (evidence
-destruction, coordinated workaround, unproven seam) — shared with ac-hygiene's
-bug-hunter lens.
+- The plan clause the diff contradicts; net growth on the plan's named files
 
 **SLUGS:** `logic-error`, `off-by-one`, `race-condition`, `null-hazard`,
-`swallowed-exception`, `type-assertion-abuse`, `missing-edge-case`, `stale-closure`,
-`missing-cleanup`, `missing-error-path`, `missing-validation`, `missing-test-coverage`
+`swallowed-exception`, `missing-edge-case`, `stale-closure`, `missing-cleanup`,
+`missing-error-path`, `missing-validation`, `plan-drift`, `unproven-causation`
 
 ---
 
-## test-quality
+## test-quality — fixture-shape validity and mutation probes
 
 - **ROLE:** `test-quality`
 - **SKILL_HINT:** *If project has testing skills:* `Read .claude/skills/<testing-skill>/SKILL.md for test patterns.`
-- **EVIDENCE:** What the test claims to guard, and the proof — probe result ("emptied calculateTotal, all covering tests stayed green") or the specific reading
-- **SKIP:** Only when the diff contains **zero test files AND zero runtime source** (docs/CI-only diff). Otherwise spawn.
+- **EVIDENCE:** What the test claims to guard, and the proof — the probe result (e.g. "emptied calculateTotal; every covering test stayed green") or the specific reading
 
 **METHOD:**
 
 Audit whether the tests this diff adds or changes are worth anything. A bad test is
-worse than no test — it costs runtime and buys false confidence. Machine-written tests
-are the expected failure mode here: testing the mock, tautologies, cannot-fail
-assertions. Scope: test files in the diff, plus the covering tests of runtime code the
-diff touched (if the diff adds runtime code with NO covering tests, that gap belongs to
-correctness/contracts — you audit the tests that exist).
+worse than no test — it costs runtime and buys false confidence.
 
-Read first, experiment second: shortlist suspects from the reading veins below, then
-spend a capped probe budget — **max ~5 probes** — convicting the shortlist. Reading
-nominates; probes convict.
+Read first, experiment second: shortlist suspects, then spend a capped probe budget —
+**max ~5 probes**. Reading nominates; probes convict.
 
-The probes:
-- **Rerun** suspect tests 2–3× on identical code. A test that flips is proven flaky.
-- **Shuffle** — run them in random order (vitest: `--sequence.shuffle` with a seed, or
-  the runner's equivalent). Fails only when shuffled = proven order-dependent.
-- **Sabotage** — break the code a test claims to guard (empty the function body, flip a
-  boundary, invert a condition — pick the ONE sabotage most likely to expose a hollow
-  test), run just the covering tests, expect red. Still green = the test asserts
-  nothing. That's proof, not opinion.
+- **Fixture-shape validity.** Could each test's fixtures EXIST in production? A test
+  over a row, state or input the pipeline can never persist asserts nothing; a suite
+  that is green, mutation-sensitive and built on an impossible fixture is worthless
+  anyway.
+- **Sabotage.** Break the code a test claims to guard (empty the body, flip a boundary,
+  invert a condition — the ONE sabotage most likely to expose a hollow test), run the
+  covering tests, expect red. Still green = the test asserts nothing. That is proof,
+  not opinion.
+- **Rerun / shuffle.** A test that flips on identical code is flaky; one that fails
+  only under `--sequence.shuffle` is order-dependent.
+- **Cannot-fail and tautology.** No assertions; assertions inside conditionals or catch
+  blocks; un-awaited async assertions; expected values computed by the SUT's own logic;
+  assertions that only echo arguments the test itself passed.
 
-Isolation discipline (absolute): the conductor and other reviewers are working on this
-branch RIGHT NOW. Never sabotage or modify the shared tree. All destructive probes run
+**Isolation (absolute):** the shared tree is read-only to you. Destructive probes run
 in a disposable worktree — `git worktree add <tmpdir> HEAD`, probe there,
-`git worktree remove --force <tmpdir>` when done. To you, the shared tree is read-only.
-Never `git stash` from a worktree: worktrees share the parent's refs, so the stash
-lands in the SHARED repo (measured: two inert "WIP on (no branch)" entries had to be
-dropped by hand). The worktree-safe discard from a worktree is a scoped
-`git checkout HEAD -- <path>` inside the worktree, or `git worktree remove --force`
-as the only teardown.
+`git worktree remove --force <tmpdir>` when done. Never `git stash` from a worktree
+(it lands in the shared repo).
 
-The reading veins, in rough payoff order:
-- **Cannot fail** — no assertions; assertions inside conditionals/catch blocks;
-  un-awaited async assertions; trivial truths (defined-only, length-only);
-  snapshot-only tests reflexively regenerated on every change.
-- **Tautologies** — expected values computed by the same logic as the code under test,
-  or the test importing the SUT's own helper to build its expectation.
-- **Testing the mock** — assertions that only echo arguments the test itself passed;
-  asserting a stub returns its stubbed value; mocking the module under test; mock setup
-  longer than the test body. Cross-check `ac-pipeline/references/anti-patterns.md`'s unproven seam: a
-  mocked boundary with no un-mocked test anywhere.
-- **Flakiness precursors** — sleeps instead of polling, unseeded randomness, un-frozen
-  clocks, real network in unit tests, shared mutable fixtures, order assertions on
-  unordered collections, float equality.
-- **Zombies** — skipped tests with no linked issue, commented-out tests, tests mocking
-  modules this diff just removed or renamed.
+**No probe, no bead.** A test or guard may be reported as a Defect only when `evidence`
+carries the mutation probe showing the guard cannot fail: revert the fix or delete the
+guarded line, and the suite still passes. Without that probe, report nothing.
 
-Discipline: never nominate a test for deletion on reading alone — a sabotage probe that
-stays green IS deletion-grade evidence. Probe-convicted cannot-fail tests and zombies:
-`auto_fixable: true`. Over-mocked or tautological tests needing a rewrite:
-`auto_fixable: false` — a bad rewrite destroys the only regression protection that code
-has. State which probes you ran and their verdicts even when clean.
-
-**SLUGS:** `hollow-test`, `testing-the-mock`, `tautological-test`, `flaky-test`,
-`order-dependent-test`, `zombie-test`, `flakiness-precursor`
+**SLUGS:** `hollow-test`, `impossible-fixture`, `testing-the-mock`, `tautological-test`,
+`flaky-test`, `order-dependent-test`, `zombie-test`
 
 ---
 
-## contracts
+## risk — security or contracts, chosen by the diff
+
+Pick ONE risk lens by what the diff touches, never by habit:
+
+- **security** when the diff touches a trust boundary — user input, auth, external
+  data (APIs, webhooks, AI responses, file uploads), PII, money.
+- **contracts** when the diff touches an exported surface — types, interfaces, route
+  handlers, exported function signatures, docs.
+- Neither, when the diff touches neither: report nothing rather than manufacture a lens.
+
+### security
+
+- **ROLE:** `security`
+- **SKILL_HINT:** *If project has security skills:* `Read .claude/skills/<security-skill>/SKILL.md for security patterns.`
+- **EVIDENCE:** The trust boundary, the concrete attack path (actor → entry point → what they gain), and the command that walks it
+
+**METHOD:** Map the trust boundaries this diff touches FIRST — where user input enters,
+where external data crosses into the system, where authentication becomes authorization —
+then walk them like an attacker with source access. Follow the data, not the checklist:
+the real finding is usually the boundary nobody thought of as a boundary. A finding must
+be exploitable with a concrete path — name the actor, the entry point, and what they get.
+**The bar applies here too:** a bypass reachable only by our own worker under a state a
+real user never produces is Hardening, not a Defect.
+
+**SLUGS:** `sql-injection`, `xss`, `csrf`, `ssrf`, `authz-bypass`, `secret-exposure`,
+`pii-leak`, `unvalidated-input`, `insecure-default`, `vulnerable-dependency`
+
+### contracts
 
 - **ROLE:** `contracts`
 - **SKILL_HINT:** *If project has API/type-convention skills:* `Read .claude/skills/<api-skill>/SKILL.md for contract patterns.`
 - **EVIDENCE:** The promise (type/doc/name/API shape), the reality, and which one is right
-- **SKIP:** Only when the diff touches **no exported surface** — no type/interface files, route handlers, exported function signatures, or docs. Otherwise spawn.
 
-**METHOD:**
+**METHOD:** Every type signature, doc comment, API shape, and function name this diff
+adds or edits is a promise. Broken promises are bugs that type-check. Hunt the gap
+between claim and implementation; when claim and code disagree, judge which is right
+from apparent intent and usage, and say so. Also hunt **stubs** — placeholders,
+hardcoded returns, mocks and TODO-shaped code landing in production paths as if real.
 
-Every type signature, doc comment, API shape, and function name this diff adds or edits
-is a promise. Broken promises are bugs that type-check. Hunt the gap between claim and
-implementation; when claim and code disagree, judge which is right from apparent intent
-and usage, and say so in the finding.
-
-Also hunt **stubs**: placeholders, hardcoded returns, mocks, and TODO-shaped code
-landing in production paths as if real — half-implemented features that fail quietly
-instead of loudly.
-
-For **untested promises**, think blast radius, not coverage percentage: where would a
-silent regression in this diff's claims hurt most — auth, data integrity, money, user
-data? For each gap, name the concrete test that would catch it.
-
-**CHECKLIST:**
-
-- Response shapes that don't match their declared types
-- Documented parameters silently ignored
-- Error responses that don't match the documented format; status codes that lie
-- Function/endpoint names describing what the code used to do
-- Stubs, hardcoded returns, or mock data in production paths
-- Half-implemented features that fail quietly
-- High-blast-radius promises with no test that would catch a silent regression
+**LOOK FOR:** Response shapes that don't match their declared types · documented
+parameters silently ignored · error responses that don't match the documented format ·
+names describing what the code used to do · stubs in production paths ·
+high-blast-radius promises with no test that would catch a silent regression
 
 **SLUGS:** `contract-drift`, `lying-signature`, `doc-mismatch`, `ignored-parameter`,
 `lying-status-code`, `stale-name`, `stub-in-production`, `untested-promise`
