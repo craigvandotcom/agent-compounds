@@ -7,10 +7,12 @@
 # tool list the provider rejects — and that is invisible to any check that reads files.
 #
 #   PROBE: per harness, a cheap parent session spawns each stance in agents/*.md with
-#          one instruction: write `ok` to a scratch file OUTSIDE the repo (the scratch
-#          home the stances name), then reply `done`. The verdict is the file, never
-#          the reply. A harness whose CLI is absent is a skipped leg; a run in which
-#          every leg skipped exits 77.
+#          one instruction: write `ok` to a scratch file INSIDE the repo working
+#          directory, then reply `done`. The verdict is the file, never the reply.
+#          Scratch used to sit under /tmp. Claude's sandbox refuses that write, so
+#          every claude stance failed the same boundary and the probe never measured
+#          spawn (ac-7ysx). A harness whose CLI is absent is a skipped leg; a run in
+#          which every leg skipped exits 77.
 #
 #   --if-changed   run only when the stance files, this probe, or a harness CLI version
 #                  changed since the last GREEN run; the stamp is written on green only,
@@ -60,7 +62,9 @@ fails=0 legs_run=0
 ok()  { echo "  ok    $1"; }
 bad() { echo "  FAIL  $1"; fails=$((fails + 1)); }
 
-WORK="$(mktemp -d "${TMPDIR:-/tmp}/stance-probe.XXXXXX")"; trap 'rm -rf "$WORK"' EXIT
+# Inside the working directory, not /tmp: the claude harness sandbox allows the
+# repo and refuses /tmp. The trap removes the directory; a leftover is untracked.
+WORK="$(mktemp -d "$ROOT/.stance-probe.XXXXXX")"; trap 'rm -rf "$WORK"' EXIT
 
 child_prompt() { # <file>
   printf "This is a spawn probe. As a scratch file, write the single word ok to %s, then reply with the single word done." "$1"
