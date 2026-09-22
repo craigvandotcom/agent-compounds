@@ -156,7 +156,7 @@ from a git hook — a hook cannot see a DB-only close.
   receipt rather than exiting silently.
   Probe: `test -x skills/ac-implement/scripts/close-gate.test.sh && bash skills/ac-implement/scripts/close-gate.test.sh` — tier: none
 - The refusal emits the exact string the worker loop greps for, so the loop can branch on it.
-  Probe: `grep -q 'refusing: no probe receipt' skills/ac-implement/scripts/close-gate.sh` — tier: none
+  Probe: `grep -q 'CLOSE-REFUSED:' skills/ac-implement/scripts/close-gate.sh` — tier: none
 - The close step of the skill invokes the gate, so the gate is on the write path and not
   merely available.
   Probe: `grep -q 'close-gate.sh' skills/ac-implement/SKILL.md` — tier: none
