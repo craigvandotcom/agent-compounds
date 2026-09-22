@@ -7,9 +7,10 @@ batch boundary, the CI and review trigger, the ledger and the telemetry rollup. 
 the batch boundary, never touch the ledger, never trigger CI — at any width, including one.
 There is no second mode in which those become yours.
 
-Four scripts refuse on your behalf. **Call them; do not re-check what they already refuse.**
+Five scripts decide on your behalf. **Call them; do not re-check what they already refuse.**
 A hand-check beside a script is a second copy of the rule, and the two will drift.
 
+    skills/ac-implement/scripts/pick.sh            at pick    — eligibility + the prod-write gate
     skills/ac-implement/scripts/require-minted-actor.sh  before claim — no minted name, hand back, no claim
     skills/ac-implement/scripts/flight-check.sh    at claim   — premises + the RED receipt
     skills/ac-implement/scripts/swarm-commit.sh    at commit  — the repo-global commit lane
@@ -42,57 +43,27 @@ per bead.
 
 ## 1 — PICK
 
-**Eligibility is explicit, and it is the whole filter.** A bead is eligible when it is
-`status: open`, carries the `refined` label, is not typed `epic` or `decision`, carries none
-of `epic` / `human-gate` / `device` / `unrefined`, has its assignee unset or set to you, and
-its title is not prefixed `PREMISE-FAILED:` (only the coordinator's `refly.sh` removes that
-prefix, by re-checking; never strip it by hand). Anything else is not a narrower filter — it is
-starvation, and total starvation was measured from exactly these omissions.
+    NEXT=$(bash skills/ac-implement/scripts/pick.sh --actor "$ACTOR" --burned "$BURNED")
 
-    RUST_LOG=error br ready --json -l refined \
-      | jq -r --arg me "$ACTOR" '
-          [ .[]
-            | select(.status == "open")
-            | select(.issue_type != "decision")
-            | select(((.labels // []) | any(. == "epic" or . == "human-gate"
-                        or . == "device" or . == "unrefined")) | not)
-            | select((.assignee // "") == "" or (.assignee // "") == $me)
-            | select((.title | startswith("PREMISE-FAILED:")) | not)
-          ]
-          | sort_by(if .issue_type == "bug" then 0
-                    elif .issue_type == "epic" then 2 else 1 end, .priority, .created_at)
-          | .[].id'
+- **an id** — claim it (§2).
+- **`EPIC <id>`** — the terminal pick: no child is left to claim. Route it to §8, never §2's
+  work path; there is no work step and no commit on an epic.
+- **`DRY`** (exit 1) — no eligible bead: go to the batch boundary (§9).
+- **exit 2** — `NOT-GATED`: a board read failed. Stop; never read it as dry.
 
-Take the first id that is NOT in `$BURNED`. **A bead whose claim was just refused is never
-re-picked in the same pass** — without that rule the loop burns its whole budget re-claiming
-one bead it cannot have. No eligible id left → go to the batch boundary (§9).
+`pick.sh` owns eligibility — the filter, the order and the claim-time prod-write gate. Never
+narrow or re-check it by hand: a differing filter is starvation. Never strip a
+`PREMISE-FAILED:` title prefix yourself; only the coordinator's `refly.sh` removes it.
 
-**An epic id out of this query is the terminal pick, never ordinary work.** Epics sort
-last, so a ready epic surfaces only when no child remains to claim; route it to §8 with
-the id — never §2's work path. There is no work step and no commit on an epic.
+Each `MALFORMED <id>` line on its stderr is a prod-write bead with no DECISION edge: comment
+the bead naming the missing edge — no edge means no docket sees it. A `GATED <id>` line needs
+nothing; its open decision bead is already on the docket.
 
-**The prod-write gate is part of eligibility, and it is claim-time.** A bead meeting
-beads-standards' prod-write predicate — (i) INSERTs, UPDATEs or DELETEs user-data rows, (ii)
-DDL on `auth.*` or an RLS policy, (iii) irreversible-by-default (no in-file rollback recipe) —
-is un-claimable until its human-gate decision bead is closed. Refine (ac-polish bead mode)
-evaluates the predicate and stamps `sensitive-prod` as its machine-readable marker; the bare
-label is that predicate's trace, never the trigger. For every pick, before claiming:
+**A bead whose claim was just refused is never re-picked in the same pass** — add it to
+`$BURNED`, or the loop burns its whole budget re-claiming one bead it cannot have.
 
-    RUST_LOG=error br show <id> --json | jq -r '.[0]
-      | select((.labels // []) | index("sensitive-prod"))
-      | ([.dependencies[]? | select(.dependency_type == "blocks"
-          and (.title | startswith("DECISION")) and .status == "closed")] | length)'
-
-    # no output  -> no sensitive-prod label: not gated, claim proceeds.
-    # 1           -> gated correctly (closed DECISION edge): claim proceeds.
-    # 0, edge to an OPEN decision bead -> GATED: leave it, take the next id; the open
-    #               decision bead is already on the docket, so the refusal surfaces there.
-    # 0, no decision edge at all -> MALFORMED (prod-write): comment the bead naming the
-    #               missing edge, take the next id. Never skip silently — no edge means no
-    #               docket sees it.
-
-Re-run this query every iteration. The pool GROWS as you close: a serial chain unlocks the
-next bead only when its blocker closes, so a cached pool reports dry while work is waiting.
+Re-run pick every iteration. The pool GROWS as you close: a serial chain unlocks the next bead
+only when its blocker closes, so a cached pool reports dry while work is waiting.
 
 ## 2 — CLAIM
 
@@ -301,7 +272,7 @@ is invisible in the result.
 
 ## STOP
 
-- No eligible bead after re-querying (§1) — the pool grows as you close, so re-query first.
+- No eligible bead after re-picking (§1) — the pool grows as you close, so re-pick first.
   This is the NORMAL end: an uncapped worker finishes because the queue is dry, not because
   it ran out of permission.
 - You were given a `--cap N` and you have closed N beads.

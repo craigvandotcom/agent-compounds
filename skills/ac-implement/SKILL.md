@@ -46,10 +46,9 @@ whose frozen tool grants waste the wave: print the regenerate command and stop. 
 `bash <scripts>/refly.sh --root "$PWD"`: it re-checks every `PREMISE-FAILED:` bead, strips the
 stamp from those that fly again, and TRIAGES the rest — one disposition-close attempt through
 `close-gate.sh`, lands when the work exists at HEAD or a Consumes blocker closed dispositionally,
-else leaves the stamp. Count the eligible pool with worker.md §1's filter VERBATIM — a differing
-filter reports a pool the workers cannot claim — epics count: a ready epic is a worker's terminal
-pick (worker.md §8), closed with no work step. Register with Agent Mail; install the pre-commit
-guard once (workers never do).
+else leaves the stamp. Count the pool with `<scripts>/pick.sh --count` (the workers' own filter);
+print the board, `<scripts>/../../ac-board/scripts/board.sh` — it carries CI, docket and
+board-truth health. Register with Agent Mail; install the pre-commit guard once (workers never do).
 
 **Phase 1 — spawn, then wait.** Spawn `width` implementer subagents — never `general`, which has no tier and rides the orchestrator's model — whose prompt is `references/worker.md`
 VERBATIM — and, ONLY if `--cap N` was given, one appended line naming the cap, plus one appended line naming this run's id for the worker's `task_description`. Verbatim means
