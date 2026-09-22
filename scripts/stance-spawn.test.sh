@@ -24,7 +24,8 @@
 # ASSURANCE
 #   PROBE:    bash scripts/stance-spawn.test.sh
 #   SCHEDULE: engine/sync.sh (--if-changed, every non-dry sync) + scripts/run-all-proofs.sh
-#             (self-skips 77 where no harness CLI exists, e.g. CI)
+#             (self-skips 77 where no harness CLI exists, e.g. CI) + the nightly pai job
+#             "Sofi - Stance Spawn Probe" (full run, 02:15; red fails the systemd unit)
 #   MODE:     advisory in sync.sh (warns, never blocks a sync); blocking in run-all-proofs
 #   ON-FAILURE: open
 set -uo pipefail
@@ -60,7 +61,8 @@ fi
 
 fails=0 legs_run=0
 ok()  { echo "  ok    $1"; }
-bad() { echo "  FAIL  $1"; fails=$((fails + 1)); }
+FAILS=()
+bad() { echo "  FAIL  $1"; FAILS+=("  FAIL  $1"); fails=$((fails + 1)); }
 
 # Inside the working directory, not /tmp: the claude harness sandbox allows the
 # repo and refuses /tmp. `_scratch/` is the scratch home the stances name; sync.sh
@@ -94,7 +96,7 @@ run_leg() { # <harness>
   wait
   for s in "${STANCES[@]}"; do
     if ! grep -qx 'ok' "$WORK/$h-$s.txt" 2>/dev/null; then
-      bad "$h/$s: no scratch file written — $(tail -n 1 "$WORK/$h-$s.log" 2>/dev/null)"
+      bad "$h/$s: no scratch file written — $(tail -n 1 "$WORK/$h-$s.log" 2>/dev/null | sed 's/\x1b\[[0-9;]*m//g')"
     elif [ "$h" = opencode ] && ! grep -qi "$s agent" "$WORK/$h-$s.log"; then
       bad "$h/$s: file written, but no '$s' subagent appears in the transcript"
     else
@@ -108,11 +110,13 @@ run_leg opencode
 echo "  note  codex: NOT PROBED (no verified spawn recipe)"
 
 if [ "$legs_run" = 0 ]; then
-  echo "  SKIP  no harness CLI on this runner — nothing was probed"
+  echo "  SKIP  no harness CLI on this runner — nothing was probed" >&2
   exit 77
 fi
 if [ "$fails" -gt 0 ]; then
   echo "  stance-spawn: $fails failure(s)"
+  # the scheduler journals only stderr on a failed job — repeat the verdict there
+  { printf '%s\n' "${FAILS[@]}"; echo "  stance-spawn: $fails failure(s)"; } >&2
   exit 1
 fi
 mkdir -p "$(dirname "$STAMP_FILE")" && fingerprint > "$STAMP_FILE"
