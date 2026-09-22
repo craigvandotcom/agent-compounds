@@ -125,9 +125,10 @@ exists; otherwise unclaim, go to §1.
 Relocate every anchor by the bead's QUOTED text, never by a line number: on a shared trunk
 line numbers drift, and a bead is compiled intent, never a cache of the tree.
 
-**Satisfying a probe is NECESSARY, NOT SUFFICIENT.** Most ACs here are `grep -q '<string>'
-<file>`. Build the thing the AC describes, then confirm the probe goes green. Writing the token
-to pass the grep is the vacuous-AC class this pipeline exists to kill.
+**Satisfying a probe is NECESSARY, NOT SUFFICIENT.** The worker may not edit an AC — the worker
+writes the test, against a definition fixed before the task starts. Build the thing the AC
+describes, then confirm the probe goes green. Writing the token to pass the grep is the
+vacuous-AC class this pipeline exists to kill.
 
 If the bead needs a decision only a human can make, do NOT file it — a subagent files
 nothing. Return the fork as a PROPOSED-BEAD block to the coordinator (gate reason — fork ·
