@@ -333,6 +333,17 @@ cap "$SCRIPT" ready "$W/capc-reg.md"
 expect "$RC" 1 "edit inside ## Success Criteria -> exit 1"
 expect "$(grep -c '^REFUSED regate SuccessCriterion$' <<<"$OUT")" 1 "edit inside ## Success Criteria -> REFUSED regate SuccessCriterion"
 
+# 23b — the same edit under the lowercase heading "## Success criterion" (the chain's
+# case 1). mk_plan already writes that heading; both spellings name SuccessCriterion.
+mk_plan "$W/sc.md" "- D1 x" "$SETTLED_CARD" "a"
+cap "$SCRIPT" approve "$W/sc.md" "Alex"
+expect "$RC" 0 "setup: approve sc"
+add_polish_keys "$W/sc.md"
+sed -i 's/Some criterion\./Some amended criterion./' "$W/sc.md"
+cap "$SCRIPT" ready "$W/sc.md"
+expect "$RC" 1 "edit inside ## Success criterion -> exit 1"
+expect "$(grep -c '^REFUSED regate SuccessCriterion$' <<<"$OUT")" 1 "edit inside ## Success criterion -> REFUSED regate SuccessCriterion"
+
 # 24 — ready after an edit INSIDE ## Seams names only that section (exit 1)
 mk_plan "$W/s.md" "- **D1 \`$REAL_PATH\`** — a thing." "$SETTLED_CARD" "$SEAMS_OK"
 cap "$SCRIPT" approve "$W/s.md" "Alex"

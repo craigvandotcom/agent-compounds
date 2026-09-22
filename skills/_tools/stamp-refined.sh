@@ -33,6 +33,41 @@ _STAMP_REFINED_DIR="$(cd "$(dirname "$_STAMP_REFINED_SELF")" && pwd)"
 ELEMENT4_CHECK="${ELEMENT4_CHECK:-$_STAMP_REFINED_DIR/element4-check.sh}"
 TOUCHERS_TOOL="${TOUCHERS_TOOL:-$_STAMP_REFINED_DIR/touchers.sh}"
 
+# 0 when a probe still runs something after text and existence clauses are removed.
+# grep, rg, and `test -e|-f|-x` are not a run. `test -x p && bash p` leaves `bash p`.
+probe_runs_something() {
+  [ -n "$(printf '%s\n' "$1" | awk '
+    function emit(clause,   t) {
+      t = clause
+      gsub(/^[[:space:]]+|[[:space:]]+$/, "", t)
+      if (t == "") return
+      if (t ~ /^(grep|rg)([[:space:]]|$)/) return
+      if (t ~ /^test[[:space:]]+-[efx]([[:space:]]|$)/) return
+      print t
+    }
+    {
+      s = $0; n = length(s); buf = ""; q = ""
+      i = 1
+      while (i <= n) {
+        c = substr(s, i, 1)
+        if (q != "") {
+          buf = buf c
+          if (c == q) q = ""
+          i++
+          continue
+        }
+        if (c == "\"" || c == "\047") { q = c; buf = buf c; i++; continue }
+        two = substr(s, i, 2)
+        if (two == "&&" || two == "||") { emit(buf); buf = ""; i += 2; continue }
+        if (c == ";") { emit(buf); buf = ""; i++; continue }
+        buf = buf c
+        i++
+      }
+      emit(buf)
+    }
+  ')" ]
+}
+
 stamp_refined() {
   local id="$1" path_label="${2:-${REFINE_PATH:-refine-full}}"
   [ -n "$id" ] || { echo "stamp_refined: no bead id given" >&2; return 2; }
@@ -126,20 +161,40 @@ stamp_refined() {
         . == "origin:ac-implement" or . == "origin:ac-review" or . == "origin:ac-publish"
       ) ] | length' 2>/dev/null || echo 0)
 
-  # PROBE-PRESENCE LEG (2026-08-29): `refined` must certify something a worker can execute.
-  # The worker's flight-check gate executes `Probe:` lines; a description with none
-  # makes the stamp a routing hint, not a fact — measured 2026-08-29: 18 of 22
-  # `refined` beads in one ready pool
-  # carried a Declared RED and zero probes, and every lean claim died NOT-GATED. The floor
-  # here is PRESENCE (>= 1 probe); per-AC completeness stays the checklist's judgment
-  # (ac-polish references/bead-checklist.md § 2), because counting ACs mechanically would
-  # re-implement the checklist badly.
-  local probes
+  # PROBE-PRESENCE LEG (2026-08-29, runs-something 2026-09-22): `refined` must
+  # certify something a worker can execute. Zero `Probe:` lines is still a refusal —
+  # measured 2026-08-29, when 18 of 22 refined beads carried none and every lean claim
+  # died NOT-GATED. Counting lines is not enough when ## Delivers names a code file:
+  # a probe that is only grep, rg, or test -e/-f/-x leaves nothing to run, and the
+  # stamp is refused. One probe that still runs something — `test -x p && bash p`
+  # included — is enough. Per-AC completeness stays the checklist's judgment.
+  local probes _code _runs _pr
   probes=$(printf '%s' "$meta" | jq -r '.[0].description // ""' | grep -c 'Probe:')
   if [ "${probes:-0}" -eq 0 ]; then
     echo "stamp_refined: REFUSED $id — description carries no executable 'Probe:' line; a refined bead must be probe-bearing (beads-standards: refined). Author the probes, then re-stamp. No label written." >&2
     _downgrade "$id" "no executable Probe: line" || return $?
     return 1
+  fi
+  _code=$(printf '%s\n' "$meta" | jq -r '.[0].description // ""' | awk '
+      /^## Delivers/ { on=1; next }
+      /^## / { on=0 }
+      on && $0 !~ /^[[:space:]]*touchers:/ { print }
+    ' | grep -oE '[A-Za-z0-9_.][A-Za-z0-9_./-]*\.[A-Za-z0-9]+' \
+      | grep -E '\.(ts|tsx|js|jsx|mjs|cjs|sh|bash|py|go|rs|rb|java|swift|kt)$' \
+      | head -1 || true)
+  if [ -n "${_code:-}" ]; then
+    _runs=0
+    while IFS= read -r _pr; do
+      [ -n "$_pr" ] || continue
+      if probe_runs_something "$_pr"; then _runs=1; break; fi
+    done <<EOF
+$(printf '%s\n' "$meta" | jq -r '.[0].description // ""' | grep -o 'Probe: `[^`]*`' | sed 's/^Probe: `//; s/`$//' || true)
+EOF
+    if [ "$_runs" -eq 0 ]; then
+      echo "stamp_refined: REFUSED $id — nothing left to run once grep, rg and test -e/-f/-x clauses are removed; ## Delivers names a code file ('$_code') and no probe runs something. The guarded form 'test -x p && bash p' counts. No label written." >&2
+      _downgrade "$id" "nothing left to run" || return $?
+      return 1
+    fi
   fi
 
   if [ "${family_hits:-0}" -gt 0 ]; then

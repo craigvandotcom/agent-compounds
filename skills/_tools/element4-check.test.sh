@@ -511,6 +511,51 @@ else
   fail "Case 21: expected exit 1, got $RC. Output: $OUT"
 fi
 
+# ============================================================================
+# Cases 22-23: a .sh Delivers with tier: none probes. test -x and grep -q leave
+# nothing to run, so stamp-refined refuses. The guarded form stamps.
+# The path is untracked, so the touchers leg owes nothing.
+# ============================================================================
+SH_BARE='## Acceptance Criteria
+- The script exists.
+  Probe: `test -x scripts/x.sh` — tier: none
+- The script contains the marker.
+  Probe: `grep -q marker scripts/x.sh` — tier: none
+
+## Delivers
+- script: scripts/x.sh
+'
+SH_RUNS='## Acceptance Criteria
+- The script is run.
+  Probe: `test -x scripts/x.sh && bash scripts/x.sh` — tier: none
+
+## Delivers
+- script: scripts/x.sh
+'
+jq --arg bare "$(printf '%s' "$SH_BARE")" --arg runs "$(printf '%s' "$SH_RUNS")" \
+  '. + [
+    {id:"bd-sh-bare", issue_type:"task", description:$bare, labels:[]},
+    {id:"bd-sh-runs", issue_type:"task", description:$runs, labels:[]}
+  ]' "$FIXTURE_BEADS" >"$FIXTURE_BEADS.tmp" && mv "$FIXTURE_BEADS.tmp" "$FIXTURE_BEADS"
+
+: >"$BR_LOG"
+OUT=$(PATH="$MOCK:$PATH" bash "$STAMP" bd-sh-bare 2>&1); RC=$?
+if [ "$RC" -eq 1 ] && echo "$OUT" | grep -q "nothing left to run" \
+   && ! grep -q 'label add bd-sh-bare refined' "$BR_LOG"; then
+  pass "Case 22: .sh tier-none probes (test -x, grep -q) are REFUSED — nothing left to run"
+else
+  fail "Case 22: expected nothing-left-to-run refusal with no label, got $RC. Output: $OUT / log: $(cat "$BR_LOG")"
+fi
+
+: >"$BR_LOG"
+OUT=$(PATH="$MOCK:$PATH" REFINE_PATH=refine-full bash "$STAMP" bd-sh-runs 2>&1); RC=$?
+if [ "$RC" -eq 0 ] && echo "$OUT" | grep -q "STAMPED" \
+   && grep -q 'label add bd-sh-runs refined' "$BR_LOG"; then
+  pass "Case 23: .sh tier-none fixture with test -x && bash is STAMPED"
+else
+  fail "Case 23: expected a stamp of the runs-something probe, got $RC. Output: $OUT / log: $(cat "$BR_LOG")"
+fi
+
 echo
 if [ "$FAILURES" -eq 0 ]; then
   echo "All element4-check fixture tests passed."
