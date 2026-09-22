@@ -333,6 +333,10 @@ except (OSError, ValueError): line3.append("tidy shadow: ?")
 if waves: line3.append(f"{waves} wave branch" + ("" if waves == 1 else "es"))
 elif waves is None: line3.append("waves ?")
 out.append("  ·  ".join(line3))
+# CHECKS — always printed, zeros included: a zero is the probe reporting it ran and found nothing
+checks = [(f"board-truth", truth)] + [(k, docket(k)) for k in ("reason-less", "gate-incomplete", "plan-gap")]
+out.append("🩺 checks " + ("✓ " if all(v == "0" for _, v in checks) else "")
+           + " · ".join(f"{'' if v == '0' else '⚠ '}{k} {v}" for k, v in checks))
 if prs is None: out.append("PR ?")
 for p in (prs or [])[:3]:
     tail = f"opened {age(p.get('createdAt'))} ago · {pr_ci(p)}" + (" · draft" if p.get("isDraft") else "")
@@ -466,9 +470,8 @@ else:
                    + (f" +{len(idle) - 6}" if len(idle) > 6 else ""))
     out.append("")
 
-# FLAGS — only what is non-zero or unreadable
+# FLAGS — reads that could not answer (the counts live on the always-on checks line)
 flags = []
-if truth != "0": flags.append(f"board-truth {truth} cited-but-open")
 if not docket_line: flags.append("docket-health ?")
 if flags or failed:
     out.append("⚠ FLAGS")

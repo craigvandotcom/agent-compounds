@@ -66,6 +66,9 @@ fixture flowing "[$READY,$HELD]" "[$READY]" "$READY
 $HELD" "$LIVE"
 check flowing "verdict says it flows"          '^✅ FLOWING · 1 ready · 1 agent working$'
 check flowing "agent row shows its bead"       'BlueFox .*→ ac-p1$'
+check flowing "checks print zeros, all clear"  '^🩺 checks ✓ board-truth 0 · reason-less 0 · gate-incomplete 0 · plan-gap 0$'
+put "$W/flowing/reads" truth 0 "board-truth: 3 cited-but-open"
+check flowing "a non-zero check is marked"     '^🩺 checks ⚠ board-truth 3 · reason-less 0'
 check flowing "no jam when work is ready"      'jammed' absent
 check flowing "NEXT has nothing for you"       '^  1\. nothing needs you — the loop is running$'
 
