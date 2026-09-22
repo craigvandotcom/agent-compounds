@@ -27,8 +27,8 @@
 #                         plan too. Never writes.
 #
 # THE DIGEST: sha256 over the concatenated bodies of `## Vision`, `## Deliverables`,
-# `## Decisions`, `## Out of scope`, `## Success Criteria` (prefix `## Success C`, so
-# the capital-C spelling a real plan carries hashes instead of empty) and `## Seams`,
+# `## Decisions`, `## Out of scope`, `## Success Criteria` (matcher `## Success [Cc]`,
+# so both the capital-C and lowercase-c spellings hash instead of empty) and `## Seams`,
 # plus the `Human gates:` line — extracted with the same awk shape touchers.sh uses for
 # `## Delivers`, the header parameterized rather than a second parser. `approved_sha256`
 # is that single digest, exactly as named in the plan;
@@ -97,7 +97,7 @@ _section_digest_one() {
     Deliverables)     _section_body "$file" "## Deliverables" | _sha ;;
     Decisions)        _section_body "$file" "## Decisions" | _sha ;;
     OutOfScope)       _section_body "$file" "## Out of scope" | _sha ;;
-    SuccessCriterion) _section_body "$file" "## Success C" | _sha ;;
+    SuccessCriterion) _section_body "$file" "## Success [Cc]" | _sha ;;
     Seams)            _section_body "$file" "## Seams$" | _sha ;;
     HumanGates)       _human_gates_line "$file" | _sha ;;
   esac
@@ -120,7 +120,7 @@ _compute_overall_digest() {
     _section_body "$file" "## Deliverables"
     _section_body "$file" "## Decisions"
     _section_body "$file" "## Out of scope"
-    _section_body "$file" "## Success C"
+    _section_body "$file" "## Success [Cc]"
     _section_body "$file" "## Seams$"
     _human_gates_line "$file"
   } | _sha
