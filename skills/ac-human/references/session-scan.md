@@ -46,8 +46,11 @@ for repo in "$REPOS_ROOT" $(while IFS= read -r a; do echo "$REPOS_ROOT"/$a; done
   if [ -z "$RAW" ]; then
     echo "DEGRADED $repo — read refused; this repo is not represented in the sweep below"
   else
+    # A deferred bead is not on the docket — mirror board-scan.md § Docket health (`on_docket`),
+    # which excludes `deferred` beside `closed`, so the org-wide sweep and the project-local
+    # docket-health reader agree on which gates the human is shown.
     printf '%s' "$RAW" | jq --arg repo "$(basename "$repo")" \
-      '[.[] | select((.labels // []) | (index("human-gate") or index("pipeline-proposal") or index("dream-proposal"))) | select(.status != "closed") | . + {repo: $repo}]'
+      '[.[] | select((.labels // []) | (index("human-gate") or index("pipeline-proposal") or index("dream-proposal"))) | select(.status != "closed" and .status != "deferred") | . + {repo: $repo}]'
   fi
   # unpushed ledger: a session that died (or lost a push race) before this repo's
   # .beads/issues.jsonl reached origin. No upstream is NOT a silent zero — a different fact.
