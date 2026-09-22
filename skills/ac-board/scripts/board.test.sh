@@ -57,7 +57,8 @@ check stalled "verdict names the human gate"   '^⛔ STALLED on you · 0 ready �
 check stalled "gate row counts what it blocks" 'ac-g1 .*→ blocks 1$'
 check stalled "blocked row names its blocker"  'ac-b1 .*← ac-g1 \(you\)$'
 check stalled "flow strip marks the jam"       '▲ jammed here'
-check stalled "next points at the gate"        '^next → ac-g1 \(action, blocks 1\) · /ac-human$'
+check stalled "NEXT leads with the gate"       '^  1\. ac-g1 — action, unblocks 1 bead +→ /ac-human$'
+check stalled "then the refinement jam"        '^  2\. refine 1 bead — nothing is ready without them +→ /ac-polish$'
 check stalled "a live agent with no bead"      'BlueFox .*→ —$'
 
 # FLOWING: a ready bead and one held by a live agent.
@@ -66,15 +67,17 @@ $HELD" "$LIVE"
 check flowing "verdict says it flows"          '^✅ FLOWING · 1 ready · 1 agent working$'
 check flowing "agent row shows its bead"       'BlueFox .*→ ac-p1$'
 check flowing "no jam when work is ready"      'jammed' absent
+check flowing "NEXT has nothing for you"       '^  1\. nothing needs you — the loop is running$'
 
 # STARVED: ready work, nobody live to take it.
 fixture starved "[$READY]" "[$READY]" "$READY" ""
 check starved "verdict says starved, not empty" '^🥵 STARVED · 1 ready · 0 agents taking$'
-check starved "next routes to implement"        '^next → 1 ready, no agent taking · /ac-implement$'
+check starved "NEXT routes to implement"        '^  1\. 1 ready bead, no agent taking them +→ /ac-implement$'
 
 # EMPTY: nothing open at all.
 fixture empty '[]' '[]' '' ""
 check empty "verdict says empty"               '^⏸ EMPTY · 0 open$'
+check empty "NEXT routes to planning"          '^  1\. nothing open — plan the next wave +→ /ac-align$'
 
 # A failed read renders `?` and is named — never a guessed count.
 fixture failed "[$READY]" "[$READY]" "$READY" "$LIVE"

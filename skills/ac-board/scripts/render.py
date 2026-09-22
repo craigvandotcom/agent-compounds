@@ -310,9 +310,12 @@ def pr_ci(p):
               in ("FAILURE", "ERROR", "TIMED_OUT", "CANCELLED", "ACTION_REQUIRED"))
     pend = sum(1 for c in checks if (c.get("status") or "COMPLETED").upper() != "COMPLETED"
                or (c.get("state") or "").upper() == "PENDING")
-    if bad: return f"✗ {bad} failing"
-    if pend: return f"… {pend} running"
-    return "✓" if checks else "no checks"
+    if bad:
+        names = [c.get("name") or c.get("context") or "?" for c in checks if (c.get("conclusion")
+                 or c.get("state") or "").upper() in ("FAILURE", "ERROR", "TIMED_OUT", "CANCELLED", "ACTION_REQUIRED")]
+        return f"CI ✗ {bad} failing: " + ", ".join(names[:2]) + (" …" if bad > 2 else "")
+    if pend: return f"CI … {pend} running"
+    return "CI ✓" if checks else "no CI checks"
 
 
 out = [f"{name} · {NOW.astimezone():%Y-%m-%d %H:%M}", VERDICT]
@@ -322,9 +325,9 @@ elif waves is None: line3.append("waves ?")
 out.append("  ·  ".join(line3))
 if prs is None: out.append("PR ?")
 for p in (prs or [])[:3]:
-    tail = f"{age(p.get('createdAt'))} · {pr_ci(p)}" + (" · draft" if p.get("isDraft") else "")
-    head = f"PR #{p.get('number')}  "
-    out.append(head + clip(p.get("title", ""), W - len(head) - len(tail) - 2) + "  " + tail)
+    tail = f"opened {age(p.get('createdAt'))} ago · {pr_ci(p)}" + (" · draft" if p.get("isDraft") else "")
+    head = f"🔀 PR #{p.get('number')}  "
+    out.append(head + '"' + clip(p.get("title", ""), W - len(head) - len(tail) - 6) + '"  · ' + tail)
 if prs and len(prs) > 3: out.append(f"   + {len(prs) - 3} more PRs")
 out.append("")
 
@@ -383,7 +386,7 @@ else:
     def group(title, items, note, n, route=""):
         if not items: return
         head = f"  {title}"
-        out.append(head + (route.rjust(W - len(head)) if route else ""))
+        out.extend(["", head + (route.rjust(W - len(head)) if route else "")])
         out.extend(rows("    ", "", items[:n], note))
         if len(items) > n: out.append(f"    + {len(items) - n} more")
 
@@ -403,7 +406,6 @@ else:
         bs.sort(key=lambda d: (d not in gate_ids, d))  # your gates first
         return "← " + " ".join(short(d, b["id"]) for d in bs[:3]) + (f" +{len(bs) - 3}" if len(bs) > 3 else "")
 
-    out.append("")
     by_age = lambda xs: sorted(xs, key=lambda b: b["created_at"])
     group(f"IN PROGRESS · {n_ip}", loop["in_progress"], ip_note, 10)
     group(f"READY · {n_ready}", by_age(loop["ready"]), lambda b: "", 10, "→ /ac-implement")
@@ -464,16 +466,39 @@ if flags or failed:
     out.extend(f"  ? {f}" for f in failed)
     out.append("")
 
-# next — one pointer, derived from the verdict
-if beads is None or ready_ids is None: nxt = "next → fix the failed reads above"
-elif VERDICT.startswith("🥵"): nxt = f"next → {n_ready} ready, no agent taking · /ac-implement"
-elif gates and not VERDICT.startswith("✅"):
-    g = max(gates, key=lambda b: (blocks_count(b["id"]) or 0, mins(b["created_at"]) or 0))
-    k = blocks_count(g["id"])
-    nxt = f"next → {g['id']} ({gate_kind(g)}" + (f", blocks {k}" if k else "") + ") · /ac-human"
-elif n_unref and not n_ready: nxt = f"next → refine {plural(n_unref, 'bead')} · /ac-polish"
-elif VERDICT.startswith("⏸"): nxt = "next → nothing open · plan the next wave with /ac-align"
-elif gates: nxt = f"next → the loop is running · {plural(n_gates, 'gate')} when you're ready · /ac-human"
-else: nxt = "next → the loop is running · nothing needs you"
-out.append(nxt)
+# NEXT — the three most impactful moves, ranked; pointers, never prompts
+def moves():
+    """(score, what, route). A gate that holds up work outranks the jam; the jam outranks
+    idle gates, unheld WIP, a red PR and approved plans."""
+    if beads is None or ready_ids is None: return [(0, "fix the failed reads in FLAGS", "")]
+    m = []
+    if VERDICT.startswith("🥵"): m.append((100, f"{plural(n_ready, 'ready bead')}, no agent taking them", "/ac-implement"))
+    idle_gates = []
+    for g in gates:
+        k = blocks_count(g["id"]) or 0
+        if k: m.append((50 + 10 * k, f"{g['id']} — {gate_kind(g)}, unblocks {plural(k, 'bead')}", "/ac-human"))
+        else: idle_gates.append(g["id"])
+    if n_unref and not n_ready: m.append((45, f"refine {plural(n_unref, 'bead')} — nothing is ready without them", "/ac-polish"))
+    if idle_gates:
+        more = "more " if len(idle_gates) < n_gates else ""
+        m.append((35, f"{len(idle_gates)} {more}gate{'s' if len(idle_gates) > 1 else ''}: "
+                      + ", ".join(idle_gates[:3]) + (" …" if len(idle_gates) > 3 else ""), "/ac-human"))
+    unheld = [b["id"] for b in loop["in_progress"] if live_names is not None and holder(b) not in live_names]
+    if unheld: m.append((30, f"reclaim {plural(len(unheld), 'unheld bead')}: " + ", ".join(unheld[:3]), "/ac-tidy"))
+    red = [p for p in prs or [] if pr_ci(p).startswith("CI ✗")]
+    if red: m.append((25, f"PR #{red[0]['number']} is red — {pr_ci(red[0])[5:]}", f"gh pr checks {red[0]['number']}"))
+    ok_plans = [p for p in plans if p[1] in ("approved", "bead-ready")]
+    if ok_plans: m.append((20, f"beadify {plural(len(ok_plans), 'approved plan')}", "/ac-beadify"))
+    if not m:
+        m.append((0, "nothing open — plan the next wave", "/ac-align") if VERDICT.startswith("⏸")
+                 else (0, "nothing needs you — the loop is running", ""))
+    return sorted(m, key=lambda x: -x[0])[:3]
+
+
+out.append("🎯 NEXT")
+top = moves()
+rw = max(len(r) for _, _, r in top)  # one arrow column for every move
+for i, (_, what, route) in enumerate(top, 1):
+    head, room = f"  {i}. ", W - 7 - (rw + 4 if rw else 0)
+    out.append((head + clip(what, room).ljust(room) + (f"  → {route}" if route else "")).rstrip())
 print("\n".join(out))

@@ -12,7 +12,7 @@ description: 'Read-only pipeline board — the whole factory in one glance: huma
 |                  |                                                                    |
 | ---------------- | ------------------------------------------------------------------ |
 | **Input**        | None (reads project state directly). Optional: "org-wide".          |
-| **Output**       | One board render: verdict first, a `next →` pointer last. No prompts. |
+| **Output**       | One board render: verdict first, the ranked `🎯 NEXT` moves last. No prompts. |
 | **Artifacts**    | NONE — never writes, closes, promotes, archives, labels, or asks.   |
 | **Verification** | Every count traces to a scan; an unreadable read renders `?`, never a guessed number. |
 
@@ -36,7 +36,7 @@ Print its stdout verbatim — it is the board. `board.sh` runs every read of
 filter) plus waves, PRs and the agent roster in parallel; `render.py` derives the verdict
 (FLOWING · STALLED · STARVED · EMPTY), caps every list, and renders `?` plus the failing command
 for any read that cannot answer. Never re-derive a count it printed; never run the scans by hand.
-Its `next →` line is the routing pointer — add nothing after it.
+Its `🎯 NEXT` block (top three moves, ranked) is the routing — add nothing after it.
 
 Asked "org-wide" → run `board.sh --compact` inside each `.beads/` repo (in parallel) and print
 its one verdict line per repo.
@@ -47,4 +47,4 @@ its one verdict line per repo.
 2. **A glance, not an audit** — cheap reads only, counts over prose, one screen if possible. Depth belongs to `ac-human` (drive the docket), `ac-tidy` (reconcile) and `ac-align` (strategy).
 3. **No loop-boundary filter** — the loop side is the answer to "is the factory running". Show it.
 4. **Never guess a count** — `?` plus the failing command beats a plausible number.
-5. **Exit silently** — render and stop. The `next →` line is the hand-off.
+5. **Exit silently** — render and stop. The `🎯 NEXT` block is the hand-off.
