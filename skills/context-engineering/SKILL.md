@@ -312,7 +312,7 @@ three things — **stance · tool permissions · model tier** — and NO domain 
 (domains live in skills any stance can load; fat skills, thin agents). A domain agent
 duplicating a domain skill is a registry bug.
 
-| Agent | Stance | Tool boundary | Why the boundary is load-bearing |
+| Agent | Stance | Tool boundary (enforced on Claude Code; opencode keeps only edit allow/deny; codex + droid carry prompt text alone) | Why the boundary is load-bearing |
 |---|---|---|---|
 | **orchestrator** | plans, sequences, delegates; holds decisions & batch boundaries | all tools, but delegates the doing | implementing itself defeats the point of holding the plan |
 | **coordinator** | looks, understands, critiques, synthesizes | all tools; edits only the artifact under judgment | code changes belong to implementer |
