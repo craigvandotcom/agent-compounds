@@ -48,7 +48,7 @@ set -euo pipefail
 ENGINE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 AC_ROOT="$(cd "$ENGINE_DIR/.." && pwd)"
 
-DRY=0; CHECK=0; PRUNE=1; DO_ROOT=0; DO_ALL=0; VERIFY_AGY=0; REPORT=0; OPENCODE_HOME_OVERRIDE=""; TARGETS=()
+DRY=0; CHECK=0; PRUNE=1; DO_ROOT=0; DO_ALL=0; VERIFY_AGY=0; REPORT=0; OPENCODE_HOME_OVERRIDE=""; PRINT_OPENCODE_EDIT_PERM=0; PRINT_OPENCODE_EDIT_TOOLS=""; TARGETS=()
 while [ $# -gt 0 ]; do
   case "$1" in
     --verify-antigravity) VERIFY_AGY=1; shift ;;
@@ -56,6 +56,11 @@ while [ $# -gt 0 ]; do
     --all)       DO_ALL=1; DO_ROOT=1; shift ;;
     --report)    REPORT=1; shift ;;
     --opencode-home) OPENCODE_HOME_OVERRIDE="${2:-}"; shift 2 ;;
+    --print-opencode-edit-perm)
+      PRINT_OPENCODE_EDIT_PERM=1
+      PRINT_OPENCODE_EDIT_TOOLS="${2-}"
+      shift 2
+      ;;
     -n|--dry-run) DRY=1; shift ;;
     --check)     DRY=1; CHECK=1; shift ;;
     --no-prune)  PRUNE=0; shift ;;
@@ -69,7 +74,7 @@ done
 if [ "$DRY" = 1 ] && [ "$DO_ROOT" = 0 ] && [ ${#TARGETS[@]} -eq 0 ] && [ "$VERIFY_AGY" = 0 ] && [ "$REPORT" = 0 ]; then
   DO_ROOT=1
 fi
-[ "$DO_ROOT" = 1 ] || [ ${#TARGETS[@]} -gt 0 ] || [ "$VERIFY_AGY" = 1 ] || [ "$REPORT" = 1 ] || { echo "error: need --root, --all, --report, a target dir, or --verify-antigravity" >&2; exit 2; }
+[ "$DO_ROOT" = 1 ] || [ ${#TARGETS[@]} -gt 0 ] || [ "$VERIFY_AGY" = 1 ] || [ "$REPORT" = 1 ] || [ "$PRINT_OPENCODE_EDIT_PERM" = 1 ] || { echo "error: need --root, --all, --report, a target dir, or --verify-antigravity" >&2; exit 2; }
 
 CHANGES=0
 note_change() { CHANGES=$((CHANGES + 1)); }
@@ -375,9 +380,33 @@ $A_BODY")"
 # posture is gone: opencode now runs a real 3-level gradient (orchestrator =
 # opencode.jsonc's "model" default; coordinator/worker stamped below).
 #
-# `tools:` is deprecated upstream in favour of `permission:`, so write-capability is
-# DERIVED from the source tools line (Write or Edit present yields edit=allow, else
-# edit=deny) rather than hardcoded per agent name: add a stance and it maps itself.
+# `tools:` is deprecated upstream in favour of `permission:`. OpenCode's edit
+# key covers the write, edit, and patch tools together — it does not separate
+# creating a file from changing one — and its path rules expand only ~ and
+# $HOME, not $TMPDIR or $CLAUDE_JOB_DIR (https://opencode.ai/docs/permissions).
+# A Write-without-Edit stance (validator: report and scratch only, never the
+# reviewed tree) therefore cannot be projected as "allow scratch, deny the
+# tree". Decision (ac-oqfe): edit=allow only when the source tools line lists
+# Edit as its own tool. Write alone is edit=deny, which holds the read-only
+# contract on those tools. The report then leaves through bash (already
+# allow), bounded by the stance text to tests and scratch — the same prose
+# bound Claude uses, because OpenCode cannot name the scratch path. Add a
+# stance and it still maps itself; the mapping is this decision, not an
+# alternation that treats Write and Edit as the same grant.
+# opencode_edit_perm <tools-line> — prints allow or deny.
+opencode_edit_perm() {
+  if printf '%s' "$1" | grep -qE '(^|[^A-Za-z0-9_])Edit([^A-Za-z0-9_]|$)'; then
+    printf '%s\n' allow
+  else
+    printf '%s\n' deny
+  fi
+}
+# Query path for scripts/opencode-edit-perm.test.sh: print the decision and
+# stop before any projection. The tools line is the argument, which may be empty.
+if [ "$PRINT_OPENCODE_EDIT_PERM" = 1 ]; then
+  opencode_edit_perm "$PRINT_OPENCODE_EDIT_TOOLS"
+  exit 0
+fi
 gen_opencode_agents() { # <src-agents-dir> <dest-dir>
   local src="$1" dest="$2" f name relsrc tools edit_perm omodel
   [ -d "$src" ] || { echo "  WARN: agent source missing: $src"; return 0; }
@@ -388,7 +417,8 @@ gen_opencode_agents() { # <src-agents-dir> <dest-dir>
     omodel="$(tier_model opencode "${A_TIER:-}" "$name")"
     relsrc="${f/#$ORG_ROOT\//}"
     tools="$(awk '/^---[[:space:]]*$/{c++; next} c==1 && /^tools:/{print; exit}' "$f")"
-    if printf '%s' "$tools" | grep -qE 'Write|Edit'; then edit_perm="allow"; else edit_perm="deny"; fi
+    # ac-oqfe: Edit listed -> allow; Write without Edit -> deny (opencode_edit_perm).
+    edit_perm="$(opencode_edit_perm "$tools")"
     write_generated "$dest/$name.md" "$(printf '%s' \
 "---
 description: $A_DESC
