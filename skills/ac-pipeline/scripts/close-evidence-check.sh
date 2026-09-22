@@ -28,9 +28,9 @@
 #   investigation -> the reason cites a spawned bead id or a documented-answer marker
 #   epic          -> the reason cites the probe receipt close-gate.sh ran from, AND
 #                    every ## Delivers path exists on disk (exit-0 itself is
-#                    close-gate.sh's GREEN leg, which runs before this core), AND a
-#                    `REVIEW: APPROVED` comment sits on the epic's own comments —
-#                    review passed, read from the bead, never the reason
+#                    close-gate.sh's GREEN leg, which runs before this core). An
+#                    epic closes when its children are closed; there is no review
+#                    receipt to demand (ac-ac-review-narrowing-aq10.1)
 #   human-gate    -> exempt (closure is a recorded human decision)
 #
 # HISTORICAL CLOSES ARE NEVER SWEPT: this runs at close time, on the bead being closed.
@@ -253,19 +253,6 @@ case "$ITYPE" in
 
     if ! printf '%s' "$REASON" | grep -qiE 'probe receipt'; then
       verdict "REFUSE" "epic — close reason cites no probe receipt: an epic closes on its children's temporal pairs, so the reason must cite the probe receipt line close-gate.sh ran from (every probe exit 0)" 1
-    fi
-
-    # The review receipt: the probe receipt proves the probes ran green, but only a
-    # `REVIEW: APPROVED` comment on the epic proves review passed — read from the
-    # bead's own comments (`br show --json` carries a `comments` key), never the
-    # close reason. Unreadable or absent comments refuse: a gate that cannot see the
-    # receipt must not assume it. The match is anchored to a receipt-shaped line
-    # (`^REVIEW: APPROVED`, the shape ac-review writes with the range): a bare
-    # substring grep is satisfied by a negation sentence stating the receipt is
-    # ABSENT (measured live on ac-zug5: "No REVIEW: APPROVED receipt written…"),
-    # which would close the epic on an explicit non-receipt (ac-7lpp).
-    if ! printf '%s' "$NODE" | jq -r '.comments // [] | .[].text // empty' 2>/dev/null | grep -q '^REVIEW: APPROVED'; then
-      verdict "REFUSE" "epic — no REVIEW: APPROVED comment on the epic: review has not passed, so the epic cannot close" 1
     fi
 
     MISSING=""

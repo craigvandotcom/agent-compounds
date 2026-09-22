@@ -68,12 +68,6 @@ bead() {
     > "$FIXTURE_DIR/$1.json"
 }
 
-# review_comment <issue-id> <text> -> comments-json with one comment in br show shape
-review_comment() {
-  jq -n --arg i "$1" --arg t "$2" \
-    '[{id:1, issue_id:$i, author:"reviewer", text:$t, created_at:"2026-09-15T00:00:00Z"}]'
-}
-
 run_gate() { # <expected exit> <label> -- <gate args...>
   local want="$1" label="$2"; shift 3
   CASES=$((CASES + 1))
@@ -157,15 +151,16 @@ whatever
 - script: epicship/thing.sh
 ## Consumes
 - none'
-bead bd-epic-ship epic '[]' "$EPIC_DELIVERS" "$(review_comment bd-epic-ship 'REVIEW: APPROVED epicship/thing.sh at feb39cc')"
+bead bd-epic-ship epic '[]' "$EPIC_DELIVERS"
 EPIC_GONE_DELIVERS='## Intent
 whatever
 ## Delivers
 - script: epicship/gone.sh
 ## Consumes
 - none'
-bead bd-epic-gone epic '[]' "$EPIC_GONE_DELIVERS" "$(review_comment bd-epic-gone 'REVIEW: APPROVED epicship/gone.sh at feb39cc')"
+bead bd-epic-gone epic '[]' "$EPIC_GONE_DELIVERS"
 bead bd-epic-noreview epic '[]' "$EPIC_DELIVERS"
+bead bd-epic-negated epic '[]' "$EPIC_DELIVERS"
 EPIC_OWNED_DELIVERS='## Intent
 whatever
 ## Delivers
@@ -173,7 +168,7 @@ whatever
   touchers: `rg -l -F "epicship/thing" .` -> 2 · owned by: bd-epic-owned.3
 ## Consumes
 - none'
-bead bd-epic-owned epic '[]' "$EPIC_OWNED_DELIVERS" "$(review_comment bd-epic-owned 'REVIEW: APPROVED epicship/thing.sh at feb39cc')"
+bead bd-epic-owned epic '[]' "$EPIC_OWNED_DELIVERS"
 run_epic() { # <expected exit> <label> -- <gate args...>
   local want="$1" label="$2"; shift 3
   CASES=$((CASES + 1))
@@ -188,16 +183,11 @@ run_epic() { # <expected exit> <label> -- <gate args...>
   fi
 }
 run_epic 1 "epic without evidence -> REFUSE" -- bd-epic-ship "closing the epic"
-run_epic 0 "epic with receipt -> PASS" -- bd-epic-ship "shipped: epic landed. Delivered: epicship/thing.sh. probe receipt: FLIGHT-RECEIPT v1 red-probe ... exit 0"
-run_epic 1 "epic with probe receipt but no REVIEW: APPROVED comment -> REFUSE" -- bd-epic-noreview "shipped: epic landed. Delivered: epicship/thing.sh. probe receipt: FLIGHT-RECEIPT v1 exit 0"
-run_epic 1 "epic with receipt but no declared artifact named -> REFUSE" -- bd-epic-ship "shipped: epic landed. probe receipt: FLIGHT-RECEIPT v1 exit 0"
-run_epic 1 "epic with receipt but a promised path missing on disk -> REFUSE" -- bd-epic-gone "shipped: epic landed. Delivered: epicship/gone.sh. probe receipt: FLIGHT-RECEIPT v1 exit 0"
-# Polarity case (ac-7lpp): a negation sentence stating the receipt is ABSENT
-# contains the bare string but is not a receipt-shaped line — it must refuse.
-# Mirrors the live comment on ac-zug5 ("No REVIEW: APPROVED receipt written…"),
-# which satisfied the pre-anchor substring grep.
-bead bd-epic-negated epic '[]' "$EPIC_DELIVERS" "$(review_comment bd-epic-negated 'No REVIEW: APPROVED receipt written: the round is clean but a P1 child is now open, so the receipt waits for the re-review.')"
-run_epic 1 "epic with negated receipt sentence containing the string -> REFUSE" -- bd-epic-negated "shipped: epic landed. Delivered: epicship/thing.sh. probe receipt: FLIGHT-RECEIPT v1 exit 0"
+# An epic closes on its children's closure, never on a review receipt: a fixture with
+# no receipt comment passes on the probe receipt + existing Delivers alone (D9).
+run_epic 0 "epic with no receipt -> PASS" -- bd-epic-noreview "shipped: epic landed. Delivered: epicship/thing.sh. probe receipt: FLIGHT-RECEIPT v1 exit 0"
+run_epic 1 "epic with no declared artifact named -> REFUSE" -- bd-epic-ship "shipped: epic landed. probe receipt: FLIGHT-RECEIPT v1 exit 0"
+run_epic 1 "epic with a promised path missing on disk -> REFUSE" -- bd-epic-gone "shipped: epic landed. Delivered: epicship/gone.sh. probe receipt: FLIGHT-RECEIPT v1 exit 0"
 # A touchers line's `owned by: <child bead id>` is path-shaped but is not a file: read as an
 # artifact it refuses every epic whose Delivers names its owner beads (measured on ac-4y7l).
 run_epic 0 "epic whose touchers name a dotted child bead id -> PASS (ids are not artifacts)" -- bd-epic-owned "shipped: probe receipt green 6/6. Delivered: epicship/thing.sh"
