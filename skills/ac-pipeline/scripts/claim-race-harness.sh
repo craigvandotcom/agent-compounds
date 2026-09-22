@@ -96,7 +96,8 @@ cleanup() {
     | jq -r '.issues[]?.id' 2>/dev/null) \
     || { fail "br list refused in cleanup — the stray sweep is unverified"; strays=""; }
   if [ -n "$strays" ]; then
-    # shellcheck disable=SC2086 -- word-split intentional, IDs are single tokens
+    # word-split intentional, IDs are single tokens
+    # shellcheck disable=SC2086
     br delete $strays --hard --no-auto-flush --no-auto-import \
       --reason "claim-race-harness stray cleanup" >/dev/null 2>&1 || true
   fi

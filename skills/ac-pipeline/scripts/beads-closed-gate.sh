@@ -387,7 +387,8 @@ done
 # `--beads` list cannot masquerade as a claim-free run or a spellable `--allow-empty`.
 SCOPED_BEADS="[]"
 if [ -n "$BEADS_SCOPE" ]; then
-  # shellcheck disable=SC2086 — deliberate word-split: BEADS_SCOPE is a space-separated id list.
+  # deliberate word-split: BEADS_SCOPE is a space-separated id list.
+  # shellcheck disable=SC2086
   _scoped_raw=$(br_call show --json $BEADS_SCOPE) || {
     echo "beads-closed-gate: FAIL-CLOSED — the br show read for --beads refused" >&2
     echo "  the batch scope cannot be resolved" >&2
