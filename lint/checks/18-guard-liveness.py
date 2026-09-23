@@ -17,21 +17,27 @@ runs and always exits 0 is equally dead. So every guard asserts that it RUNS,
 and every guard we can drive asserts that it FIRES on a positive case and
 stays SILENT on a negative one.
 
-  - every hooks/*.py must be executable
+  - every hook script under hooks/ must be executable — a `.py`, a `.sh`, or
+    an extensionless file carrying a shebang; the `.md` docs there are not
+    guards and are never scanned
   - skill-edit-guard.py must fire (exit 2) on both entry points — an Edit
     file_path under skills/, and a Bash command writing into skills/ — and
     stay silent (exit 0) on both negatives (non-skill file, read-only command)
   - bead-capture-guard is a HARD gate, so its own full behaviour suite is
     driven rather than duplicated probes that would drift from it (its stated
     case count is asserted against the live suite by Check 32)
-  - wiring lives in the harness settings, not this repo, so a missing or
-    partial matcher is reported as a NOTICE, never failed — but it is ALWAYS
-    printed: an unwired guard is exactly as dead as a non-executable one
+  - wiring lives in the harness settings this machine actually renders
+    (org scope: `<org_root>/.claude/settings.json`, org_root read via
+    `engine/machine.sh --org-root`), never a hardcoded user path. When that
+    file cannot be located (machine.json absent, e.g. CI) or does not exist,
+    the leg reports a NOTICE and claims no verdict. When it IS present, an
+    unwired or partially-wired guard FAILs — it is exactly as dead as a
+    non-executable one.
 
 The probe flag dir is a private mktemp (the legacy block used a shared
 /tmp/lint-guard-probe that concurrent runs clobbered).
 
-Exit: 0 clean, 1 violations, 2 no hooks/*.py under root (NOT-GATED, never a
+Exit: 0 clean, 1 violations, 2 no hook scripts under root (NOT-GATED, never a
 pass).
 """
 
@@ -73,10 +79,25 @@ def main(argv=()):
               file=sys.stderr)
         return 2
 
+    def _is_hook_script(path, name):
+        """True for a guard script: `.py`, `.sh`, or an extensionless file with a
+        shebang. `.md` docs (delegation-reminder.md and friends) are never guards."""
+        if name.endswith(".md"):
+            return False
+        if name.endswith(".py") or name.endswith(".sh"):
+            return True
+        if "." in name:
+            return False
+        try:
+            with open(path, "rb") as fh:
+                return fh.read(2) == b"#!"
+        except OSError:
+            return False
+
     scanned = 0
     for name in sorted(os.listdir(hooks)):
         path = os.path.join(hooks, name)
-        if not (os.path.isfile(path) and name.endswith(".py")):
+        if not os.path.isfile(path) or not _is_hook_script(path, name):
             continue
         scanned += 1
         if not os.access(path, os.X_OK):
@@ -112,8 +133,32 @@ def main(argv=()):
         violations.append(
             "bead-capture-guard.py or its .test.py is missing — the bead provenance gate cannot be verified")
 
-    settings = os.path.join(os.path.expanduser("~"), "Repos", ".claude", "settings.json")
-    if os.path.isfile(settings):
+    # The live wiring: org scope renders skill-edit-guard into
+    # <org_root>/.claude/settings.json. org_root comes from the ONE reader of
+    # machine.json (engine/machine.sh) — never a hardcoded user path. When
+    # machine.json is absent (e.g. CI) machine.sh exits 4 and org_root is
+    # unknown, so the leg can only NOTICE. Once the settings file IS present,
+    # an unwired or partially-wired guard is a real FAIL, not a notice.
+    ac_root = os.path.dirname(_LINT)
+    machine_sh = os.path.join(ac_root, "engine", "machine.sh")
+    settings = None
+    try:
+        org_root_proc = subprocess.run(
+            ["bash", machine_sh, "--org-root"],
+            capture_output=True, text=True, timeout=30,
+        )
+        if org_root_proc.returncode == 0 and org_root_proc.stdout.strip():
+            settings = os.path.join(org_root_proc.stdout.strip(), ".claude", "settings.json")
+    except (subprocess.SubprocessError, OSError):
+        settings = None
+
+    if settings is None:
+        notices.append(
+            "machine.json is not configured on this machine (engine/machine.sh "
+            "--org-root) — wiring not verified")
+    elif not os.path.isfile(settings):
+        notices.append(f"{settings} absent — wiring not verified on this machine")
+    else:
         try:
             import json
             with open(settings, encoding="utf-8") as fh:
@@ -130,25 +175,23 @@ def main(argv=()):
         if "Bash" in wiring and "Edit" in wiring:
             print(f"  wiring: skill-edit-guard on [{wiring}] — both entry points covered")
         elif wiring in ("NONE", ""):
-            notices.append(
+            violations.append(
                 f"skill-edit-guard is NOT wired in {settings} — it cannot fire on this machine")
         else:
-            notices.append(
+            violations.append(
                 f"skill-edit-guard wired on [{wiring}] only — the uncovered entry point is ungoverned")
-    else:
-        notices.append(f"{settings} unreadable — wiring not verified on this machine")
 
     for n in notices:
         print(f"NOTICE: {n}")
     if scanned == 0 and not violations:
-        print("18-guard-liveness NOT-CHECKED: no hooks/*.py under root — nothing scanned",
+        print("18-guard-liveness NOT-CHECKED: no hook scripts under root — nothing scanned",
               file=sys.stderr)
         return 2
     if violations:
         for v in violations:
             print(f"FAIL 18-guard-liveness: {v}")
         return 1
-    print(f"18-guard-liveness: {scanned} hooks/*.py scanned, all guards alive")
+    print(f"18-guard-liveness: {scanned} hook script(s) scanned, all guards alive")
     return 0
 
 
