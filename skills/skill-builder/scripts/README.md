@@ -82,10 +82,6 @@ Validate skill meets standards and best practices.
 - Contains trigger phrases ("Use when", "Triggers on", "Applies to")
 - Not workflow summary (no "first...then", "step 1", etc.)
 
-**Size Constraints:**
-- SKILL.md under 500 lines (warns if >400)
-- Recommends moving content to workflows/ or references/ if too large
-
 **Recommended Sections:**
 - "When to Use" section
 - "Core Pattern" or "Core Principle" section

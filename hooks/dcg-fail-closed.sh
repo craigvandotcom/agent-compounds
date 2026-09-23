@@ -4,7 +4,7 @@
 # binary, non-JSON output — the wrapper BLOCKS. A broken destructive-command guard stops
 # the line; it does not wave commands through at the moment the environment is broken
 # enough to have crashed the guard. dcg's own decisions (exit 0) pass through untouched.
-# Canon: hooks/hooks.json + ac-pipeline/references/assurance-declarations.md.
+# Canon: engine/hooks.wiring.json + ac-pipeline/references/assurance-declarations.md.
 set -u
 DCG="${DCG_UNDER_TEST:-$HOME/.local/bin/dcg}"
 ERR="$(mktemp /tmp/dcg-fail-closed-stderr.XXXXXX)"

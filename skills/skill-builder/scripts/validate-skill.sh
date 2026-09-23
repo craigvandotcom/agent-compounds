@@ -8,7 +8,6 @@
 # - YAML frontmatter exists with name and description
 # - Name is lowercase-hyphen format, max 64 chars
 # - Description under 1024 chars
-# - SKILL.md under 500 lines (warning if over 400)
 # - Description contains trigger phrases (not just purpose)
 # - POINTER INTEGRITY: every references/|workflows/|tools/|_shared/ file named in the
 #   skill's .md files exists (hard fail if missing); reference files never pointed to
@@ -390,7 +389,7 @@ fi
 # ac-q6e.2) — it was INERT (WARN-only, never blocked anything) and judged a
 # file in isolation rather than the change. Superseded by lint.sh Check 14
 # (no-net-growth): a diff-aware HARD gate that fails on net SKILL.md line
-# growth vs origin/main unless stamped `<!-- net-growth-ok: <reason> -->`.
+# growth vs origin/main; there is no stamp escape.
 
 # Check for common required sections
 echo ""

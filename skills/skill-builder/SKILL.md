@@ -345,7 +345,6 @@ description: Use when user mentions tasks, todos, deadlines, reminders, calendar
 **validate-skill.sh** checks:
 - YAML frontmatter format
 - Name/description constraints
-- Size limits (warns >400 and >500 lines — see enforcement-heavy exception above)
 - Trigger phrase presence
 - Workflow summary anti-patterns
 - `--registry <skills-dir>`: sums all model-invocable descriptions against the listing budget (default ~15k; this registry deploys BUDGET_FAIL=30000)

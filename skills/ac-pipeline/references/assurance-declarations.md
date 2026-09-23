@@ -11,7 +11,7 @@ root's `an-assurance-claim-without-a-loop-is-decoration.md`.
 
 ## The four fields
 
-Every mechanism declares these AT BIRTH. In `hooks/hooks.json` they live in the entry's
+Every mechanism declares these AT BIRTH. In `engine/hooks.wiring.json` they live in the entry's
 `assurance` object; elsewhere, as a greppable comment block in the file itself.
 
 | Field | Says | Why it cannot be inferred |

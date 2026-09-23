@@ -62,5 +62,5 @@ semantic 8.0s.
 
 Wired by project-relative path in root `.claude/settings.json` UserPromptSubmit
 (`$CLAUDE_PROJECT_DIR/.claude/hooks/memory-retrieval.py`) — the canon manifest is
-`agent-compounds/hooks/hooks.json` (`memory-recall` entry), rendered per harness by
+`agent-compounds/engine/hooks.wiring.json` (`memory-recall` entry), rendered per harness by
 `harness-sync.sh`. Apps carry their own absolute-path call to this same file.

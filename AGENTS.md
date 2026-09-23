@@ -25,7 +25,8 @@
 | **Write this machine's settings** | copy `machine.example.json` to `machine.json` (gitignored) and edit by hand — this machine's org root, deploy targets and harness overrides; reader: `engine/machine.sh` |
 | **Selective one-off stamp (non-target project)** | `./engine/deploy.sh <target> --skills a,b --agents x,y` (or `--all`) |
 | **Dry run** | `./engine/sync.sh --all -n` / `./engine/deploy.sh <target> --all -n` |
-| Dev/test/lint/build | N/A (content repo — no build pipeline) |
+| Lint (invariants) | `./lint.sh` |
+| Proof tests | `bash scripts/run-all-proofs.sh` |
 
 ## Distribution policy
 
@@ -39,7 +40,7 @@ carry `"skillListingBudgetFraction": 0.02` — the full registry's model-invocab
 descriptions exceed Claude Code's default listing budget, and without the setting an app
 degrades to nondeterministic per-app description truncation. New apps inherit it by copying
 settings from an existing app (the standard bootstrap). The registry's own gate:
-`lint.sh` Check D / `validate-skill.sh --registry` (budget threshold coupled to this value
+`lint.sh` Check `13-skill-registry` / `validate-skill.sh --registry` (budget threshold coupled to this value
 + the invocation-graph rule — flags derived from the files, never memory; doctrine:
 `skills/skill-builder/references/token-economics.md`).
 

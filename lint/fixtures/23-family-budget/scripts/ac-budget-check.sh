@@ -46,7 +46,7 @@
 #                  the owner-hosted operating contracts there; the no-subdirs bound now
 #                  applies to the constitution CORE in SKILL.md, enforced by review.
 #   5. assurance   every lean script declares PROBE / SCHEDULE / MODE / ON-FAILURE. lint
-#                  Check 21 reads only hooks/hooks.json and structurally cannot see these.
+#                  Check 21 reads only engine/hooks.wiring.json and structurally cannot see these.
 #                  Discovery set: the six workflow skills' scripts/*.sh PLUS the named
 #                  skills/_tools/polish-fixpoint.sh (the one lean script that lives
 #                  outside any member dir, so a glob-only set would silently report zero).

@@ -170,7 +170,7 @@ joints. A domain rule restated inside one is drift debt (the SINGLE-HOME rule th
 skill-edit-guard reminds about); a domain rule with no canon home yet is a finding —
 create the home first, then bind to it. Defensive restatement ("the child might not
 load the canon") is solved by delivery (preamble line / tripwire / validator — see
-`hooks/hooks.json` patterns), never by copying the rule in.
+`engine/hooks.wiring.json` patterns), never by copying the rule in.
 
 ## The move-out decision — when content leaves SKILL.md, where does it go?
 
