@@ -303,6 +303,19 @@ def kv(key, val, kw=11):
     return [f"{key:<{kw}}{vs[0]}"] + [" " * kw + v for v in vs[1:]]
 
 
+def pr_ci(p):
+    checks = p.get("statusCheckRollup") or []
+    bad = [c.get("name") or c.get("context") or "?" for c in checks
+           if (c.get("conclusion") or c.get("state") or "").upper()
+           in ("FAILURE", "ERROR", "TIMED_OUT", "CANCELLED", "ACTION_REQUIRED")]
+    pend = sum(1 for c in checks if (c.get("status") or "COMPLETED").upper() != "COMPLETED"
+               or (c.get("state") or "").upper() == "PENDING")
+    if bad:
+        return f"CI ✗ {len(bad)} failing: " + ", ".join(bad[:2]) + (" …" if len(bad) > 2 else "")
+    if pend: return f"CI … {pend} running"
+    return "CI ✓" if checks else "no CI checks"
+
+
 out = [clip(f"{name} · {NOW.astimezone():%m-%d %H:%M}", W), ""]
 
 # VERDICT — the state word alone, its reasons stacked beneath
