@@ -55,8 +55,8 @@ tools/dcg/fixtures/
 # absolute paths) in a public repo. Every adopter accumulates their own.
 #
 # Sensors that read these paths now SKIP when they are absent and stay
-# fail-closed when present-but-broken: scripts/ac-ledger-integrity.sh (via
-# check 22), check 25-archived-names, check 35-board-integrity.
+# fail-closed when present-but-broken: checks 22-ledger-integrity,
+# 25-archived-names and 35-board-integrity.
 # ---------------------------------------------------------------------------
 
 # Friction ledgers — each deployment's own operational log

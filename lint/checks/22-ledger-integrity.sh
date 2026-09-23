@@ -1,11 +1,26 @@
 #!/usr/bin/env bash
+# ---
+# id: 22-ledger-integrity
+# prevents: a friction ledger and its controls drifting apart — entries citing controls the
+#   constitution does not define, receipts nobody kept, a friction re-observed after its control
+#   landed accruing silently instead of surfacing as a FAILED CONTROL, and an entry with no scorable
+#   ordinal going unreported
+# scope: LEDGER
+# severity: fail
+# fixture: lint/fixtures/22-ledger-integrity
+# ---
 #
-# ac-ledger-integrity.sh — the ac2 family ledger's referential-integrity gate (lint Check 22).
+# 22-ledger-integrity.sh — the lean family's friction sensor: one check, two surfaces.
 #
-# ASSURANCE — MODE: blocking · ON-FAILURE: closed. A missing or empty ledger is NOT a pass:
-# it exits non-zero carrying the literal token NOT-GATED. A check that green-passes over an
-# empty set is the exact failure this pipeline exists to stop believing (ac-pipeline
-# Invariant 3: silence is never success).
+# The lean family's controls and its friction ledger must still point at each other: every
+# entry cites a `receipt:` and the `control:` that treats it (or is explicitly `untreated`),
+# every control names the failure it prevents, and a friction re-observed AFTER its control
+# landed surfaces as a FAILED CONTROL rather than accruing silently. This check is also the
+# ONE friction sensor for the ledger-health class: an entry with no scorable ordinal
+# (impact/frequency/recurrence) is a named finding — never a mutation (the ledger edit is
+# human-gated; the frictions docket consumes the report rows). The ledger is parsed through
+# the ONE shared parser (`skills/skill-builder/scripts/friction-rollup.py`) — this script adds
+# assertions, never a second parse of the same files.
 #
 # THE CONTRACT, both directions:
 #   ledger -> control   every entry cites a `receipt:` (the evidence) and names the
@@ -14,47 +29,35 @@
 #                       an Invariant, `C-<slug>` for a Calibration.
 #   control -> failure  every Invariant names the failure it Prevents AND its L-tag; every
 #                       Calibration names its L-tag and the measurement that *retires* it.
-#                       (ac-pipeline Invariant 8, made mechanical.)
 #   regression          a treated entry whose `last_seen` is AFTER its `control_landed`
 #                       date is a FAILED CONTROL — the friction kept biting after the fix
 #                       shipped. Treated entries must carry `control_landed:`, or that
 #                       detector is unfalsifiable.
-#   seed rule           a friction id minted in an OLD ac-* ledger is legal input: during
-#                       construction ac2 controls cite those ids and the family ledger
+#   seed rule           a friction id minted in an older ledger is legal input: during
+#                       construction, controls cite those ids and the family ledger
 #                       inherits them. Foreign ids are never flagged.
 #
-# THE SCORABLE SWEEP (folded in from friction-rollup.py --strict, 2026-09-08 ruling:
-# detection automated, mutation human-gated): every skills/*/FRICTIONS.md entry must
-# carry scorable ordinals (impact/frequency/recurrence) — the integrity class the
-# strict pass existed for. This check is now the ONE friction sensor: findings are
-# REPORT ROWS, never mutations, and the frictions docket consumes them. friction-rollup.py
-# --strict stays available to other callers; its former scheduled pass had no owner and
-# is retired. With no --ledger, the sweep covers ALL ledgers; an explicit --ledger
-# scopes the sweep to that one ledger.
+# THE SCORABLE SWEEP (folded in from friction-rollup.py --strict; detection automated,
+# mutation human-gated): every skills/*/FRICTIONS.md entry must carry scorable ordinals
+# (impact/frequency/recurrence). Findings are REPORT ROWS, never mutations; the frictions
+# docket consumes them. With no --ledger, the sweep covers ALL ledgers; an explicit
+# --ledger scopes the sweep to that one ledger.
 #
-# ENTRY COUNTS (2026-09-12, maintainer-decided lint audit): every entry count in this
-# script's own output is derived from the parsed ledger at read time
-# (`.ledger.entries | length`), never from a hand-kept frontmatter field. The
-# ledgers used to carry an `entries: N` header that a mismatch leg compared
-# against the parsed count; concurrent appends raced on that hand-kept number
-# (a human had to bump it by hand), so the header is removed from every ledger
-# and the comparison retired with it — there is no longer a stale copy for
-# anything to race on.
+# ENTRY COUNTS: every entry count this check reports is derived from the parsed ledger at
+# read time (`.ledger.entries | length`), never from a hand-kept frontmatter field.
 #
 # FINDINGS CONTRACT (machine-readable, one row per line, grep-able for the docket):
 #   FAIL: NOT-SCORABLE: <id> (<path>): <ordinal>='<value>'; ...
-# plus the existing contract rows (FAIL: ledger entry '...' / FAIL: constitution: ... /
+# plus the contract rows (FAIL: ledger entry '...' / FAIL: constitution: ... /
 # FAIL: FAILED CONTROL — ...).
 #
-# ONE PARSER: the ledger is parsed by `skills/skill-builder/scripts/friction-rollup.py`
-# --ledger (the shared computation delivered by ac-on0y.3), and the sweep reads the
-# same script's default-all JSON — its own unscorable reasons and pointer-corrected
-# counts. This script adds assertions, never a second parse of the same files.
-#
-# Usage:  ac-ledger-integrity.sh [--ledger <path>] [--constitution <path>] [<repo root>]
-# Exit 0  the ledger and the constitution satisfy the contract
-# Exit 1  at least one violation (each reported as FAIL: ...)
-# Exit 2  usage error, or the shared parser is missing
+# Usage:  22-ledger-integrity.sh [--ledger <path>] [--constitution <path>] [<repo root>]
+# Exit 0   the ledger and the constitution satisfy the contract
+# Exit 1   at least one violation (each reported as FAIL: ...), including an explicitly
+#          named --ledger/--constitution or a parser that cannot be read
+# Exit 2   the shared parser is missing — nothing was checked
+# Exit 77 skip — this checkout ships no ledger at all (adopter-local, gitignored); an
+#          explicitly named --ledger that is absent is still exit 1, never a skip
 set -uo pipefail
 
 LEDGER=""
@@ -69,7 +72,7 @@ while [ $# -gt 0 ]; do
     *) ROOT="$1"; shift ;;
   esac
 done
-ROOT="${ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
+ROOT="${ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)}"
 LEDGER="${LEDGER:-$ROOT/skills/ac-pipeline/FRICTIONS.md}"
 CONSTITUTION="${CONSTITUTION:-$ROOT/skills/ac-pipeline/SKILL.md}"
 ROLLUP="$ROOT/skills/skill-builder/scripts/friction-rollup.py"
@@ -83,13 +86,13 @@ if [ ! -f "$ROLLUP" ]; then
 fi
 
 # --- Absent ledger: skip when unshipped, fail closed when explicitly named -------------
-# Friction ledgers are adopter-local and gitignored (they are each deployment's own
-# operational log, not shipped registry content), so a checkout carrying none is the
-# normal case, not a broken sensor. An explicitly named --ledger that does not exist is
-# still a hard failure: the caller asserted a sensor that is not there.
+# Friction ledgers are adopter-local and gitignored (each deployment's own operational
+# log, not shipped registry content), so a checkout carrying none is the normal case, not
+# a broken sensor. An explicitly named --ledger that does not exist is still a hard
+# failure: the caller asserted a sensor that is not there.
 if [ ! -f "$LEDGER" ] && [ "$LEDGER_SET" = 0 ]; then
-  echo "SKIP: no ac2 ledger in this checkout — friction ledgers are adopter-local (gitignored), so there is nothing to gate here."
-  exit 0
+  echo "skipped: 22-ledger-integrity — no ledger in this checkout, nothing gated"
+  exit 77
 fi
 if [ ! -f "$LEDGER" ]; then
   echo "FAIL: NOT-GATED — no ac2 ledger at $LEDGER. An absent sensor is not a clean one."
@@ -137,7 +140,7 @@ while IFS= read -r line; do
     ali_fail "constitution: Invariant $num carries no L-tag — a control naming neither its failure nor its layer is deleted, not demoted" ;;
   esac
   case "$line" in *"Prevents:"*) ;; *)
-    ali_fail "constitution: Invariant $num names no failure it prevents (no 'Prevents:') — ac-pipeline Invariant 8" ;;
+    ali_fail "constitution: Invariant $num names no failure it prevents (no 'Prevents:')" ;;
   esac
 done <<EOF
 $INVARIANTS
@@ -164,7 +167,7 @@ EOF
 # MIDDLE field shifts every later column (control reads last_seen, landed reads
 # last_seen) — the failed-control detector then compares the wrong pair, silently.
 # awk -F'\t' preserves empties; the fields are re-delimited with \x1f (US), which is
-# NOT IFS whitespace, so the read below cannot collapse them (ac-va0t).
+# NOT IFS whitespace, so the read below cannot collapse them.
 while IFS=$'\x1f' read -r id receipt control landed last_seen untreated; do
   [ -n "$id" ] || continue
   if [ -z "$receipt" ]; then
@@ -229,10 +232,10 @@ if [ -n "$NOT_SCORABLE" ]; then printf '%s\n' "$NOT_SCORABLE"; RC=1; fi
 
 if [ "$RC" -eq 0 ]; then
   if [ "$LEDGER_SET" = 1 ]; then
-    echo "ac-ledger-integrity: $ENTRY_COUNT entr(y|ies) · $(printf '%s' "$CONTROL_IDS" | wc -w | tr -d ' ') controls — contract holds both directions"
+    echo "  ok: 22-ledger-integrity — $ENTRY_COUNT entr(y|ies) · $(printf '%s' "$CONTROL_IDS" | wc -w | tr -d ' ') controls — contract holds both directions"
   else
     LEDGER_COUNT=$(printf '%s' "$SWEEP_JSON" | jq -r '.ledgers')
-    echo "ac-ledger-integrity: $ENTRY_COUNT entr(y|ies) · $(printf '%s' "$CONTROL_IDS" | wc -w | tr -d ' ') controls — contract holds both directions · all $LEDGER_COUNT ledgers scorable"
+    echo "  ok: 22-ledger-integrity — $ENTRY_COUNT entr(y|ies) · $(printf '%s' "$CONTROL_IDS" | wc -w | tr -d ' ') controls — contract holds both directions · all $LEDGER_COUNT ledgers scorable"
   fi
 fi
 exit "$RC"

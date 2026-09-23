@@ -21,7 +21,7 @@ The ONE exception is opt-in `--strict`: it flips ON-FAILURE for two integrity cl
 only — entries with no scorable ordinal (impact/frequency/recurrence) and `entries:`
 frontmatter counts that disagree with the parsed entries — emitting an explicit
 NOT-SCORABLE / entry-count mismatch line to stderr and exiting 3. Its OWNER is lint
-Check 22 (`scripts/ac-ledger-integrity.sh`), which mirrors the two classes as its own
+Check 22 (`lint/checks/22-ledger-integrity.sh`), which mirrors the two classes as its own
 verdict lines so the frictions docket can consume them; the former scheduled strict
 pass had no owner and is retired (2026-09-08: detection automated, mutation
 human-gated). `--strict` stays available to any other caller. Everything else stays
@@ -238,7 +238,7 @@ def entry_count_mismatches(ledgers: list) -> list:
 
 def strict_fail(ledgers: list, by_id: dict) -> int:
     """--strict: the weighting pass must never silently skip a reading it cannot score.
-    Loud on stderr, exit 3. Owned by lint Check 22 (scripts/ac-ledger-integrity.sh),
+    Loud on stderr, exit 3. Owned by lint Check 22 (lint/checks/22-ledger-integrity.sh),
     which mirrors these classes as its own verdict lines for the frictions docket;
     advisory mode never calls this."""
     unscorable = sorted(
