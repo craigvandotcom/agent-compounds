@@ -10,7 +10,7 @@
 # ---
 """19-bead-template-conformance — the ported Check 19 (ac-1p7j.15).
 
-Ported VERBATIM from the legacy bash block (proven by lint/parity.sh against
+Ported VERBATIM from the legacy bash block (parity proven at port time against
 the extracted block, before the block was removed from lint.sh). Same judge,
 same verdict strings: scripts/bead-template-lint.py — the static twin of the
 runtime bead-capture-guard — is the contract's ONE implementation; this check

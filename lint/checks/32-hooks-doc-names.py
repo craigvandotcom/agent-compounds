@@ -37,7 +37,7 @@ prose, and are out of scope.
 
 The live roster is derived from the shared scope model — the skills/*/SKILL.md
 members of LIVE_TEXT — never from a hand-kept list. The manifest itself is a
-single named config input (the lint/config.json precedent in Check 14), read
+single named config input (the same manifest pattern Check 14 reads), read
 directly; scope declares LIVE_TEXT because the roster it resolves against is
 the live skill population.
 

@@ -36,7 +36,6 @@ same contract as 25:
 Exit: 0 clean, 1 orphans, 2 scanned nothing (NOT-GATED, never a pass).
 """
 
-import json
 import os
 import subprocess
 import sys
@@ -99,13 +98,6 @@ def git(root, *args):
 
 def ratchet_base(root):
     ref = DEFAULT_BASE_REF
-    cfg = os.path.join(root, "lint", "config.json")
-    if os.path.isfile(cfg):
-        try:
-            with open(cfg, encoding="utf-8") as fh:
-                ref = json.load(fh).get("base_ref", DEFAULT_BASE_REF)
-        except (OSError, ValueError):
-            ref = DEFAULT_BASE_REF
     if git(root, "rev-parse", "--verify", "--quiet", ref):
         b = git(root, "merge-base", ref, "HEAD")
         if b:

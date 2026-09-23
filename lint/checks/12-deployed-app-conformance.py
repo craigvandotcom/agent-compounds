@@ -15,7 +15,7 @@
 # ---
 """12-deployed-app-conformance — no dead names in every-prompt surfaces (ac-1p7j.14).
 
-Ported from the legacy Check 12 bash block in lint.sh (proven by lint/parity.sh
+Ported from the legacy Check 12 bash block in lint.sh (parity proven at port time
 against the extracted legacy block, over the consumer union the legacy Check 7
 block built, before both blocks were removed). Same verdicts: probe each
 consumer's hooks/workflow-reminder.md (C1 dead pipeline commands), its

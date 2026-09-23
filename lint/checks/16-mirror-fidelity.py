@@ -10,7 +10,7 @@
 # ---
 """16-mirror-fidelity — the ported Check 16 judge (ac-1p7j.15).
 
-Ported VERBATIM from the legacy bash block (proven by lint/parity.sh against
+Ported VERBATIM from the legacy bash block (parity proven at port time against
 the extracted block, before the block was removed from lint.sh). Same marker
 grammar, same three buckets, same verdict strings.
 

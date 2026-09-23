@@ -1334,9 +1334,8 @@ guard_public() { # <target-base-dir> — 0 if every stamped harness path is giti
 # (a Husky `_` dir is one common example). Never clobbers the chain runner or a real
 # pre-commit file — refuses loudly, like deploy.sh does for skills.
 # Hook symlinks are RELATIVE, always. An absolute target bakes one machine's layout
-# into a link that is committed in some repos (agent-compounds tracks its own
-# .husky/_/hooks.d/pre-commit/60-ac-lint as ../../../../hooks/pre-commit) and would be a
-# dead path on any other host — the same spell-the-path defect ac-9ahd removed from the
+# into a link that could be committed in some repos (a Husky `_` dir, e.g.) and would be
+# a dead path on any other host — the same spell-the-path defect ac-9ahd removed from the
 # engine itself. install_commit_msg_hook used to link absolutely while install_lint_hook's
 # committed form was relative, so the installer and the tree disagreed and every sync
 # printed "SKIP (symlink points elsewhere)" at the one it did not write.

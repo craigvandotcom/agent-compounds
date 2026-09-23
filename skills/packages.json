@@ -32,7 +32,7 @@
     }
   },
   "_lint": {
-    "_doc": "relocated lint v2 constants (ac-6asz.3): lint/config.json is deleted, so this section is the only source. Checks 14/15 read caps, ceilings and base_ref through lint/lib/manifest.py; Checks 13/23 read the per-package budgets above the same way. Values moved verbatim — a constant change is a manifest change, never a script edit. The README renderer skips '_' keys, so the 7-package map is unaffected.",
+    "_doc": "relocated lint v2 constants (ac-6asz.3): this section is the only source. Checks 14/15 read caps, ceilings and base_ref through lint/lib/manifest.py; Checks 13/23 read the per-package budgets above the same way. Values moved verbatim — a constant change is a manifest change, never a script edit. The README renderer skips '_' keys, so the 7-package map is unaffected.",
     "base_ref": "origin/main",
     "lean_family_cap": 800,
     "conductor_ceiling": 170,

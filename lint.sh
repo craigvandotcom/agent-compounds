@@ -13,7 +13,7 @@
 # inline made it invisible to 00-meta.py's header contract and to
 # --check/--changed scoping). Check 14 (no-net-growth)'s `net-growth-ok`
 # escape hatch stays removed (ec5fa64) — growth is bought with deletion,
-# never a prose stamp — pinned by scripts/lint-net-growth.test.sh.
+# never a prose stamp — pinned by lint/checks/14-no-net-growth.test.sh.
 #
 # Usage:  ./lint.sh                 every check under lint/checks/
 #         ./lint.sh --check <id>    ONLY the named check (repeatable)

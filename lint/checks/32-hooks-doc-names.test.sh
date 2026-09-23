@@ -24,6 +24,9 @@ fails=0
 ok()  { echo "  ok    $1"; }
 bad() { echo "  FAIL  $1"; fails=$((fails + 1)); }
 
+OUT="$(mktemp)"
+trap 'rm -f "$OUT"' EXIT
+
 run_check() { # <tmp-root> <out-file> -> exit code
   python3 "$CHECK" "$1" > "$2" 2>&1
   echo $?
@@ -50,33 +53,33 @@ EOF
 # --- RED: _doc naming a missing ac- skill --------------------------------------
 w="$(mktemp -d)"
 write_manifest "$w" "Fails open because the ac-missing-skill stamp-gate is the backstop." "the live backstop." "ac-on0y.5"
-rc=$(run_check "$w" /tmp/32hd-out.txt)
-if [ "$rc" = 1 ] && grep -q "'ac-missing-skill' names no live" /tmp/32hd-out.txt; then
+rc=$(run_check "$w" "$OUT")
+if [ "$rc" = 1 ] && grep -q "'ac-missing-skill' names no live" "$OUT"; then
   ok "RED: missing ac- skill -> exit 1 naming the field"
 else
-  bad "RED case: expected 1 naming ac-missing-skill, got $rc"; cat /tmp/32hd-out.txt
+  bad "RED case: expected 1 naming ac-missing-skill, got $rc"; cat "$OUT"
 fi
 rm -rf "$w"
 
 # --- RED: BACKSTOP naming a missing skill --------------------------------------
 w="$(mktemp -d)"
 write_manifest "$w" "All live references here." "the ac-ghost-backstop catches it." "ac-on0y.5"
-rc=$(run_check "$w" /tmp/32hd-out.txt)
-if [ "$rc" = 1 ] && grep -q "assurance/BACKSTOP: skill reference 'ac-ghost-backstop'" /tmp/32hd-out.txt; then
+rc=$(run_check "$w" "$OUT")
+if [ "$rc" = 1 ] && grep -q "assurance/BACKSTOP: skill reference 'ac-ghost-backstop'" "$OUT"; then
   ok "RED: BACKSTOP missing skill -> exit 1 naming the field"
 else
-  bad "BACKSTOP case: expected 1, got $rc"; cat /tmp/32hd-out.txt
+  bad "BACKSTOP case: expected 1, got $rc"; cat "$OUT"
 fi
 rm -rf "$w"
 
 # --- RED: dead skills/ path reference ------------------------------------------
 w="$(mktemp -d)"
 write_manifest "$w" "Docs live at skills/nope/SKILL.md." "the live backstop." "ac-on0y.5"
-rc=$(run_check "$w" /tmp/32hd-out.txt)
-if [ "$rc" = 1 ] && grep -q "'skills/nope/SKILL.md' does not exist" /tmp/32hd-out.txt; then
+rc=$(run_check "$w" "$OUT")
+if [ "$rc" = 1 ] && grep -q "'skills/nope/SKILL.md' does not exist" "$OUT"; then
   ok "RED: dead skills/ path -> exit 1"
 else
-  bad "PATH case: expected 1, got $rc"; cat /tmp/32hd-out.txt
+  bad "PATH case: expected 1, got $rc"; cat "$OUT"
 fi
 rm -rf "$w"
 
@@ -85,11 +88,11 @@ w="$(mktemp -d)"
 write_manifest "$w" "All live references here." "the live backstop." "ac-on0y.5" \
   "hooks/bead-capture-guard.test.py (7 cases)"
 printf 'cases = [1, 2, 3]\n' > "$w/hooks/bead-capture-guard.test.py"
-rc=$(run_check "$w" /tmp/32hd-out.txt)
-if [ "$rc" = 1 ] && grep -q "states 7 case(s)" /tmp/32hd-out.txt; then
+rc=$(run_check "$w" "$OUT")
+if [ "$rc" = 1 ] && grep -q "states 7 case(s)" "$OUT"; then
   ok "RED: stated case count != live suite -> exit 1"
 else
-  bad "COUNT case: expected 1 naming the mismatch, got $rc"; cat /tmp/32hd-out.txt
+  bad "COUNT case: expected 1 naming the mismatch, got $rc"; cat "$OUT"
 fi
 rm -rf "$w"
 
@@ -98,52 +101,52 @@ w="$(mktemp -d)"
 write_manifest "$w" "All live references here." "the live backstop." "ac-on0y.5" \
   "hooks/bead-capture-guard.test.py (3 cases)"
 printf 'cases = [1, 2, 3]\n' > "$w/hooks/bead-capture-guard.test.py"
-rc=$(run_check "$w" /tmp/32hd-out.txt)
+rc=$(run_check "$w" "$OUT")
 if [ "$rc" = 0 ]; then
   ok "GREEN: stated count matching the live suite -> exit 0"
 else
-  bad "COUNT-GREEN case: expected 0, got $rc"; cat /tmp/32hd-out.txt
+  bad "COUNT-GREEN case: expected 0, got $rc"; cat "$OUT"
 fi
 rm -rf "$w"
 
 # --- GREEN: live references resolve; file names and bead ids stay quiet --------
 w="$(mktemp -d)"
 write_manifest "$w" "Renders to plugins/ac-demo.js; re-filed as bead ac-on0y.5; see skills/real/SKILL.md." "skills/real/SKILL.md carries it." "ac-on0y.5"
-rc=$(run_check "$w" /tmp/32hd-out.txt)
+rc=$(run_check "$w" "$OUT")
 if [ "$rc" = 0 ]; then
   ok "GREEN: live refs resolve; ac-demo.js and ac-on0y.5 not read as skills"
 else
-  bad "GREEN case: expected 0, got $rc"; cat /tmp/32hd-out.txt
+  bad "GREEN case: expected 0, got $rc"; cat "$OUT"
 fi
 rm -rf "$w"
 
 # --- OUT OF SCOPE: a PENDING-DECISION bead id never fails the check ------------
 w="$(mktemp -d)"
 write_manifest "$w" "All live references here." "the live backstop." "ac-dcg-fails-closed-u7hj"
-rc=$(run_check "$w" /tmp/32hd-out.txt)
+rc=$(run_check "$w" "$OUT")
 if [ "$rc" = 0 ]; then
   ok "SCOPE: PENDING-DECISION bead id out of scope -> exit 0"
 else
-  bad "SCOPE case: expected 0, got $rc"; cat /tmp/32hd-out.txt
+  bad "SCOPE case: expected 0, got $rc"; cat "$OUT"
 fi
 rm -rf "$w"
 
 # --- EMPTY: no manifest -> NOT-GATED exit 2 ------------------------------------
 w="$(mktemp -d)"
-rc=$(run_check "$w" /tmp/32hd-out.txt)
-if [ "$rc" = 2 ] && grep -qi "NOT-CHECKED" /tmp/32hd-out.txt; then
+rc=$(run_check "$w" "$OUT")
+if [ "$rc" = 2 ] && grep -qi "NOT-CHECKED" "$OUT"; then
   ok "EMPTY: no manifest -> NOT-GATED exit 2"
 else
-  bad "EMPTY case: expected 2 NOT-CHECKED, got $rc"; cat /tmp/32hd-out.txt
+  bad "EMPTY case: expected 2 NOT-CHECKED, got $rc"; cat "$OUT"
 fi
 rm -rf "$w"
 
 # --- REAL: the live wiring manifest resolves clean ----------------------------------
-rc=$(python3 "$CHECK" >/tmp/32hd-out.txt 2>&1; echo $?)
+rc=$(python3 "$CHECK" >"$OUT" 2>&1; echo $?)
 if [ "$rc" = 0 ]; then
   ok "REAL: live wiring manifest -> exit 0"
 else
-  bad "REAL: expected 0, got $rc"; cat /tmp/32hd-out.txt
+  bad "REAL: expected 0, got $rc"; cat "$OUT"
 fi
 
 echo

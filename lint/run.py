@@ -59,8 +59,6 @@ sys.path.insert(0, _HERE)
 
 from lib import frontmatter, scope  # noqa: E402
 
-STEM = re.compile(r"^(\d{2})-([a-z0-9-]+)\.(py|sh)$")
-
 
 def discover():
     out = []

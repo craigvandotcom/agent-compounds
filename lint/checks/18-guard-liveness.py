@@ -10,7 +10,7 @@
 # ---
 """18-guard-liveness — the ported Check 18 (ac-1p7j.15).
 
-Ported VERBATIM from the legacy bash block (proven by lint/parity.sh against
+Ported VERBATIM from the legacy bash block (parity proven at port time against
 the extracted block, before the block was removed from lint.sh). Same probes,
 same verdict strings. Executability alone is not the assertion: a hook that
 runs and always exits 0 is equally dead. So every guard asserts that it RUNS,

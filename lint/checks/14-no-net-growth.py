@@ -10,7 +10,7 @@
 # ---
 """14-no-net-growth — the ported Check 14 judge (ac-1p7j.2).
 
-Ported VERBATIM from the legacy bash block (proven by lint/parity.sh against the
+Ported VERBATIM from the legacy bash block (parity proven at port time against the
 extracted legacy functions, before the block was removed from lint.sh). Same
 shape, same verdict strings, same degrades:
 
@@ -34,7 +34,7 @@ an existing member never defers. There is NO prose token: ec5fa64 removed
 
 Modes:
   <root>                    full run: leg 1 + leg 2 over the registry
-  --scan <repo> <label> <base> <spec>   the raw judge over one repo (parity + harness)
+  --scan <repo> <label> <base> <spec>   the raw judge over one repo (test harness)
   --base-of <repo>          print the default-branch merge base (nng_base_of)
   --leg1-base <root>        print leg 1's base (nng_leg1_base)
 Exit: 0 clean, 1 violations, 2 population empty (no tree, no consumers).
@@ -93,8 +93,8 @@ def leg1_base(root, base_ref):
 def load_config(root):
     """The check-14 lists (base_ref, lean_family, creation_exception,
     lean_family_cap), read from the manifest's `_lint` section through
-    lint/lib/manifest.py (ac-6asz.3) — lint/config.json is deleted, so the
-    manifest is the only source. Raises ManifestMissing naming the defect,
+    lint/lib/manifest.py (ac-6asz.3) — the manifest is the only source.
+    Raises ManifestMissing naming the defect,
     which the caller reports as a FAIL (never a traceback)."""
     section = manifest.packages(root).get("_lint")
     if not isinstance(section, dict):

@@ -2,7 +2,7 @@
 # lint-staged-scope.test.sh — proof harness for the pre-commit staged lane
 # (lint/run.py --changed --staged; 2026-09-12 lint audit, items 1 + 4).
 #
-# Builds a throwaway registry-shaped repo in /tmp — never the real checkout —
+# Builds a throwaway registry-shaped repo in a mktemp dir — never the real checkout —
 # carrying a COPY of THIS repo's actual lint/run.py + lint/lib/*.py (so the
 # exact code under review is what's exercised) plus a handful of tiny demo
 # checks. Guarantees under test:
@@ -42,8 +42,8 @@ FAIL=0
 ok()  { PASS=$((PASS+1)); printf 'ok   %s\n' "$1"; }
 bad() { FAIL=$((FAIL+1)); printf 'FAIL %s\n' "$1"; }
 
-W=/tmp/lint-staged-scope-proof
-rm -rf "$W" "$W-alias"
+W="$(mktemp -d)"
+trap 'rm -rf "$W" "$W-alias" "${CAPTURE_OUT:-}"' EXIT
 mkdir -p "$W/lint/lib" "$W/lint/checks" "$W/skills/demo" "$W/skills/demo2"
 
 # A COPY of the real runner + lib, so the exact code this bead touched runs —
@@ -259,8 +259,7 @@ res4=$(echo "$out4" | scope_of)
 # that partial commit and points GIT_INDEX_FILE at it while hooks run; a real
 # pre-commit hook that captures LINT_CALLER_GIT_INDEX_FILE before stripping the
 # raw variable (hooks/pre-commit's own pattern) must let run.py see the change.
-CAPTURE_OUT=/tmp/lint-staged-scope-proof-capture.json
-rm -f "$CAPTURE_OUT"
+CAPTURE_OUT="$(mktemp)"
 cat > "$W/.git/hooks/pre-commit" <<HOOK
 #!/usr/bin/env bash
 set -uo pipefail

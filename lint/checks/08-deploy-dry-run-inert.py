@@ -10,8 +10,8 @@
 # ---
 """08-deploy-dry-run-inert — deploy.sh --dry-run must be inert (ac-1p7j.14).
 
-Ported from the legacy Check 8 bash block in lint.sh (proven by lint/parity.sh
-against the extracted legacy block before the block was removed). Same verdicts:
+Ported from the legacy Check 8 bash block in lint.sh (parity proven at port time
+against the extracted legacy block, before the block was removed). Same verdicts:
 run `engine/deploy.sh <tmp> --skills <first-skill> -n`; a nonzero exit is a finding, and
 any file left in the temp dir is a finding (a crash before any write would also
 leave the dir empty, so the exit code is checked too — or the inertness test

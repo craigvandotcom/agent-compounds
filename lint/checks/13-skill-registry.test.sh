@@ -20,11 +20,14 @@ fails=0
 ok()  { echo "  ok    $1"; }
 bad() { echo "  FAIL  $1"; fails=$((fails + 1)); }
 
+OUT="$(mktemp)"
+trap 'rm -f "$OUT"' EXIT
+
 # --- RED: the run.sh fixture demonstrates the over-cap case ----------------------
-if bash "$ROOT/lint/fixtures/13-skill-registry/run.sh" >/tmp/13fx.out 2>&1; then
+if bash "$ROOT/lint/fixtures/13-skill-registry/run.sh" >"$OUT" 2>&1; then
   ok "RED: over-cap description -> judge fails, check exits 1"
 else
-  bad "RED case: run.sh did not demonstrate the RED"; cat /tmp/13fx.out
+  bad "RED case: run.sh did not demonstrate the RED"; cat "$OUT"
 fi
 
 # --- GREEN: the real registry ----------------------------------------------------

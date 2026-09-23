@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# lint-net-growth.test.sh — proof harness for the ported no-net-growth check (bd-oxmsf,
+# 14-no-net-growth.test.sh — proof harness for the ported no-net-growth check (bd-oxmsf,
 # rewritten for the lint v2 port by ac-1p7j.2; before that commit this harness awk-extracted
 # the LIVE bash nng_* functions out of lint.sh and eval'd them — a Python check cannot be
 # extracted that way, so the harness drives the check binary directly now).
@@ -7,7 +7,7 @@
 # WHY: Check 14 leg 2 judges OTHER repos (deploy targets), so it cannot be exercised
 # without a target — and exercising it against a live app repo would mean dirtying
 # someone else's checkout. This runs lint/checks/14-no-net-growth.py against throwaway
-# repos in /tmp: default branch `master` (so origin/HEAD resolution is proven, not
+# repos in a mktemp dir: default branch `master` (so origin/HEAD resolution is proven, not
 # assumed), growth, the wrong-token near-miss, the removed `net-growth-ok` token (which
 # must NOT exempt — ec5fa64), a shrink, a symlinked skill dir, the two reader states
 # (leg 1 unconditional while leg 2 discloses its SKIP, ac-vlje.9), and the ac family's
@@ -15,13 +15,13 @@
 #
 # Runs under bash AND zsh. Exit 0 = all cases pass.
 
-ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ROOT="$(cd "$HERE/../.." && pwd)"
 CHECK="$ROOT/lint/checks/14-no-net-growth.py"
 [ -f "$CHECK" ] || { echo "HARNESS FAIL: $CHECK missing — the ported check is gone"; exit 1; }
 
-W=/tmp/nng-proof
-rm -rf /tmp/nng-proof
-mkdir -p /tmp/nng-proof
+W="$(mktemp -d)"
+trap 'rm -rf "$W"' EXIT
 git init -q --bare "$W/origin.git" -b master        # default branch master, like some real repos still use
 git clone -q "$W/origin.git" "$W/app" 2>/dev/null
 cd "$W/app" || exit 1
@@ -101,7 +101,7 @@ expect "already-pushed SHRINK is still a pass" 0 "$base" '.claude/skills/*/SKILL
 # A brand-new SKILL.md always has `del = 0`, so the net is always positive and a
 # creation was ALWAYS a violation — which made the ac family uncreatable. Creation now
 # answers to the ac family TOTAL instead (the manifest's `_lint` section,
-# skills/packages.json — lint/config.json is deleted, ac-6asz.3). Creation is distinguished
+# skills/packages.json, ac-6asz.3). Creation is distinguished
 # from a pure-addition EDIT with --diff-filter=A: both print `N 0` on numstat, so
 # numstat alone cannot tell them apart.
 git checkout -q -- .claude/skills/foo/SKILL.md 2>/dev/null || true

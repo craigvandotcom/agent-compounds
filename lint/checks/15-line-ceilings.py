@@ -10,7 +10,7 @@
 # ---
 """15-line-ceilings — the ported Check 15 judge (ac-1p7j.15).
 
-Ported VERBATIM from the legacy bash block (proven by lint/parity.sh against
+Ported VERBATIM from the legacy bash block (parity proven at port time against
 the extracted block, before the block was removed from lint.sh). Same roster
 derivation, same ratchet arithmetic, same verdict strings. The constants moved
 to skills/packages.json (`_lint`: conductor_ceiling, standard_ceiling,
@@ -76,8 +76,8 @@ def ceil_to_10(max_lines, mult_pct):
 
 def load_config(root):
     """The ceiling constants, read from the manifest's `_lint` section through
-    lint/lib/manifest.py (ac-6asz.3) — lint/config.json is deleted, so the
-    manifest is the only source. Raises ManifestMissing (an OSError) naming
+    lint/lib/manifest.py (ac-6asz.3) — the manifest is the only source.
+    Raises ManifestMissing (an OSError) naming
     the defect, which run() reports as a FAIL."""
     section = manifest.packages(root).get(SECTION)
     if not isinstance(section, dict):

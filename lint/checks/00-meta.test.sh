@@ -22,8 +22,11 @@ fails=0
 ok()   { echo "  ok    $1"; }
 bad()  { echo "  FAIL  $1"; fails=$((fails + 1)); }
 
-run_meta() { # <tmp-root> -> prints exit code, captures output in /tmp/00meta-out
-  python3 "$META" "$1" >/tmp/00meta-out.txt 2>&1
+OUT="$(mktemp)"
+trap 'rm -f "$OUT"' EXIT
+
+run_meta() { # <tmp-root> -> prints exit code, captures output in $OUT
+  python3 "$META" "$1" >"$OUT" 2>&1
   echo $?
 }
 
@@ -36,7 +39,7 @@ write_stub() { # <path> <header-lines-file> <exit-code>
 }
 
 work="$(mktemp -d)"
-trap 'rm -rf "$work"' EXIT
+trap 'rm -rf "$work"; rm -f "$OUT"' EXIT
 mkdir -p "$work/lint/checks" "$work/fixtures"
 
 GOOD_HDR="$(mktemp)"; printf '%s\n' \
@@ -57,7 +60,7 @@ CLEAN_BODY="$(mktemp)"; printf '%s\n' \
 mkdir -p "$work/fixtures/01-good"
 printf '# broken: deliberate RED case\n' > "$work/fixtures/01-good/SKILL.md"
 write_stub "$work/lint/checks/01-good.py" "$GOOD_HDR" "$RED_BODY"
-rc=$(run_meta "$work"); [ "$rc" = 0 ] && ok "GOOD case passes (exit 0)" || { cat /tmp/00meta-out.txt; bad "GOOD case: expected 0, got $rc"; }
+rc=$(run_meta "$work"); [ "$rc" = 0 ] && ok "GOOD case passes (exit 0)" || { cat "$OUT"; bad "GOOD case: expected 0, got $rc"; }
 
 # --- cases MISSINGx5: each missing header field is failed by name ------------
 for field in id prevents scope severity fixture; do
@@ -72,7 +75,7 @@ for field in id prevents scope severity fixture; do
   } > "$hdr"
   write_stub "$local_scoped" "$hdr" "$RED_BODY"
   rc=$(run_meta "$work")
-  if [ "$rc" = 1 ] && grep -q "'$field' missing" /tmp/00meta-out.txt; then
+  if [ "$rc" = 1 ] && grep -q "'$field' missing" "$OUT"; then
     ok "missing $field -> failed, names the field"
   else
     bad "missing $field: expected exit 1 naming '$field', got $rc"
@@ -85,7 +88,7 @@ hdr="$(mktemp)"; printf '%s\n' \
   '# scope: NOT_A_SET' '# severity: fail' '# fixture: fixtures/01-good' '# ---' > "$hdr"
 write_stub "$work/lint/checks/01-bad-scope.py" "$hdr" "$RED_BODY"
 rc=$(run_meta "$work")
-if [ "$rc" = 1 ] && grep -q "names no set in lib.scope" /tmp/00meta-out.txt; then
+if [ "$rc" = 1 ] && grep -q "names no set in lib.scope" "$OUT"; then
   ok "scope naming no scope set -> failed"
 else
   bad "BAD-SCOPE: expected exit 1 naming lib.scope, got $rc"
@@ -98,7 +101,7 @@ hdr="$(mktemp)"; printf '%s\n' \
   '# scope: LIVE_TEXT' '# severity: fail' '# fixture: fixtures/01-notred' '# ---' > "$hdr"
 write_stub "$work/lint/checks/01-notred.py" "$hdr" "$CLEAN_BODY"
 rc=$(run_meta "$work")
-if [ "$rc" = 1 ] && grep -q "does NOT go RED" /tmp/00meta-out.txt; then
+if [ "$rc" = 1 ] && grep -q "does NOT go RED" "$OUT"; then
   ok "fixture that does not go RED -> failed"
 else
   bad "NOT-RED: expected exit 1 naming the RED leg, got $rc"
@@ -107,7 +110,7 @@ fi
 # --- case EMPTY: no checks population -> NOT-GATED exit 2, never a pass ------
 empty="$(mktemp -d)"
 rc=$(run_meta "$empty")
-if [ "$rc" = 2 ] && grep -qi "NOT-CHECKED" /tmp/00meta-out.txt; then
+if [ "$rc" = 2 ] && grep -qi "NOT-CHECKED" "$OUT"; then
   ok "empty checks population -> NOT-GATED exit 2"
 else
   bad "EMPTY: expected exit 2 NOT-CHECKED, got $rc"
@@ -115,7 +118,7 @@ fi
 
 # --- case REAL: the live tree's own population audits clean ------------------
 rc=$(run_meta "$ROOT")
-[ "$rc" = 0 ] && ok "real tree population audits clean" || { cat /tmp/00meta-out.txt; bad "REAL: expected 0, got $rc"; }
+[ "$rc" = 0 ] && ok "real tree population audits clean" || { cat "$OUT"; bad "REAL: expected 0, got $rc"; }
 
 echo
 if [ "$fails" -eq 0 ]; then
