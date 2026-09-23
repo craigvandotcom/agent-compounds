@@ -279,7 +279,7 @@ echo "ac-budget: pointed-at canon $CANON_LINES lines across $CANON_FILES file(s)
 
 # --- Leg 5: assurance-triad declarations for lean scripts ------------------------------
 # *.test.sh is EXCLUDED. A harness IS a probe; requiring one to declare its own probe is
-# circular, and scripts/harness-scheduling-check.sh already proves every harness IS RUN.
+# circular, and lint/checks/20-harness-scheduling.sh already proves every harness IS RUN.
 # Keeping them in was worse than useless: each harness contains the four field NAMES inside
 # its own declaration self-check, so `grep -q` matched them and the leg passed for the wrong
 # reason on every test file it discovered.

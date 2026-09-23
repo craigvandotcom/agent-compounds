@@ -11,7 +11,7 @@
 #   run-all-proofs.sh          run every discovered harness; exit 1 if any fails
 #   run-all-proofs.sh --list   print the harnesses that WOULD run (repo-relative,
 #                                 sorted, one per line) and exit 0 — this is the
-#                                 surface scripts/harness-scheduling-check.sh audits
+#                                 surface lint/checks/20-harness-scheduling.sh audits
 #
 # Harness exit contract:
 #   0    pass
@@ -21,8 +21,8 @@
 #   any  fail
 #
 # Discovery is repo-wide on purpose. A harness that lands somewhere unexpected must be
-# RUN, not missed — and harness-scheduling-check.sh independently recomputes this
-# inventory so a narrowed glob here cannot quietly shrink coverage.
+# RUN, not missed — and lint/checks/20-harness-scheduling.sh independently recomputes
+# this inventory so a narrowed glob here cannot quietly shrink coverage.
 #
 set -uo pipefail
 
