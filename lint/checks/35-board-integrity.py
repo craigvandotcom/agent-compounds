@@ -1,98 +1,86 @@
 #!/usr/bin/env python3
 # ---
 # id: 35-board-integrity
-# prevents: a duplicate board record, a line that is not JSON, or a THIS-COMMIT origin-less /
-#   probe-less post-cutover OPEN implementable bead sitting in the committed board unsensed — the
-#   create-time guards fail open on unparseable shell (a body passed as `-d "$(cat file)"` or a
-#   heredoc blinds the born-probe check), and the only repair between create and refine is a
-#   backstop a bead only reaches if someone refines it. Format rules are commit-scoped so a
-#   pre-existing malformed bead never blocks an unrelated commit to the ledger.
+# prevents: a duplicate board record (rule 2); a line that is not JSON (rule 1); an off-canon
+#   status (rule 4); an OPEN post-cutover implementable bead sitting origin-less or probe-less
+#   (rule 3); a malformed WORKER: receipt (rule 5); a closed bead whose landing record cites no
+#   evidence (rule 6) — the create-time guards fail open on unparseable shell (a body passed as
+#   `-d "$(cat file)"` or a heredoc blinds the born-probe check) and close-gate.sh's bypass leaves
+#   no other sensor, so the committed board itself is the backstop every one of these rules reads.
 # scope: HOOKS
 # severity: fail
 # fixture: lint/fixtures/35-board-integrity
 # ---
-"""35-board-integrity — the committed board stays well-formed and origin-tagged (ac-heyt.9).
+"""35-board-integrity — the board stays well-formed, origin-tagged and receipt-honest.
 
-The origin axis has two enforcers — the runtime capture guard and Check 19 — both at
-CREATE time and both fail-open on unparseable shell. This check puts a sensor at the one
-door every board change already walks through: the pre-commit chain runs `lint.sh
---changed`, and `.beads/issues.jsonl` is in HOOKS scope, so the LEDGER COMMIT ITSELF is
-the gate.
+Six FAIL rules, all scanning the WHOLE board on every run (no staged-vs-HEAD diff — the
+board is adopter-local and gitignored, so there is nothing to diff against):
 
-Six FAIL rules over the committed board:
-  1. a line that is not JSON;
-  2. an `id` that appears more than once;
-  3. an OPEN bead created on or after the origin cutover (2026-08-23 — the date the
-     hooks manifest's `_doc` records the origin axis becoming a hard gate) carrying no
+  1. a line that is not JSON.
+  2. an `id` that appears more than once.
+  3. an OPEN bead created on or after the origin cutover (`CUTOVER` below) carrying no
      `origin:` label, or an OPEN implementable bead (task/bug/feature) carrying no
-     `Probe:` line. The probe axis shares the origin axis's failure mode: the born-probe
-     guard reads the `br create` COMMAND, so a body passed as `-d "$(cat file)"` or a
-     heredoc makes it fail open, and this artifact read is the backstop.
+     `Probe:` line. Forward-only, no backfill: closed beads and beads created before the
+     cutover are never scanned.
   4. ANY row (either status, both lanes) whose `status` is outside the canon set
      (`skills/beads-standards/SKILL.md` § Status & priority canon: open / in_progress /
      blocked / deferred / closed / tombstone).
-  5. staged lane only (skipped on a whole-board run, per Commit-scoped format rules
-     below): a `WORKER:`-prefixed comment newly added to a changed id BY THIS COMMIT
-     (its identity — the comment `id`, or `(created_at, text)` when no id is present —
-     absent from that id's comment list at HEAD; identity is NEVER position, because br
-     orders same-second comments in no fixed order) whose FIRST LINE does not match the
-     canon grammar's three fields, `model=`/`actor=`/`tree=` (§ Worker-identity stamp) —
-     shape only, never the fields' truth. A canon first line followed by note lines is
-     green; a pre-existing (HEAD-era) receipt on an untouched comment of a changed bead,
-     wherever it now sorts in the staged list, is never re-judged.
-  6. staged lane only, same scope and same by-identity "new" test as rule 5, no
-     whole-board fallback: a changed id whose staged `status` is `closed` and whose HEAD
-     `status` was NOT `closed` — a close that genuinely happened in this commit —
-     carrying no comment AMONG THOSE NEW IN THIS COMMIT whose text begins `GATE:`,
-     `FRESH-VERIFY:`, or `TRIAGE-CLOSE:`. A landing record already on the row at HEAD
-     (a stale receipt from an earlier close, later reopened) does not satisfy a new
-     close. The close sensor is board-side (every close path, prose or script, human or
-     system); it never asks WHO closed, only whether a NEW landing record exists.
-     Board-side per the Decisions card; this is deliberately not fence lint.
-     THE RECORD CITES ITS EVIDENCE (ac-4y7l.31): a landing record present is not enough —
-     `GATE: receipt` must cite `receipt-at: <stamp>` matching an `at: <stamp>` line on
-     another comment of the SAME row (the flight receipt); `GATE: decided` must cite
+  5. a `WORKER:`-prefixed comment whose own `created_at` is on or after `RULE56_CUTOVER`
+     (below) and whose first line does not match the canon grammar's three fields,
+     `model=`/`actor=`/`tree=` (§ Worker-identity stamp) — shape only, never the fields'
+     truth. A canon first line followed by note lines is green. Forward-only by the
+     comment's own timestamp: a pre-existing malformed receipt from before the cutover is
+     never re-judged.
+  6. a CLOSED bead whose `closed_at` is on or after `RULE56_CUTOVER` and which carries no
+     comment naming its evidence: `GATE: receipt` must cite `receipt-at: <stamp>` matching
+     an `at: <stamp>` line on another comment of the same row; `GATE: decided` must cite
      `ruling-comment: #<id>` matching a same-row comment with that id whose text starts
      `DECISION (`; `FRESH-VERIFY:`/`TRIAGE-CLOSE:` must self-cite `tree: <sha>`. A bare
-     `br close --transition-comment "GATE: receipt"` with no citation — the bypass that
-     skips close-gate.sh entirely — is RED, not a pass.
+     landing comment with no citation resolving against the row is RED, not a pass — the
+     record cites its evidence, or it is refused. Forward-only by the bead's own
+     `closed_at`: a close that happened before the cutover is never re-judged.
 
-Rules 3 (origin: label, Probe: line) skip closed beads — forward-only, no backfill, per
-the origin-provenance ruling: enforcement started at the cutover and the past is not
-relitigated. Rules 4 (status canon) and 5 (WORKER receipt shape) scan a row regardless of
-its status: rule 4 because an off-canon status is corruption at any lifecycle stage, rule
-5 because a receipt this commit newly writes onto a closed bead (a coordinator close-out
-label, a late note) is still new content the commit is authoring. Rule 6 by construction
-only ever fires on a row THIS commit closed. An empty or unreadable board exits 2
-NOT-GATED, because a check that read nothing has proved nothing.
-The check REPORTS; it never repairs — mutating the board would make this a second writer
-of the origin axis (decision D-2).
-
-Commit-scoped format rules (2026-09-12 lint audit): the whole-board rules above (valid
-JSON, unique ids) always scan every line — they catch real corruption and a bead another
-session wrote badly must never hide behind them. The per-bead FORMAT rules (origin: label,
-Probe: line) are scoped to the ids THIS commit adds or changes whenever that can be
-determined: `git show :.beads/issues.jsonl` (the staged blob) is diffed by id against
-`git show HEAD:.beads/issues.jsonl` (the last commit). A bead nobody touched this commit
-cannot fail it. When there is no git checkout, no HEAD yet, or the staged blob equals
-HEAD's (a full run, not a commit touching the ledger), the diff is undeterminable and the
-format rules fall back to today's whole-board scope — CI's bare `bash lint.sh` still
-reports the whole backlog.
+Rules 1, 2 and 4 scan every row unconditionally — they catch corruption at any lifecycle
+stage. Rules 3, 5 and 6 are each forward-only by their own cutover and their own
+timestamp field (a bead's `created_at` for rule 3, a comment's `created_at` for rule 5, a
+bead's `closed_at` for rule 6) — enforcement started at each cutover and the past is not
+relitigated. An empty or unreadable board exits 2 NOT-GATED, because a check that read
+nothing has proved nothing. The check REPORTS; it never repairs — mutating the board would
+make this a second writer of the axes it enforces.
 
 Exit: 0 clean (at least one record scanned), 1 findings, 2 read nothing,
 77 skipped (no board file — adopter-local, gitignored).
 """
 
+import importlib.util
 import json
 import os
 import re
-import subprocess
 import sys
 
-CUTOVER = "2026-08-23"  # origin axis became a hard gate (hooks/hooks.json _doc)
+_HERE = os.path.dirname(os.path.abspath(__file__))
+_REGISTRY_ROOT = os.path.dirname(os.path.dirname(_HERE))  # lint/checks -> lint -> root
+
+
+def _load_guard(registry_root):
+    spec = importlib.util.spec_from_file_location(
+        "bead_capture_guard", os.path.join(registry_root, "hooks", "bead-capture-guard.py")
+    )
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+guard = _load_guard(_REGISTRY_ROOT)
+PROBE = guard.PROBE  # the same shape the runtime capture guard scans for
+
+CUTOVER = "2026-08-23"  # rule 3: origin axis became a hard gate (hooks/hooks.json _doc)
+# rule 5/6: measured against the real board on 2026-09-23 — the last malformed WORKER
+# receipt and the last uncited close both landed 2026-09-22 (15:38/15:58 UTC); every close
+# and WORKER comment from 2026-09-23 on is clean, so the whole-board rewrite does not
+# relitigate history it was never scoped to catch under the old staged-only rules.
+RULE56_CUTOVER = "2026-09-23"
 IMPLEMENTABLE = ("task", "bug", "feature")  # element4's non-exempt types
-PROBE = re.compile(r"Probe:\s*`[^`]+`[^\n]*\btier:")  # same shape the capture guard uses
-LEDGER_REL = ".beads/issues.jsonl"
 # canon status set — skills/beads-standards/SKILL.md § Status & priority canon
 STATUS_CANON = {"open", "in_progress", "blocked", "deferred", "closed", "tombstone"}
 # canon WORKER: grammar — skills/beads-standards/SKILL.md § Worker-identity stamp
@@ -103,101 +91,64 @@ DECIDED_CITE_RE = re.compile(r"ruling-comment:\s*#(\d+)")
 TREE_CITE_RE = re.compile(r"tree:\s*([0-9a-f]{4,40})")
 DECISION_LINE_RE = re.compile(r"^DECISION \(")
 
+RULE_LABELS = {
+    1: "rule 1 — line is not JSON",
+    2: "rule 2 — duplicate id",
+    3: f"rule 3 — open bead missing origin:/Probe: (created on/after {CUTOVER})",
+    4: "rule 4 — status outside the canon set",
+    5: f"rule 5 — malformed WORKER: receipt (on/after {RULE56_CUTOVER})",
+    6: f"rule 6 — closed bead with no cited landing record (closed on/after {RULE56_CUTOVER})",
+}
+RULE_HINTS = {
+    1: "repair: fix the line to valid JSON, or remove the row",
+    2: "repair: give the row a unique id — ids must be unique across the whole board",
+    3: "repair: br update <id> --add-label origin:<skill>  (and add a `Probe: `...`` line "
+       "to the description for an implementable bead)",
+    4: "repair: br update <id> --status <open|in_progress|blocked|deferred|closed|tombstone>",
+    5: "repair: rewrite the comment's first line to the canon grammar: "
+       "WORKER: model=<id> actor=<id> tree=<sha>",
+    6: "repair: close through skills/ac-implement/scripts/close-gate.sh — a GATE:/"
+       "FRESH-VERIFY:/TRIAGE-CLOSE: comment must cite its evidence (receipt-at / "
+       "ruling-comment / tree)",
+}
+
 
 def board_path(root):
     return os.path.join(root, ".beads", "issues.jsonl")
 
 
-def _git_show(root, rev_path):
-    """`git show <rev_path>` from cwd=root, or None on any failure (not a git
-    checkout, no such rev, git unavailable) — the caller's cue to fall back to
-    whole-board scope, never a crash and never a silent wrong answer."""
-    try:
-        proc = subprocess.run(
-            ["git", "show", rev_path], cwd=root,
-            capture_output=True, text=True, timeout=10,
-            check=False,  # non-zero (no such rev) is a normal fallback path below, not a crash
+def _landing_cited(landing, all_comments):
+    """True when a single landing comment's citation resolves against another
+    comment on the SAME row — the exact cross-check close-gate.sh's own landing
+    text supports (receipt-at / ruling-comment / tree)."""
+    if landing.startswith("GATE: receipt"):
+        m = RECEIPT_CITE_RE.search(landing)
+        if not m:
+            return False
+        stamp = m.group(1)
+        return any(
+            isinstance(c, dict)
+            and re.search(rf"(?m)^at:\s*{re.escape(stamp)}\s*$", str(c.get("text") or ""))
+            for c in all_comments
         )
-    except (OSError, subprocess.SubprocessError):
-        return None
-    return proc.stdout if proc.returncode == 0 else None
-
-
-def _comment_key(c):
-    """Stable identity for a comment: prefer its `id`; fall back to
-    (created_at, text) when no id is present. NEVER position — br orders
-    comments by created_at with same-second ties in no fixed order
-    (measured on ac-kqpw.5, ac-gcj.8, ac-1p7j.31), so slicing by count can
-    mis-sort a legacy receipt as new or vice versa."""
-    if not isinstance(c, dict):
-        key = ("raw", repr(c))
-    elif c.get("id") is not None:
-        key = ("id", c["id"])
-    else:
-        key = ("ct", str(c.get("created_at") or ""), str(c.get("text") or ""))
-    return key
-
-
-def _by_id(text):
-    out = {}
-    for line in text.splitlines():
-        line = line.strip()
-        if not line:
-            continue
-        try:
-            rec = json.loads(line)
-        except ValueError:
-            continue
-        if isinstance(rec, dict) and "id" in rec:
-            out[rec["id"]] = rec
-    return out
-
-
-def _staged_head_maps(root):
-    """(staged_map, head_map) by id, or None when the diff cannot be determined
-    (no git checkout, no HEAD yet) or when the staged blob equals HEAD's (no
-    staged ledger change — a full run)."""
-    staged = _git_show(root, f":{LEDGER_REL}")
-    if staged is None:
-        return None
-    head = _git_show(root, f"HEAD:{LEDGER_REL}")
-    if head is None:
-        head = ""  # no HEAD yet, or the ledger is new-to-this-commit
-    if staged == head:
-        return None
-    return _by_id(staged), _by_id(head)
-
-
-def changed_bead_data(root):
-    """(changed_ids, new_worker_comments, head_status) — changed_ids is the set of ids
-    added or modified in the staged ledger vs HEAD's (None when undeterminable or no
-    staged change; the caller's signal to apply the per-bead format rules to the whole
-    board). new_worker_comments maps id -> the list of comments THIS COMMIT appends
-    for that id — comments are append-only, so anything past HEAD's own comment
-    count for that id is new; a pre-existing receipt on an untouched comment is
-    never in this list. head_status maps id -> that id's status at HEAD (absent id ->
-    None, i.e. the bead is new-to-this-commit). All three members are None together."""
-    maps = _staged_head_maps(root)
-    if maps is None:
-        return None, None, None
-    staged_map, head_map = maps
-    changed_ids = {rid for rid, rec in staged_map.items()
-                   if rid not in head_map or head_map[rid] != rec}
-    new_comments = {}
-    head_status = {}
-    for rid in changed_ids:
-        staged_comments = staged_map[rid].get("comments") or []
-        head_rec = head_map.get(rid) or {}
-        head_comments = head_rec.get("comments") or []
-        head_keys = {_comment_key(c) for c in head_comments}
-        new_comments[rid] = [c for c in staged_comments if _comment_key(c) not in head_keys]
-        head_status[rid] = head_rec.get("status")
-    return changed_ids, new_comments, head_status
+    if landing.startswith("GATE: decided"):
+        m = DECIDED_CITE_RE.search(landing)
+        if not m:
+            return False
+        return any(
+            isinstance(c, dict) and str(c.get("id")) == m.group(1)
+            and DECISION_LINE_RE.match(str(c.get("text") or "").strip())
+            for c in all_comments
+        )
+    if landing.startswith(("FRESH-VERIFY:", "TRIAGE-CLOSE:")):
+        return bool(TREE_CITE_RE.search(landing))
+    return False
 
 
 def main():
     root = sys.argv[1] if len(sys.argv) > 1 else os.environ.get("LINT_ROOT", os.getcwd())
     board = board_path(root)
+    rel = os.path.relpath(board, root)
     if not os.path.isfile(board):
         # The board is adopter-local and gitignored (it is each deployment's own work
         # ledger, not shipped registry content), so a checkout carrying none has
@@ -216,10 +167,7 @@ def main():
         print("NOT-GATED: board is empty — a check that read nothing has proved nothing", file=sys.stderr)
         return 2
 
-    # None, None, None -> undeterminable, apply format rules to all (rules 5-6 stay off)
-    changed_ids, new_worker_comments, head_status = changed_bead_data(root)
-
-    violations = []
+    violations = {n: [] for n in RULE_LABELS}
     seen_ids = {}
     scanned = 0
     for lineno, raw in enumerate(lines, 1):
@@ -229,122 +177,94 @@ def main():
         try:
             rec = json.loads(line)
         except ValueError:
-            violations.append(f"{board}:{lineno} — line is not JSON")
+            violations[1].append(f"{rel}:{lineno} — line is not JSON")
             continue
         if not isinstance(rec, dict) or "id" not in rec:
-            violations.append(f"{board}:{lineno} — record carries no 'id'")
+            violations[1].append(f"{rel}:{lineno} — record carries no 'id'")
             continue
         scanned += 1
         rid = rec.get("id")
         if rid in seen_ids:
-            violations.append(f"{board}:{lineno} — duplicate id '{rid}' (first seen at line {seen_ids[rid]})")
+            violations[2].append(f"{rel}:{lineno} — duplicate id '{rid}' (first seen at line {seen_ids[rid]})")
         else:
             seen_ids[rid] = lineno
+
         status = rec.get("status")
         if status not in STATUS_CANON:
-            violations.append(
-                f"{board}:{lineno} — off-canon status is RED: bead '{rid}' has status "
-                f"'{status}', outside the canon set {sorted(STATUS_CANON)}")
-        if changed_ids is not None and rid in changed_ids:
-            for comment in new_worker_comments.get(rid, []):
-                text = str(comment.get("text") or "") if isinstance(comment, dict) else ""
-                stripped = text.strip()
-                if not stripped.startswith("WORKER:"):
-                    continue
-                first_line = stripped.splitlines()[0]
-                if not WORKER_RE.match(first_line):
-                    violations.append(
-                        f"{board}:{lineno} — malformed WORKER receipt is RED: bead '{rid}' comment "
-                        f"{stripped!r} does not match the canon grammar 'WORKER: model=<id> "
-                        "actor=<id> tree=<sha>' on its first line")
-            # Rule 6 — the landing record: a close that genuinely happened in this commit
-            # (staged status closed, HEAD status was something else) leaves at least one
-            # NEW comment (per the id/created_at+text key above, never a stale receipt
-            # already on the row at HEAD) naming the evidence it closed on. Staged lane
-            # only, same scope as rule 5 — no whole-board fallback (no backfill by doctrine).
-            #
-            # THE RECORD CITES ITS EVIDENCE (ac-4y7l.31, the maintainer's ruling on ac-4y7l.29):
-            # a bare `br close --transition-comment "GATE: receipt"` used to satisfy this
-            # rule with no evidence behind it at all — close-gate.sh skipped entirely still
-            # passed. A landing record now must NAME something this check can resolve
-            # against the SAME row's comments (new or pre-existing): `GATE: receipt` cites
-            # `receipt-at: <stamp>`, cross-checked against an `at: <stamp>` line elsewhere on
-            # the row (the flight receipt close-gate.sh itself posted at claim); `GATE:
-            # decided` cites `ruling-comment: #<id>`, cross-checked against a comment with
-            # that id whose text starts `DECISION (`; `FRESH-VERIFY:`/`TRIAGE-CLOSE:` name
-            # the tree they verified as `tree: <sha>`, self-citing (fresh-verify runs
-            # precisely when no separate receipt exists to point at).
-            if status == "closed" and head_status.get(rid) != "closed":
-                comments = new_worker_comments.get(rid, [])
-                all_comments = rec.get("comments") or []
-                landings = [
-                    str(c.get("text") or "").strip() for c in comments
-                    if isinstance(c, dict)
-                    and str(c.get("text") or "").strip().startswith(("GATE:", "FRESH-VERIFY:", "TRIAGE-CLOSE:"))
-                ]
-                if not landings:
-                    violations.append(
-                        f"{board}:{lineno} — closed bead '{rid}' carries no landing record is RED: "
-                        "close through skills/ac-implement/scripts/close-gate.sh — see "
-                        "ac-human/references/action-loop.md")
-                else:
-                    # ANY new landing-shaped comment resolving its citation is enough — the
-                    # check asks "does evidence exist among what this commit added", never
-                    # "is the FIRST prefixed comment perfect" (a later addendum citing the
-                    # same pre-existing receipt is just as real as an inline citation).
-                    cited = False
-                    for landing in landings:
-                        m = RECEIPT_CITE_RE.search(landing) if landing.startswith("GATE: receipt") else None
-                        if m:
-                            stamp = m.group(1)
-                            if any(
-                                isinstance(c, dict)
-                                and re.search(rf"(?m)^at:\s*{re.escape(stamp)}\s*$", str(c.get("text") or ""))
-                                for c in all_comments
-                            ):
-                                cited = True
-                                break
-                            continue
-                        if landing.startswith("GATE: decided"):
-                            m = DECIDED_CITE_RE.search(landing)
-                            if m and any(
-                                isinstance(c, dict) and str(c.get("id")) == m.group(1)
-                                and DECISION_LINE_RE.match(str(c.get("text") or "").strip())
-                                for c in all_comments
-                            ):
-                                cited = True
-                                break
-                            continue
-                        if landing.startswith(("FRESH-VERIFY:", "TRIAGE-CLOSE:")) and TREE_CITE_RE.search(landing):
-                            cited = True
-                            break
-                    if not cited:
-                        violations.append(
-                            f"{board}:{lineno} — closed bead '{rid}' landing record cites no "
-                            "evidence on the bead is RED: the record cites its evidence, or "
-                            "close-gate.sh's own landing text is bypassed — close through "
-                            "skills/ac-implement/scripts/close-gate.sh")
+            violations[4].append(
+                f"{rel}:{lineno} — bead '{rid}' has status '{status}', outside the canon "
+                f"set {sorted(STATUS_CANON)}")
+
+        # rule 5 — every WORKER: comment on this row, forward-only by the comment's own
+        # created_at against RULE56_CUTOVER; a pre-cutover receipt is never re-judged.
+        for comment in rec.get("comments") or []:
+            if not isinstance(comment, dict):
+                continue
+            text = str(comment.get("text") or "")
+            stripped = text.strip()
+            if not stripped.startswith("WORKER:"):
+                continue
+            if str(comment.get("created_at") or "")[:10] < RULE56_CUTOVER:
+                continue
+            first_line = stripped.splitlines()[0]
+            if not WORKER_RE.match(first_line):
+                violations[5].append(
+                    f"{rel}:{lineno} — bead '{rid}' comment {stripped!r} does not match "
+                    "the canon grammar 'WORKER: model=<id> actor=<id> tree=<sha>' on its "
+                    "first line")
+
+        # rule 6 — a close whose own closed_at is on/after RULE56_CUTOVER carries a
+        # landing comment (GATE:/FRESH-VERIFY:/TRIAGE-CLOSE:) that cites its evidence.
+        # Forward-only by the bead's own closed_at: a close that happened before the
+        # cutover is never re-judged.
+        if status == "closed" and str(rec.get("closed_at") or "")[:10] >= RULE56_CUTOVER:
+            all_comments = rec.get("comments") or []
+            landings = [
+                str(c.get("text") or "").strip() for c in all_comments
+                if isinstance(c, dict)
+                and str(c.get("text") or "").strip().startswith(("GATE:", "FRESH-VERIFY:", "TRIAGE-CLOSE:"))
+            ]
+            if not landings:
+                violations[6].append(
+                    f"{rel}:{lineno} — closed bead '{rid}' carries no landing record; "
+                    "close through skills/ac-implement/scripts/close-gate.sh — see "
+                    "ac-human/references/action-loop.md")
+            elif not any(_landing_cited(landing, all_comments) for landing in landings):
+                violations[6].append(
+                    f"{rel}:{lineno} — closed bead '{rid}' landing record cites no "
+                    "evidence resolving against the row; close-gate.sh's own landing "
+                    "text is bypassed — close through skills/ac-implement/scripts/close-gate.sh")
+
+        # rule 3 — open beads only, forward-only by created_at, never scans closed rows.
         if status != "open":
-            continue  # closed beads are NEVER scanned for origin/probe — forward-only, no backfill
+            continue
         created = str(rec.get("created_at") or "")[:10]
-        if created >= CUTOVER and (changed_ids is None or rid in changed_ids):
+        if created >= CUTOVER:
             labels = [str(label) for label in (rec.get("labels") or [])]
             if not any(label.startswith("origin:") for label in labels):
-                violations.append(
-                    f"{board}:{lineno} — open bead '{rid}' created {created} (on/after origin cutover "
-                    f"{CUTOVER}) carries no origin: label")
+                violations[3].append(
+                    f"{rel}:{lineno} — open bead '{rid}' created {created} (on/after origin "
+                    f"cutover {CUTOVER}) carries no origin: label")
             if rec.get("issue_type") in IMPLEMENTABLE and not PROBE.search(rec.get("description") or ""):
-                violations.append(
-                    f"{board}:{lineno} — open {rec.get('issue_type')} bead '{rid}' created {created} "
-                    "carries no Probe: line")
+                violations[3].append(
+                    f"{rel}:{lineno} — open {rec.get('issue_type')} bead '{rid}' created "
+                    f"{created} carries no Probe: line")
 
-    if not violations:
+    if not any(violations.values()):
         print(f"35-board-integrity: {scanned} record(s) scanned — well-formed, ids unique, open "
-              "post-cutover beads origin-tagged and implementable beads probe-bearing")
+              "post-cutover beads origin-tagged, implementable beads probe-bearing, WORKER "
+              "receipts and close landing records clean since their cutovers")
         return 0
+
     print("FAIL 35-board-integrity: committed board violates a board-integrity rule:")
-    for v in violations:
-        print(f"  - {v}")
+    for n in sorted(violations):
+        items = violations[n]
+        if not items:
+            continue
+        print(f"\n{RULE_LABELS[n]}:")
+        for v in items:
+            print(f"  - {v}")
+        print(f"  {RULE_HINTS[n]}")
     return 1
 
 
