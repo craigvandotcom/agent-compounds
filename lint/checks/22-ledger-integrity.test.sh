@@ -187,17 +187,14 @@ else
 fi
 rm -rf "$w"
 
-# --- the real registry: the ONE sensor sees a clean scorable ledger ------------------
-# GREEN pin (2026-09-09): the live NOT-SCORABLE — ac-polish's seams-reader entry
-# carrying `frequency: sometimes`, outside the schema's canonical set — was cured
-# by a human-ledger edit (mapped to the honest nearest ordinal, `occasional`) in
-# run 20260907-exhaust. This case now asserts the fix holds: exit 0, no
-# NOT-SCORABLE named. If the ledger regresses, this case flips back to RED-first.
+# --- the real registry: a present ledger is scorable; an absent one skips (77) --------
 out="$(python3 "$CHECK" 2>&1)"; rc=$?
-if [ "$rc" = 0 ] && ! printf '%s' "$out" | grep -q "NOT-SCORABLE"; then
-  ok "GREEN: the real registry's ledger is scorable — the live NOT-SCORABLE is cured"
+if [ "$rc" = 77 ]; then
+  ok "SKIP: no friction ledger in this checkout (adopter-local) -> 77, never ok"
+elif [ "$rc" = 0 ] && ! printf '%s' "$out" | grep -q "NOT-SCORABLE"; then
+  ok "GREEN: the real registry's ledger is scorable"
 else
-  bad "real-tree case: expected 0 with no NOT-SCORABLE, got $rc"; printf '%s\n' "$out"
+  bad "real-tree case: expected 0 with no NOT-SCORABLE (or 77 with no ledger), got $rc"; printf '%s\n' "$out"
 fi
 
 echo "22-ledger-integrity.test.sh: ${fails} failure(s)"
