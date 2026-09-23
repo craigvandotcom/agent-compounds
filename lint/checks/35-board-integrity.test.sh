@@ -8,8 +8,8 @@
 #           pre-cutover beads are NEVER scanned (GREEN); a clean board is GREEN;
 #           an off-canon status is RED regardless of lane or open/closed; a
 #           malformed WORKER: receipt on a changed id is RED in the staged lane
-#           and skipped entirely in the whole-board lane; an empty or missing
-#           board is NOT-GATED (exit 2).
+#           and skipped entirely in the whole-board lane; an empty board is
+#           NOT-GATED (exit 2); a missing board skips (exit 77).
 #
 # ASSURANCE
 #   PROBE:    bash lint/checks/35-board-integrity.test.sh
@@ -335,7 +335,7 @@ rc=$(run_check "$WORK/f")
 [ "$rc" -eq 2 ] && grep -q 'NOT-GATED' "$OUT" && ok "empty board is NOT-GATED (exit 2)" || bad "empty board: rc=$rc out=$(cat "$OUT")"
 mkdir -p "$WORK/g"
 rc=$(run_check "$WORK/g")
-[ "$rc" -eq 0 ] && grep -q 'skipped' "$OUT" && ok "missing board skips (exit 0, reported as a skip)" || bad "missing board: rc=$rc out=$(cat "$OUT")"
+[ "$rc" -eq 77 ] && grep -q 'skipped' "$OUT" && ok "missing board skips (exit 77, reported as a skip)" || bad "missing board: rc=$rc out=$(cat "$OUT")"
 grep -q 'record(s) scanned' "$OUT" && bad "missing board: claimed records scanned while gating nothing"
 
 echo

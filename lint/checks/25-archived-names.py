@@ -41,7 +41,8 @@ The allowlist lint/allowlists/25-archived-names.txt is DATED and SHRINK-ONLY:
     moment one exists. Adding an entry therefore fails the check from the
     next commit on: the allowlist only shrinks.
 
-Exit: 0 clean, 1 violations, 2 scanned nothing (NOT-GATED, never a pass).
+Exit: 0 clean, 1 violations, 2 scanned nothing (NOT-GATED, never a pass),
+77 skipped (no _archive/skills dir in this checkout — adopter-local, gitignored).
 """
 
 import json
@@ -213,7 +214,7 @@ def run(root):
         # no archive has nothing to gate. Skip, never claim a pass.
         print("25-archived-names skipped: no archived skill dir in this checkout — "
               "_archive/ is adopter-local (gitignored), nothing to check")
-        return 0
+        return 77
     if not scope.LIVE_TEXT:
         print("25-archived-names NOT-CHECKED: no live text under this root — nothing scanned")
         return 2

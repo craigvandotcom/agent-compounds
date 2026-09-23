@@ -20,9 +20,9 @@ The list is therefore `lint/instance-tokens.local.txt`, gitignored, one word per
 line, `#` comments and blank lines ignored, matched case-insensitively as a
 substring. `lint/instance-tokens.example.txt` is the tracked template.
 
-No list -> SKIP, reported as a skip. A clone has no list and nothing to hunt;
-that is honest, not a pass. The deployment that HAS a list gets the protection,
-at the pre-commit gate where its own words would leak.
+No list -> exit 77, reported as a skip. A clone has no list and nothing to
+hunt; that is honest, not a pass. The deployment that HAS a list gets the
+protection, at the pre-commit gate where its own words would leak.
 
 Population is scope.TRACKED — what a clone receives — not a filesystem walk.
 The gitignored adopter-local artifacts (friction ledgers, the bead board,
@@ -32,7 +32,8 @@ them would be pure noise.
 EXEMPT_PATHS are the files that must contain a banned word to do their job:
 a guard cannot hunt a literal it is forbidden to spell.
 
-Exit: 0 clean or skipped, 1 hits, 2 a list to hunt but nothing read.
+Exit: 0 clean, 1 hits, 2 a list to hunt but nothing read, 77 skipped (no list
+or an empty one — nothing to hunt).
 """
 
 import os
@@ -89,13 +90,13 @@ def main():
         print(f"27-instance-tokens skipped: no {TOKEN_FILE} in this checkout — the "
               f"banned-word list is deployment-local (gitignored); copy {EXAMPLE_FILE} "
               "to start one. Nothing hunted, nothing verified.")
-        return 0
+        return 77
 
     tokens = read_tokens(token_path)
     if not tokens:
         print(f"27-instance-tokens skipped: {TOKEN_FILE} lists no words — "
               "nothing hunted, nothing verified.")
-        return 0
+        return 77
 
     findings = []
     scanned = 0

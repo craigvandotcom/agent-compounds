@@ -46,6 +46,8 @@ drift:
           never passes)
   exit 2  judge missing from the audited root, or the judge itself verified
           nothing (its shared parser missing) — NOT-GATED, never a pass
+  exit 77 the judge skipped: this checkout ships no ledger at all (adopter-
+          local, gitignored) — nothing gated, reported honestly, never `ok`
 """
 
 import os
@@ -85,7 +87,7 @@ def main():
         # check that gated nothing must not claim the contract holds.
         if out.startswith("SKIP:"):
             print(f"  skipped: {CHECK_ID} — no ledger in this checkout, nothing gated")
-            return 0
+            return 77
         print(f"  ok: {CHECK_ID} — the ledger and the constitution satisfy the contract both directions")
         return 0
     if proc.returncode == 2:

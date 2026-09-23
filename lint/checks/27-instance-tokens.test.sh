@@ -100,10 +100,10 @@ t="$WORK/nolist"; build_tree "$t"
 printf 'names acme-widget\n' > "$t/skills/demo/SKILL.md"
 git -C "$t" add -A
 rc=$(run "$t")
-if [ "$rc" = 0 ] && grep -q "skipped" "$WORK/out"; then
-  ok "SKIP: no list -> exit 0, reported as a skip"
+if [ "$rc" = 77 ] && grep -q "skipped" "$WORK/out"; then
+  ok "SKIP: no list -> exit 77, reported as a skip"
 else
-  bad "no-list: expected 0 carrying 'skipped', got $rc"; cat "$WORK/out"
+  bad "no-list: expected 77 carrying 'skipped', got $rc"; cat "$WORK/out"
 fi
 if grep -qE '^\s*ok:' "$WORK/out"; then
   bad "no-list: printed a pass claim while hunting nothing"
@@ -115,10 +115,10 @@ printf '# only comments here\n\n' > "$t/lint/instance-tokens.local.txt"
 printf 'names acme-widget\n' > "$t/skills/demo/SKILL.md"
 git -C "$t" add -A
 rc=$(run "$t")
-if [ "$rc" = 0 ] && grep -q "skipped" "$WORK/out"; then
-  ok "SKIP: a list with no words -> exit 0, reported as a skip"
+if [ "$rc" = 77 ] && grep -q "skipped" "$WORK/out"; then
+  ok "SKIP: a list with no words -> exit 77, reported as a skip"
 else
-  bad "empty-list: expected 0 carrying 'skipped', got $rc"; cat "$WORK/out"
+  bad "empty-list: expected 77 carrying 'skipped', got $rc"; cat "$WORK/out"
 fi
 
 # --- NOT-GATED: words to hunt, but nothing read --------------------------------

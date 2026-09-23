@@ -99,10 +99,10 @@ rm -rf "$w"
 w="$(mktemp -d)"
 build_tree "$w" EMPTY yes
 out="$(python3 "$CHECK" "$w" 2>&1)"; rc=$?
-if [ "$rc" = 0 ] && printf '%s' "$out" | grep -q "skipped"; then
-  ok "SKIP: no ledger in the checkout -> exit 0, reported as a skip"
+if [ "$rc" = 77 ] && printf '%s' "$out" | grep -q "skipped"; then
+  ok "SKIP: no ledger in the checkout -> exit 77, reported as a skip"
 else
-  bad "skip case: expected 0 carrying 'skipped', got $rc"; printf '%s\n' "$out"
+  bad "skip case: expected 77 carrying 'skipped', got $rc"; printf '%s\n' "$out"
 fi
 if printf '%s' "$out" | grep -q "contract holds both directions"; then
   bad "skip case: claimed the contract holds while gating nothing"

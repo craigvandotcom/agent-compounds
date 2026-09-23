@@ -79,7 +79,8 @@ HEAD's (a full run, not a commit touching the ledger), the diff is undeterminabl
 format rules fall back to today's whole-board scope — CI's bare `bash lint.sh` still
 reports the whole backlog.
 
-Exit: 0 clean (at least one record scanned), 1 findings, 2 read nothing.
+Exit: 0 clean (at least one record scanned), 1 findings, 2 read nothing,
+77 skipped (no board file — adopter-local, gitignored).
 """
 
 import json
@@ -204,7 +205,7 @@ def main():
         # unreadable or empty stays fail-closed below.
         print("35-board-integrity skipped: no board at .beads/issues.jsonl — the board is "
               "adopter-local (gitignored), nothing to gate")
-        return 0
+        return 77
     try:
         with open(board, encoding="utf-8", errors="replace") as fh:
             lines = fh.read().splitlines()

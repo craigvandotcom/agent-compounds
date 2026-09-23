@@ -23,6 +23,12 @@ The check-file contract both this file and run.py honour:
   exit 0       clean, and at least one file scanned
   exit 1       findings (or header/fixture defects, for this meta check)
   exit 2       scanned nothing — NOT-GATED, never a pass
+  exit 77      skip — the check's own adopter-local input (a friction ledger,
+               the board, an instance-token list) is absent from THIS root;
+               accepted only when run.py runs the check against the real repo
+               root. A check's declared RED FIXTURE must still demonstrate a
+               real violation: 77 from a fixture run is NOT accepted as a RED
+               (fixture_goes_red below never treats it as the required exit 1).
 """
 
 import os
@@ -132,6 +138,9 @@ def fixture_goes_red(path, header):
             return True
         if proc.returncode == 1:
             fail(f"{rel}: fixture {header['fixture']} does NOT go RED — run.sh reported the check passed its RED case")
+        elif proc.returncode == 77:
+            fail(f"{rel}: fixture leg NOT A RED — {header['fixture']}/run.sh's check reported SKIP (77), "
+                 "not the required violation; a fixture must demonstrate a real RED, never an absent-input skip")
         else:
             fail(f"{rel}: fixture leg NOT-GATED — {header['fixture']}/run.sh exited {proc.returncode}, not a RED")
         return False
@@ -147,6 +156,9 @@ def fixture_goes_red(path, header):
         return True
     if proc.returncode == 0:
         fail(f"{rel}: fixture {header['fixture']} does NOT go RED — the check passed against its own RED case")
+    elif proc.returncode == 77:
+        fail(f"{rel}: fixture leg NOT A RED — running against {header['fixture']} reported SKIP (77), "
+             "not the required violation; a fixture must demonstrate a real RED, never an absent-input skip")
     else:
         fail(f"{rel}: fixture leg NOT-GATED — running against {header['fixture']} exited {proc.returncode}, not a RED")
     return False

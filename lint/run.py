@@ -4,15 +4,17 @@
 Discovers lint/checks/* (harness *.test.sh files excluded), runs them in
 parallel, prints ONE table, and exits:
 
-  0   every executed check green
-  1   at least one check reported findings
+  0   every executed check green (skips alone never fail the run)
+  1   at least one check reported findings — outranks a bare NOT-GATED
   2   NOT-GATED — an executed check scanned zero files (the check itself
-      exits 2). An empty scan is never read as a pass.
+      exits 2), and no check exited 1. An empty scan is never read as a pass.
 
 Invocation contract for a check: `python3 <check>.py [root]` / `bash <check>.sh
 [root]`; root defaults to the real repo root. Exit 0 green, 1 findings, 2
-scanned-nothing. The header contract the checks declare is enforced by
-00-meta.py; the runner only executes and tabulates.
+scanned-nothing, 77 skip (the check's own adopter-local input — a friction
+ledger, the board, an instance-token list — is absent from this checkout;
+honest of a skip, never tabulated `ok`). The header contract the checks
+declare is enforced by 00-meta.py; the runner only executes and tabulates.
 
 Flags: --check <id> (repeatable, id is the filename's NN prefix or the full
 stem), --changed (only checks whose declared scope intersects `git diff
@@ -395,6 +397,8 @@ def main():
             r["result"] = "ok"
         elif r["exit"] == 2:
             r["result"] = "not-gated"
+        elif r["exit"] == 77:
+            r["result"] = "skip"
         else:
             r["result"] = "fail"
 
@@ -409,12 +413,22 @@ def main():
             if r["result"] == "fail" and len(r["findings"]) > 1:
                 for line in r["findings"][1:]:
                     print(f"    {line}")
+        # A skip is not a pass: a check whose own adopter-local input was absent
+        # gated nothing, and that must be visible in the same breath as the table,
+        # never buried in a per-row DETAIL column only a careful reader checks.
+        gated_skips = [r["id"] for r in results if r["result"] == "skip"]
+        if gated_skips:
+            print(f"NOT-FULLY-GATED: {len(gated_skips)} ({', '.join(gated_skips)})")
 
+    # A 1 (real findings) outranks a bare 2 (NOT-GATED) — a check that both found
+    # something AND another check scanned nothing must still report as a failure,
+    # not a lesser NOT-GATED verdict. Skips (77) never appear here: they cannot
+    # fail the run alone, per the 2026-09-20 adopter-local-input ruling.
     exits = [r["exit"] for r in results if not r.get("skipped_scope")]
-    if 2 in exits:
-        return 2
     if 1 in exits:
         return 1
+    if 2 in exits:
+        return 2
     return 0
 
 
