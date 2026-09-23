@@ -41,12 +41,15 @@ if ! grep -lq "run-all-proofs" "$ROOT"/.github/workflows/*.yml 2>/dev/null; then
 fi
 
 # 3 — independent inventory vs the runner's claimed inventory.
+# Tracked plus untracked-not-ignored inside a checkout; the walk outside one.
 EXPECTED=$(
-  find "$ROOT" \
-    -type d \( -name node_modules -o -name _archive -o -name .git \) -prune -o \
-    -type f \( -name '*.test.sh' -o -name '*.test.py' \) -print 2>/dev/null \
-    | sed "s#^$ROOT/##" \
-    | LC_ALL=C sort
+  if git -C "$ROOT" rev-parse --git-dir >/dev/null 2>&1; then
+    git -C "$ROOT" ls-files --cached --others --exclude-standard -- '*.test.sh' '*.test.py' \
+      | while IFS= read -r f; do [ -f "$ROOT/$f" ] && printf '%s\n' "$f"; done
+  else
+    find "$ROOT" -type d \( -name node_modules -o -name _archive -o -name .git \) -prune -o \
+      -type f \( -name '*.test.sh' -o -name '*.test.py' \) -print 2>/dev/null | sed "s#^$ROOT/##"
+  fi | LC_ALL=C sort -u
 )
 ACTUAL=$(bash "$RUNNER" --list 2>/dev/null | LC_ALL=C sort)
 

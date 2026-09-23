@@ -53,12 +53,17 @@ FLAKY_RETRIES=2
 # ---------------------------------------------------------------------------
 
 # Print every harness this runner would execute, repo-relative and sorted.
+# Tracked plus untracked-not-ignored: a gitignored copy of the tree (a scratch snapshot,
+# _archive/) is never a harness.
+# Outside a git checkout (a fixture tree), fall back to the walk.
 discover() {
-  find "$ROOT" \
-    -type d \( -name node_modules -o -name _archive -o -name .git \) -prune -o \
-    -type f \( -name '*.test.sh' -o -name '*.test.py' \) -print 2>/dev/null \
-    | sed "s#^$ROOT/##" \
-    | LC_ALL=C sort
+  if git -C "$ROOT" rev-parse --git-dir >/dev/null 2>&1; then
+    git -C "$ROOT" ls-files --cached --others --exclude-standard -- '*.test.sh' '*.test.py' \
+      | while IFS= read -r f; do [ -f "$ROOT/$f" ] && printf '%s\n' "$f"; done
+  else
+    find "$ROOT" -type d \( -name node_modules -o -name _archive -o -name .git \) -prune -o \
+      -type f \( -name '*.test.sh' -o -name '*.test.py' \) -print 2>/dev/null | sed "s#^$ROOT/##"
+  fi | LC_ALL=C sort -u
 }
 
 # registry_lookup <repo-relative path> <entry...> -> echoes "<bead>|<why>", rc 0 if found
