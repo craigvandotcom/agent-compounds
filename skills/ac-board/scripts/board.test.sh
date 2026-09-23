@@ -75,6 +75,9 @@ put "$W/flowing/reads" truth 0 "board-truth: 3 cited-but-open"
 check flowing "only a non-zero check shows"    '^   checks +⚠ board-truth 3$'
 check flowing "no jam when work is ready"      '▲' absent
 check flowing "NEXT has nothing for you"       '^1\. nothing needs you$'
+put "$W/flowing/reads" prs 0 '[{"number":42,"statusCheckRollup":[{"conclusion":"FAILURE","name":"build"}]}]'
+check flowing "a failing PR check is counted"  '^   PRs +1 open · 1 red$'
+check flowing "and surfaces in NEXT"           '^1\. PR #42 is red$'
 
 # STARVED: ready work, nobody live to take it.
 fixture starved "[$READY]" "[$READY]" "$READY" ""
