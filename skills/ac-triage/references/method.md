@@ -205,14 +205,30 @@ Beads ship `unrefined` — there is no in-session refine step. Refinement happen
 ## Phase 4 — report
 
 ```
-TRIAGE RUN  (<date>)
-sources:    sentry ✓ (12 new issues)  ·  asc ✓ (2 feedback)  ·  supabase — (not wired)
-clustered:  14 raw → 5 findings (3 defects · 2 themes)
-beads:      3 created (bd-xxxx bug, bd-yyyy bug, bd-zzzz investigation), 1 deduped to existing
-candidates: 1 created (pool/061-offline-logging.md, from 4 feedback items) — awaiting approval in ac-human 🟢
-dropped:    9 (sub-threshold / known-3rd-party — listed)
-watermarks updated.
+📡 TRIAGE · <MM-DD HH:MM>
+   14 raw → 5 findings
+   3 defects · 2 themes
+
+SOURCES
+   sentry     ✓ 12 new
+   asc        ✓ 2 feedback
+   supabase   — not wired
+
+FILED
+   3 beads · 1 deduped
+   1 candidate · from 4 items
+   9 dropped · sub-threshold
+   watermarks ✓
+
+NEXT
+   bd-xxxx      bug
+   bd-yyyy      bug
+   bd-zzzz      investigation
+   061-offline-logging
+   → approve in /ac-human
 ```
+
+Layout: `skill-builder/references/command-patterns.md` § 7 — every line ≤ 40 columns.
 
 The report must OUTLIVE the session — headless runs otherwise report to nobody. Write it
 to the app's **`.claude/state/triage-last-run.md`** and, when the app has a Slack channel

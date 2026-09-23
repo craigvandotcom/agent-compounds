@@ -4,21 +4,23 @@
 
 Output for the user and next session:
 
-```markdown
-## Bead-Work Session Summary
-
-**Beads Completed:** N (list IDs + titles)
-**Beads Remaining:** M (from `br ready --json`)
-**Commits:** K commits pushed
-
-**Quality Gates:** All passing | Issues filed (list)
-
-**Learnings Applied:** X upgrades (list targets)
-
-**Open Issues:**
-
-- (any filed beads or blockers)
 ```
+🛬 LANDED
+   N beads closed · M ready
+   K commits pushed
+
+GATES
+   ✓ all passing | ⚠ N issues filed
+
+LEARNED
+   X upgrades · <targets, stacked>
+
+OPEN
+   <bead-id>  <blocker, ≤ 25 chars>
+```
+
+M comes from `br ready --json`. Omit OPEN when nothing is filed or blocked. Layout:
+`skill-builder/references/command-patterns.md` § 7 — every line ≤ 40 columns.
 
 **Present next session choice with `AskUserQuestion`** — interactive sessions only. When driven
 headless by the ac-implement coordinator's Exit-Land prompt ("never `AskUserQuestion`"), skip

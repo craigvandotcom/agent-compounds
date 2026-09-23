@@ -2,32 +2,35 @@
 
 Write one report per run (Phase 5). Omit sections with zero items.
 
-```markdown
-## Pipeline Alignment Report
-
-### Strategy Summary
-- **Core value prop:** {one sentence}
-- **Current target milestone:** {milestone}
-- **Strategy gaps noted:** {list or "none"}
-
-### Orphans ({N} items — don't serve strategy)
-| Item | Location | Recommendation |
-|------|----------|----------------|
-| {title} | {backlog/plan/bead} | Defer to v{N} / archive |
-
-### Missing Execution ({N} gaps)
-| Strategy Demand | Missing Item | Suggested Action |
-|----------------|--------------|-----------------|
-| {demand} | nothing in pipeline | Add to _backlog or /ac-plan |
-
-### Missequenced Items ({N} items)
-| Item | Current Position | Should Be | Reason |
-|------|-----------------|-----------|--------|
-| {title} | {current stage} | {earlier/later} | {brief reason} |
-
-### Sequencing Notes
-{1–3 observations about crystallization order and downstream impact}
-
-### Strategy Gaps
-{List any internal strategy inconsistencies or missing strategy elements}
 ```
+🧭 ALIGN · {milestone}
+   {core value prop, wrapped}
+   N orphans · N missing
+   N missequenced
+
+ORPHANS · N
+{title}
+   {backlog|plan|bead}
+   → defer to v{N} | archive
+
+MISSING EXECUTION · N
+{strategy demand}
+   nothing in pipeline
+   → _backlog | /ac-plan
+
+MISSEQUENCED · N
+{title}
+   {current stage} → {earlier|later}
+   {brief reason}
+
+SEQUENCING NOTES
+   {1–3 lines: crystallization order
+   and downstream impact}
+
+STRATEGY GAPS
+   {one inconsistency or missing
+   element per line}
+```
+
+The head block is the Strategy Summary. Layout: `skill-builder/references/command-patterns.md`
+§ 7 — every line ≤ 40 columns, no tables.

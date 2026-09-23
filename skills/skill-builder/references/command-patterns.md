@@ -122,6 +122,17 @@ Self-organizing, easy archival, no filename clashes. Watch BSD-vs-GNU `date` por
 bead board (bead-native code repo). Avoid scattering state across `patterns.md` /
 `dependencies.md` / etc. unless the user asks.
 
+**Human-read summaries fit a phone** — a board, docket, run report or Slack post:
+
+- **40 columns, never wrapped.** A longer value stacks onto the next line.
+- **Counts before names.** Names appear only where the human acts on them.
+- **One stacked block per section.** A header with the headline count, short rows indented
+  three spaces, a blank line between blocks. No markdown tables.
+- **IDs only in the next moves.** The ranked moves carry ids and routes; the rest counts.
+
+Reference render: `ac-board/scripts/render.py`. Exempt: output a script parses, and a report
+read at a desk (a review file).
+
 ---
 
 ## 8 · Flexibility & overrides
