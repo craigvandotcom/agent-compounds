@@ -82,6 +82,12 @@ def check_id(path):
 def run_check(path, root, timeout=300, extra_env=None):
     cmd = [sys.executable, path, root] if path.endswith(".py") else ["bash", path, root]
     env = os.environ.copy()
+    # Every check's `from lib import ...` needs lint/ on sys.path. Setting it here — the
+    # ONE place a check's own process is launched — is why no check's source carries the
+    # sys.path.insert dance itself; lint/checks/_bootstrap.py covers the standalone
+    # `python3 lint/checks/NN.py` invocation this runner does not own.
+    existing = env.get("PYTHONPATH", "")
+    env["PYTHONPATH"] = _HERE + (os.pathsep + existing if existing else "")
     if extra_env:
         env.update(extra_env)
     t0 = time.time()

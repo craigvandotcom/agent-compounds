@@ -223,6 +223,9 @@ CHECKS = frozenset(
     "lint/checks/" + f
     for f in sorted(os.listdir(CHECKS_DIR))
     if os.path.isfile(os.path.join(CHECKS_DIR, f)) and not f.endswith(".test.sh")
+    # a leading underscore names a shared helper (e.g. _bootstrap.py), not a
+    # check: it carries no header and is never discovered, run or audited as one.
+    and not f.startswith("_")
 ) if os.path.isdir(CHECKS_DIR) else frozenset()
 
 CACHES = frozenset({d for d in SKIP_DIRS if d not in (".git",)})

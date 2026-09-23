@@ -157,7 +157,7 @@ mk "$TREE/lint/allowlists/28-path-resolution.txt" <<EOF
 skills/gone/references/old.md
 EOF
 run
-if [ "$RC" -eq 1 ] && echo "$OUT" | grep -q "not \`YYYY-MM-DD <path>\`"; then
+if [ "$RC" -eq 1 ] && echo "$OUT" | grep -q "not \`YYYY-MM-DD key"; then
   pass "Case 8: an undated allowlist line is a malformed-entry defect"
 else
   fail "Case 8: expected exit 1 naming the malformed line, got $RC. Output: $OUT"

@@ -43,9 +43,7 @@ import re
 import subprocess
 import sys
 
-_HERE = os.path.dirname(os.path.abspath(__file__))
-_LINT = os.path.dirname(_HERE)
-sys.path.insert(0, _LINT)
+import _bootstrap  # noqa: F401
 
 # consumers: leg 2's consumer union — the ONE copy of this fact. manifest: check-14 lists.
 from lib import consumers, manifest, scope  # noqa: E402

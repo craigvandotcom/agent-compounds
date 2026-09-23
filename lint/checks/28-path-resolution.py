@@ -21,11 +21,12 @@ only when it IS the root (the 00-meta RED leg), never as live text. OUT: bare
 script names (`lint.sh`) and dir-only mentions (`skills/agents`) — no file
 extension, not a citation.
 
-Allowlist `lint/allowlists/28-path-resolution.txt`: one entry per line,
-`YYYY-MM-DD <path>` — the date the dangling path was admitted. Shrink-only is
-mechanical: an entry whose path RESOLVES today is itself a violation (the fix
-landed; delete the line). The check never adds entries — a new dangling path
-fails, and admission is a dated edit by a human or a bead.
+Allowlist `lint/allowlists/28-path-resolution.txt`: lib.ratchet's `DATE key
+[# why]` format, `key` being the dangling path and `DATE` the day it was
+admitted. Shrink-only is mechanical: an entry whose path RESOLVES today is
+itself a violation (the fix landed; delete the line). The check never adds
+entries — a new dangling path fails, and admission is a dated edit by a
+human or a bead.
 
 Exit: 0 clean (>=1 file scanned), 1 findings, 2 scanned nothing.
 """
@@ -34,11 +35,8 @@ import os
 import re
 import sys
 
-_HERE = os.path.dirname(os.path.abspath(__file__))
-_LINT = os.path.dirname(_HERE)
-sys.path.insert(0, _LINT)
-
-from lib import scope  # noqa: E402
+import _bootstrap  # noqa: F401
+from lib import ratchet, scope
 
 FORM1 = re.compile(
     r"(?<![\w/.\-])skills/[A-Za-z0-9][A-Za-z0-9._-]*(?:/[A-Za-z0-9._-]+)+"
@@ -49,7 +47,6 @@ FORM2 = re.compile(
     r"[A-Za-z0-9._-]+\.[A-Za-z0-9]{1,5}\b"
 )
 ALLOWLIST = os.path.join("lint", "allowlists", "28-path-resolution.txt")
-ENTRY = re.compile(r"^(\d{4}-\d{2}-\d{2})\s+(\S+)$")
 
 
 def resolves(root, tok):
@@ -59,33 +56,28 @@ def resolves(root, tok):
     return False
 
 
-def load_allowlist(root):
-    """Returns (allowed set, defect list). Stale/malformed entries are defects."""
+def admitted_paths(root):
+    """Returns (allowed set, defect list): lib.ratchet's shared parse, plus this
+    check's own per-entry validity — a duplicate path, or a path that now
+    RESOLVES (the fix landed; shrink-only demands the line go), is a defect
+    lib.ratchet has no way to know about."""
     path = os.path.join(root, ALLOWLIST)
     if not os.path.isfile(path):
         return set(), []
-    allowed, defects, seen = set(), [], set()
-    with open(path, encoding="utf-8") as fh:
-        for n, raw in enumerate(fh, 1):
-            line = raw.strip()
-            if not line or line.startswith("#"):
-                continue
-            m = ENTRY.match(line)
-            if not m:
-                defects.append(f"allowlist line {n}: not `YYYY-MM-DD <path>` — {line!r}")
-                continue
-            tok = m.group(2)
-            if tok in seen:
-                defects.append(f"allowlist line {n}: duplicate entry {tok}")
-                continue
-            seen.add(tok)
-            if resolves(root, tok):
-                defects.append(
-                    f"allowlist line {n}: {tok} now RESOLVES — the fix landed; "
-                    "delete the line (shrink-only)"
-                )
-                continue
-            allowed.add(tok)
+    entries, defects = ratchet.load_allowlist(path)
+    allowed, seen = set(), set()
+    for _date, tok in entries:
+        if tok in seen:
+            defects.append(f"{ALLOWLIST}: duplicate entry {tok}")
+            continue
+        seen.add(tok)
+        if resolves(root, tok):
+            defects.append(
+                f"{ALLOWLIST}: {tok} now RESOLVES — the fix landed; "
+                "delete the line (shrink-only)"
+            )
+            continue
+        allowed.add(tok)
     return allowed, defects
 
 
@@ -115,7 +107,7 @@ def main():
                 if not resolves(root, tok):
                     hits.append(f"{rel}:{n} cites '{tok}' — no such file")
 
-    allowed, al_defects = load_allowlist(root)
+    allowed, al_defects = admitted_paths(root)
     defects += al_defects
     open_hits = [h for h in hits if not any(a in h for a in allowed)]
     for d in defects:

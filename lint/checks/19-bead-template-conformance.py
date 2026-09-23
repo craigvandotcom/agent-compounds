@@ -124,7 +124,7 @@ def human_gate_violation(cmd):
 
 
 def has_catch_stage(cmd):
-    return any(l in CATCH_STAGE for l in guard.all_labels(cmd))
+    return any(label in CATCH_STAGE for label in guard.all_labels(cmd))
 
 
 def is_finding_template(cmd):
@@ -143,13 +143,15 @@ def is_finding_template(cmd):
 
 
 def template_has_origin(cmd):
-    return any(TEMPLATE_ORIGIN.match(l) for l in guard.all_labels(cmd))
+    return any(TEMPLATE_ORIGIN.match(label) for label in guard.all_labels(cmd))
 
 
 # A title or labels — NOT -d/--description. Skill prose illustrates shell-quoting hazards
 # with fragments like `br create -d "…"`, which name nothing and are not copyable templates.
 CONTENT_FLAGS = {"--title", "-l", "--labels"}
 CONTENT_PREFIXES = ("--title=", "--labels=")
+# Flags whose value token must be skipped over when scanning for a bare positional (the title).
+VALUE_FLAGS = {"-t", "--type", "-p", "--priority", "--parent", "-e", "--estimate", "-d", "--description", "--body"}
 
 
 def is_substantive(cmd):
@@ -170,7 +172,7 @@ def is_substantive(cmd):
         if tok in CONTENT_FLAGS or tok.startswith(CONTENT_PREFIXES):
             return True
         if tok.startswith("-"):
-            skip_next = tok in {"-t", "--type", "-p", "--priority", "--parent", "-e", "--estimate", "-d", "--description", "--body"}
+            skip_next = tok in VALUE_FLAGS
             continue
         return True  # a bare positional — the title
     return False

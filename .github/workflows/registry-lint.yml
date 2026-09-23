@@ -28,6 +28,12 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - run: bash lint.sh
+        # Checks 25/29/31's growth ratchet (lint/lib/ratchet.py's base_ref()) reads this: the
+        # pre-push sha on a push, the PR's base sha on a pull_request — what was actually on
+        # the branch before, never a moving origin/main a squash or force-push can shift out
+        # from under a commit still in flight.
+        env:
+          LINT_BASE_REF: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
 
   # Executes every committed proof-test harness (glob-discovered by run-all-proofs.sh). A
   # proof test that never runs is documentation. Its OWN job with its OWN checkout, so

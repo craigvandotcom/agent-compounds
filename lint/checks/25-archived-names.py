@@ -31,15 +31,17 @@ them):
       an archived v1 whose live successor has disappeared must be renamed out
       of the constant so its name joins the governed set.
 
-The allowlist lint/allowlists/25-archived-names.txt is DATED and SHRINK-ONLY:
+The allowlist lint/allowlists/25-archived-names.txt (absent today — 0 live
+carriers, nothing to admit) is, when it exists, DATED and SHRINK-ONLY per lib.ratchet:
   - every entry must still carry at least one archived-name hit; a file the
     sweeps cleaned must have its entry REMOVED in the same change;
-  - growth is refused against the committed base (merge-base of config
-    base_ref and HEAD, falling back to HEAD^): an entry not present in the
-    committed allowlist fails the check. The file's first landing has no
-    committed version at base — that IS the seed, and the ratchet starts the
-    moment one exists. Adding an entry therefore fails the check from the
-    next commit on: the allowlist only shrinks.
+  - growth is refused against the committed base (lib.ratchet.base_ref,
+    honouring LINT_BASE_REF): an entry not present in the committed
+    allowlist fails the check. The file's first landing has no committed
+    version at base — that IS the seed, and the ratchet starts the moment
+    one exists. Adding an entry therefore fails the check from the next
+    commit on: the allowlist only shrinks. No file means no exceptions —
+    every carrier is a violation.
 
 Exit: 0 clean, 1 violations, 2 scanned nothing (NOT-GATED, never a pass),
 77 skipped (no _archive/skills dir in this checkout — adopter-local, gitignored).
@@ -47,30 +49,17 @@ Exit: 0 clean, 1 violations, 2 scanned nothing (NOT-GATED, never a pass),
 
 import os
 import re
-import subprocess
 import sys
 
-_HERE = os.path.dirname(os.path.abspath(__file__))
-_LINT = os.path.dirname(_HERE)
-sys.path.insert(0, _LINT)
-
-from lib import scope  # noqa: E402
+import _bootstrap  # noqa: F401
+from lib import ratchet, scope
 
 STANDING_EXCLUSIONS = ("audit", "planning", "openrouter")
 ARCHIVED_V1_SURVIVORS = ("ac-beadify", "ac-implement", "ac-publish")
 ALLOWLIST = "lint/allowlists/25-archived-names.txt"
-DEFAULT_BASE_REF = "origin/main"
 
 violations = []
 notes = []
-
-
-def git(root, *args):
-    proc = subprocess.run(
-        ["git", "--no-optional-locks", "-C", root, *args],
-        capture_output=True, text=True, timeout=60,
-    )
-    return proc.stdout.strip()
 
 
 def archived_names(root):
@@ -92,44 +81,6 @@ def pattern_for(names):
         r"(?:^|[^A-Za-z0-9_-])(" + "|".join(re.escape(n) for n in names) + r")(?:[^A-Za-z0-9_-]|$)")
 
 
-def load_allowlist(path):
-    entries = []
-    with open(path, encoding="utf-8") as fh:
-        for line in fh:
-            line = line.strip()
-            if line and not line.startswith("#"):
-                entries.append(line)
-    return entries
-
-
-def ratchet_base(root):
-    ref = DEFAULT_BASE_REF
-    if git(root, "rev-parse", "--verify", "--quiet", ref):
-        b = git(root, "merge-base", ref, "HEAD")
-        if b:
-            return b
-    head = git(root, "rev-parse", "--verify", "--quiet", "HEAD")
-    if head and git(root, "rev-parse", "--verify", "--quiet", "HEAD^"):
-        return git(root, "rev-parse", "HEAD^")
-    return ""
-
-
-def committed_entries(root, base):
-    """The allowlist as committed at base; None when it does not exist there."""
-    proc = subprocess.run(
-        ["git", "--no-optional-locks", "-C", root, "show", f"{base}:{ALLOWLIST}"],
-        capture_output=True, text=True, timeout=60,
-    )
-    if proc.returncode != 0:
-        return None
-    out = []
-    for line in proc.stdout.splitlines():
-        line = line.strip()
-        if line and not line.startswith("#"):
-            out.append(line)
-    return out
-
-
 def scan(root, names, allowlist_path):
     pat = pattern_for(names)
     carriers = {}
@@ -144,7 +95,10 @@ def scan(root, names, allowlist_path):
 
     allowed = set()
     if allowlist_path:
-        allowed = set(load_allowlist(allowlist_path))
+        entries, defects = ratchet.load_allowlist(allowlist_path)
+        for d in defects:
+            violations.append(d)
+        allowed = {k for _, k in entries}
         for entry in sorted(allowed - set(carriers)):
             if not os.path.isfile(os.path.join(root, entry)):
                 violations.append(
@@ -161,15 +115,15 @@ def scan(root, names, allowlist_path):
                 "— replace the name(s) in the text; the allowlist is a dated shrinking rest home, not an amnesty")
 
     if allowlist_path:
-        base = ratchet_base(root)
+        base = ratchet.base_ref(root)
         if base:
-            committed = committed_entries(root, base)
+            committed = ratchet.committed_keys(root, base, ALLOWLIST)
             if committed is None:
                 notes.append(
                     f"allowlist has no committed version at base {base[:12]} "
                     "— this is the seed; the shrink-only growth ratchet starts once it lands")
             else:
-                for entry in sorted(set(load_allowlist(allowlist_path)) - set(committed)):
+                for entry in ratchet.shrink_only(allowed, committed):
                     violations.append(
                         f"allowlist GREW vs base {base[:12]}: '{entry}' is not in the committed list "
                         "— the allowlist only shrinks; clean the file and remove an entry instead")

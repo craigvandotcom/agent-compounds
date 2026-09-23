@@ -47,8 +47,7 @@ import sys
 import tempfile
 
 _HERE = os.path.dirname(os.path.abspath(__file__))
-_LINT = os.path.dirname(_HERE)
-sys.path.insert(0, _LINT)
+_LINT = os.path.dirname(_HERE)  # this check imports no `lib` module — _LINT only computes the repo root below
 
 violations = []
 notices = []

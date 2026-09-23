@@ -24,30 +24,24 @@ The pointer corpus is LIVE_TEXT + agents/*.md + README.md — the registry's rea
 surface. Tooling (lint.sh, the checks) deliberately does NOT keep a reference
 alive: a file only lint knows about is still dead weight for every reader.
 
-The allowlist lint/allowlists/31-orphan-references.txt is DATED and SHRINK-ONLY,
-same contract as 25:
+The allowlist lint/allowlists/31-orphan-references.txt (lib.ratchet's
+`DATE key  # why` format) is DATED and SHRINK-ONLY, same contract as 25:
   - every entry must still be an orphan; a file that gained a reader has its
     entry REMOVED in the same change;
-  - growth is refused against the committed base (merge-base of config
-    base_ref and HEAD, falling back to HEAD^) — the first landing has no
-    committed version at base, that IS the seed, and the ratchet starts the
-    moment one exists.
+  - growth is refused against the committed base (lib.ratchet.base_ref,
+    honouring LINT_BASE_REF) — the first landing has no committed version at
+    base, that IS the seed, and the ratchet starts the moment one exists.
 
 Exit: 0 clean, 1 orphans, 2 scanned nothing (NOT-GATED, never a pass).
 """
 
 import os
-import subprocess
 import sys
 
-_HERE = os.path.dirname(os.path.abspath(__file__))
-_LINT = os.path.dirname(_HERE)
-sys.path.insert(0, _LINT)
-
-from lib import scope  # noqa: E402
+import _bootstrap  # noqa: F401
+from lib import ratchet, scope
 
 ALLOWLIST = "lint/allowlists/31-orphan-references.txt"
-DEFAULT_BASE_REF = "origin/main"
 
 violations = []
 notes = []
@@ -88,47 +82,6 @@ def texts(root, paths):
     return out
 
 
-def git(root, *args):
-    proc = subprocess.run(
-        ["git", "--no-optional-locks", "-C", root, *args],
-        capture_output=True, text=True, timeout=60,
-    )
-    return proc.stdout.strip()
-
-
-def ratchet_base(root):
-    ref = DEFAULT_BASE_REF
-    if git(root, "rev-parse", "--verify", "--quiet", ref):
-        b = git(root, "merge-base", ref, "HEAD")
-        if b:
-            return b
-    head = git(root, "rev-parse", "--verify", "--quiet", "HEAD")
-    if head and git(root, "rev-parse", "--verify", "--quiet", "HEAD^"):
-        return git(root, "rev-parse", "HEAD^")
-    return ""
-
-
-def committed_entries(root, base):
-    proc = subprocess.run(
-        ["git", "--no-optional-locks", "-C", root, "show", f"{base}:{ALLOWLIST}"],
-        capture_output=True, text=True, timeout=60,
-    )
-    if proc.returncode != 0:
-        return None
-    return [line.strip() for line in proc.stdout.splitlines()
-            if line.strip() and not line.startswith("#")]
-
-
-def load_allowlist(path):
-    entries = []
-    with open(path, encoding="utf-8") as fh:
-        for line in fh:
-            line = line.strip()
-            if line and not line.startswith("#"):
-                entries.append(line)
-    return entries
-
-
 def scan(root):
     corpus_paths = pointer_corpus(root)
     if not corpus_paths:
@@ -161,7 +114,9 @@ def scan(root):
     allowed = set()
     allowlist_path = os.path.join(root, ALLOWLIST)
     if os.path.isfile(allowlist_path):
-        allowed = set(load_allowlist(allowlist_path))
+        entries, defects = ratchet.load_allowlist(allowlist_path)
+        violations.extend(defects)
+        allowed = {k for _, k in entries}
         for entry in sorted(allowed - set(orphans)):
             if not os.path.isfile(os.path.join(root, entry)):
                 violations.append(
@@ -171,15 +126,15 @@ def scan(root):
                 violations.append(
                     f"allowlist entry '{entry}' is no longer an orphan — something points "
                     "at it now; the list only shrinks: remove the entry")
-        base = ratchet_base(root)
+        base = ratchet.base_ref(root)
         if base:
-            committed = committed_entries(root, base)
+            committed = ratchet.committed_keys(root, base, ALLOWLIST)
             if committed is None:
                 notes.append(
                     f"allowlist has no committed version at base {base[:12]} "
                     "— this is the seed; the shrink-only growth ratchet starts once it lands")
             else:
-                for entry in sorted(allowed - set(committed)):
+                for entry in ratchet.shrink_only(allowed, committed):
                     violations.append(
                         f"allowlist GREW vs base {base[:12]}: '{entry}' is not in the committed list "
                         "— the allowlist only shrinks; clean the tree and remove an entry instead")

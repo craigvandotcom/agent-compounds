@@ -64,7 +64,7 @@ fi
 t="$work/allowlisted"; build_tree "$t"
 mkdir -p "$t/lint/allowlists"
 { echo "# dated allowlist"
-  echo "skills/skill-a/references/orphan.md"
+  echo "2026-09-07 skills/skill-a/references/orphan.md"
 } > "$t/lint/allowlists/31-orphan-references.txt"
 rc=$(run_check "$t")
 if [ "$rc" = 0 ] && grep -qE "this is the seed|no resolvable base ref" "$OUT"; then
@@ -79,7 +79,7 @@ mkdir -p "$t/skills/skill-b" "$t/lint/allowlists"
 printf '%s\n' '# skill-b' '' 'Read skills/skill-a/references/orphan.md now.' \
   > "$t/skills/skill-b/SKILL.md"
 { echo "# dated allowlist"
-  echo "skills/skill-a/references/orphan.md"
+  echo "2026-09-07 skills/skill-a/references/orphan.md"
 } > "$t/lint/allowlists/31-orphan-references.txt"
 rc=$(run_check "$t")
 if [ "$rc" = 1 ] && grep -q "no longer an orphan" "$OUT"; then
@@ -98,7 +98,7 @@ git -C "$t" -c user.name=h -c user.email=h@x commit -qm base
 BASE_SHA=$(git -C "$t" rev-parse HEAD)
 git -C "$t" update-ref refs/remotes/origin/main "$BASE_SHA"
 { echo "# dated allowlist"
-  echo "skills/skill-a/references/orphan.md"
+  echo "2026-09-07 skills/skill-a/references/orphan.md"
 } > "$t/lint/allowlists/31-orphan-references.txt"
 rc=$(run_check "$t")
 if [ "$rc" = 1 ] && grep -q "allowlist GREW" "$OUT"; then

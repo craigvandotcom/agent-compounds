@@ -26,10 +26,7 @@ import os
 import re
 import sys
 
-_HERE = os.path.dirname(os.path.abspath(__file__))
-_LINT = os.path.dirname(_HERE)
-sys.path.insert(0, _LINT)
-
+import _bootstrap  # noqa: F401
 from lib import scope  # noqa: E402
 
 CHECK_ID = "36-br-envelope"

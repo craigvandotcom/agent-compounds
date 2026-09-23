@@ -53,7 +53,7 @@ fi
 t="$work/green"; build_tree "$t"
 mkdir -p "$t/lint/allowlists"
 { echo "# dated allowlist"
-  echo "skills/red-skill/SKILL.md"
+  echo "2026-09-07 skills/red-skill/SKILL.md"
 } > "$t/lint/allowlists/25-archived-names.txt"
 rc=$(run_check "$t")
 if [ "$rc" = 0 ]; then
@@ -66,8 +66,8 @@ fi
 t="$work/stale"; build_tree "$t"
 mkdir -p "$t/lint/allowlists"
 { echo "# dated allowlist"
-  echo "skills/red-skill/SKILL.md"
-  echo "skills/clean-skill/SKILL.md"
+  echo "2026-09-07 skills/red-skill/SKILL.md"
+  echo "2026-09-07 skills/clean-skill/SKILL.md"
 } > "$t/lint/allowlists/25-archived-names.txt"
 rc=$(run_check "$t")
 if [ "$rc" = 1 ] && grep -q "only shrinks: remove the entry" "$OUT"; then
@@ -87,8 +87,8 @@ git -C "$t" -c user.name=h -c user.email=h@x commit -qm base
 BASE_SHA=$(git -C "$t" rev-parse HEAD)
 git -C "$t" update-ref refs/remotes/origin/main "$BASE_SHA"
 { echo "# dated allowlist"
-  echo "skills/red-skill/SKILL.md"
-  echo "skills/clean-skill/SKILL.md"
+  echo "2026-09-07 skills/red-skill/SKILL.md"
+  echo "2026-09-07 skills/clean-skill/SKILL.md"
 } > "$t/lint/allowlists/25-archived-names.txt"
 rc=$(run_check "$t")
 if [ "$rc" = 1 ] && grep -q "allowlist GREW" "$OUT"; then
@@ -106,7 +106,7 @@ BASE_SHA=$(git -C "$t" rev-parse HEAD)
 git -C "$t" update-ref refs/remotes/origin/main "$BASE_SHA"
 mkdir -p "$t/lint/allowlists"
 { echo "# dated allowlist"
-  echo "skills/red-skill/SKILL.md"
+  echo "2026-09-07 skills/red-skill/SKILL.md"
 } > "$t/lint/allowlists/25-archived-names.txt"
 rc=$(run_check "$t")
 if [ "$rc" = 0 ] && grep -q "this is the seed" "$OUT"; then

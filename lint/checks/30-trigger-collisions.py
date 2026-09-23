@@ -24,8 +24,10 @@ about selection across skills, and a description re-quoting its own phrase
 still selects one skill).
 
 Known collisions land in a dated SHRINK-ONLY allowlist
-(lint/allowlists/30-trigger-collisions.txt), the same ratchet contract as
-Check 27's instance-token allowlist:
+(lint/allowlists/30-trigger-collisions.txt, absent today — 0 live collisions,
+nothing to admit), a multi-field format of its own (a collision names two
+skills, not one key, so it does not fit lib.ratchet's single-key `DATE key
+[# why]` shape):
 
     # seeded: YYYY-MM-DD
     <date> | <phrase> | <skill>,<skill>
@@ -34,7 +36,8 @@ An entry dated after the seed is refused (the allowlist only shrinks); an
 entry whose collision no longer reproduces is refused (a description edit
 that separates the phrases forces its line out in the same change); a
 malformed allowlist (missing seed header, bad date, phrase not in the live
-collision set) fails loud.
+collision set) fails loud. No file means no exceptions — every collision is
+a violation.
 
 Exit: 0 clean (and at least one description scanned), 1 findings, 2 scanned
 nothing.
@@ -44,10 +47,7 @@ import os
 import re
 import sys
 
-_HERE = os.path.dirname(os.path.abspath(__file__))
-_LINT = os.path.dirname(_HERE)
-sys.path.insert(0, _LINT)
-
+import _bootstrap  # noqa: F401
 from lib import frontmatter, scope  # noqa: E402
 
 ALLOWLIST = "lint/allowlists/30-trigger-collisions.txt"
@@ -183,8 +183,9 @@ def main():
         return 1
     if problems:
         return 1
+    allowlist_note = f"{len(entries)} entries, seed {seed}" if seed else "no allowlist file — none admitted"
     print(f"  ok: 30-trigger-collisions — {scanned} description(s) tokenised, {len(collisions)} collision(s), "
-          f"all carried by the seeded allowlist ({len(entries)} entries, seed {seed})")
+          f"all carried by the seeded allowlist ({allowlist_note})")
     return 0
 
 

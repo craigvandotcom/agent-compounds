@@ -341,13 +341,13 @@ fi
 # the audited root's), so a synthetic fixture root missing lint/ entirely still runs the
 # leg: it is the manifest READ that may come up empty, never the module.
 LINT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-PKG_OUT=$(python3 - "$ROOT" "$CHECK_ID" "$LINT_DIR" <<'PYEOF'
+PKG_OUT=$(PYTHONPATH="$LINT_DIR" python3 - "$ROOT" "$CHECK_ID" <<'PYEOF'
 import os
 import sys
 
-root, check_id, lint_dir = sys.argv[1], sys.argv[2], sys.argv[3]
-sys.path.insert(0, lint_dir)
-from lib import manifest  # noqa: E402
+from lib import manifest
+
+root, check_id = sys.argv[1], sys.argv[2]
 
 
 def count_lines(path):

@@ -34,29 +34,26 @@ A skill with no hand-off sentence is scanned and passes (nothing declared).
 A target that resolves to nothing — not a table owner, not an alias — is RED
 ("names a hand-off the table does not carry").
 
-The dated allowlist lint/allowlists/29-stage-conformance.txt is SHRINK-ONLY:
-entry = a skill dir name whose today's mismatches WS2 will reword; a clean
-allowlisted skill must have its entry REMOVED, and an entry not in the
-committed version at the base ref fails the check (growth). The file's first
-landing has no committed version at base — that IS the seed.
+The dated allowlist lint/allowlists/29-stage-conformance.txt (lib.ratchet's
+`DATE key  # why` format) is SHRINK-ONLY: entry = a skill dir name whose
+today's mismatches WS2 will reword; a clean allowlisted skill must have its
+entry REMOVED, and an entry not in the committed version at the base ref
+(lib.ratchet.base_ref, honouring LINT_BASE_REF) fails the check (growth).
+The file's first landing has no committed version at base — that IS the
+seed.
 
 Exit: 0 clean, 1 violations, 2 scanned nothing (NOT-GATED, never a pass).
 """
 
 import os
 import re
-import subprocess
 import sys
 
-_HERE = os.path.dirname(os.path.abspath(__file__))
-_LINT = os.path.dirname(_HERE)
-sys.path.insert(0, _LINT)
-
-from lib import scope  # noqa: E402
+import _bootstrap  # noqa: F401
+from lib import ratchet, scope
 
 TABLE = "skills/ac-pipeline/references/stage-table.md"
 ALLOWLIST = "lint/allowlists/29-stage-conformance.txt"
-DEFAULT_BASE_REF = "origin/main"
 
 HANDOFF_PATTERNS = [
     ("hands off to", re.compile(r"hands off to\s+`?([^.,;()`\u2014\u2013\n]+)", re.I), "forward"),
@@ -73,14 +70,6 @@ ALIASES = {
 
 violations = []
 notes = []
-
-
-def git(root, *args):
-    proc = subprocess.run(
-        ["git", "--no-optional-locks", "-C", root, *args],
-        capture_output=True, text=True, timeout=60,
-    )
-    return proc.stdout.strip()
 
 
 def parse_table(root):
@@ -133,8 +122,9 @@ def scan(root, chain, allowlist_path):
     table_pos = {s: position_of(chain, s) for s in owner_set}
     allowed = set()
     if allowlist_path:
-        with open(allowlist_path, encoding="utf-8") as fh:
-            allowed = {line.strip() for line in fh if line.strip() and not line.startswith("#")}
+        entries, defects = ratchet.load_allowlist(allowlist_path)
+        violations.extend(defects)
+        allowed = {k for _, k in entries}
 
     scanned = 0
     hits_by_skill = {}
@@ -183,22 +173,20 @@ def scan(root, chain, allowlist_path):
             violations.append(f"{skill}/SKILL.md: {msg}")
 
     if allowlist_path:
-        base = ratchet_base(root)
+        base = ratchet.base_ref(root)
         if base:
-            proc = subprocess.run(
-                ["git", "--no-optional-locks", "-C", root, "show", f"{base}:{ALLOWLIST}"],
-                capture_output=True, text=True, timeout=60)
-            if proc.returncode != 0:
+            committed = ratchet.committed_keys(root, base, ALLOWLIST)
+            if committed is None:
                 notes.append(
                     f"allowlist has no committed version at base {base[:12]} "
                     "— this is the seed; the shrink-only growth ratchet starts once it lands")
             else:
-                committed = {line.strip() for line in proc.stdout.splitlines()
-                             if line.strip() and not line.startswith("#")}
-                for entry in sorted(allowed - committed):
+                for entry in ratchet.shrink_only(allowed, committed):
                     violations.append(
                         f"allowlist GREW vs base {base[:12]}: '{entry}' is not in the committed list "
                         "— the allowlist only shrinks; fix the prose instead")
+        else:
+            notes.append("no resolvable base ref — growth ratchet skipped this run (shallow or standalone checkout)")
 
     print(f"29-stage-conformance: {scanned} ac-* skill(s) scanned, {len(chain)} table stage(s) read from {TABLE}, "
           f"{len(hits_by_skill)} non-conforming skill(s)")
@@ -211,17 +199,6 @@ def scan(root, chain, allowlist_path):
         return 1
     print("29-stage-conformance: PASS")
     return 0
-
-
-def ratchet_base(root):
-    ref = DEFAULT_BASE_REF
-    if git(root, "rev-parse", "--verify", "--quiet", ref):
-        b = git(root, "merge-base", ref, "HEAD")
-        if b:
-            return b
-    if git(root, "rev-parse", "--verify", "--quiet", "HEAD^"):
-        return git(root, "rev-parse", "HEAD^")
-    return ""
 
 
 def run(root):

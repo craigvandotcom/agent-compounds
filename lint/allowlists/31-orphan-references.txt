@@ -1,71 +1,72 @@
-# 31-orphan-references — DATED, SHRINK-ONLY rest home (bead ac-1p7j.5, seeded 2026-09-07).
+# 31-orphan-references — lib.ratchet format (`DATE key  # why`), DATED and SHRINK-ONLY
+# rest home (bead ac-1p7j.5, seeded 2026-09-07).
 # Every entry is a references/, reference/ or workflows/ file nothing in the registry
 # points at yet. A file that gains a reader must have its entry REMOVED in the same
 # change; growth is refused against the committed base. Emptied by the WS2 rebuilds.
-skills/ac-land/references/ui-tester-prompt.md
-skills/ac-pipeline/references/ceremony-batching-pool.md
-skills/jef-prompts/references/agent-swarm-launcher.md
-skills/jef-prompts/references/api-contract-validator.md
-skills/jef-prompts/references/brainstorm.md
-skills/jef-prompts/references/bug-hunter-alien.md
-skills/jef-prompts/references/bug-hunter-genius.md
-skills/jef-prompts/references/bug-hunter.md
-skills/jef-prompts/references/cli-error-tolerance.md
-skills/jef-prompts/references/code-optimizer-alien.md
-skills/jef-prompts/references/code-reorganizer.md
-skills/jef-prompts/references/de-slopify.md
-skills/jef-prompts/references/deep-performance-audit.md
-skills/jef-prompts/references/deep-project-primer.md
-skills/jef-prompts/references/dependency-audit.md
-skills/jef-prompts/references/deployment-verifier.md
-skills/jef-prompts/references/dueling-idea-wizards.md
-skills/jef-prompts/references/e2e-pipeline-validator.md
-skills/jef-prompts/references/error-message-improver.md
-skills/jef-prompts/references/git-committer.md
-skills/jef-prompts/references/headless-webview-crumb-debugging.md
-skills/jef-prompts/references/hundred-to-ten-filter.md
-skills/jef-prompts/references/idea-wizard.md
-skills/jef-prompts/references/multi-model-synthesis.md
-skills/jef-prompts/references/peer-code-reviewer.md
-skills/jef-prompts/references/plan-enhancer-alien.md
-skills/jef-prompts/references/premortem-planner.md
-skills/jef-prompts/references/project-opinion-elicitor.md
-skills/jef-prompts/references/readme-reviser.md
-skills/jef-prompts/references/robot-mode-maker.md
-skills/jef-prompts/references/stripe-level-ui.md
-skills/jef-prompts/references/stub-eliminator.md
-skills/jef-prompts/references/synthesize-info.md
-skills/jef-prompts/references/system-weaknesses.md
-skills/jef-prompts/references/test-coverage-gaps.md
-skills/skill-builder/references/trigger-corpus.md
-skills/supabase/references/advanced-full-text-search.md
-skills/supabase/references/advanced-jsonb-indexing.md
-skills/supabase/references/conn-idle-timeout.md
-skills/supabase/references/conn-limits.md
-skills/supabase/references/conn-pooling.md
-skills/supabase/references/conn-prepared-statements.md
-skills/supabase/references/data-batch-inserts.md
-skills/supabase/references/data-n-plus-one.md
-skills/supabase/references/data-pagination.md
-skills/supabase/references/data-upsert.md
-skills/supabase/references/lock-advisory.md
-skills/supabase/references/lock-deadlock-prevention.md
-skills/supabase/references/lock-short-transactions.md
-skills/supabase/references/lock-skip-locked.md
-skills/supabase/references/monitor-explain-analyze.md
-skills/supabase/references/monitor-pg-stat-statements.md
-skills/supabase/references/monitor-vacuum-analyze.md
-skills/supabase/references/query-composite-indexes.md
-skills/supabase/references/query-covering-indexes.md
-skills/supabase/references/query-index-types.md
-skills/supabase/references/query-missing-indexes.md
-skills/supabase/references/query-partial-indexes.md
-skills/supabase/references/schema-constraints.md
-skills/supabase/references/schema-data-types.md
-skills/supabase/references/schema-foreign-key-indexes.md
-skills/supabase/references/schema-lowercase-identifiers.md
-skills/supabase/references/schema-partitioning.md
-skills/supabase/references/schema-primary-keys.md
-skills/supabase/references/security-privileges.md
-skills/supabase/references/security-rls-basics.md
-skills/supabase/references/security-rls-performance.md
+2026-09-07 skills/ac-land/references/ui-tester-prompt.md
+2026-09-07 skills/ac-pipeline/references/ceremony-batching-pool.md
+2026-09-07 skills/jef-prompts/references/agent-swarm-launcher.md
+2026-09-07 skills/jef-prompts/references/api-contract-validator.md
+2026-09-07 skills/jef-prompts/references/brainstorm.md
+2026-09-07 skills/jef-prompts/references/bug-hunter-alien.md
+2026-09-07 skills/jef-prompts/references/bug-hunter-genius.md
+2026-09-07 skills/jef-prompts/references/bug-hunter.md
+2026-09-07 skills/jef-prompts/references/cli-error-tolerance.md
+2026-09-07 skills/jef-prompts/references/code-optimizer-alien.md
+2026-09-07 skills/jef-prompts/references/code-reorganizer.md
+2026-09-07 skills/jef-prompts/references/de-slopify.md
+2026-09-07 skills/jef-prompts/references/deep-performance-audit.md
+2026-09-07 skills/jef-prompts/references/deep-project-primer.md
+2026-09-07 skills/jef-prompts/references/dependency-audit.md
+2026-09-07 skills/jef-prompts/references/deployment-verifier.md
+2026-09-07 skills/jef-prompts/references/dueling-idea-wizards.md
+2026-09-07 skills/jef-prompts/references/e2e-pipeline-validator.md
+2026-09-07 skills/jef-prompts/references/error-message-improver.md
+2026-09-07 skills/jef-prompts/references/git-committer.md
+2026-09-07 skills/jef-prompts/references/headless-webview-crumb-debugging.md
+2026-09-07 skills/jef-prompts/references/hundred-to-ten-filter.md
+2026-09-07 skills/jef-prompts/references/idea-wizard.md
+2026-09-07 skills/jef-prompts/references/multi-model-synthesis.md
+2026-09-07 skills/jef-prompts/references/peer-code-reviewer.md
+2026-09-07 skills/jef-prompts/references/plan-enhancer-alien.md
+2026-09-07 skills/jef-prompts/references/premortem-planner.md
+2026-09-07 skills/jef-prompts/references/project-opinion-elicitor.md
+2026-09-07 skills/jef-prompts/references/readme-reviser.md
+2026-09-07 skills/jef-prompts/references/robot-mode-maker.md
+2026-09-07 skills/jef-prompts/references/stripe-level-ui.md
+2026-09-07 skills/jef-prompts/references/stub-eliminator.md
+2026-09-07 skills/jef-prompts/references/synthesize-info.md
+2026-09-07 skills/jef-prompts/references/system-weaknesses.md
+2026-09-07 skills/jef-prompts/references/test-coverage-gaps.md
+2026-09-07 skills/skill-builder/references/trigger-corpus.md
+2026-09-07 skills/supabase/references/advanced-full-text-search.md
+2026-09-07 skills/supabase/references/advanced-jsonb-indexing.md
+2026-09-07 skills/supabase/references/conn-idle-timeout.md
+2026-09-07 skills/supabase/references/conn-limits.md
+2026-09-07 skills/supabase/references/conn-pooling.md
+2026-09-07 skills/supabase/references/conn-prepared-statements.md
+2026-09-07 skills/supabase/references/data-batch-inserts.md
+2026-09-07 skills/supabase/references/data-n-plus-one.md
+2026-09-07 skills/supabase/references/data-pagination.md
+2026-09-07 skills/supabase/references/data-upsert.md
+2026-09-07 skills/supabase/references/lock-advisory.md
+2026-09-07 skills/supabase/references/lock-deadlock-prevention.md
+2026-09-07 skills/supabase/references/lock-short-transactions.md
+2026-09-07 skills/supabase/references/lock-skip-locked.md
+2026-09-07 skills/supabase/references/monitor-explain-analyze.md
+2026-09-07 skills/supabase/references/monitor-pg-stat-statements.md
+2026-09-07 skills/supabase/references/monitor-vacuum-analyze.md
+2026-09-07 skills/supabase/references/query-composite-indexes.md
+2026-09-07 skills/supabase/references/query-covering-indexes.md
+2026-09-07 skills/supabase/references/query-index-types.md
+2026-09-07 skills/supabase/references/query-missing-indexes.md
+2026-09-07 skills/supabase/references/query-partial-indexes.md
+2026-09-07 skills/supabase/references/schema-constraints.md
+2026-09-07 skills/supabase/references/schema-data-types.md
+2026-09-07 skills/supabase/references/schema-foreign-key-indexes.md
+2026-09-07 skills/supabase/references/schema-lowercase-identifiers.md
+2026-09-07 skills/supabase/references/schema-partitioning.md
+2026-09-07 skills/supabase/references/schema-primary-keys.md
+2026-09-07 skills/supabase/references/security-privileges.md
+2026-09-07 skills/supabase/references/security-rls-basics.md
+2026-09-07 skills/supabase/references/security-rls-performance.md

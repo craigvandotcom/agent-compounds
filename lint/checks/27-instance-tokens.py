@@ -39,10 +39,7 @@ or an empty one — nothing to hunt).
 import os
 import sys
 
-_HERE = os.path.dirname(os.path.abspath(__file__))
-_LINT = os.path.dirname(_HERE)
-sys.path.insert(0, _LINT)
-
+import _bootstrap  # noqa: F401
 from lib import scope  # noqa: E402
 
 TOKEN_FILE = "lint/instance-tokens.local.txt"

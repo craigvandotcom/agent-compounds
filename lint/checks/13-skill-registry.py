@@ -40,10 +40,7 @@ import os
 import subprocess
 import sys
 
-_HERE = os.path.dirname(os.path.abspath(__file__))
-_LINT = os.path.dirname(_HERE)
-sys.path.insert(0, _LINT)
-
+import _bootstrap  # noqa: F401
 from lib import manifest, scope  # noqa: E402  (registry read through the manifest)
 
 CHECK_ID = "13-skill-registry"

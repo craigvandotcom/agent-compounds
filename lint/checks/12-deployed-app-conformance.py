@@ -44,9 +44,8 @@ import os
 import re
 import sys
 
-_HERE = os.path.dirname(os.path.abspath(__file__))
-sys.path.insert(0, os.path.dirname(_HERE))
-from lib import consumers, scope  # noqa: E402
+import _bootstrap  # noqa: F401
+from lib import consumers, scope
 
 C1_PATTERN = "/ac/bead-work|/ac/wave-merge|/ac/backlog-add|/ac/bead-land|/ac/work-review"
 C2_PATTERN = "cass search"

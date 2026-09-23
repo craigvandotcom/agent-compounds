@@ -105,7 +105,7 @@ fi
 t="$work/alw-ok"; write_table "$t"
 mkdir -p "$t/skills/ac-red" "$t/lint/allowlists"
 printf '%s\n' '# ac-red' 'Hands off to ac-four.' > "$t/skills/ac-red/SKILL.md"
-printf '%s\n' '# allowlist' 'ac-red' > "$t/lint/allowlists/29-stage-conformance.txt"
+printf '%s\n' '# allowlist' '2026-09-07 ac-red' > "$t/lint/allowlists/29-stage-conformance.txt"
 rc=$(run_check "$t")
 if [ "$rc" = 0 ]; then
   ok "ALLOWLIST-OK: allowlisted violator excused"
@@ -117,7 +117,7 @@ fi
 t="$work/alw-stale"; write_table "$t"
 mkdir -p "$t/skills/ac-clean" "$t/lint/allowlists"
 printf '%s\n' '# ac-clean' 'Nothing declared here.' > "$t/skills/ac-clean/SKILL.md"
-printf '%s\n' '# allowlist' 'ac-clean' > "$t/lint/allowlists/29-stage-conformance.txt"
+printf '%s\n' '# allowlist' '2026-09-07 ac-clean' > "$t/lint/allowlists/29-stage-conformance.txt"
 rc=$(run_check "$t")
 if [ "$rc" = 1 ] && grep -q "only shrinks: remove the entry" "$OUT"; then
   ok "SHRINK: stale allowlist entry refused"
@@ -135,7 +135,7 @@ git -C "$t" -c user.name=h -c user.email=h@x add -A
 git -C "$t" -c user.name=h -c user.email=h@x commit -qm base
 BASE_SHA=$(git -C "$t" rev-parse HEAD)
 git -C "$t" update-ref refs/remotes/origin/main "$BASE_SHA"
-printf '%s\n' '# allowlist' 'ac-red' > "$t/lint/allowlists/29-stage-conformance.txt"
+printf '%s\n' '# allowlist' '2026-09-07 ac-red' > "$t/lint/allowlists/29-stage-conformance.txt"
 rc=$(run_check "$t")
 if [ "$rc" = 1 ] && grep -q "allowlist GREW" "$OUT"; then
   ok "GROWTH: added allowlist entry refused"

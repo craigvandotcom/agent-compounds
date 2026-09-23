@@ -34,9 +34,8 @@ gated nothing, so it verified nothing.
 import os
 import sys
 
-_HERE = os.path.dirname(os.path.abspath(__file__))
-sys.path.insert(0, os.path.dirname(_HERE))
-from lib import consumers, scope  # noqa: E402
+import _bootstrap  # noqa: F401
+from lib import consumers, scope
 
 violations = []
 

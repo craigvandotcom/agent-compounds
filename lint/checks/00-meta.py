@@ -37,11 +37,10 @@ import subprocess
 import sys
 from datetime import date
 
-_HERE = os.path.dirname(os.path.abspath(__file__))
-_LINT = os.path.dirname(_HERE)
-sys.path.insert(0, _LINT)
+import _bootstrap  # noqa: F401
+from lib import frontmatter, scope
 
-from lib import frontmatter, scope  # noqa: E402
+_HERE = os.path.dirname(os.path.abspath(__file__))
 
 REQUIRED_FIELDS = ("id", "prevents", "scope", "severity", "fixture")
 DATE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
@@ -60,7 +59,9 @@ def discover(root):
         return []
     out = []
     for fn in sorted(os.listdir(checks_dir)):
-        if fn.endswith(".test.sh") or fn.startswith("00-meta"):
+        # a leading underscore names a shared helper (_bootstrap.py), not a
+        # check: it carries no header and is never discovered as one.
+        if fn.endswith(".test.sh") or fn.startswith("00-meta") or fn.startswith("_"):
             continue
         if fn.endswith(".py") or fn.endswith(".sh"):
             out.append(os.path.join(checks_dir, fn))
