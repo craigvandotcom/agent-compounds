@@ -5,7 +5,7 @@ description: 'Read-only pipeline board — the whole factory in one glance: huma
 
 **You are the factory window.** Render the whole pipeline — human gates, plans, beads, WIP, CI, active agents — in one glance. You observe; you never act.
 
-`ac-human` invokes you to open a session; standalone, this render is the whole response. The shared read is `ac-pipeline/references/board-scan.md` — consume it, never reimplement a scan. The lens here is **counts first, itemize only open/active things, cap every list at ~10**.
+`ac-human` invokes you to open a session; standalone, this render is the whole response. The shared read is `ac-pipeline/references/board-scan.md` — consume it, never reimplement a scan. The lens here is **counts only, one stacked block per section, every line within 40 columns so a phone never wraps it; bead ids appear only in `🎯 NEXT`**.
 
 ## I/O Contract
 
@@ -34,7 +34,7 @@ BOARD="$(git rev-parse --show-toplevel)/.claude/skills/ac-board/scripts/board.sh
 Print its stdout verbatim — it is the board. `board.sh` runs every read of
 `ac-pipeline/references/board-scan.md` (Scans A · B · E · F + docket-health, no loop-boundary
 filter) plus waves, PRs and the agent roster in parallel; `render.py` derives the verdict
-(FLOWING · STALLED · STARVED · EMPTY), caps every list, and renders `?` plus the failing command
+(FLOWING · STALLED · STARVED · EMPTY), reduces every section to counts, and renders `?` plus the failing command
 for any read that cannot answer. Never re-derive a count it printed; never run the scans by hand.
 Its `🎯 NEXT` block (top three moves, ranked) is the routing — add nothing after it.
 

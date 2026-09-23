@@ -53,34 +53,39 @@ LIVE=$'BlueFox\tclaude-code\tclaude-opus-5-5\t2026-09-22T11:55:00+00:00'
 fixture stalled "[$GATE,$UNREF,$BLOCKED]" "[$GATE,$UNREF]" "$GATE
 $UNREF
 $BLOCKED" "$LIVE"
-check stalled "verdict names the human gate"   '^⛔ STALLED on you · 0 ready · 1 gate · 1 awaiting refinement$'
-check stalled "gate row counts what it blocks" 'ac-g1 .*→ blocks 1$'
-check stalled "blocked row names its blocker"  'ac-b1 .*← ac-g1 \(you\)$'
-check stalled "flow strip marks the jam"       '▲ jammed here'
-check stalled "NEXT leads with the gate"       '^  1\. ac-g1 — action, unblocks 1 bead +→ /ac-human$'
-check stalled "then the refinement jam"        '^  2\. refine 1 bead — nothing is ready without them +→ /ac-polish$'
-check stalled "a live agent with no bead"      'BlueFox .*→ —$'
+check stalled "verdict word on its own line"   '^⛔ STALLED on you$'
+check stalled "its reasons stacked beneath"    '^   0 ready · 1 gate$'
+check stalled "YOU counts what gates block"    '^   blocking 1 · oldest 2d$'
+check stalled "blocked row counts yours"       '^   blocked +1  1 on you$'
+check stalled "no bead is itemized"            'ac-b1|waits on the gate' absent
+check stalled "the jam is marked"              '▲ nothing refined'
+check stalled "NEXT leads with the gate"       '^1\. ac-g1$'
+check stalled "its detail and route stack"     '^   action · unblocks 1 bead$'
+check stalled "then the refinement jam"        '^2\. refine 1 bead$'
+check stalled "a live agent with no bead"      '^   0 working · 0 idle >1h · mail up$'
 
 # FLOWING: a ready bead and one held by a live agent.
 fixture flowing "[$READY,$HELD]" "[$READY]" "$READY
 $HELD" "$LIVE"
-check flowing "verdict says it flows"          '^✅ FLOWING · 1 ready · 1 agent working$'
-check flowing "agent row shows its bead"       'BlueFox .*→ ac-p1$'
-check flowing "checks print zeros, all clear"  '^🩺 checks ✓ board-truth 0 · reason-less 0 · gate-incomplete 0 · plan-gap 0$'
+check flowing "verdict says it flows"          '^✅ FLOWING$'
+check flowing "agents count the held bead"     '^   1 working'
+check flowing "no ready title leaks"           'a refined bead' absent
+check flowing "checks all clear on zeros"      '^   checks +✓ all clear$'
 put "$W/flowing/reads" truth 0 "board-truth: 3 cited-but-open"
-check flowing "a non-zero check is marked"     '^🩺 checks ⚠ board-truth 3 · reason-less 0'
-check flowing "no jam when work is ready"      'jammed' absent
-check flowing "NEXT has nothing for you"       '^  1\. nothing needs you — the loop is running$'
+check flowing "only a non-zero check shows"    '^   checks +⚠ board-truth 3$'
+check flowing "no jam when work is ready"      '▲' absent
+check flowing "NEXT has nothing for you"       '^1\. nothing needs you$'
 
 # STARVED: ready work, nobody live to take it.
 fixture starved "[$READY]" "[$READY]" "$READY" ""
-check starved "verdict says starved, not empty" '^🥵 STARVED · 1 ready · 0 agents taking$'
-check starved "NEXT routes to implement"        '^  1\. 1 ready bead, no agent taking them +→ /ac-implement$'
+check starved "verdict says starved, not empty" '^🥵 STARVED$'
+check starved "NEXT names the ready work"       '^1\. 1 ready bead$'
+check starved "and routes to implement"         '^   → /ac-implement$'
 
 # EMPTY: nothing open at all.
 fixture empty '[]' '[]' '' ""
-check empty "verdict says empty"               '^⏸ EMPTY · 0 open$'
-check empty "NEXT routes to planning"          '^  1\. nothing open — plan the next wave +→ /ac-align$'
+check empty "verdict says empty"               '^⏸ EMPTY$'
+check empty "NEXT routes to planning"          '^   → /ac-align$'
 
 # A failed read renders `?` and is named — never a guessed count.
 fixture failed "[$READY]" "[$READY]" "$READY" "$LIVE"
@@ -94,12 +99,12 @@ CASES=$((CASES + 1))
 if [ "$(render stalled 1 | wc -l)" -eq 1 ]; then echo "ok   compact: one line"
 else echo "FAIL compact: expected one line"; FAILURES=$((FAILURES + 1)); fi
 
-# Every line fits 100 columns.
+# Every line fits a phone: 40 columns, never wrapped.
 CASES=$((CASES + 1))
 wide=$(for c in stalled flowing starved empty failed; do render "$c"; done |
        python3 -c 'import sys; print(max(len(l.rstrip("\n")) for l in sys.stdin))')
-if [ "$wide" -le 100 ]; then echo "ok   width: widest line $wide"
-else echo "FAIL width: widest line $wide > 100"; FAILURES=$((FAILURES + 1)); fi
+if [ "$wide" -le 40 ]; then echo "ok   width: widest line $wide"
+else echo "FAIL width: widest line $wide > 40"; FAILURES=$((FAILURES + 1)); fi
 
 echo "board.test.sh: $((CASES - FAILURES))/$CASES passed"
 [ "$FAILURES" -eq 0 ]

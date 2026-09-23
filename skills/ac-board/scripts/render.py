@@ -14,7 +14,7 @@ import datetime as dt, json, math, os, re, sys
 T, ROOT, COMPACT = sys.argv[1], sys.argv[2], sys.argv[3] == "1"
 NOW = (dt.datetime.fromisoformat(os.environ["AC_BOARD_NOW"]) if os.environ.get("AC_BOARD_NOW")
        else dt.datetime.now(dt.timezone.utc))
-W = 100                # every line fits a terminal or a Slack message
+W = 40                 # every line fits a phone screen unwrapped
 LIVE_MIN = 60          # an agent active within this many minutes is live
 STALE_H = 24           # an in-progress bead untouched this long is stale
 GATE_LABELS = {"human-gate", "pipeline-proposal", "dream-proposal"}
@@ -278,240 +278,176 @@ tr, ok = lines_of("truth", "board-truth.sh")
 m = re.search(r"board-truth:\s*(\d+)", tr[0]) if ok and tr else None
 truth = m.group(1) if m else "?"
 
-# ── render ────────────────────────────────────────────────────────────────
-new = lambda b: " •" if (mins(b.get("created_at")) or 1e9) < 24 * 60 else "  "
+# ── render: one block per section, every line inside W so a phone never wraps ──
+IND = "   "
 
 
-def row(indent, lead, b, note="", nw=0):
-    """One row shape everywhere: <lead> id · age · title, then a note in a column nw wide."""
-    head = f"{indent}{lead}{b['id']:<12} {age(b['created_at']):>4}{new(b)}  "
-    room = W - len(head) - (nw + 2 if nw else 0)
-    return (head + clip(b.get("title", ""), room).ljust(room) + "  " + note).rstrip() if nw else \
-        head + clip(b.get("title", ""), room)
+def pack(parts, width=W - len(IND)):
+    """Join parts with ` · `, starting a new line whenever the next part would overflow."""
+    lines = []
+    for p in parts:
+        if lines and len(lines[-1]) + 3 + len(p) <= width: lines[-1] += " · " + p
+        else: lines.append(clip(p, width))
+    return lines
 
 
-def rows(indent, lead, items, note=lambda b: ""):
-    """Rows sharing one note column, as wide as the widest note."""
-    notes = [note(b) for b in items]
-    nw = max(map(len, notes), default=0)
-    return [row(indent, lead, b, t, nw) for b, t in zip(items, notes)]
+def block(head, *rows):
+    out.append(head)
+    out.extend(IND + r for r in rows if r)
+    out.append("")
 
 
-def short(dep, bid):
-    """A sibling of the same epic prints as `.5`; a human gate is marked as yours."""
-    stem = bid.rsplit(".", 1)[0] + "." if "." in bid else None
-    s = "." + dep[len(stem):] if stem and dep.startswith(stem) else dep
-    return s + (" (you)" if dep in gate_ids else "")
+def kv(key, val, kw=11):
+    """A key/value row, the value column aligned; an overlong value continues under it."""
+    vs = pack(val.split(" · "), W - len(IND) - kw)
+    return [f"{key:<{kw}}{vs[0]}"] + [" " * kw + v for v in vs[1:]]
 
 
-def pr_ci(p):
-    checks = p.get("statusCheckRollup") or []
-    bad = sum(1 for c in checks if (c.get("conclusion") or c.get("state") or "").upper()
-              in ("FAILURE", "ERROR", "TIMED_OUT", "CANCELLED", "ACTION_REQUIRED"))
-    pend = sum(1 for c in checks if (c.get("status") or "COMPLETED").upper() != "COMPLETED"
-               or (c.get("state") or "").upper() == "PENDING")
-    if bad:
-        names = [c.get("name") or c.get("context") or "?" for c in checks if (c.get("conclusion")
-                 or c.get("state") or "").upper() in ("FAILURE", "ERROR", "TIMED_OUT", "CANCELLED", "ACTION_REQUIRED")]
-        return f"CI ✗ {bad} failing: " + ", ".join(names[:2]) + (" …" if bad > 2 else "")
-    if pend: return f"CI … {pend} running"
-    return "CI ✓" if checks else "no CI checks"
+out = [clip(f"{name} · {NOW.astimezone():%m-%d %H:%M}", W), ""]
 
+# VERDICT — the state word alone, its reasons stacked beneath
+vp = VERDICT.split(" · ")
+block(clip(vp[0], W), *pack(vp[1:]))
 
-out = [f"{name} · {NOW.astimezone():%Y-%m-%d %H:%M}", VERDICT]
-line3 = [f"closed 7d {spark_s}", ci_s]
+# FLOW — throughput and the health probes
+flow = kv("closed 7d", spark_s) + kv("CI gates", ci_s.split(":", 1)[1].strip())
 tg, ok = lines_of("triage", "triage-gate.sh --status")  # empty = the repo declares no gate
-if tg: line3.append(tg[0])
-elif not ok: line3.append("triage: ?")
+if tg: flow += kv("triage", tg[0].split(":", 1)[-1].strip())
+elif not ok: flow += kv("triage", "?")
 try:  # tidy shadow streak: trailing `match: true` runs — 7 means tidy-scan may apply for real
     with open(os.path.join(ROOT, ".claude/state/tidy-runs.jsonl")) as fh:
         runs = [json.loads(l) for l in fh if l.strip()]
     streak = next((i for i, r in enumerate(reversed(runs)) if r.get("match") is not True), len(runs))
-    line3.append("tidy: ready to apply (7/7)" if streak >= 7 else f"tidy shadow: {streak}/7 agree")
+    flow += kv("tidy", "ready to apply" if streak >= 7 else f"{streak}/7 agree")
 except FileNotFoundError: pass
-except (OSError, ValueError): line3.append("tidy shadow: ?")
-if waves: line3.append(f"{waves} wave branch" + ("" if waves == 1 else "es"))
-elif waves is None: line3.append("waves ?")
-out.append("  ·  ".join(line3))
-# CHECKS — always printed, zeros included: a zero is the probe reporting it ran and found nothing
-checks = [(f"board-truth", truth)] + [(k, docket(k)) for k in ("reason-less", "gate-incomplete", "plan-gap")]
-out.append("🩺 checks " + ("✓ " if all(v == "0" for _, v in checks) else "")
-           + " · ".join(f"{'' if v == '0' else '⚠ '}{k} {v}" for k, v in checks))
-if prs is None: out.append("PR ?")
-for p in (prs or [])[:3]:
-    tail = f"opened {age(p.get('createdAt'))} ago · {pr_ci(p)}" + (" · draft" if p.get("isDraft") else "")
-    head = f"🔀 PR #{p.get('number')}  "
-    out.append(head + '"' + clip(p.get("title", ""), W - len(head) - len(tail) - 6) + '"  · ' + tail)
-if prs and len(prs) > 3: out.append(f"   + {len(prs) - 3} more PRs")
-out.append("")
+except (OSError, ValueError): flow += kv("tidy", "?")
+if waves: flow += kv("waves", f"{waves} branch" + ("" if waves == 1 else "es"))
+elif waves is None: flow += kv("waves", "?")
+if prs is None: flow += kv("PRs", "?")
+elif prs:
+    red = sum(1 for p in prs if pr_ci(p).startswith("CI ✗"))
+    flow += kv("PRs", f"{len(prs)} open" + (f" · {red} red" if red else ""))
+# CHECKS — always printed: a zero is the probe reporting it ran and found nothing
+checks = [("board-truth", truth)] + [(k, docket(k)) for k in ("reason-less", "gate-incomplete", "plan-gap")]
+bad = [f"{k} {v}" for k, v in checks if v != "0"]
+flow += kv("checks", "⚠ " + " · ".join(bad) if bad else "✓ all clear")
+block("📈 FLOW", *flow)
 
-# YOU — gates, decisions first, then by what each one holds up
-out.append(f"🧑 YOU — {'?' if beads is None else plural(n_gates, 'gate')}")
-if beads is not None:
-    gates.sort(key=lambda b: (gate_kind(b) != "decision", -(blocks_count(b["id"]) or 0), b["created_at"]))
-    def gate_note(b):
-        k = blocks_count(b["id"])
-        return "→ blocks ?" if k is None else f"→ blocks {k}" if k else ""
-    out += [r for kind in ("decision", "action") for r in
-            rows("  ", f"{kind:<9} ", [b for b in gates[:10] if gate_kind(b) == kind], gate_note)]
-    if len(gates) > 10: out.append(f"    + {len(gates) - 10} more")
-    no_memo = [b["id"] for b in gates if not re.search(
-        r"(evidence|consequence|recommendation):", b.get("description") or "", re.I)]
-    foot = []
-    if no_memo: foot.append(f"{len(no_memo)} without a memo: " + ", ".join(no_memo[:4])
-                            + (" …" if len(no_memo) > 4 else ""))
-    for key, label in (("reason-less", "reason-less"), ("gate-incomplete", "incomplete")):
-        if docket(key) not in ("0", "?"): foot.append(f"{docket(key)} {label}")
-    if foot: out.append("            " + " · ".join(foot))
-out.append("")
-
-# BEADS — flow strip, then groups in urgency order, one row shape
+# YOU — the gates as counts; which one to take first is NEXT's job
 if beads is None:
-    out += ["🧿 BEADS — ?", ""]
+    block("🧑 YOU · ?")
 else:
+    kinds = [plural(sum(1 for g in gates if gate_kind(g) == k), k) for k in ("decision", "action")]
+    held_up = None if recs is None else sum(1 for r in recs.values() if is_open(r)
+                                            and set(blockers(r["id"]) or []) & gate_ids)
+    oldest_g = min((b["created_at"] for b in gates), default=None)
+    no_memo = sum(1 for b in gates if not re.search(
+        r"(evidence|consequence|recommendation):", b.get("description") or "", re.I))
+    foot = [f"{no_memo} without memo" if no_memo else ""] + [
+        f"{docket(k)} {label}" for k, label in (("reason-less", "reason-less"), ("gate-incomplete", "incomplete"))
+        if docket(k) not in ("0", "?")]
+    block(f"🧑 YOU · {plural(n_gates, 'gate')}", *([] if not gates else pack(kinds) + pack(
+        [f"blocking {'?' if held_up is None else held_up}", f"oldest {age(oldest_g)}"]) + pack([f for f in foot if f])))
+
+# BEADS — one count per stage, numbers in one column, a warning beside the count it explains
+if beads is None:
+    block("🧿 BEADS · ?")
+else:
+    stale = sum(1 for b in loop["in_progress"]
+                if (mins(rec(b["id"]).get("updated_at") or b.get("updated_at")) or 0) > STALE_H * 60)
+    unheld = sum(1 for b in loop["in_progress"] if live_names is not None and holder(b) not in live_names)
+    on_you = None if recs is None else sum(1 for b in loop["blocked"] if set(blockers(b["id"]) or []) & gate_ids)
     orphans = "?"
     if recs is not None:
         epic_ids = {i for i, r in recs.items() if r.get("issue_type") == "epic"}
-        orphans = str(sum(1 for b in live if not any(
+        orphans = sum(1 for b in live if not any(
             d.get("type") == "parent-child" and d.get("depends_on_id") in epic_ids
-            for d in rec(b["id"]).get("dependencies") or [])))
-    hdr = [f"🧿 BEADS — {len(live)} open", f"{orphans} without an epic"]
-    if loop["deferred"]: hdr.append(f"{len(loop['deferred'])} deferred")
-    out.append(" · ".join(hdr))
-    for e in epics[:3]:
-        if recs is None: out.append(f"  EPIC {e['id']}  ?"); continue
-        done, total = epic_progress(e["id"])
+            for d in rec(b["id"]).get("dependencies") or []))
+    stage = lambda k, n, note="": f"{k:<12}{n:>3}" + (f"  {note}" if note else "")
+    rows_ = [stage("unrefined", n_unref), stage("ready", n_ready),
+             stage("in progress", n_ip, " · ".join(x for x in (f"⚠ {stale} stale" if stale else "",
+                                                             f"{unheld} unheld" if unheld else "") if x)),
+             stage("blocked", n_blocked, "? on you" if on_you is None else f"{on_you} on you" if on_you else ""),
+             stage("no epic", orphans)]
+    if loop["deferred"]: rows_.append(stage("deferred", len(loop["deferred"])))
+    if loop["other"]: rows_.append(stage("other", len(loop["other"])))
+    if not n_ready and n_unref: rows_.append("▲ nothing refined, so nothing ready")
+    elif not n_ready and not n_ip and n_blocked: rows_.append("▲ every open bead waits on another")
+    block(f"🧿 BEADS · {len(live)} open", *rows_)
+
+# EPICS — one aggregate bar
+if epics:
+    if recs is None: block(f"🗂  EPICS · {len(epics)} open", "?")
+    else:
+        prog = [epic_progress(e["id"]) for e in epics]
+        done, total = sum(d for d, _ in prog), sum(t for _, t in prog)
         fill = round(10 * done / total) if total else 0
-        out.append(f"  EPIC {e['id']:<12} {'▓' * fill}{'░' * (10 - fill)} {done}/{total} closed  "
-                   + clip(e.get("title", ""), W - 46))
-    if len(epics) > 3: out.append(f"  + {len(epics) - 3} more epics")
-    out.append("")
+        near = sum(1 for d, t in prog if t and 0.7 <= d / t < 1)
+        whole = sum(1 for d, t in prog if t and d == t)
+        block(f"🗂  EPICS · {len(epics)} open", f"{done}/{total} closed  {'▓' * fill}{'░' * (10 - fill)}",
+              *pack([x for x in (f"{near} near done" if near else "",
+                                 f"{whole} ready to close" if whole else "") if x]))
 
-    stages = [("unrefined", n_unref), ("ready", n_ready), ("in progress", n_ip),
-              ("closed 7d", "?" if closed7 is None else sum(closed7))]
-    strip = "  " + " ─▶ ".join(f"{s} {c}" for s, c in stages)
-    if n_blocked: strip += f"    · blocked {n_blocked}"
-    out.append(strip)
-    if not n_ready and n_unref:
-        out.append("  ▲ jammed here: nothing refined, so nothing ready")
-    elif not n_ready and not n_ip and n_blocked:
-        out.append("  jammed: every open bead is waiting on another")
-
-    def group(title, items, note, n, route=""):
-        if not items: return
-        head = f"  {title}"
-        out.extend(["", head + (route.rjust(W - len(head)) if route else "")])
-        out.extend(rows("    ", "", items[:n], note))
-        if len(items) > n: out.append(f"    + {len(items) - n} more")
-
-    def ip_note(b):
-        h, notes = holder(b), []
-        if h and live_names is not None and h in live_names: notes.append(h)
-        elif h and re.fullmatch(r"[A-Z][a-z]+[A-Z][a-z]+", h): notes.append(f"{h} gone")
-        else: notes.append("no live holder")
-        if (mins(rec(b["id"]).get("updated_at") or b.get("updated_at")) or 0) > STALE_H * 60:
-            notes.append("⚠ stale")
-        return " · ".join(notes)
-
-    def blk_note(b):
-        bs = blockers(b["id"])
-        if bs is None: return "← ?"
-        if not bs: return "← (no open edge)"
-        bs.sort(key=lambda d: (d not in gate_ids, d))  # your gates first
-        return "← " + " ".join(short(d, b["id"]) for d in bs[:3]) + (f" +{len(bs) - 3}" if len(bs) > 3 else "")
-
-    by_age = lambda xs: sorted(xs, key=lambda b: b["created_at"])
-    group(f"IN PROGRESS · {n_ip}", loop["in_progress"], ip_note, 10)
-    group(f"READY · {n_ready}", by_age(loop["ready"]), lambda b: "", 10, "→ /ac-implement")
-    group(f"BLOCKED · {n_blocked}", by_age(loop["blocked"]), blk_note, 5)
-    unref = by_age(loop["unrefined"])
-    if unref:
-        fresh = sum(1 for b in unref if new(b) == " •")
-        t = f"UNREFINED · {n_unref} · oldest {age(unref[0]['created_at'])}" + (f" · {fresh} new •" if fresh else "")
-        group(t, unref, lambda b: "", 3, "→ /ac-polish")
-    group(f"OTHER · {len(loop['other'])}", loop["other"], lambda b: b["status"], 5)
-    out.append("")
-
-# PLANS — one line unless something is actionable
+# PLANS — stage counts and age
 if not plans:
-    out += ["📋 PLANS — none", ""]
+    block("📋 PLANS · none")
 else:
-    counts = [f"{s} {c}" for s in STAGES if (c := sum(1 for _, st, _ in plans if st == s))]
+    counts = [f"{c} {s}" for s in STAGES if (c := sum(1 for _, st, _ in plans if st == s))]
     other = sum(1 for _, st, _ in plans if st not in STAGES)
-    if other: counts.append(f"other {other}")
-    oldest = min(plans, key=lambda p: p[2])
-    o_age = age(dt.datetime.fromtimestamp(oldest[2], dt.timezone.utc).isoformat())
-    head = f"📋 PLANS — {len(plans)} live: {' · '.join(counts)} · oldest {o_age} "
-    out.append(head + f"({clip(oldest[0], W - len(head) - 2)})")
-    if docket("plan-gap") not in ("0", "?"): out.append(f"  {docket('plan-gap')} approved plans with no beads")
-    act = sorted((p for p in plans if p[1] in ("approved", "bead-ready")), key=lambda p: -p[2])
-    for p, st, _ in act[:10]:
-        out.append(f"    {clip(p, 66):<66}  {st:<10}  → /ac-beadify")
-    out.append("")
+    if other: counts.append(f"{other} other")
+    o_age = age(dt.datetime.fromtimestamp(min(p[2] for p in plans), dt.timezone.utc).isoformat())
+    one = len(counts) == 1
+    block(f"📋 PLANS · {counts[0] if one else f'{len(plans)} live'}", *([] if one else pack(counts)),
+          f"oldest {o_age}",
+          f"{docket('plan-gap')} approved, no beads" if docket("plan-gap") not in ("0", "?") else "")
 
-# AGENTS — live ones itemized with what they hold; idle ones on one line
+# AGENTS — counts only
 if agents is None:
-    out += [f"🤖 AGENTS — ? · mail {mail or '?'}", ""]
+    block("🤖 AGENTS · ?", f"mail {mail or '?'}")
 else:
-    holds = {}
-    for b in loop["in_progress"]:
-        if holder(b): holds.setdefault(holder(b), []).append(b["id"])
     lv = [a for a in agents if a[0] in live_names]
-    idle = [a for a in agents if a[0] not in live_names]
-    last = lambda a: age(a[3]) if len(a) > 3 else "?"
-    out.append(f"🤖 AGENTS — {len(lv)} live · {len(idle)} idle >1h · mail {mail or '?'}")
-    for a in lv[:10]:
-        model = a[2] if len(a) > 2 else "?"
-        out.append(f"  {a[0]:<15} {a[1]:<12} {clip(model, 22):<22} {last(a):>4}  → "
-                   + (" ".join(holds.get(a[0], [])) or "—"))
-    if len(lv) > 10: out.append(f"    + {len(lv) - 10} more")
-    if idle:
-        out.append("  idle: " + " · ".join(f"{a[0]} {last(a)}" for a in idle[:6])
-                   + (f" +{len(idle) - 6}" if len(idle) > 6 else ""))
-    out.append("")
+    working = sum(1 for a in lv if any(holder(b) == a[0] for b in loop["in_progress"]))
+    block(f"🤖 AGENTS · {len(lv)} live", *pack(([f"{working} working"] if lv else [])
+                                            + [f"{len(agents) - len(lv)} idle >1h", f"mail {mail or '?'}"]))
 
-# FLAGS — reads that could not answer (the counts live on the always-on checks line)
-flags = []
-if not docket_line: flags.append("docket-health ?")
-if flags or failed:
-    out.append("⚠ FLAGS")
-    if flags: out.append("  " + " · ".join(flags))
-    out.extend(f"  ? {f}" for f in failed)
-    out.append("")
+# FLAGS — reads that could not answer
+if not docket_line: failed.insert(0, "docket-health ?")
+if failed: block("⚠ FLAGS", *(clip(f"? {x}", W - len(IND)) for x in failed))
+
 
 # NEXT — the three most impactful moves, ranked; pointers, never prompts
 def moves():
-    """(score, what, route). A gate that holds up work outranks the jam; the jam outranks
-    idle gates, unheld WIP, a red PR and approved plans."""
-    if beads is None or ready_ids is None: return [(0, "fix the failed reads in FLAGS", "")]
+    """(score, subject, detail, route). A gate that holds up work outranks the jam; the jam
+    outranks idle gates, unheld WIP, a red PR and approved plans."""
+    if beads is None or ready_ids is None: return [(0, "fix the failed reads", "see FLAGS", "")]
     m = []
-    if VERDICT.startswith("🥵"): m.append((100, f"{plural(n_ready, 'ready bead')}, no agent taking them", "/ac-implement"))
+    if VERDICT.startswith("🥵"): m.append((100, plural(n_ready, "ready bead"), "no agent taking them", "/ac-implement"))
     idle_gates = []
     for g in gates:
         k = blocks_count(g["id"]) or 0
-        if k: m.append((50 + 10 * k, f"{g['id']} — {gate_kind(g)}, unblocks {plural(k, 'bead')}", "/ac-human"))
+        if k: m.append((50 + 10 * k, g["id"], f"{gate_kind(g)} · unblocks {plural(k, 'bead')}", "/ac-human"))
         else: idle_gates.append(g["id"])
-    if n_unref and not n_ready: m.append((45, f"refine {plural(n_unref, 'bead')} — nothing is ready without them", "/ac-polish"))
+    if n_unref and not n_ready: m.append((45, f"refine {plural(n_unref, 'bead')}", "nothing is ready without them", "/ac-polish"))
     if idle_gates:
         more = "more " if len(idle_gates) < n_gates else ""
-        m.append((35, f"{len(idle_gates)} {more}gate{'s' if len(idle_gates) > 1 else ''}: "
-                      + ", ".join(idle_gates[:3]) + (" …" if len(idle_gates) > 3 else ""), "/ac-human"))
-    unheld = [b["id"] for b in loop["in_progress"] if live_names is not None and holder(b) not in live_names]
-    if unheld: m.append((30, f"reclaim {plural(len(unheld), 'unheld bead')}: " + ", ".join(unheld[:3]), "/ac-tidy"))
+        m.append((35, f"{len(idle_gates)} {more}gate{'s' if len(idle_gates) > 1 else ''}",
+                  ", ".join(idle_gates[:3]) + (" …" if len(idle_gates) > 3 else ""), "/ac-human"))
+    unheld_ids = [b["id"] for b in loop["in_progress"] if live_names is not None and holder(b) not in live_names]
+    if unheld_ids: m.append((30, f"reclaim {plural(len(unheld_ids), 'unheld bead')}", ", ".join(unheld_ids[:3]), "/ac-tidy"))
     red = [p for p in prs or [] if pr_ci(p).startswith("CI ✗")]
-    if red: m.append((25, f"PR #{red[0]['number']} is red — {pr_ci(red[0])[5:]}", f"gh pr checks {red[0]['number']}"))
+    if red: m.append((25, f"PR #{red[0]['number']} is red", pr_ci(red[0])[5:], f"gh pr checks {red[0]['number']}"))
     ok_plans = [p for p in plans if p[1] in ("approved", "bead-ready")]
-    if ok_plans: m.append((20, f"beadify {plural(len(ok_plans), 'approved plan')}", "/ac-beadify"))
+    if ok_plans: m.append((20, f"beadify {plural(len(ok_plans), 'approved plan')}", "", "/ac-beadify"))
     if not m:
-        m.append((0, "nothing open — plan the next wave", "/ac-align") if VERDICT.startswith("⏸")
-                 else (0, "nothing needs you — the loop is running", ""))
+        m.append((0, "nothing open", "plan the next wave", "/ac-align") if VERDICT.startswith("⏸")
+                 else (0, "nothing needs you", "the loop is running", ""))
     return sorted(m, key=lambda x: -x[0])[:3]
 
 
 out.append("🎯 NEXT")
-top = moves()
-rw = max(len(r) for _, _, r in top)  # one arrow column for every move
-for i, (_, what, route) in enumerate(top, 1):
-    head, room = f"  {i}. ", W - 7 - (rw + 4 if rw else 0)
-    out.append((head + clip(what, room).ljust(room) + (f"  → {route}" if route else "")).rstrip())
+for i, (_, subject, detail, route) in enumerate(moves(), 1):
+    if i > 1: out.append("")
+    out.append(clip(f"{i}. {subject}", W))
+    out.extend(IND + d for d in pack(detail.split(", ") if detail else []) if d)
+    if route: out.append(IND + clip(f"→ {route}", W - len(IND)))
 print("\n".join(out))
