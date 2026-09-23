@@ -104,7 +104,7 @@ the canonical title prefix (`DECISION:`/`HUMAN:` → decision, `ACTION:` → act
 the type is absent. **Never key on the prefix alone** — 46 of 55 historical gates carried no
 prefix (measured 2026-09-12), so a prefix-only read files actions and proposals under
 decisions and hides the actions. Prefix↔type agreement is enforced statically by
-`scripts/bead-template-lint.py`.
+check `19-bead-template-conformance`.
 
 ### Docket health (open gates + reason-less gates)
 

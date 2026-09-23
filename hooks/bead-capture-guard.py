@@ -2,7 +2,7 @@
 """PreToolUse(Bash) guard — the bead creation contract, enforced at the moment of capture.
 
 Canon: skills/beads-standards/reference/bead-create-contract.md. Change the contract THERE
-first; this file and scripts/bead-template-lint.py both implement it. The lint imports this
+first; this file and lint/checks/19-bead-template-conformance.py both implement it. The lint imports this
 module, so the two enforcers cannot drift — they share one implementation of the rules.
 
 Enforced here:

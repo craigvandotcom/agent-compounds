@@ -25,9 +25,8 @@ Sets:
   HOOKS      engine/hooks.wiring.json, the hooks/ executables it wires, and the bead
               board its PENDING-DECISION escapes resolve against — Check 21's
               audit surface.
-  TEMPLATES  the templates/ the registry ships plus scripts/
-              bead-template-lint.py, the one judge over them — Check 19's
-              audit surface.
+  TEMPLATES  the templates/ the registry ships plus check 19, the one judge over
+              them — Check 19's audit surface.
   CHECKS     the lint v2 check files themselves (lint/checks, harnesses excluded).
   ALL        every walked path — the trigger for a check that reads cross-cutting
              repo state (the git log, the board) rather than a file population, so
@@ -169,7 +168,7 @@ for p in sorted(_paths):
     # asks a question no other scope does: does the engine hardcode a path to canon.
     if p.startswith("engine/"):
         _engine.add(p)
-    if p.startswith("templates/") or p == "scripts/bead-template-lint.py":
+    if p.startswith("templates/") or p == "lint/checks/19-bead-template-conformance.py":
         _templates.add(p)
     if (p.startswith("skills/") or p.startswith("scripts/")) \
        and (p.endswith(".sh") or p.endswith(".py")) \
