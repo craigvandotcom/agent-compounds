@@ -39,6 +39,10 @@ is the reader doing its job; reaching for a finding to justify the round is not.
   error, no *command not found* for its leading word? A probe you did not execute is a
   probe nobody ran.
 - Is any "probe" a prose fragment (`wc -l`, "diff it", "check the output")? No probe, no bead.
+- An `investigation` is probe-exempt at capture, not at the stamp or the close. An agent can
+  answer it? Give it an exit probe — the findings file it writes, the fix bead it spawns —
+  class (c). It needs a human ruling? List it in DECLINED as `MISFILED: human fork — <why>`;
+  the conductor retypes it, never the reader.
 
 ## 3. consumer-verification
 

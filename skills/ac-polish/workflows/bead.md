@@ -83,6 +83,9 @@ predicate whose gate edge cannot be wired is HELD for the human and is never sta
 
 ## Hand-off
 
+Retype every `MISFILED: human fork` a reader declined to `decision` + `human-gate`, with its
+memo (`beads-standards/reference/human-gate-template.md`), before handing off.
+
 Report `rounds-to-fixpoint` with the verdict token, then stop: `Next: /ac-implement <epic>` —
 or name what still blocks it. No stage invokes the next; the next call is the human's, or an
 explicit "X then Y" already in play.
