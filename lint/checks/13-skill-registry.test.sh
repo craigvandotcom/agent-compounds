@@ -30,6 +30,85 @@ else
   bad "RED case: run.sh did not demonstrate the RED"; cat "$OUT"
 fi
 
+# --- RED: description-budget breach (registry-description-budget: BREACH) -------
+w="$(mktemp -d)"
+mkdir -p "$w/skills/skill-builder/scripts"
+cp "$ROOT/skills/skill-builder/scripts/validate-skill.sh" "$w/skills/skill-builder/scripts/"
+chmod +x "$w/skills/skill-builder/scripts/"*.sh
+DESC="$(python3 -c 'print("trigger word " * 70)' | cut -c1-900)"
+for i in $(seq 1 40); do
+  mkdir -p "$w/skills/budget-$i"
+  printf -- '---\nname: budget-%d\ndescription: "%s"\n---\n\n# budget-%d\n' "$i" "$DESC" "$i" > "$w/skills/budget-$i/SKILL.md"
+done
+out="$(python3 "$CHECK" "$w" 2>&1)"; rc=$?
+if [ "$rc" = 1 ] && printf '%s' "$out" | grep -q "registry-description-budget: BREACH"; then
+  ok "RED: description-budget breach -> BREACH marker, check exits 1"
+else
+  bad "budget-breach RED case: expected exit 1 + BREACH marker, got rc=$rc"; printf '%s\n' "$out"
+fi
+rm -rf "$w"
+
+# --- RED: invocation-graph violation (a flipped skill invoked from another's body) -
+w="$(mktemp -d)"
+mkdir -p "$w/skills/skill-builder/scripts" "$w/skills/flipped" "$w/skills/caller"
+cp "$ROOT/skills/skill-builder/scripts/validate-skill.sh" "$w/skills/skill-builder/scripts/"
+chmod +x "$w/skills/skill-builder/scripts/"*.sh
+cat > "$w/skills/flipped/SKILL.md" <<'SKILLEOF'
+---
+name: flipped
+description: "use when testing the invocation-graph rule"
+disable-model-invocation: true
+---
+
+# flipped
+SKILLEOF
+cat > "$w/skills/caller/SKILL.md" <<'SKILLEOF'
+---
+name: caller
+description: "use when testing that a caller cannot invoke a flipped skill"
+---
+
+# caller
+
+Run `flipped` to do the thing.
+SKILLEOF
+rm -f /tmp/ac-lint-registry.out
+out="$(python3 "$CHECK" "$w" 2>&1)"; rc=$?
+detail="/tmp/ac-lint-registry.out"
+if [ "$rc" = 1 ] && [ -f "$detail" ] && grep -q "GRAPH:" "$detail"; then
+  ok "RED: invocation-graph violation -> judge fails, check exits 1"
+else
+  bad "invocation-graph RED case: expected exit 1 + GRAPH violation, got rc=$rc"
+  printf '%s\n' "$out"; [ -f "$detail" ] && cat "$detail"
+fi
+rm -rf "$w"
+
+# --- RED: manifest leg names a dead skill (no skills/<name>/SKILL.md) ------------
+w="$(mktemp -d)"
+mkdir -p "$w/skills/skill-builder/scripts" "$w/skills/foo"
+cp "$ROOT/skills/skill-builder/scripts/validate-skill.sh" "$w/skills/skill-builder/scripts/"
+chmod +x "$w/skills/skill-builder/scripts/"*.sh
+cat > "$w/skills/foo/SKILL.md" <<'SKILLEOF'
+---
+name: foo
+description: "use when testing the manifest dead-name leg"
+---
+
+# foo
+SKILLEOF
+cat > "$w/skills/packages.json" <<'JSONEOF'
+{
+  "pkg1": {"skills": ["foo", "ghost"]}
+}
+JSONEOF
+out="$(python3 "$CHECK" "$w" 2>&1)"; rc=$?
+if [ "$rc" = 1 ] && printf '%s' "$out" | grep -q "manifest names a dead skill"; then
+  ok "RED: manifest names a dead skill -> check exits 1"
+else
+  bad "manifest dead-name RED case: expected exit 1 + dead-skill message, got rc=$rc"; printf '%s\n' "$out"
+fi
+rm -rf "$w"
+
 # --- GREEN: the real registry ----------------------------------------------------
 out="$(python3 "$CHECK" 2>&1)"; rc=$?
 if [ "$rc" = 0 ]; then

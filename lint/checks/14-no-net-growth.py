@@ -34,9 +34,7 @@ an existing member never defers. There is NO prose token: ec5fa64 removed
 
 Modes:
   <root>                    full run: leg 1 + leg 2 over the registry
-  --scan <repo> <label> <base> <spec>   the raw judge over one repo (test harness)
   --base-of <repo>          print the default-branch merge base (nng_base_of)
-  --leg1-base <root>        print leg 1's base (nng_leg1_base)
 Exit: 0 clean, 1 violations, 2 population empty (no tree, no consumers).
 """
 
@@ -286,21 +284,9 @@ def run_full(root, cfg):
 def main():
     args = sys.argv[1:]
     cfg_root = scope.ROOT
-    if args and args[0] == "--scan":
-        repo, label, base, spec = args[1], args[2], args[3], args[4]
-        cfg = require_config(cfg_root)
-        scan(repo, label, base, spec, cfg)
-        if violations:
-            print("FAIL 14-no-net-growth: net-positive SKILL.md file(s): " + ", ".join(violations))
-            return 1
-        return 0
     if args and args[0] == "--base-of":
         cfg = require_config(cfg_root)
         print(base_of(args[1], cfg["base_ref"]))
-        return 0
-    if args and args[0] == "--leg1-base":
-        cfg = require_config(cfg_root)
-        print(leg1_base(args[1], cfg["base_ref"]))
         return 0
     root = args[0] if args else scope.ROOT
     if os.path.abspath(root) != scope.ROOT:

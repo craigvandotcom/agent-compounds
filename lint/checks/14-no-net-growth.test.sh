@@ -1,17 +1,24 @@
 #!/usr/bin/env bash
 # 14-no-net-growth.test.sh — proof harness for the ported no-net-growth check (bd-oxmsf,
-# rewritten for the lint v2 port by ac-1p7j.2; before that commit this harness awk-extracted
-# the LIVE bash nng_* functions out of lint.sh and eval'd them — a Python check cannot be
-# extracted that way, so the harness drives the check binary directly now).
+# ported for lint v2 by ac-1p7j.2). Reworked 2026-09-23 to drive the check through its
+# NORMAL entry point (the root arg, run_full()) — the two parity-only CLI flags this
+# harness used to call directly (a single-repo-scan mode and a print-the-leg-1-base
+# mode) are gone: the port they served (ac-1p7j.2) is finished and lint/parity.sh is
+# deleted. leg1_base()'s trunk-direct HEAD^ fallback is now exercised the same way
+# every real invocation exercises it, not through a side door.
 #
 # WHY: Check 14 leg 2 judges OTHER repos (deploy targets), so it cannot be exercised
 # without a target — and exercising it against a live app repo would mean dirtying
-# someone else's checkout. This runs lint/checks/14-no-net-growth.py against throwaway
-# repos in a mktemp dir: default branch `master` (so origin/HEAD resolution is proven, not
-# assumed), growth, the wrong-token near-miss, the removed `net-growth-ok` token (which
-# must NOT exempt — ec5fa64), a shrink, a symlinked skill dir, the two reader states
-# (leg 1 unconditional while leg 2 discloses its SKIP, ac-vlje.9), and the ac family's
-# creation-vs-growth rule.
+# someone else's checkout. This runs lint/checks/14-no-net-growth.py against a throwaway
+# repo in a mktemp dir, always with AC_MACHINE_FILE pointed at a path that cannot exist so
+# leg 2 always takes its documented disclosed skip (never a violation) and every case
+# below exercises leg 1 alone: default branch `master` (so origin/HEAD resolution is
+# proven, not assumed), growth, the wrong-token near-miss, the removed `net-growth-ok`
+# token (which must NOT exempt — ec5fa64), a shrink, a symlinked skill dir, already-
+# committed-and-pushed growth (leg1_base's trunk-direct HEAD^ fallback), and the ac
+# family's creation-vs-growth rule. The fixture repo uses `skills/*/SKILL.md` — leg 1's
+# own hardcoded spec — throughout, and carries a real copy of this registry's
+# skills/packages.json so require_config() reads real base_ref/lean_family/cap values.
 #
 # Runs under bash AND zsh. Exit 0 = all cases pass.
 
@@ -26,76 +33,80 @@ git init -q --bare "$W/origin.git" -b master        # default branch master, lik
 git clone -q "$W/origin.git" "$W/app" 2>/dev/null
 cd "$W/app" || exit 1
 git config user.email t@t.t; git config user.name t
-mkdir -p .claude/skills/foo
-for i in 1 2 3 4 5 6 7 8 9 10; do echo "line $i"; done > .claude/skills/foo/SKILL.md
+mkdir -p skills/foo
+for i in 1 2 3 4 5 6 7 8 9 10; do echo "line $i"; done > skills/foo/SKILL.md
+cp "$ROOT/skills/packages.json" skills/packages.json
 git add -A; git commit -qm base; git push -q origin master 2>/dev/null
 git remote set-head origin master
+# A second commit so leg1_base() has a real HEAD^ to fall back to (the trunk-direct
+# self-exemption escape) instead of hitting run_full's "base collapsed onto HEAD" FAIL
+# on the very first invocation, which only a single-commit history would trigger.
+echo settle > SETTLE.txt; git add -A; git commit -qm settle; git push -q origin master 2>/dev/null
 
 PASS=0; FAIL=0
-violations_of() { # <repo> <label> <base> <spec> -> violation count on stdout
-  # Count every violation ENTRY the check printed, not just "(+" ones — an
-  # ac-family-cap breach prints "(ac-family-cap: ...)" and is equally a violation.
-  python3 "$CHECK" --scan "$1" "$2" "$3" "$4" 2>/dev/null \
-    | grep '^FAIL ' | sed 's/^FAIL[^:]*: net-positive SKILL.md file(s): //' \
-    | tr ',' '\n' | grep -c .
+run_check() { AC_MACHINE_FILE=/nonexistent/machine.json python3 "$CHECK" "$W/app"; }
+run_and_count() {  # sets LAST_OUT, LAST_RC, LAST_VIOL (no `local` — expect()/the tail
+                    # "not-configured" assertion both read the last run's state)
+  LAST_OUT="$(run_check 2>&1)"; LAST_RC=$?
+  LAST_VIOL=$(printf '%s\n' "$LAST_OUT" | grep '^FAIL 14-no-net-growth: net-positive' \
+    | sed -E 's/^FAIL[^:]*: net-positive SKILL\.md file\(s\): (.*) — core is loaded.*/\1/' \
+    | tr ',' '\n' | sed '/^[[:space:]]*$/d' | grep -c .)
 }
-expect() { # <name> <want-violation-count> <base> <spec>
-  local name="$1" want="$2" base="$3" spec="$4" got
-  got=$(violations_of "$W/app" app "$base" "$spec")
-  if [ "$got" = "$want" ]; then PASS=$((PASS+1)); printf 'ok   %-46s violations=%s\n' "$name" "$got"
-  else FAIL=$((FAIL+1)); printf 'FAIL %-46s violations=%s want=%s\n' "$name" "$got" "$want"; fi
+expect() { # <name> <want-violation-count>
+  local name="$1" want="$2"
+  run_and_count
+  if [ "$LAST_VIOL" = "$want" ]; then PASS=$((PASS+1)); printf 'ok   %-46s violations=%s\n' "$name" "$LAST_VIOL"
+  else FAIL=$((FAIL+1)); printf 'FAIL %-46s violations=%s want=%s\n' "$name" "$LAST_VIOL" "$want"
+    printf '%s\n' "$LAST_OUT" | sed 's/^/  | /'
+  fi
 }
 
 echo "base-ref resolution -> $(python3 "$CHECK" --base-of "$W/app" | cut -c1-8) (origin/HEAD = master, NOT origin/main)"
 
-base=$(python3 "$CHECK" --base-of "$W/app")
-expect "clean target (no delta)" 0 "$base" '.claude/skills/*/SKILL.md'
+expect "clean target (no delta)" 0
 
-echo "line 11" >> .claude/skills/foo/SKILL.md
-echo "line 12" >> .claude/skills/foo/SKILL.md
-expect "+2 growth -> FAILS" 1 "$base" '.claude/skills/*/SKILL.md'
+echo "line 11" >> skills/foo/SKILL.md
+echo "line 12" >> skills/foo/SKILL.md
+expect "+2 growth -> FAILS" 1
 
-# the wrong-token near-must-still-fail case (bd-curate-...xu5tz's AC)
-echo "<!-- evidence: i thought about it -->" >> .claude/skills/foo/SKILL.md
-expect "wrong token 'evidence:' -> still FAILS" 1 "$base" '.claude/skills/*/SKILL.md'
+# the wrong-token near-miss case (bd-curate-...xu5tz's AC)
+echo "<!-- evidence: i thought about it -->" >> skills/foo/SKILL.md
+expect "wrong token 'evidence:' -> still FAILS" 1
 
 # ec5fa64 removed the `net-growth-ok` escape hatch outright — "growth is bought with
 # deletion, not prose". NO comment token exempts growth any more. This case pins the
-# ABSENCE of the escape, so reintroducing one cannot pass unnoticed. (Until 2026-08-27
-# this case still asserted the removed hatch worked, and stayed red undetected because
-# no workflow ran this harness — the defect ac-on0y.1 exists to end.)
-echo "<!-- net-growth-ok: proven exception -->" >> .claude/skills/foo/SKILL.md
-expect "former 'net-growth-ok' stamp -> STILL FAILS (escape removed, ec5fa64)" 1 "$base" '.claude/skills/*/SKILL.md'
+# ABSENCE of the escape, so reintroducing one cannot pass unnoticed.
+echo "<!-- net-growth-ok: proven exception -->" >> skills/foo/SKILL.md
+expect "former 'net-growth-ok' stamp -> STILL FAILS (escape removed, ec5fa64)" 1
 
-git checkout -q -- .claude/skills/foo/SKILL.md
-for i in 1 2 3; do echo "line $i"; done > .claude/skills/foo/SKILL.md
-expect "shrink -> PASSES" 0 "$base" '.claude/skills/*/SKILL.md'
+git checkout -q -- skills/foo/SKILL.md
+for i in 1 2 3; do echo "line $i"; done > skills/foo/SKILL.md
+expect "shrink -> PASSES" 0
 
-# a symlinked skill dir must be invisible to the leg (git can't traverse it)
-git checkout -q -- .claude/skills/foo/SKILL.md
+# a symlinked skill dir must be invisible to the leg (untracked, so `git diff` can't see it)
+git checkout -q -- skills/foo/SKILL.md
 mkdir -p "$W/registry/bar"
 echo x > "$W/registry/bar/SKILL.md"
-ln -s "$W/registry/bar" .claude/skills/bar
-echo "  symlinked dir present: $(ls -l .claude/skills/bar | sed 's/.*-> //')"
-expect "symlinked skill dir -> invisible" 0 "$base" '.claude/skills/*/SKILL.md'
+ln -s "$W/registry/bar" skills/bar
+echo "  symlinked dir present: $(ls -l skills/bar | sed 's/.*-> //')"
+expect "symlinked skill dir -> invisible" 0
+rm -f skills/bar
 
-# --- LEG 1 UNDER TRUNK-DIRECT -------------------------------------------------
-# The leg-1 base resolver (nng_leg1_base, ported into the check as --leg1-base) is where
-# the trunk-direct self-exemption lived: after a push origin/<default> == HEAD, so
-# merge-base is HEAD and the diff is empty by construction. These cases exercise LEG 1's
-# resolver specifically.
-git checkout -q -- .claude/skills/foo/SKILL.md
-echo "line 11" >> .claude/skills/foo/SKILL.md
-echo "line 12" >> .claude/skills/foo/SKILL.md
-git add .claude/skills/foo/SKILL.md; git commit -qm "grow SKILL.md"; git push -q origin master 2>/dev/null
-echo "  after push: merge-base(origin/HEAD,HEAD) == HEAD ? $(python3 "$CHECK" --base-of "$W/app" >/dev/null && [ "$(python3 "$CHECK" --base-of "$W/app")" = "$(git -C "$W/app" rev-parse HEAD)" ] && echo yes || echo no)"
-base=$(python3 "$CHECK" --leg1-base "$W/app")
-expect "already-pushed growth is still scored (leg-1 base)" 1 "$base" '.claude/skills/*/SKILL.md'
+# --- ALREADY-COMMITTED-AND-PUSHED GROWTH: leg1_base's trunk-direct fallback ----------
+# Every case above left its change UNCOMMITTED (run_full diffs the base commit against
+# the working tree either way, so a dirty file is already covered). This one commits
+# AND pushes the growth, so origin/HEAD collapses onto HEAD exactly like it did right
+# after the very first "base" push — proving leg1_base()'s HEAD^ fallback still catches
+# it through the check's normal entry, not a self-vs-self empty diff.
+git checkout -q -- skills/foo/SKILL.md
+echo "line 11" >> skills/foo/SKILL.md
+echo "line 12" >> skills/foo/SKILL.md
+git add skills/foo/SKILL.md; git commit -qm "grow SKILL.md"; git push -q origin master 2>/dev/null
+expect "already-pushed growth is still scored (leg-1 base)" 1
 
-for i in 1 2 3; do echo "line $i"; done > .claude/skills/foo/SKILL.md
-git add .claude/skills/foo/SKILL.md; git commit -qm "shrink SKILL.md"; git push -q origin master 2>/dev/null
-base=$(python3 "$CHECK" --leg1-base "$W/app")
-expect "already-pushed SHRINK is still a pass" 0 "$base" '.claude/skills/*/SKILL.md'
+for i in 1 2 3; do echo "line $i"; done > skills/foo/SKILL.md
+git add skills/foo/SKILL.md; git commit -qm "shrink SKILL.md"; git push -q origin master 2>/dev/null
+expect "already-pushed SHRINK is still a pass" 0
 
 # --- LEAN ac FAMILY: creation defers to the family cap, growth does not (ac-g2v4) ---
 # A brand-new SKILL.md always has `del = 0`, so the net is always positive and a
@@ -104,73 +115,56 @@ expect "already-pushed SHRINK is still a pass" 0 "$base" '.claude/skills/*/SKILL
 # skills/packages.json, ac-6asz.3). Creation is distinguished
 # from a pure-addition EDIT with --diff-filter=A: both print `N 0` on numstat, so
 # numstat alone cannot tell them apart.
-git checkout -q -- .claude/skills/foo/SKILL.md 2>/dev/null || true
-mkdir -p .claude/skills/ac-plan
-seq 1 80 | sed 's/^/line /' > .claude/skills/ac-plan/SKILL.md
-git add .claude/skills/ac-plan/SKILL.md
-base=$(python3 "$CHECK" --leg1-base "$W/app")
-expect "NEW ac SKILL.md within family cap -> PASSES" 0 "$base" '.claude/skills/*/SKILL.md'
+mkdir -p skills/ac-plan
+seq 1 80 | sed 's/^/line /' > skills/ac-plan/SKILL.md
+git add skills/ac-plan/SKILL.md
+expect "NEW ac SKILL.md within family cap -> PASSES" 0
 
 # A new non-lean-family skill is untouched by the rule: creation is still net growth there.
-git reset -q .claude/skills/ac-plan/SKILL.md 2>/dev/null; rm -rf .claude/skills/ac-plan
-mkdir -p .claude/skills/ac-other
-seq 1 40 | sed 's/^/line /' > .claude/skills/ac-other/SKILL.md
-git add .claude/skills/ac-other/SKILL.md
-base=$(python3 "$CHECK" --leg1-base "$W/app")
-expect "NEW non-ac SKILL.md -> STILL FAILS (rule is lean-family-only)" 1 "$base" '.claude/skills/*/SKILL.md'
+git reset -q skills/ac-plan/SKILL.md 2>/dev/null; rm -rf skills/ac-plan
+mkdir -p skills/ac-other
+seq 1 40 | sed 's/^/line /' > skills/ac-other/SKILL.md
+git add skills/ac-other/SKILL.md
+expect "NEW non-ac SKILL.md -> STILL FAILS (rule is lean-family-only)" 1
 
 # The rule exempts CREATION, not GROWTH. Commit the ac-plan creation and push it first
 # — advancing the base past it — so the next case is a pure EDIT of an existing family
 # member, not a creation (leg 1 judges HEAD's parent; a creation one commit back is
 # still inside the diff range and would be classified as creation, testing nothing).
-git add .claude/skills/ac-other/SKILL.md 2>/dev/null || true
-rm -rf .claude/skills/ac-other
-mkdir -p .claude/skills/ac-plan
-seq 1 80 | sed 's/^/line /' > .claude/skills/ac-plan/SKILL.md
-git add .claude/skills/ac-plan/SKILL.md
+git reset -q skills/ac-other/SKILL.md 2>/dev/null; rm -rf skills/ac-other
+mkdir -p skills/ac-plan
+seq 1 80 | sed 's/^/line /' > skills/ac-plan/SKILL.md
+git add skills/ac-plan/SKILL.md
 git commit -qm "create ac-plan within cap"; git push -q origin master 2>/dev/null
 echo advance > advance.txt; git add -A; git commit -qm advance; git push -q origin master 2>/dev/null
-echo "line 81" >> .claude/skills/ac-plan/SKILL.md
-base=$(python3 "$CHECK" --leg1-base "$W/app")
-expect "net-positive EDIT to EXISTING ac SKILL.md -> STILL FAILS" 1 "$base" '.claude/skills/*/SKILL.md'
-git checkout -q -- .claude/skills/ac-plan/SKILL.md 2>/dev/null
+echo "line 81" >> skills/ac-plan/SKILL.md
+expect "net-positive EDIT to EXISTING ac SKILL.md -> STILL FAILS" 1
+git checkout -q -- skills/ac-plan/SKILL.md
 
 # Creation over the family cap is still a violation — the cap is the payment, and
-# the exemption is a deferral to it, not an amnesty. (The registry fixture has one
-# family file, so the cap breach needs a bigger family; the manifest cap is 800 and
-# the created file alone stays under it — over-cap is asserted by 80+700 lines.)
-mkdir -p .claude/skills/ac-polish
-seq 1 800 | sed 's/^/line /' > .claude/skills/ac-polish/SKILL.md
-git add .claude/skills/ac-polish/SKILL.md
-base=$(python3 "$CHECK" --leg1-base "$W/app")
-expect "NEW ac SKILL.md BREACHING family cap -> FAILS" 1 "$base" '.claude/skills/*/SKILL.md'
+# the exemption is a deferral to it, not an amnesty. (ac-plan alone stays under the
+# manifest cap of 800, so the breach needs a bigger family: 80+800.)
+mkdir -p skills/ac-polish
+seq 1 800 | sed 's/^/line /' > skills/ac-polish/SKILL.md
+git add skills/ac-polish/SKILL.md
+run_and_count
+if [ "$LAST_RC" = 1 ] && [ "$LAST_VIOL" = 1 ] && printf '%s\n' "$LAST_OUT" | grep -q 'ac-family-cap'; then
+  PASS=$((PASS+1)); printf 'ok   %-46s violations=%s\n' "NEW ac SKILL.md BREACHING family cap -> FAILS" "$LAST_VIOL"
+else
+  FAIL=$((FAIL+1)); printf 'FAIL %-46s violations=%s want=1 (ac-family-cap)\n' "NEW ac SKILL.md BREACHING family cap -> FAILS" "$LAST_VIOL"
+  printf '%s\n' "$LAST_OUT" | sed 's/^/  | /'
+fi
 
 # --- NOT-CONFIGURED: leg 1 stays unconditional, leg 2 discloses its SKIP -------------
-# The two legs answer the reader's absence differently, and BOTH must still speak.
-# Leg 1 audits THIS registry's own skills/ and never consults the machine facts, so a
-# grown SKILL.md keeps failing; leg 2 audits the deploy-target union, which is UNKNOWN
-# without those facts, so it skips LOUDLY rather than silently ratcheting nothing. A
-# version that returned early on the reader's absence would stop the ratchet on exactly
-# the machine whose file is missing — the failure this case exists to prevent.
-# A full run needs a registry-shaped root (leg 1's spec is skills/*/SKILL.md and the
-# check-14 lists come from the manifest), so the throwaway repo gets a copy of the real
-# skills/packages.json.
-git reset -q
-mkdir -p "$W/app/skills/reg-skill"
-cp "$ROOT/skills/packages.json" "$W/app/skills/packages.json"
-printf 'line 1\n' > "$W/app/skills/reg-skill/SKILL.md"
-git add skills/packages.json skills/reg-skill/SKILL.md
-git commit -qm "registry-shaped skill, at rest"; git push -q origin master 2>/dev/null
-echo "line 2" >> "$W/app/skills/reg-skill/SKILL.md"
-out="$(AC_MACHINE_FILE=/nonexistent/machine.json python3 "$CHECK" "$W/app" 2>&1)"; rc=$?
-if [ "$rc" = 1 ] \
-   && printf '%s\n' "$out" | grep -q 'FAIL 14-no-net-growth' \
-   && printf '%s\n' "$out" | grep -q 'reg-skill' \
-   && printf '%s\n' "$out" | grep -q 'leg 2 skipped'; then
+# Every case above already ran with AC_MACHINE_FILE pointed at nothing, so leg 2's
+# disclosed skip is proven implicitly by every 'ok' line above (run_full still returns a
+# real leg-1 verdict, never an early return, on the reader's absence). This asserts its
+# exact wording once, reusing the still-dirty over-cap state from the previous case.
+if printf '%s\n' "$LAST_OUT" | grep -q 'FAIL 14-no-net-growth' && printf '%s\n' "$LAST_OUT" | grep -q 'leg 2 skipped'; then
   PASS=$((PASS+1)); printf 'ok   %-46s leg 1 still fails, leg 2 skipped\n' "not-configured machine facts"
 else
-  FAIL=$((FAIL+1)); printf 'FAIL %-46s rc=%s want=1\n' "not-configured machine facts" "$rc"
-  printf '%s\n' "$out"
+  FAIL=$((FAIL+1)); printf 'FAIL %-46s rc=%s want leg-2-skip notice present\n' "not-configured machine facts" "$LAST_RC"
+  printf '%s\n' "$LAST_OUT" | sed 's/^/  | /'
 fi
 
 echo "---"
