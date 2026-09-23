@@ -101,7 +101,7 @@ chmod +x "$MOCK/br"
 
 bead_json() { # <id> <description-file>
   jq -n --arg id "$1" --rawfile d "$2" \
-    '{id:$id,title:"chain fixture",issue_type:"task",status:"open",assignee:"",labels:[],description:$d,comments:[]}'
+    '{id:$id,title:"chain fixture",issue_type:"task",status:"open",assignee:"",labels:["origin:ac-triage"],description:$d,comments:[]}'
 }
 
 cat >"$WORK/d-grep.md" <<'EOF'

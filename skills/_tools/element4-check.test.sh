@@ -175,9 +175,9 @@ chmod +x "$MOCK/br"
 RED_OK='## Declared RED\nTest `x` must FAIL before the fix; assert exit 1.\n'
 RED_PROBED='## Declared RED\nTest `x` must FAIL before the fix; assert exit 1.\n\n## Acceptance Criteria\n- The fix lands.\n  Probe: `grep -q "the fix" src/x.ts` — tier: none\n'
 jq -n --arg red "$(printf "$RED_OK")" --arg redp "$(printf "$RED_PROBED")" '[
-  {id:"bd-good", issue_type:"bug", description:$red},
-  {id:"bd-good-probed", issue_type:"bug", description:$redp},
-  {id:"bd-bad",  issue_type:"bug", description:"## Anchors\nnone\n"}
+  {id:"bd-good", issue_type:"bug", description:$red, labels:["origin:ac-triage"]},
+  {id:"bd-good-probed", issue_type:"bug", description:$redp, labels:["origin:ac-triage"]},
+  {id:"bd-bad",  issue_type:"bug", description:"## Anchors\nnone\n", labels:["origin:ac-triage"]}
 ]' >"$FIXTURE_BEADS"
 
 # --- Case 7: stamp_refined REFUSES a bead with no Declared RED, writes NO label ---
@@ -534,8 +534,8 @@ SH_RUNS='## Acceptance Criteria
 '
 jq --arg bare "$(printf '%s' "$SH_BARE")" --arg runs "$(printf '%s' "$SH_RUNS")" \
   '. + [
-    {id:"bd-sh-bare", issue_type:"task", description:$bare, labels:[]},
-    {id:"bd-sh-runs", issue_type:"task", description:$runs, labels:[]}
+    {id:"bd-sh-bare", issue_type:"task", description:$bare, labels:["origin:ac-triage"]},
+    {id:"bd-sh-runs", issue_type:"task", description:$runs, labels:["origin:ac-triage"]}
   ]' "$FIXTURE_BEADS" >"$FIXTURE_BEADS.tmp" && mv "$FIXTURE_BEADS.tmp" "$FIXTURE_BEADS"
 
 : >"$BR_LOG"

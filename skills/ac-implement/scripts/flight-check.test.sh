@@ -452,7 +452,7 @@ Re-gate fixture: a deliverable that exists and is referenced owes a touchers lin
 - none
 BODY
 mk_json() { jq -n --arg d "$(cat "$1")" \
-  '{id:"ac-l7xt-fix",issue_type:"task",labels:["refined","refine-full"],description:$d,comments:[]}'; }
+  '{id:"ac-l7xt-fix",issue_type:"task",labels:["origin:ac-triage","refined","refine-full"],description:$d,comments:[]}'; }
 
 : >"$WORK/labels1.log"
 mk_json "$WORK/fix-desc1.md" >"$WORK/fix1.json"
@@ -494,7 +494,7 @@ echo "flight-check.test: case 8b — the refined stamp is re-gated at CLAIM time
 # adds a `comments` array to the fixture JSON and pre-seeds a flight receipt directly, so
 # the skip decision can be driven without a prior flight-check run writing it.
 mk_json_c() { jq -n --arg d "$(cat "$1")" --argjson c "$2" \
-  '{id:"ac-l7xt-fix",issue_type:"task",labels:["refined","refine-full"],description:$d,comments:$c}'; }
+  '{id:"ac-l7xt-fix",issue_type:"task",labels:["origin:ac-triage","refined","refine-full"],description:$d,comments:$c}'; }
 write_receipt() { mkdir -p "$(dirname "$1")"; cat >"$1" <<EOF
 FLIGHT-RECEIPT v1
 bead: ac-l7xt-fix

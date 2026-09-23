@@ -128,6 +128,28 @@ stamp_refined() {
     return 0
   }
 
+  # ORIGIN-LABEL GATE — runs before every other leg. Every leg below trusts the origin axis
+  # to scope itself (family-fixpoint, touchers, probe-presence); a bead that shipped with
+  # none must not reach any of them on the strength of everything else looking fine.
+  # Contract: beads-standards/reference/bead-create-contract.md § Required axes.
+  local origin_meta origin_hits
+  origin_meta=$(_show_json "$id" || true)
+  if [ -z "$origin_meta" ]; then
+    echo "stamp_refined: REFUSED $id — could not re-read the bead to check its origin label; refusing rather than guessing. No label written." >&2
+    return 2
+  fi
+  origin_hits=$(printf '%s' "$origin_meta" \
+    | jq -r '[ .[0].labels // [] | .[] | select(test("^origin:[A-Za-z0-9][A-Za-z0-9._-]*$")) ] | length' 2>/dev/null)
+  if [ -z "$origin_hits" ]; then
+    echo "stamp_refined: REFUSED $id — could not read labels to check its origin label; refusing rather than guessing. No label written." >&2
+    return 2
+  fi
+  if [ "$origin_hits" -eq 0 ]; then
+    echo "stamp_refined: REFUSED $id — no origin:<skill> label (bead-create-contract.md § Required axes). No label written. Repair: br update $id --add-label origin:<skill> (origin:unknown when unattributable)." >&2
+    _downgrade "$id" "no origin: label" || return $?
+    return 1
+  fi
+
   local out rc
   out=$(bash "$ELEMENT4_CHECK" "$id" 2>&1); rc=$?
   if [ "$rc" -ne 0 ]; then

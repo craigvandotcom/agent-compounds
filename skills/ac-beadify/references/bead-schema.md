@@ -33,6 +33,17 @@ commit discipline in `ac-pipeline/references/` (`commit-discipline.md`, `run-led
   landed body and refuses a probe-less implementable bead at the ledger commit. Only
   comments and receipts take `-f <file>`.
 
+## Creation invocation
+
+The literal `br create` this skill files. Required axes and rules:
+`beads-standards/reference/bead-create-contract.md` § Canonical invocation.
+
+```bash
+br create "<verb-first title>" -t <type> -p <0-4> \
+  --labels "origin:ac-beadify,unrefined,<domain labels>" \
+  -d "$(cat <file>)"
+```
+
 ## The four sections
 
 | Section | Bar |

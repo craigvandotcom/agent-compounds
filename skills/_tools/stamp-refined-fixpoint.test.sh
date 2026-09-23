@@ -152,11 +152,12 @@ write_board() {
     {id:"bd-legacy",        issue_type:"task", labels:["origin:ac-beadify"],  description:$leg, comments:[]},
     {id:"bd-legacy-probed", issue_type:"task", labels:["origin:ac-beadify"],  description:$legp, comments:[]},
     {id:"bd-external-probed", issue_type:"task", labels:["origin:ac-triage"], description:$legp, comments:[]},
-    {id:"bd-legacy-stale",  issue_type:"task", labels:["refined","refine-full"], description:$leg, comments:[]},
+    {id:"bd-legacy-stale",  issue_type:"task", labels:["origin:ac-triage","refined","refine-full"], description:$leg, comments:[]},
     {id:"bd-ac-stale-receipt", issue_type:"task", labels:["origin:ac-beadify","refined"], description:$schema_desc, comments:[]},
-    {id:"bd-external-already", issue_type:"task", labels:["refined","refine-full"], description:$legp, comments:[]},
+    {id:"bd-external-already", issue_type:"task", labels:["origin:ac-triage","refined","refine-full"], description:$legp, comments:[]},
     {id:"bd-clean",        issue_type:"task", labels:["origin:ac-triage"], description:$legp, comments:[]},
-    {id:"bd-path-partial", issue_type:"task", labels:["origin:ac-triage"], description:$legp, comments:[]}
+    {id:"bd-path-partial", issue_type:"task", labels:["origin:ac-triage"], description:$legp, comments:[]},
+    {id:"bd-no-origin",    issue_type:"task", labels:[], description:$legp, comments:[]}
   ]' >"$FIXTURE_BEADS"
 }
 write_board
@@ -540,7 +541,9 @@ fi
 # The stamp leg and the downgrade leg each RE-READ the board after writing and assert
 # the label set they meant to produce. Exit codes are never trusted: the sensor is the
 # read-back. bd-external-probed is the clean-stamp bead (Case 3c/18a); its flow makes
-# two show reads before the read-back (element4 + the meta read).
+# three show reads before the read-back (the origin-label gate + element4 + the meta
+# read) — BR_SHOW_BUDGET is set one higher than that read count in Cases 23-24 so the
+# dead read lands on the call each case names, not on an earlier leg.
 
 # Case 22: a FAILED `br label add` — the board is not updated, the read-back refuses.
 # bd-clean is a never-stamped bead, so the read-back cannot find an earlier refined.
@@ -556,7 +559,7 @@ fi
 # Case 23: a DEAD READ after the write — the read-back cannot verify the stamp.
 : >"$BR_LOG"
 : >"$BR_SHOW_COUNT"
-OUT=$(PATH="$MOCK:$PATH" BR_SHOW_BUDGET=2 bash "$STAMP" bd-clean 2>&1); RC=$?
+OUT=$(PATH="$MOCK:$PATH" BR_SHOW_BUDGET=3 bash "$STAMP" bd-clean 2>&1); RC=$?
 if [ "$RC" -eq 2 ] && echo "$OUT" | grep -q "WRITE-FAILED bd-clean"; then
   pass "Case 23: a dead read after the write is WRITE-FAILED — the stamp is not trusted on exit codes"
 else
@@ -566,7 +569,7 @@ fi
 # Case 24: a DEAD READ during the downgrade — a cannot-check, never "no stale stamp held".
 : >"$BR_LOG"
 : >"$BR_SHOW_COUNT"
-OUT=$(PATH="$MOCK:$PATH" BR_SHOW_BUDGET=2 bash "$STAMP" bd-legacy-stale 2>&1); RC=$?
+OUT=$(PATH="$MOCK:$PATH" BR_SHOW_BUDGET=3 bash "$STAMP" bd-legacy-stale 2>&1); RC=$?
 if [ "$RC" -eq 2 ] && echo "$OUT" | grep -q "WRITE-FAILED bd-legacy-stale"; then
   pass "Case 24: a dead read during the downgrade is WRITE-FAILED (rc 2), never 'no stale stamp held'"
 else
@@ -583,6 +586,19 @@ if [ "$RC" -eq 2 ] && echo "$OUT" | grep -q "WRITE-FAILED bd-path-partial" \
   pass "Case 25: a rejected path_label write is WRITE-FAILED (rc 2), never a STAMPED"
 else
   fail "Case 25: expected rc 2 + WRITE-FAILED and no STAMPED, rc=$RC. Output: $OUT"
+fi
+
+# --- Case 26: a bead with ZERO origin: labels is REFUSED before every other gate --------
+# bd-no-origin carries a probed, non-family description (the bd-external-probed shape) that
+# every OTHER leg would happily stamp — so a stamp here would prove the origin gate is not
+# actually first, not merely that some gate refused it.
+: >"$BR_LOG"
+OUT=$(PATH="$MOCK:$PATH" bash "$STAMP" bd-no-origin 2>&1); RC=$?
+if [ "$RC" -ne 0 ] && [ "$(stamped_count bd-no-origin)" -eq 0 ] \
+   && echo "$OUT" | grep -qi "no origin:"; then
+  pass "Case 26: a bead with zero origin: labels is REFUSED, no label written"
+else
+  fail "Case 26: expected origin refusal with no label write, rc=$RC. Output: $OUT / log: $(cat "$BR_LOG")"
 fi
 
 echo
