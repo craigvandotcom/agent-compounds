@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
-# 23-family-budget.test.sh — the fixture proving Check 23's contract.
+# 23-family-budget.test.sh — the proof harness for lint/checks/23-family-budget.sh.
 #
-#   PROBE: the committed static fixture (an 813-line family SKILL.md) is RED
-#           naming the family cap; a synthetic minimal family (small SKILL.md
-#           + one pointed-at reference + one triad-declaring lean script) is
-#           GREEN; the real registry is GREEN; a root missing the judge is
-#           NOT-GATED (2).
+#   PROBE: every cap gets BOTH sides of its boundary, and every fail-closed rule gets an
+#          empty fixture: the plan's biggest named risk is cultural (the files staying
+#          small) and the only countermeasure that has ever held in this registry is a
+#          check with fixtures either side of the line. A cap proven only by a passing
+#          tree is a cap nobody has tested. The real registry is GREEN.
 #
 # ASSURANCE
 #   PROBE:    bash lint/checks/23-family-budget.test.sh
@@ -14,64 +14,292 @@
 #   ON-FAILURE: closed
 set -uo pipefail
 
-HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-CHECK="$HERE/23-family-budget.py"
-ROOT="$(cd "$HERE/../.." && pwd)"
-JUDGE="$ROOT/scripts/ac-budget-check.sh"
+DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ROOT="$(cd "$DIR/../.." && pwd)"
+CHECK="$DIR/23-family-budget.sh"
 
-fails=0
-ok()  { echo "  ok    $1"; }
-bad() { echo "  FAIL  $1"; fails=$((fails + 1)); }
+FAILURES=0
+pass() { echo "  PASS: $1"; }
+fail() { echo "  FAIL: $1"; FAILURES=$((FAILURES + 1)); }
 
-# --- RED: the committed static fixture (family cap breached) ---------------------
-out="$(python3 "$CHECK" "$ROOT/lint/fixtures/23-family-budget" 2>&1)"; rc=$?
-if [ "$rc" = 1 ] && printf '%s' "$out" | grep -q "lean family SKILL.md total 813/800"; then
-  ok "RED: family over cap -> exit 1 naming the total"
-else
-  bad "RED case: expected 1 naming the cap, got $rc"; printf '%s\n' "$out"
-fi
+WORK=$(mktemp -d); trap 'rm -rf "$WORK"' EXIT
 
-# --- GREEN: a synthetic minimal family -------------------------------------------
-w="$(mktemp -d)"
-mkdir -p "$w/scripts" "$w/skills/ac-plan/references" "$w/skills/_tools"
-cp "$JUDGE" "$w/scripts/"; chmod +x "$w/scripts/"*.sh
-printf -- '---\nname: ac-plan\ndescription: "small family member"\n---\n\nReads skills/ac-plan/references/deep.md for the deep form.\n' > "$w/skills/ac-plan/SKILL.md"
-printf '# deep form\n\nDetails.\n' > "$w/skills/ac-plan/references/deep.md"
-cat > "$w/skills/_tools/polish-fixpoint.sh" <<'EOF'
+# lines <n> — n lines of filler, so a fixture can sit exactly either side of a cap.
+lines() { seq 1 "$1" | sed 's/^/line /'; }
+
+# fix <name> — a MINIMAL conforming fixture root; callers mutate it per case.
+#   ac-pipeline (the constitution, no subdirs) + ac-polish (points at one reference)
+#   + one declared script. Everything under the caps.
+fix() {
+  local r="$WORK/$1"
+  mkdir -p "$r/skills/ac-pipeline" "$r/skills/ac-polish/references" "$r/skills/ac-polish/scripts"
+  lines 60 >"$r/skills/ac-pipeline/SKILL.md"
+  { echo "Checklist: references/plan-checklist.md (mandatory load)"; lines 59; } \
+    >"$r/skills/ac-polish/SKILL.md"
+  lines 40 >"$r/skills/ac-polish/references/plan-checklist.md"
+  cat >"$r/skills/ac-polish/scripts/demo.sh" <<'EOF'
 #!/usr/bin/env bash
-# PROBE: run the stamp tool
-# SCHEDULE: polish fixpoint runs
-# MODE: blocking
+# PROBE:      demo.test.sh
+# SCHEDULE:   every polish round
+# MODE:       blocking
 # ON-FAILURE: closed
-exit 0
 EOF
-out="$(python3 "$CHECK" "$w" 2>&1)"; rc=$?
-if [ "$rc" = 0 ] && printf '%s' "$out" | grep -q "family budget and anti-drift legs hold"; then
-  ok "GREEN: synthetic minimal family -> exit 0"
-else
-  bad "GREEN case: expected 0, got $rc"; printf '%s\n' "$out"
-fi
-rm -rf "$w"
+  printf '%s' "$r"
+}
 
-# --- GREEN: the real registry ----------------------------------------------------
-out="$(python3 "$CHECK" 2>&1)"; rc=$?
-if [ "$rc" = 0 ]; then
-  ok "GREEN: the real family is inside its caps"
+run_on() { OUT=$(bash "$CHECK" "$1" 2>&1); RC=$?; }
+
+# --- Case 1: NO family skills at all -> NOT-GATED, never a silent pass ----------------
+mkdir -p "$WORK/empty/skills"
+run_on "$WORK/empty"
+if [ "$RC" -eq 2 ] && echo "$OUT" | grep -q "NOT-GATED"; then
+  pass "Case 1: zero discovered family skills fails closed with NOT-GATED (exit 2)"
 else
-  bad "real-tree case: expected 0, got $rc"; printf '%s\n' "$out"
+  fail "Case 1: expected exit 2 + NOT-GATED, got $RC. Output: $OUT"
 fi
 
-# --- NOT-GATED: the judge script is missing --------------------------------------
-w="$(mktemp -d)"
-mkdir -p "$w/skills/ac-plan"
-printf -- '---\nname: ac-plan\ndescription: "x"\n---\n\nbody\n' > "$w/skills/ac-plan/SKILL.md"
-out="$(python3 "$CHECK" "$w" 2>&1)"; rc=$?
-if [ "$rc" = 2 ] && printf '%s' "$out" | grep -q "NOT-CHECKED"; then
-  ok "NOT-GATED: missing judge -> exit 2, verified nothing"
+# --- Case 2: the minimal conforming fixture PASSES ------------------------------------
+R=$(fix ok)
+run_on "$R"
+if [ "$RC" -eq 0 ]; then
+  pass "Case 2: a conforming family PASSES"
 else
-  bad "NOT-GATED case: expected 2, got $rc"; printf '%s\n' "$out"
+  fail "Case 2: expected exit 0, got $RC. Output: $OUT"
 fi
-rm -rf "$w"
 
-echo "23-family-budget.test.sh: ${fails} failure(s)"
-[ "$fails" -eq 0 ]
+# --- Case 3: family SKILL.md cap — 800 passes, 801 fails ------------------------------
+R=$(fix at800); lines 740 >"$R/skills/ac-pipeline/SKILL.md"   # 740 + 60 (polish) = 800
+run_on "$R"
+if [ "$RC" -eq 0 ] && echo "$OUT" | grep -q "800/800"; then
+  pass "Case 3a: a family of exactly 800 SKILL.md lines PASSES"
+else
+  fail "Case 3a: expected exit 0 at the boundary, got $RC. Output: $OUT"
+fi
+R=$(fix over800); lines 741 >"$R/skills/ac-pipeline/SKILL.md"
+run_on "$R"
+if [ "$RC" -eq 1 ] && echo "$OUT" | grep -q "801/800"; then
+  pass "Case 3b: 801 SKILL.md lines FAILS the family cap (exit 1)"
+else
+  fail "Case 3b: expected exit 1 over the cap, got $RC. Output: $OUT"
+fi
+
+# --- Case 4: loaded-path cap — the reference counts toward 1,200 ----------------------
+R=$(fix at1200); lines 400 >"$R/skills/ac-polish/references/plan-checklist.md"
+lines 620 >"$R/skills/ac-pipeline/SKILL.md"          # 620 + 60 + 400 = 1080
+run_on "$R"
+if [ "$RC" -eq 0 ]; then
+  pass "Case 4a: a worst path under the 1,200 target passes quietly"
+else
+  fail "Case 4a: expected exit 0, got $RC. Output: $OUT"
+fi
+R=$(fix over1200); lines 600 >"$R/skills/ac-polish/references/plan-checklist.md"
+lines 620 >"$R/skills/ac-pipeline/SKILL.md"          # 620 + 60 + 600 = 1280
+run_on "$R"
+if [ "$RC" -eq 0 ] && echo "$OUT" | grep -q "WARN worst path 1280 is over the 1200 target by 80"; then
+  pass "Case 4b: a worst path over the 1,200 target WARNS with the overage named — and does NOT fail (a target, not a cap)"
+else
+  fail "Case 4b: expected exit 0 with a WARN naming 80 over, got $RC. Output: $OUT"
+fi
+
+# --- Case 5: the mandatory-load set is DERIVED from the pointers, not hardcoded -------
+# A hardcoded list is exactly how per-file caps "held" while references/ grew ~11x.
+R=$(fix derived)
+lines 30 >"$R/skills/ac-polish/references/new.md"
+{ echo "Also loads references/new.md at every invocation."; cat "$R/skills/ac-polish/SKILL.md"; } \
+  >"$R/skills/ac-polish/SKILL.md.tmp" && mv "$R/skills/ac-polish/SKILL.md.tmp" "$R/skills/ac-polish/SKILL.md"
+run_on "$R"
+if [ "$RC" -eq 0 ] && echo "$OUT" | grep -q "references/new.md"; then
+  pass "Case 5: a newly pointed-at reference is COUNTED without touching the checker"
+else
+  fail "Case 5: the new reference was not counted, rc=$RC. Output: $OUT"
+fi
+
+# --- Case 6: a references file NOBODY points at is uncounted fat -> NOT-GATED --------
+R=$(fix orphanref); lines 30 >"$R/skills/ac-polish/references/unpointed.md"
+run_on "$R"
+if [ "$RC" -eq 2 ] && echo "$OUT" | grep -q "unpointed.md"; then
+  pass "Case 6: a references file no SKILL.md points at is REJECTED as uncounted (NOT-GATED)"
+else
+  fail "Case 6: expected exit 2 naming the uncounted file, got $RC. Output: $OUT"
+fi
+
+# --- Case 7: a pointer to a reference that does not exist -> FAIL --------------------
+R=$(fix dangling)
+{ echo "Loads references/ghost.md every run."; cat "$R/skills/ac-polish/SKILL.md"; } \
+  >"$R/x" && mv "$R/x" "$R/skills/ac-polish/SKILL.md"
+run_on "$R"
+if [ "$RC" -eq 1 ] && echo "$OUT" | grep -q "ghost.md"; then
+  pass "Case 7: a pointer to a missing reference FAILS (a pointer nobody kept)"
+else
+  fail "Case 7: expected exit 1 naming the missing reference, got $RC. Output: $OUT"
+fi
+
+# --- Case 9: assurance declarations for family scripts (Check 21 cannot see these) ---
+R=$(fix undeclared); printf '#!/usr/bin/env bash\necho hi\n' >"$R/skills/ac-polish/scripts/demo.sh"
+run_on "$R"
+if [ "$RC" -eq 1 ] && echo "$OUT" | grep -q "demo.sh"; then
+  pass "Case 9a: a family script with no assurance declarations FAILS"
+else
+  fail "Case 9a: expected exit 1 naming the script, got $RC. Output: $OUT"
+fi
+R=$(fix noscripts); rm -rf "$R/skills/ac-polish/scripts"
+run_on "$R"
+if [ "$RC" -eq 2 ] && echo "$OUT" | grep -q "NOT-GATED"; then
+  pass "Case 9b: a discovery set resolving to ZERO scripts is NOT-GATED, not a pass"
+else
+  fail "Case 9b: expected exit 2 + NOT-GATED, got $RC. Output: $OUT"
+fi
+
+# --- Case 11: pointed-at canon is REPORTED, never capped ----------------------------
+R=$(fix canon); mkdir -p "$R/skills/beads-standards/reference"
+lines 5000 >"$R/skills/beads-standards/reference/bead-conventions.md"
+{ echo "Bead canon by pointer: skills/beads-standards/reference/bead-conventions.md"; cat "$R/skills/ac-polish/SKILL.md"; } \
+  >"$R/x" && mv "$R/x" "$R/skills/ac-polish/SKILL.md"
+run_on "$R"
+if [ "$RC" -eq 0 ] && echo "$OUT" | grep -q "pointed-at canon 5000"; then
+  pass "Case 11: 5,000 lines of pointed-at canon are REPORTED and do not fail the check"
+else
+  fail "Case 11: expected exit 0 with the canon line count reported, got $RC. Output: $OUT"
+fi
+
+# --- Case 13: a relative pointer at a SIBLING's reference resolves family-wide -------
+# ac-plan names ac-polish's checklist as its bar. That is a real pointer, not a dangling
+# one — but an AMBIGUOUS basename must still fail, or the counted file is a coin toss.
+R=$(fix sibling)
+mkdir -p "$R/skills/ac-plan"
+{ echo "Its references/plan-checklist.md is the bar."; lines 20; } >"$R/skills/ac-plan/SKILL.md"
+run_on "$R"
+if [ "$RC" -eq 0 ] && echo "$OUT" | grep -q "ac-polish/references/plan-checklist.md"; then
+  pass "Case 13a: a sibling's reference resolves family-wide and is counted ONCE"
+else
+  fail "Case 13a: expected exit 0 counting the sibling reference, got $RC. Output: $OUT"
+fi
+mkdir -p "$R/skills/ac-plan/references"; lines 10 >"$R/skills/ac-plan/references/plan-checklist.md"
+run_on "$R"
+if [ "$RC" -eq 0 ]; then
+  pass "Case 13b: with its own copy present, the citing skill's own file wins (no ambiguity)"
+else
+  fail "Case 13b: expected exit 0, got $RC. Output: $OUT"
+fi
+
+# --- Case 14: workflows/ is MANDATORY LOAD and is COUNTED ------------------------------
+# It was counted as zero for 145 lines in the heaviest skill while the header said "fat
+# cannot hide either way". This case is the sensor that stops it hiding again.
+R=$(fix wf-counted)
+mkdir -p "$R/skills/ac-polish/workflows"; lines 25 >"$R/skills/ac-polish/workflows/plan.md"
+{ cat "$R/skills/ac-polish/SKILL.md"; printf '\n| mode | workflow | checklist |\n| --- | --- | --- |\n| `plan` | `workflows/plan.md` | `references/plan-checklist.md` |\n'; } \
+  >"$R/skills/ac-polish/SKILL.md.tmp" && mv "$R/skills/ac-polish/SKILL.md.tmp" "$R/skills/ac-polish/SKILL.md"
+run_on "$R"
+if [ "$RC" -eq 0 ] && echo "$OUT" | grep -q "workflows/plan.md (25 lines, mode plan"; then
+  pass "Case 14: a workflows/ file is COUNTED, and attributed to its mode"
+else
+  fail "Case 14: workflows/ not counted or not scoped, rc=$RC. Output: $OUT"
+fi
+
+# --- Case 15: mode-scoped files count ONLY the heaviest mode -----------------------------
+# Three modes: 20, 60 and 40 lines. Worst path must add 60, not 120. Anything else charges
+# the skill for loads that never happen together.
+R=$(fix heaviest)
+mkdir -p "$R/skills/ac-polish/workflows"
+lines 20 >"$R/skills/ac-polish/references/a.md"; lines 60 >"$R/skills/ac-polish/references/b.md"; lines 40 >"$R/skills/ac-polish/references/c.md"
+lines 40 >"$R/skills/ac-polish/references/plan-checklist.md"   # keep the fixture's own pointer valid
+{ printf 'Checklist: references/plan-checklist.md (mandatory load)\n'; lines 59
+  printf '\n| mode | checklist |\n| --- | --- |\n| `a` | `references/a.md` |\n| `b` | `references/b.md` |\n| `c` | `references/c.md` |\n'; } \
+  >"$R/skills/ac-polish/SKILL.md"
+run_on "$R"
+# The claim is STRUCTURAL, not a magic number: total counts all three modes, worst counts only
+# the heaviest, so total - worst must equal exactly the two modes left out (a=20 + c=40 = 60).
+W=$(echo "$OUT" | sed -nE 's/.*worst path ([0-9]+)\/.*/\1/p'); T=$(echo "$OUT" | sed -nE 's/.*total inventory ([0-9]+) .*/\1/p')
+if [ "$RC" -eq 0 ] && echo "$OUT" | grep -q "heaviest mode is b (60 lines)" \
+   && [ -n "$W" ] && [ -n "$T" ] && [ $(( T - W )) -eq 60 ]; then
+  pass "Case 15: worst path adds the HEAVIEST mode only — total exceeds it by exactly the two modes left out (60)"
+else
+  fail "Case 15: expected total - worst = 60 with heaviest=b, got worst=$W total=$T rc=$RC. Output: $OUT"
+fi
+
+# --- Case 16: workflows/ with NO mode table is NOT-GATED ----------------------------------
+# Workflows are mode-bound by construction. If the table cannot be read, the worst path is a
+# guess, and a guess is not claimed.
+R=$(fix wf-notable)
+mkdir -p "$R/skills/ac-polish/workflows"; lines 10 >"$R/skills/ac-polish/workflows/x.md"
+{ cat "$R/skills/ac-polish/SKILL.md"; echo "See workflows/x.md."; } \
+  >"$R/skills/ac-polish/SKILL.md.tmp" && mv "$R/skills/ac-polish/SKILL.md.tmp" "$R/skills/ac-polish/SKILL.md"
+run_on "$R"
+if [ "$RC" -eq 2 ] && echo "$OUT" | grep -q "NOT-GATED.*no mode table"; then
+  pass "Case 16: workflows/ without a mode table is NOT-GATED — the worst path is not claimed"
+else
+  fail "Case 16: expected NOT-GATED (exit 2) on an unscoped workflows/, rc=$RC. Output: $OUT"
+fi
+
+# --- Case 17: a mode row naming a missing file FAILS ----------------------------------------
+R=$(fix mode-dangling)
+{ cat "$R/skills/ac-polish/SKILL.md"; printf '\n| mode | checklist |\n| --- | --- |\n| `ghost` | `references/ghost.md` |\n'; } \
+  >"$R/skills/ac-polish/SKILL.md.tmp" && mv "$R/skills/ac-polish/SKILL.md.tmp" "$R/skills/ac-polish/SKILL.md"
+run_on "$R"
+if [ "$RC" -eq 1 ] && echo "$OUT" | grep -q "mode 'ghost' names 'references/ghost.md', which does not exist"; then
+  pass "Case 17: a mode row pointing at nothing FAILS, naming the mode and the file"
+else
+  fail "Case 17: dangling mode row not refused, rc=$RC. Output: $OUT"
+fi
+
+# --- Case 18: a workflows/ file nobody points at is UNCOUNTED FAT ---------------------------
+R=$(fix wf-orphan)
+mkdir -p "$R/skills/ac-polish/workflows"; lines 10 >"$R/skills/ac-polish/workflows/orphan.md"
+run_on "$R"
+if [ "$RC" -eq 2 ] && echo "$OUT" | grep -q "workflows/orphan.md exists but no lean SKILL.md points at it"; then
+  pass "Case 18: an unpointed workflows/ file is rejected as uncounted fat, same as references/"
+else
+  fail "Case 18: orphan workflow not rejected, rc=$RC. Output: $OUT"
+fi
+
+# --- Case 19: a FOREIGN-skill reference path is a citation, not a family load ------------
+# `skill-builder/references/x.md` is shared canon cited by pointer. Its bare tail
+# `references/x.md` must not resolve against the citing skill and fail on a file that
+# exists elsewhere.
+R=$(fix foreign-cite)
+{ cat "$R/skills/ac-polish/SKILL.md"; echo "Litmus: skill-builder/references/structure-standard.md § shape."; } \
+  >"$R/skills/ac-polish/SKILL.md.tmp" && mv "$R/skills/ac-polish/SKILL.md.tmp" "$R/skills/ac-polish/SKILL.md"
+run_on "$R"
+if [ "$RC" -eq 0 ] && ! echo "$OUT" | grep -q "structure-standard"; then
+  pass "Case 19: a foreign-skill references/ path is NOT resolved against the citing skill"
+else
+  fail "Case 19: foreign citation still misread as a dangling family pointer, rc=$RC. Output: $OUT"
+fi
+# ...while a genuinely dangling FAMILY-LOCAL pointer must still fail — do not fix this by widening.
+R=$(fix local-dangling)
+{ cat "$R/skills/ac-polish/SKILL.md"; echo "See references/does-not-exist.md."; } \
+  >"$R/skills/ac-polish/SKILL.md.tmp" && mv "$R/skills/ac-polish/SKILL.md.tmp" "$R/skills/ac-polish/SKILL.md"
+run_on "$R"
+if [ "$RC" -eq 1 ] && echo "$OUT" | grep -q "does-not-exist.md', which does not exist"; then
+  pass "Case 19b: a dangling FAMILY-LOCAL pointer still FAILS — the fix did not widen the check into uselessness"
+else
+  fail "Case 19b: local dangling pointer no longer refused, rc=$RC. Output: $OUT"
+fi
+
+# --- Case 20: per-package budgets read through skills/packages.json ------------------
+# A synthetic root carrying no manifest predates it: NOTICE and stand aside, the legs
+# above still hold the verdict.
+R=$(fix nomanifest)
+run_on "$R"
+if [ "$RC" -eq 0 ] && echo "$OUT" | grep -q "NOTICE"; then
+  pass "Case 20: a root with no skills/packages.json NOTICEs and stands aside (still exit 0)"
+else
+  fail "Case 20: expected exit 0 with a NOTICE, got $RC. Output: $OUT"
+fi
+
+# --- Case 12: the REAL registry passes its own check --------------------------------
+run_on "$ROOT"
+if [ "$RC" -eq 0 ]; then
+  pass "Case 12: the shipped family satisfies every leg, including the per-package budgets"
+else
+  fail "Case 12: the real repo does not satisfy the check, rc=$RC. Output: $OUT"
+fi
+
+echo
+if [ "$FAILURES" -eq 0 ]; then
+  echo "23-family-budget.test.sh: 0 failure(s)"
+  exit 0
+else
+  echo "23-family-budget.test.sh: ${FAILURES} failure(s)"
+  exit 1
+fi

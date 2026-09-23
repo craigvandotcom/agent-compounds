@@ -1,10 +1,20 @@
 #!/usr/bin/env bash
+# ---
+# id: 23-family-budget
+# prevents: the lean-family files growing without a number anyone defends — every previous "keep it
+#   small" rule was prose, and every one of them lost; the cap is counted over the LOADED PATH with
+#   the mandatory-load set DERIVED from the pointers, not a hardcoded list (the measured evasion with
+#   an extra step)
+# scope: LIVE_TEXT
+# severity: fail
+# fixture: lint/fixtures/23-family-budget
+# ---
 #
-# ac-budget-check.sh — the lean-pipeline anti-drift assertion (lint Check 23).
+# 23-family-budget.sh — the lean-family + loaded-path anti-drift assertion.
 #
 # ASSURANCE — MODE: blocking · ON-FAILURE: closed. Every leg fails CLOSED: a discovery set
-# that resolves to nothing exits non-zero carrying NOT-GATED, because a cap that measured
-# no files is not a cap that held.
+# that resolves to nothing exits NOT-GATED, because a cap that measured no files is not a cap
+# that held.
 #
 # WHY A SCRIPT AND NOT A RULE IN PROSE: the plan's biggest named risk for the lean
 # pipeline is cultural — the files staying small — and every previous "keep it small" rule
@@ -56,19 +66,32 @@
 #                  2's /ac-[a-z] pattern structurally could not see them. The rename
 #                  erased that blind spot: Check 2 now resolves every invocation the
 #                  family makes.
+#   7. package     per-package spine/loaded budgets read through skills/packages.json (via
+#                  lint/lib/manifest.py, the JSON reader every v2 check that reads the
+#                  manifest shares): every package's live-measured spine (member SKILL.md
+#                  lines, the always-loaded surface) and loaded (all Markdown under member
+#                  dirs) must fit its manifest budget. A root carrying no manifest predates
+#                  it (a synthetic fixture tree): NOTICE and stand aside — the legs above
+#                  still hold the verdict; the real tree always carries the manifest, so
+#                  this leg always runs there.
 #
-# Usage:  ac-budget-check.sh [<repo root>]
-# Exit 0  every leg holds · Exit 1 at least one violation · Exit 2 usage error
+# Usage:  23-family-budget.sh [<repo root>]
+#   Exit 0  every leg holds
+#   Exit 1  at least one leg reports a real violation
+#   Exit 2  NOT-GATED — a discovery set resolved to nothing, or the given root does not exist
 set -uo pipefail
 
+CHECK_ID="23-family-budget"
 FAMILY_CAP=800
-LOADED_TARGET=1200   # a TARGET, not a cap (human ruling 2026-08-29): steer toward it, warn past it, never refuse on it
+LOADED_TARGET=1200   # a TARGET, not a cap: steer toward it, warn past it, never refuse on it
 
-ROOT="${1:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
+ROOT="${1:-$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)}"
 [ -d "$ROOT" ] || { echo "usage: $0 [<repo root>]" >&2; exit 2; }
 
 RC=0
+NOTGATED=0
 abc_fail() { echo "FAIL: $*"; RC=1; }
+abc_notgated() { echo "FAIL: $*"; NOTGATED=1; }
 count_lines() { [ -f "$1" ] && wc -l <"$1" | tr -d ' ' || echo 0; }
 
 # Family membership (all seven) vs the cap-measured set (six — see header) vs the
@@ -88,7 +111,7 @@ done
 
 if [ -z "${SKILL_MDS// /}" ]; then
   echo "FAIL: NOT-GATED — no lean-family SKILL.md found under $ROOT/skills (expected one of: $CAP_SKILLS); the caps measured nothing"
-  exit 1
+  exit 2
 fi
 
 FAMILY=0
@@ -133,8 +156,8 @@ for f in $SKILL_MDS; do
   # A references/ or workflows/ token PRECEDED BY '/' is the tail of a foreign-skill path
   # (`skill-builder/references/x.md`) — a citation of shared canon, not a family load. It
   # resolves nowhere in the family, so matching it produced a false "pointer nobody kept" on
-  # a file that exists (ac-check23-leg2-cross-family-citation-gy75). grep -oE has no
-  # lookbehind: require a non-path character (or line start) before the token, then strip it.
+  # a file that exists. grep -oE has no lookbehind: require a non-path character (or line
+  # start) before the token, then strip it.
   for ref in $(grep -oE '(^|[^/A-Za-z0-9_.-])(skills/ac-[a-z0-9-]+/)?(references|workflows)/[A-Za-z0-9._-]+\.md' "$f" \
                 | sed -E 's|^[^/A-Za-z0-9_.-]||' | sort -u); do
     case "$ref" in
@@ -188,7 +211,7 @@ EOF
   # A skill with workflows/ but no parseable mode table cannot have its worst path computed.
   # Workflows are mode-bound by construction, so silence here would be a guess.
   if [ -d "$skill_dir/workflows" ] && ls "$skill_dir/workflows"/*.md >/dev/null 2>&1 && [ -z "$(printf '%s' "$rows" | tr -d '[:space:]')" ]; then
-    abc_fail "NOT-GATED — $sname has workflows/ but no mode table names them; its worst path cannot be derived and is not claimed"
+    abc_notgated "NOT-GATED — $sname has workflows/ but no mode table names them; its worst path cannot be derived and is not claimed"
   fi
 done
 
@@ -201,14 +224,14 @@ for name in $REF_SKILLS; do
       [ -f "$r" ] || continue
       case " $COUNTED " in
         *" $r "*) ;;
-        *) abc_fail "NOT-GATED — ${r#$ROOT/} exists but no lean SKILL.md points at it, so no number here ever counted it" ;;
+        *) abc_notgated "NOT-GATED — ${r#$ROOT/} exists but no lean SKILL.md points at it, so no number here ever counted it" ;;
       esac
     done
   done
 done
 
 # The three numbers.
-[ -n "${COUNTED// /}" ] || abc_fail "NOT-GATED — zero mandatory-load files discovered; every number below would be one it never had to earn"
+[ -n "${COUNTED// /}" ] || abc_notgated "NOT-GATED — zero mandatory-load files discovered; every number below would be one it never had to earn"
 scope_of() {  # <path> -> "skill<TAB>mode" or ""
   printf '%s\n' "$SCOPED" | awk -F'\t' -v p="$1" '$1==p {print $2"\t"$3; exit}'
 }
@@ -294,7 +317,7 @@ done
 [ -f "$ROOT/skills/_tools/polish-fixpoint.sh" ] && LEAN_SCRIPTS="$LEAN_SCRIPTS $ROOT/skills/_tools/polish-fixpoint.sh"
 
 if [ -z "${LEAN_SCRIPTS// /}" ]; then
-  abc_fail "NOT-GATED — the lean script discovery set resolved to zero scripts; the declaration leg verified nothing"
+  abc_notgated "NOT-GATED — the lean script discovery set resolved to zero scripts; the declaration leg verified nothing"
 else
   SCRIPT_COUNT=0
   for s in $LEAN_SCRIPTS; do
@@ -313,4 +336,82 @@ fi
 
 # --- Leg 6: RETIRED — see header --------------------------------------------------------
 
-exit "$RC"
+# --- Leg 7: per-package budgets, via the manifest (skills/packages.json) ---------------
+# The reader lives in lint/lib/manifest.py — imported from THIS script's own lint/lib (not
+# the audited root's), so a synthetic fixture root missing lint/ entirely still runs the
+# leg: it is the manifest READ that may come up empty, never the module.
+LINT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+PKG_OUT=$(python3 - "$ROOT" "$CHECK_ID" "$LINT_DIR" <<'PYEOF'
+import os
+import sys
+
+root, check_id, lint_dir = sys.argv[1], sys.argv[2], sys.argv[3]
+sys.path.insert(0, lint_dir)
+from lib import manifest  # noqa: E402
+
+
+def count_lines(path):
+    with open(path, encoding="utf-8", errors="replace") as fh:
+        return sum(1 for _ in fh)
+
+
+try:
+    pkgs = manifest.packages(root)
+except manifest.ManifestMissing as exc:
+    print(f"  NOTICE {check_id}: {exc} — per-package budget leg skipped, judge verdict stands")
+    sys.exit(0)
+
+failures = 0
+for name, pkg in sorted(pkgs.items()):
+    if name.startswith("_") or not isinstance(pkg, dict):
+        continue
+    members = pkg.get("skills", [])
+    budget = pkg.get("budget", {})
+    if not isinstance(budget, dict) or "spine" not in budget or "loaded" not in budget:
+        print(f"FAIL {check_id}: package '{name}' carries no spine/loaded budget — "
+              "a package without a budget is unbudgeted growth")
+        failures += 1
+        continue
+    spine = 0
+    loaded = 0
+    for skill in members:
+        smd = os.path.join(root, "skills", skill, "SKILL.md")
+        if os.path.isfile(smd):
+            spine += count_lines(smd)
+        sdir = os.path.join(root, "skills", skill)
+        for dirpath, _dirnames, filenames in os.walk(sdir):
+            for fn in filenames:
+                if fn.endswith(".md"):
+                    loaded += count_lines(os.path.join(dirpath, fn))
+    legs = []
+    if spine > budget["spine"]:
+        legs.append(f"spine {spine} > {budget['spine']}")
+    if loaded > budget["loaded"]:
+        legs.append(f"loaded {loaded} > {budget['loaded']}")
+    if legs:
+        print(f"FAIL {check_id}: package '{name}' over budget — {', '.join(legs)} "
+              f"({len(members)} member(s)) — diet the package or raise the budget deliberately")
+        failures += 1
+    else:
+        print(f"  PASS {name:<22} spine {spine:>6}/{budget['spine']:<6} "
+              f"loaded {loaded:>6}/{budget['loaded']:<6}")
+sys.exit(1 if failures else 0)
+PYEOF
+)
+PKG_RC=$?
+[ -n "$PKG_OUT" ] && printf '%s\n' "$PKG_OUT"
+if [ "$PKG_RC" -ne 0 ]; then
+  echo "FAIL $CHECK_ID: per-package budget violation(s) — see above"
+  RC=1
+fi
+
+if [ "$RC" -ne 0 ]; then
+  echo "FAIL $CHECK_ID: family budget/anti-drift violation(s) — see above"
+  exit 1
+fi
+if [ "$NOTGATED" -ne 0 ]; then
+  echo "$CHECK_ID NOT-GATED: a discovery set resolved to nothing — see FAIL lines above" >&2
+  exit 2
+fi
+echo "  ok: $CHECK_ID — the family budget and anti-drift legs hold"
+exit 0
