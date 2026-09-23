@@ -1,10 +1,12 @@
 #!/usr/bin/env bash
-# 21-assurance-declarations.test.sh — the fixture proving Check 21's contract.
+# 21-assurance-declarations.test.sh — proof harness for lint/checks/21-assurance-declarations.sh:
+# the four-field schema, fail-open-only-for-advisory, the PENDING-DECISION/BACKSTOP escapes,
+# orphan detection over hooks/, and the NOT-GATED (exit 2) paths.
 #
-#   PROBE: a wiring entry with no assurance object is RED naming the entry; a
-#           conforming blocking+closed declaration is GREEN; blocking+fail-open
-#           with no escape is RED; a tree missing the judge is NOT-GATED
-#           (exit 2); the real registry is GREEN.
+# Every case builds a throwaway root under $TMPDIR with its own engine/hooks.wiring.json, its own
+# hooks/ executables, and its own .beads/issues.jsonl. Fixture beads are synthetic jsonl lines fed
+# to the parser — NEVER live board mutations. The final case runs the check against the REAL repo
+# so the fixtures cannot drift into proving something it does not do.
 #
 # ASSURANCE
 #   PROBE:    bash lint/checks/21-assurance-declarations.test.sh
@@ -14,76 +16,159 @@
 set -uo pipefail
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-CHECK="$HERE/21-assurance-declarations.py"
+CHECK="$HERE/21-assurance-declarations.sh"
 ROOT="$(cd "$HERE/../.." && pwd)"
-REG="$ROOT/scripts/assurance-declarations-check.sh"
+CASES=0
+FAILURES=0
 
-fails=0
-ok()  { echo "  ok    $1"; }
-bad() { echo "  FAIL  $1"; fails=$((fails + 1)); }
+WORK="$(mktemp -d "${TMPDIR:-/tmp}/assurance-decl.XXXXXX")"
+cleanup() { rm -rf "$WORK"; }
+trap cleanup EXIT
 
-build_tree() { # <root> <hooks-json-text>
-  local w="$1" body="$2"
-  mkdir -p "$w/scripts" "$w/hooks" "$w/engine"
-  cp "$REG" "$w/scripts/"
-  chmod +x "$w/scripts/"*.sh
-  printf '%s' "$body" > "$w/engine/hooks.wiring.json"
+N=0
+GOOD='{"PROBE":"p","SCHEDULE":"s","MODE":"advisory","ON-FAILURE":"open"}'
+
+# fixture <assurance-json-or-empty> [extra-hook-file-content] -> root path on stdout
+# Builds a root whose single wiring entry runs hooks/wired.sh with the given declaration.
+fixture() {
+  local decl="$1" extra="${2:-}"
+  N=$((N + 1))
+  local root="$WORK/f$N"
+  mkdir -p "$root/hooks" "$root/engine" "$root/.beads"
+
+  printf '#!/bin/bash\nexit 0\n' > "$root/hooks/wired.sh"
+
+  if [ -n "$decl" ]; then
+    jq -n --argjson a "$decl" \
+      '{_doc:"fixture", wiring:[{id:"wired", event:"PreToolUse", command:"{HOOKS}/wired.sh", harnesses:["claude"], scope:["org"], assurance:$a}]}' \
+      > "$root/engine/hooks.wiring.json"
+  else
+    jq -n '{_doc:"fixture", wiring:[{id:"wired", event:"PreToolUse", command:"{HOOKS}/wired.sh", harnesses:["claude"], scope:["org"]}]}' \
+      > "$root/engine/hooks.wiring.json"
+  fi
+
+  # A synthetic board: one OPEN decision, one CLOSED decision, one OPEN task.
+  {
+    printf '%s\n' '{"id":"bd-open-dec","issue_type":"decision","status":"open"}'
+    printf '%s\n' '{"id":"bd-closed-dec","issue_type":"decision","status":"closed"}'
+    printf '%s\n' '{"id":"bd-open-task","issue_type":"task","status":"open"}'
+  } > "$root/.beads/issues.jsonl"
+
+  [ -n "$extra" ] && printf '%s\n' "$extra" > "$root/hooks/loose.sh"
+  printf '%s' "$root"
 }
 
-DECL='{"PROBE":"run the test harness","SCHEDULE":"CI lint job","MODE":"blocking","ON-FAILURE":"closed"}'
+run_check() { # <expected exit> <label> <root>
+  local want="$1" label="$2" root="$3" out rc
+  CASES=$((CASES + 1))
+  out=$(bash "$CHECK" "$root" 2>&1); rc=$?
+  if [ "$rc" = "$want" ]; then
+    printf '  PASS  %s\n' "$label"
+  else
+    printf '  FAIL  %s (wanted exit %s, got %s)\n' "$label" "$want" "$rc"
+    printf '%s\n' "$out" | sed 's/^/          | /'
+    FAILURES=$((FAILURES + 1))
+  fi
+}
 
-# --- RED: wiring entry carries no assurance declaration ------------------------
-w="$(mktemp -d)"
-build_tree "$w" '{"wiring":[{"id":"demo","command":"echo hi"}]}'
-out="$(python3 "$CHECK" "$w" 2>&1)"; rc=$?
-if [ "$rc" = 1 ] && printf '%s' "$out" | grep -q "wiring 'demo' carries no assurance declaration"; then
-  ok "RED: undeclared wiring -> exit 1 naming the entry"
-else
-  bad "RED case: expected 1 naming 'demo', got $rc"; printf '%s\n' "$out"
-fi
-rm -rf "$w"
+run_check_grep() { # <expected exit> <needle> <label> <root>
+  local want="$1" needle="$2" label="$3" root="$4" out rc
+  CASES=$((CASES + 1))
+  out=$(bash "$CHECK" "$root" 2>&1); rc=$?
+  if [ "$rc" = "$want" ] && printf '%s' "$out" | grep -q "$needle"; then
+    printf '  PASS  %s\n' "$label"
+  else
+    printf '  FAIL  %s (wanted exit %s carrying %q, got %s)\n' "$label" "$want" "$needle" "$rc"
+    printf '%s\n' "$out" | sed 's/^/          | /'
+    FAILURES=$((FAILURES + 1))
+  fi
+}
 
-# --- RED: blocking + fail-open with no escape -----------------------------------
-w="$(mktemp -d)"
-build_tree "$w" '{"wiring":[{"id":"demo","command":"echo hi","assurance":{"PROBE":"p","SCHEDULE":"s","MODE":"blocking","ON-FAILURE":"open"}}]}'
-out="$(python3 "$CHECK" "$w" 2>&1)"; rc=$?
-if [ "$rc" = 1 ] && printf '%s' "$out" | grep -q "MODE: blocking with ON-FAILURE: open and no escape"; then
-  ok "RED: blocking fail-open with no escape -> exit 1"
-else
-  bad "RED fail-open case: expected 1, got $rc"; printf '%s\n' "$out"
-fi
-rm -rf "$w"
+echo "--- the four-field schema ---"
+run_check 0 "conforming declaration -> PASSES" "$(fixture "$GOOD")"
+run_check_grep 1 "wiring 'wired' carries no assurance declaration" \
+  "wiring entry with NO declaration -> FAILS naming the entry" "$(fixture "")"
+run_check 1 "declaration missing PROBE -> FAILS" \
+  "$(fixture '{"SCHEDULE":"s","MODE":"advisory","ON-FAILURE":"open"}')"
+run_check 1 "declaration missing SCHEDULE -> FAILS" \
+  "$(fixture '{"PROBE":"p","MODE":"advisory","ON-FAILURE":"open"}')"
+run_check 1 "declaration missing MODE -> FAILS" \
+  "$(fixture '{"PROBE":"p","SCHEDULE":"s","ON-FAILURE":"open"}')"
+run_check 1 "declaration missing ON-FAILURE -> FAILS" \
+  "$(fixture '{"PROBE":"p","SCHEDULE":"s","MODE":"advisory"}')"
+run_check 1 "MODE outside blocking|advisory -> FAILS" \
+  "$(fixture '{"PROBE":"p","SCHEDULE":"s","MODE":"sometimes","ON-FAILURE":"open"}')"
 
-# --- GREEN: conforming blocking + closed declaration ----------------------------
-w="$(mktemp -d)"
-build_tree "$w" "{\"wiring\":[{\"id\":\"demo\",\"command\":\"echo hi\",\"assurance\":$DECL}]}"
-out="$(python3 "$CHECK" "$w" 2>&1)"; rc=$?
-if [ "$rc" = 0 ] && printf '%s' "$out" | grep -q "all declared"; then
-  ok "GREEN: conforming declaration -> exit 0"
-else
-  bad "GREEN case: expected 0, got $rc"; printf '%s\n' "$out"
-fi
-rm -rf "$w"
+echo "--- fail-open is legal only for advisory ---"
+run_check 0 "blocking + ON-FAILURE: closed -> PASSES" \
+  "$(fixture '{"PROBE":"p","SCHEDULE":"s","MODE":"blocking","ON-FAILURE":"closed"}')"
+run_check_grep 1 "MODE: blocking with ON-FAILURE: open and no escape" \
+  "blocking + fail-open with NO escape -> FAILS" \
+  "$(fixture '{"PROBE":"p","SCHEDULE":"s","MODE":"blocking","ON-FAILURE":"open"}')"
 
-# --- NOT-GATED: the judge script is missing from the audited tree ---------------
-w="$(mktemp -d)"
-mkdir -p "$w/hooks" "$w/engine"
-printf '{"wiring":[]}\n' > "$w/engine/hooks.wiring.json"
-out="$(python3 "$CHECK" "$w" 2>&1)"; rc=$?
-if [ "$rc" = 2 ] && printf '%s' "$out" | grep -q "NOT-CHECKED"; then
-  ok "NOT-GATED: missing judge -> exit 2, verified nothing"
-else
-  bad "NOT-GATED case: expected 2, got $rc"; printf '%s\n' "$out"
-fi
-rm -rf "$w"
+echo "--- PENDING-DECISION is self-expiring ---"
+run_check 0 "escape citing an OPEN DECISION bead -> PASSES" \
+  "$(fixture '{"PROBE":"p","SCHEDULE":"s","MODE":"blocking","ON-FAILURE":"open","PENDING-DECISION":"bd-open-dec"}')"
+run_check 1 "escape citing a CLOSED decision bead -> FAILS (a ruling must be executed)" \
+  "$(fixture '{"PROBE":"p","SCHEDULE":"s","MODE":"blocking","ON-FAILURE":"open","PENDING-DECISION":"bd-closed-dec"}')"
+run_check 1 "escape citing an OPEN NON-decision bead -> FAILS" \
+  "$(fixture '{"PROBE":"p","SCHEDULE":"s","MODE":"blocking","ON-FAILURE":"open","PENDING-DECISION":"bd-open-task"}')"
+run_check 1 "escape citing a NONEXISTENT id -> FAILS" \
+  "$(fixture '{"PROBE":"p","SCHEDULE":"s","MODE":"blocking","ON-FAILURE":"open","PENDING-DECISION":"bd-nope"}')"
 
-# --- the real registry is green -------------------------------------------------
-out="$(python3 "$CHECK" 2>&1)"; rc=$?
-if [ "$rc" = 0 ]; then
-  ok "GREEN: the real registry's wiring is fully declared"
-else
-  bad "real-tree case: expected 0, got $rc"; printf '%s\n' "$out"
-fi
+echo "--- duplicate board records (the wedge head -1 cannot survive) ---"
+DUP="$(fixture '{"PROBE":"p","SCHEDULE":"s","MODE":"blocking","ON-FAILURE":"open","PENDING-DECISION":"bd-open-dec"}')"
+# The exact wedge shape: the SAME id exported twice, one record open, one closed.
+printf '%s\n' '{"id":"bd-open-dec","issue_type":"decision","status":"closed"}' >> "$DUP/.beads/issues.jsonl"
+run_check 1 "duplicate board records for a cited id -> FAILS naming the count, not head -1" "$DUP"
 
-echo "21-assurance-declarations.test.sh: ${fails} failure(s)"
-[ "$fails" -eq 0 ]
+echo "--- BACKSTOP: a ruled fail-open, not a pending one ---"
+run_check 0 "BACKSTOP naming an EXISTING path -> PASSES" \
+  "$(fixture '{"PROBE":"p","SCHEDULE":"s","MODE":"blocking","ON-FAILURE":"open","BACKSTOP":"hooks/wired.sh catches the rest"}')"
+run_check 1 "BACKSTOP naming a MISSING path -> FAILS" \
+  "$(fixture '{"PROBE":"p","SCHEDULE":"s","MODE":"blocking","ON-FAILURE":"open","BACKSTOP":"hooks/gone.sh catches the rest"}')"
+
+echo "--- orphan detection ---"
+run_check 1 "unwired, undeclared executable in hooks/ -> FAILS" \
+  "$(fixture "$GOOD" '#!/bin/bash
+exit 0')"
+run_check 0 "declared utility naming a CALLER -> PASSES" \
+  "$(fixture "$GOOD" '#!/bin/bash
+# ASSURANCE-ROLE: utility
+# CALLER: harness-sync.sh
+exit 0')"
+run_check 1 "declared utility with NO CALLER -> FAILS" \
+  "$(fixture "$GOOD" '#!/bin/bash
+# ASSURANCE-ROLE: utility
+exit 0')"
+run_check 0 "declared orphan citing an OPEN decision -> PASSES" \
+  "$(fixture "$GOOD" '#!/bin/bash
+# ASSURANCE-ROLE: orphan
+# PENDING-DECISION: bd-open-dec
+exit 0')"
+run_check 1 "declared orphan citing a CLOSED decision -> FAILS" \
+  "$(fixture "$GOOD" '#!/bin/bash
+# ASSURANCE-ROLE: orphan
+# PENDING-DECISION: bd-closed-dec
+exit 0')"
+run_check 1 "unknown ASSURANCE-ROLE -> FAILS" \
+  "$(fixture "$GOOD" '#!/bin/bash
+# ASSURANCE-ROLE: vibes
+exit 0')"
+
+echo "--- NOT-GATED: verified nothing is never a pass (exit 2) ---"
+NOJSON="$WORK/no-hooks-json"; mkdir -p "$NOJSON/hooks" "$NOJSON/.beads"
+run_check_grep 2 "NOT-GATED" \
+  "engine/hooks.wiring.json missing entirely -> exit 2, verified nothing" "$NOJSON"
+
+EMPTY="$(fixture "$GOOD")"
+jq -n '{_doc:"fixture", wiring:[]}' > "$EMPTY/engine/hooks.wiring.json"
+run_check_grep 2 "NOT-GATED" \
+  "zero wiring entries -> exit 2, verified nothing" "$EMPTY"
+
+echo "--- against the live repo ---"
+run_check 0 "every wiring entry + hooks/ executable in THIS repo is declared" "$ROOT"
+
+echo ""
+echo "21-assurance-declarations.test.sh: ${CASES} cases, ${FAILURES} failures"
+[ "$FAILURES" -eq 0 ]

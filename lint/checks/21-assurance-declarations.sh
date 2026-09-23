@@ -1,57 +1,64 @@
 #!/usr/bin/env bash
+# ---
+# id: 21-assurance-declarations
+# prevents: a mechanism that does not say what it does when it breaks — a hooks/ guard that stayed
+#   fail-open against a store that does not exist, and an executable with no wiring at all, neither
+#   detectable while "wired" was the only claim anyone made
+# scope: HOOKS
+# severity: fail
+# fixture: lint/fixtures/21-assurance-declarations
+# ---
 #
-# assurance-declarations-check.sh — every mechanism DECLARES its failure semantics,
-# and no executable hides in hooks/ undeclared (ac-on0y.4).
+# 21-assurance-declarations.sh — every mechanism DECLARES its failure semantics,
+# and no executable hides in hooks/ undeclared.
 #
-# lint.sh Check 18 proves a guard CAN fire. Check 20 proves a proof test IS RUN. This
-# proves a mechanism SAYS WHAT IT DOES WHEN IT BREAKS — because "wired" and "working"
-# are different claims, and hooks/ contained a guard that had been fail-open against an
-# empty store for months plus an executable with no wiring at all.
+# Check 18 proves a guard CAN fire; Check 20 proves a proof test IS RUN. This
+# proves a mechanism SAYS WHAT IT DOES WHEN IT BREAKS — because "wired" and
+# "working" are different claims.
 #
-# Usage:  assurance-declarations-check.sh [<repo root>]
-# Exit 0  every wiring entry and hooks/ executable carries a conforming declaration
-# Exit 1  at least one does not (each reported as FAIL: ...)
+# Usage:  21-assurance-declarations.sh [<repo root>]     (default: this checkout)
 #
 # THE SCHEMA — four fields on each hooks.json wiring entry's `assurance` object:
 #   PROBE       how you would show it is alive
 #   SCHEDULE    what triggers it
 #   MODE        blocking | advisory   (DECLARED, never inferred: hooks.json's event/matcher
-#               shape cannot distinguish advisory skill-edit-guard from blocking
-#               bead-capture-guard — they are both PreToolUse)
+#               shape cannot distinguish them — advisory skill-edit-guard and blocking
+#               bead-capture-guard are both PreToolUse)
 #   ON-FAILURE  open | closed
 #
 # FAIL-OPEN IS LEGAL ONLY FOR ADVISORY. A blocking mechanism declaring ON-FAILURE: open
-# needs exactly one of two escapes, and both are self-expiring or verifiable:
+# needs exactly one of two escapes, each self-expiring or verifiable:
 #   PENDING-DECISION: <bead-id>  the fail-open is an UNRESOLVED fork. Valid only while the
 #       cited bead is issue_type=="decision" AND status=="open", resolved by parsing the
 #       committed .beads/issues.jsonl directly — NO br dependency, because br is a locally
-#       installed binary absent from CI runners and lint.sh runs on ubuntu-latest. Citing a
-#       closed, missing, or non-decision bead FAILS: a ruled decision must be executed, not
-#       squatted on, and a stray open task cannot host the escape.
+#       installed binary absent from CI runners. Citing a closed, missing, or non-decision
+#       bead FAILS: a ruled decision must be executed, not squatted on, and a stray open
+#       task cannot host the escape.
 #   BACKSTOP: <named mechanism>  the fail-open is a RULED design with something else
-#       catching what slips through. Added because bead-capture-guard is blocking and
-#       deliberately fails open on unparseable shell (a guard must not wedge an unattended
-#       3am loop) with the ac-bead-refine stamp-gate as its backstop — a real, decided case
-#       that is not a pending decision. When the value names a path, that path must EXIST,
+#       catching what slips through. When the value names a path, that path must EXIST,
 #       so a backstop cannot be a comforting sentence about a file nobody kept.
 #
 # ORPHAN DETECTION: an executable in hooks/ with neither a wiring entry nor a declared
 # role is a failure. Roles: `ASSURANCE-ROLE: utility|test-harness` + `CALLER:` naming its
 # real caller, or `ASSURANCE-ROLE: orphan` + the same PENDING-DECISION escape.
 #
+#   Exit 0   every wiring entry and hooks/ executable carries a conforming declaration
+#   Exit 1   at least one does not (each reported as FAIL: ...)
+#   Exit 2   NOT-GATED — verified nothing: engine/hooks.wiring.json is missing, or it
+#            declares zero wiring entries
 set -uo pipefail
 
-ROOT="${1:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
+ROOT="${1:-$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)}"
 HOOKS_JSON="$ROOT/engine/hooks.wiring.json"
 BOARD="$ROOT/.beads/issues.jsonl"
+CHECK_ID="21-assurance-declarations"
 FAILURES=0
 
 ad_fail() { echo "FAIL: $*"; FAILURES=$(( FAILURES + 1 )); }
 
 if [ ! -r "$HOOKS_JSON" ]; then
-  ad_fail "engine/hooks.wiring.json missing — wiring and its declarations unverifiable"
-  echo "assurance-declarations: ${FAILURES} failure(s)"
-  exit 1
+  echo "$CHECK_ID NOT-GATED: engine/hooks.wiring.json missing — wiring and its declarations unverifiable" >&2
+  exit 2
 fi
 
 # resolve_pending <bead-id> -> 0 if it is an OPEN DECISION bead, else 1 with a reason
@@ -90,9 +97,8 @@ resolve_pending() {
 
 COUNT=$(jq '.wiring | length' "$HOOKS_JSON" 2>/dev/null || echo 0)
 if [ "$COUNT" -eq 0 ]; then
-  ad_fail "hooks.json declares ZERO wiring entries — this check verified nothing (NOT-GATED)"
-  echo "assurance-declarations: ${FAILURES} failure(s)"
-  exit 1
+  echo "$CHECK_ID NOT-GATED: hooks.json declares ZERO wiring entries — verified nothing" >&2
+  exit 2
 fi
 
 i=0
@@ -168,7 +174,8 @@ for f in "$ROOT"/hooks/*.py "$ROOT"/hooks/*.sh; do
 done
 
 if [ "$FAILURES" -eq 0 ]; then
-  echo "assurance-declarations: $COUNT wiring entries + hooks/ executables all declared"
+  echo "  ok: $CHECK_ID — $COUNT wiring entries + hooks/ executables all declared"
+  exit 0
 fi
-echo "assurance-declarations: ${FAILURES} failure(s)"
-[ "$FAILURES" -eq 0 ]
+echo "FAIL $CHECK_ID: ${FAILURES} undeclared or wrongly-declared mechanism(s) — see above"
+exit 1
