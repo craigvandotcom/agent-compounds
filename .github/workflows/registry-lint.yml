@@ -1,50 +1,11 @@
 name: Registry Lint
 
 on:
+  # No path filter: the suite is seconds long, and a filter list rots as files move.
   push:
     branches: [main]
-    paths:
-      - "skills/**"
-      - "hooks/**"
-      - "scripts/**"
-      - "lint.sh"
-      - "lint/**"
-      - ".github/workflows/**"
-      # .beads/** is the EXPIRY TRIGGER for Check 21's PENDING-DECISION escapes: closing a
-      # cited decision bead must re-run the check, or an expired escape rots silently until
-      # some unrelated push happens to notice (ac-on0y.4).
-      - ".beads/**"
-      # bash lint.sh runs the FULL suite with no --changed filter, but the workflow itself
-      # only TRIGGERS on a path match — a push touching only one of these was never seen by
-      # CI at all, so Checks 03/04/05/08/09/33's actual subjects (README.md, AGENTS.md,
-      # agents/*.md, deploy.sh, harnesses.json) went unaudited on their own edits
-      # (skills/packages.json is already covered by "skills/**" above — the
-      # manifest is the retuning source).
-      - "README.md"
-      - "AGENTS.md"
-      - "agents/**"
-      - "deploy.sh"
-      - "harnesses.json"
   pull_request:
     branches: [main]
-    paths:
-      - "skills/**"
-      - "hooks/**"
-      - "scripts/**"
-      - "lint.sh"
-      - "lint/**"
-      - ".github/workflows/**"
-      # .beads/** is the EXPIRY TRIGGER for Check 21's PENDING-DECISION escapes: closing a
-      # cited decision bead must re-run the check, or an expired escape rots silently until
-      # some unrelated push happens to notice (ac-on0y.4).
-      - ".beads/**"
-      # see the push trigger's comment above — same gap, same fix.
-      - "README.md"
-      - "AGENTS.md"
-      - "agents/**"
-      - "deploy.sh"
-      - "harnesses.json"
-      - "skills/packages.json"
 
 jobs:
   registry-lint:
