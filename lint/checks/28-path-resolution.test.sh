@@ -172,8 +172,65 @@ else
   fail "Case 9: expected exit 2, got $RC. Output: $OUT"
 fi
 
+# --- Case 10: form-3 — a root-relative top-level-dir citation resolves --------
+TREE="$T/form3-ok"; mkdir -p "$TREE/engine"
+mk "$TREE/skills/demo/SKILL.md" <<'EOF'
+See `engine/wiring.json` for the manifest.
+EOF
+mk "$TREE/engine/wiring.json" <<'EOF'
+{}
+EOF
+run
+if [ "$RC" -eq 0 ]; then
+  pass "Case 10: a root-relative top-level-dir citation (engine/wiring.json) resolves"
+else
+  fail "Case 10: expected exit 0, got $RC. Output: $OUT"
+fi
+
+# --- Case 11: RED — a missing root-relative top-level-dir citation fails ------
+TREE="$T/form3-red"; mkdir -p "$TREE/engine"
+mk "$TREE/skills/demo/SKILL.md" <<'EOF'
+See `engine/missing.json` for the manifest.
+EOF
+run
+if [ "$RC" -eq 1 ] && echo "$OUT" | grep -q "engine/missing.json"; then
+  pass "Case 11: a missing root-relative top-level-dir citation (engine/missing.json) FAILS, named"
+else
+  fail "Case 11: expected exit 1 naming engine/missing.json, got $RC. Output: $OUT"
+fi
+
+# --- Case 12: form-3 latitude — resolves against ANY skill's own subdirectory -
+TREE="$T/form3-any-skill"; mkdir -p "$TREE/tools" "$TREE/skills/citer" "$TREE/skills/owner/tools"
+mk "$TREE/skills/citer/SKILL.md" <<'EOF'
+Run `tools/build.sh` first.
+EOF
+mk "$TREE/skills/owner/tools/build.sh" <<'EOF'
+#!/bin/sh
+EOF
+run
+if [ "$RC" -eq 0 ]; then
+  pass "Case 12: a bare top-level-dir citation resolves against any skill's own subdirectory"
+else
+  fail "Case 12: expected exit 0, got $RC. Output: $OUT"
+fi
+
+# --- Case 13: form-3 excludes an ambiguous top-level dir (a `scripts/`-shaped -
+# name recurring under >=3 skills means bare mentions are routinely self- or
+# consumer-app references, not citations into this repo) -----------------------
+TREE="$T/form3-ambiguous"; mkdir -p "$TREE/scripts"
+for s in a b c; do mkdir -p "$TREE/skills/$s/scripts"; done
+mk "$TREE/skills/demo/SKILL.md" <<'EOF'
+See `scripts/does-not-exist-anywhere.sh` for the example.
+EOF
+run
+if [ "$RC" -eq 0 ]; then
+  pass "Case 13: a top-level dir recurring under >=3 skills is excluded from form 3 (not flagged)"
+else
+  fail "Case 13: expected exit 0 (scripts/ excluded, ambiguous), got $RC. Output: $OUT"
+fi
+
 if [ "$FAILURES" -eq 0 ]; then
-  echo "28-path-resolution.test.sh: 9 passed, 0 failed"
+  echo "28-path-resolution.test.sh: 13 passed, 0 failed"
   exit 0
 fi
 echo "28-path-resolution.test.sh: 0 passed, $FAILURES failed"

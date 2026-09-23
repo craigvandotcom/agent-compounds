@@ -118,6 +118,62 @@ else
   bad "EMPTY: expected exit 2 NOT-CHECKED, got $rc"; cat "$OUT"
 fi
 
+# --- 7 SLUG: a catalog entry citing the bare stem in backticks is not an orphan
+t="$work/slug"
+mkdir -p "$t/skills/catalog/references"
+printf '%s\n' '# catalog' '' '| Prompt | Use when |' '| --- | --- |' \
+  '| `bug-hunter` | Standard bug hunt |' \
+  > "$t/skills/catalog/SKILL.md"
+printf '# bug-hunter\n' > "$t/skills/catalog/references/bug-hunter.md"
+rc=$(run_check "$t")
+if [ "$rc" = 0 ]; then
+  ok "SLUG: a bare-stem inline-code citation (\`bug-hunter\`) keeps the file alive"
+else
+  bad "SLUG: expected exit 0, got $rc"; cat "$OUT"
+fi
+
+# --- 8 SLUG boundary: a similarly-named stem does NOT false-match ------------
+t="$work/slug-boundary"
+mkdir -p "$t/skills/catalog/references"
+printf '%s\n' '# catalog' '' 'See `bug-hunter-alien` for the exotic variant.' \
+  > "$t/skills/catalog/SKILL.md"
+printf '# bug-hunter\n' > "$t/skills/catalog/references/bug-hunter.md"
+rc=$(run_check "$t")
+if [ "$rc" = 1 ] && grep -q "skills/catalog/references/bug-hunter.md is an orphan" "$OUT"; then
+  ok "SLUG BOUNDARY: a longer sibling stem does not false-match a shorter one"
+else
+  bad "SLUG BOUNDARY: expected exit 1 naming bug-hunter.md, got $rc"; cat "$OUT"
+fi
+
+# --- 9 GLOB: a category row citing a glob pattern is not an orphan ------------
+t="$work/glob"
+mkdir -p "$t/skills/catalog/references"
+printf '%s\n' '# catalog' '' \
+  '| Category | Files |' '| --- | --- |' \
+  '| Query Performance | `references/query-*.md` (2) |' \
+  > "$t/skills/catalog/SKILL.md"
+printf '# missing-indexes\n' > "$t/skills/catalog/references/query-missing-indexes.md"
+printf '# covering-indexes\n' > "$t/skills/catalog/references/query-covering-indexes.md"
+rc=$(run_check "$t")
+if [ "$rc" = 0 ]; then
+  ok "GLOB: a glob-pattern citation (\`references/query-*.md\`) covers every matching file"
+else
+  bad "GLOB: expected exit 0, got $rc"; cat "$OUT"
+fi
+
+# --- 10 GLOB negative: a non-matching glob leaves the file an orphan ----------
+t="$work/glob-miss"
+mkdir -p "$t/skills/catalog/references"
+printf '%s\n' '# catalog' '' 'See `references/conn-*.md` for connection docs.' \
+  > "$t/skills/catalog/SKILL.md"
+printf '# missing-indexes\n' > "$t/skills/catalog/references/query-missing-indexes.md"
+rc=$(run_check "$t")
+if [ "$rc" = 1 ] && grep -q "skills/catalog/references/query-missing-indexes.md is an orphan" "$OUT"; then
+  ok "GLOB NEGATIVE: a non-matching glob does not rescue an unrelated file"
+else
+  bad "GLOB NEGATIVE: expected exit 1 naming query-missing-indexes.md, got $rc"; cat "$OUT"
+fi
+
 echo
 if [ "$fails" -eq 0 ]; then
   echo "All 31-orphan-references contract cases passed."
