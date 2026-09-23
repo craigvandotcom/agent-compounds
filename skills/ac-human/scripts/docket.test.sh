@@ -7,6 +7,7 @@ SELF=$(cd "$(dirname "$0")" && pwd)
 DOCKET="$SELF/docket.sh"
 W=$(mktemp -d); trap 'rm -rf "$W"' EXIT
 PASS=0; FAIL=0
+ALL=""    # every rendered case, for the width assertion at the end
 ok()   { PASS=$((PASS + 1)); }
 bad()  { FAIL=$((FAIL + 1)); echo "FAIL: $1"; }
 has()  { printf '%s' "$OUT" | grep -qF -- "$2" && ok || bad "$1 — expected: $2"; }
@@ -14,6 +15,10 @@ hasnt(){ printf '%s' "$OUT" | grep -qF -- "$2" && bad "$1 — unexpected: $2" ||
 before(){ a=$(printf '%s\n' "$OUT" | grep -nF -- "$2" | head -1 | cut -d: -f1)
           b=$(printf '%s\n' "$OUT" | grep -nF -- "$3" | head -1 | cut -d: -f1)
           [ -n "$a" ] && [ -n "$b" ] && [ "$a" -lt "$b" ] && ok || bad "$1 — '$2' not before '$3'"; }
+# block_has: the mini-block starting at the line == <id-line> (up to the next blank line)
+# carries <substring> — the shape a stacked gate/lane/member block renders as.
+block_has(){ chunk=$(awk -v id="$2" 'index($0,id)==1{f=1} f{print; if($0==""){exit}}' <<<"$OUT")
+             printf '%s' "$chunk" | grep -qF -- "$3" && ok || bad "$1 — expected '$3' in block '$2'"; }
 
 R="$W/repo"; mkdir -p "$R/.beads" "$R/.claude"; git -C "$R" init -q
 TODAY=$(date +%F)
@@ -80,62 +85,72 @@ EOF
 chmod +x "$W/br"
 export AC2_BR_CMD="$W/br" AC_HUMAN_FRICTION_CMD="cat '$R/frictions.json'" AC_HUMAN_MEMORY_CMD="cat '$R/memory.json'"
 
-OUT=$(cd "$R" && "$DOCKET")
+OUT=$(cd "$R" && "$DOCKET"); ALL="$ALL
+$OUT"
 
 # order + tiering
-before "P0 before P1"                 "g-p0 "      "g-p1-old"
+before "P0 before P1"                 "g-p0 · "    "g-p1-old"
 before "P1 oldest first"              "g-p1-old"   "g-p1-new"
-before "decisions before actions"     "decisions ("  "actions ("
-has    "next is P0"                   "next: g-p0"
-has    "action grouped"               "actions (1)"
+before "decisions before actions"     "🔴 DECISIONS"  "🔴 ACTIONS"
+has    "next is P0"                   "→ next g-p0"
+has    "action grouped"               "🔴 ACTIONS · 1"
 hasnt  "deferred excluded"            "g-deferred"
 hasnt  "future defer excluded"        "g-future"
 hasnt  "closed excluded"              "g-closed"
-has    "proposal on docket"           "prop-1"
-has    "proposals hint"               "⚠ 1 pipeline proposals pending"
+has    "proposal on docket"           "prop-1 ·"
+has    "proposals hint"               "⚠ 1 proposal(s) pending"
 # memo
 has    "bare decision → no memo"      "⚠ no memo"
-has    "partial memo → gate-incomplete" "⚠ gate-incomplete (no consequence, recommendation)"
+has    "partial memo → gate-incomplete" "⚠ gate-incomplete (no consequence"
 # anti-rot
-printf '%s\n' "$OUT" | grep -F "g-p0 " | grep -qF "(tap-ready)" && ok || bad "verified today → tap-ready"
-has    "earlier stamp → stale"        "⚠ stale — reverify (verified 2020-01-01)"
-printf '%s\n' "$OUT" | grep -F "g-p1-new" | grep -qF "never verified" && ok || bad "no stamp → never verified"
-has    "released history surfaced"    "⚠ released ×1 before — read events"
+block_has "verified today → tap-ready"  "g-p0 · 24h · P0"   "(tap-ready)"
+has    "earlier stamp → stale"        "⚠ stale — reverify (verified"
+block_has "no stamp → never verified" "g-p1-new · 2d · P1" "never verified"
+block_has "released history surfaced" "g-p1-new · 2d · P1" "⚠ released ×1 — read events"
 # lanes
-has    "label >5 collapses"           "🔁 flood — 6 queued"
-hasnt  "P2 lane member not itemized"  "• flood-0"
-has    "P1 lane member stays itemized" "flood-urgent"
-has    "old lane elevated"            "🔁 Run the oldlane sitting — 6 queued"
-has    "unreadable titles flagged"    "⚠ 6 unreadable titles"
+has    "label >5 collapses"           "🔁 FLOOD · 6"
+hasnt  "P2 lane member not itemized"  "flood-0 ·"
+has    "P1 lane member stays itemized" "flood-urgent · 2d · P1"
+block_has "old lane elevated"         "🔁 OLDLANE · 6" "⚠ elevated — run this sitting"
+has    "unreadable titles flagged"    "⚠ 6 unreadable titles — re-title"
 # declared lane
-has    "declared lane card"           "· 1 unanimous · 1 split"
-has    "unanimous member marked"      "✓ dl-un"
-has    "split member unmarked"        "· dl-split"
-has    "batch accept offered"         "→ Accept all 1 unanimous recommendations"
+has    "declared lane card"           "1 unanimous · 1 split"
+has    "unanimous member marked"      "✓ dl-un · 4d"
+has    "split member unmarked"        "· dl-split · 4d"
+has    "batch accept offered"         "→ accept 1 unanimous ✓"
 # cards
-has    "friction count excludes resolved/minor" "top 3 of 3 open critical/common"
-has    "critical+common marked"       "[critical·common] f-both"
-has    "critical only"                "[critical] f-crit"
-has    "common only"                  "[common] f-common"
+has    "friction count excludes resolved/minor" "🧰 FRICTIONS · top 3 of 3"
+has    "critical+common marked"       "1. [critical·common] w40"
+has    "critical only"                "[critical] w30"
+has    "common only"                  "[common] w20"
 hasnt  "resolved hidden"              "f-resolved"
 before "friction weight order"        "f-both"     "f-crit"
-has    "memory row rendered"          "[duplicate] a.md ↔ b.md  score 9 → merge"
-has    "stray human-pending"          "stray-1"
+has    "memory row rendered"          "1. [duplicate] 9 → merge"
+block_has "memory row files"          "1. [duplicate] 9 → merge" "↔ b.md"
+has    "stray human-pending"          "stray-1 ·"
 
 # memory source absent → `?`, not a crash
-OUT=$(cd "$R" && AC_HUMAN_MEMORY_CMD='echo "memory-rollup.py not found" >&2; exit 127' "$DOCKET")
-has    "memory absent → ?"            "### 🧠 Memory — ? (memory-rollup.py not found)"
+OUT=$(cd "$R" && AC_HUMAN_MEMORY_CMD='echo "memory-rollup.py not found" >&2; exit 127' "$DOCKET"); ALL="$ALL
+$OUT"
+has    "memory absent → ?"            "🧠 MEMORY · ? (memory-rollup.py not"
 
 # br failure → `?` and named, never an empty docket
-OUT=$(cd "$R" && BR_FAIL=1 "$DOCKET")
-has    "br failure → ? gates"         "### 🔴 Blocking — ? gates"
+OUT=$(cd "$R" && BR_FAIL=1 "$DOCKET"); ALL="$ALL
+$OUT"
+has    "br failure → ? gates"         "🔴 GATES · ?"
 has    "br failure named"             "br_call list"
-has    "br failure → ? remaining"     "Needs you: ? remaining"
+has    "br failure → ? remaining"     "🧑 NEEDS YOU · ? gates"
 
 # --gates slice
-OUT=$(cd "$R" && "$DOCKET" --gates)
-has    "gates header"                 "## repo —"
-hasnt  "gates omits plans"            "Feed the builders"
+OUT=$(cd "$R" && "$DOCKET" --gates); ALL="$ALL
+$OUT"
+has    "gates header"                 "gates · no upstream"
+hasnt  "gates omits plans"            "🟡 PLANS"
+
+# Every line fits a phone: 40 columns, never wrapped.
+wide=$(printf '%s\n' "$ALL" | python3 -c 'import sys; print(max(len(l.rstrip("\n")) for l in sys.stdin))')
+if [ "$wide" -le 40 ]; then echo "ok   width: widest line $wide"; ok
+else echo "FAIL width: widest line $wide > 40"; bad "phone width"; fi
 
 echo "PASS=$PASS FAIL=$FAIL"
 [ "$FAIL" -eq 0 ]

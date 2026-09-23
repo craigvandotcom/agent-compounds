@@ -77,6 +77,7 @@ T, ROOT, MODE = sys.argv[1], sys.argv[2], sys.argv[3]
 NOW = dt.datetime.now(dt.timezone.utc)
 TODAY = dt.date.today().isoformat()          # local calendar date — the freshness day boundary
 failed = []
+W, IND = 40, "   "     # every line fits a phone screen unwrapped; rows indent 3
 
 def read(name, cmd):
     try:
@@ -105,8 +106,40 @@ def age(s):
     m = int((NOW - t).total_seconds() // 60)
     return f"{m}m" if m < 60 else f"{m // 60}h" if m < 48 * 60 else f"{m // 1440}d"
 
-def cut(s, n):
-    s = " ".join(str(s or "").split()); return s if len(s) <= n else s[: n - 1] + "…"
+def cut(s, n=W - len(IND)):
+    """Cut at a word boundary with an ellipsis — never mid-word."""
+    s = " ".join(str(s or "").split())
+    if len(s) <= n: return s
+    c = s[: n - 1]; sp = c.rfind(" ")
+    if sp > n * 0.6: c = c[:sp]
+    return c.rstrip(" ,:;—-(") + "…"
+
+def wrap2(s, w=W - len(IND)):
+    """Up to 2 lines of a title, word-wrapped; the 2nd clipped with an ellipsis."""
+    s = " ".join(str(s or "").split())
+    if not s: return []
+    if len(s) <= w: return [s]
+    c = s[:w]; sp = c.rfind(" ")
+    if sp > w * 0.6: c = c[:sp]
+    rest = s[len(c):].strip()
+    return [c, cut(rest, w)] if rest else [c]
+
+def whole(s, w=W - len(IND)):
+    """An id you act on, never cut: wrapped at its hyphens, each line inside w."""
+    lines = [""]
+    for part in re.findall(r"[^-]+-?", str(s or "")):
+        if lines[-1] and len(lines[-1]) + len(part) > w: lines.append("")
+        lines[-1] += part
+    return [l[i:i + w] for l in lines for i in range(0, len(l), w)] or [""]
+
+def pack(parts, width=W - len(IND)):
+    """Join short parts with ` · `, starting a new line whenever the next would overflow."""
+    lines = []
+    for p in parts:
+        if not p: continue
+        if lines and len(lines[-1]) + 3 + len(p) <= width: lines[-1] += " · " + p
+        else: lines.append(cut(p, width))
+    return lines
 
 # ── gate beads (board-scan § Docket health: on_docket) ────────────────────
 DOCKET = {"human-gate", "pipeline-proposal", "dream-proposal"}
@@ -177,10 +210,10 @@ def memo_tag(b):
     if len(miss) == len(MEMO): return "⚠ no memo"
     return f"⚠ gate-incomplete (no {', '.join(miss)})" if miss else ""
 
-def tags(b):
+def tag_list(b):
     out = [fresh_tag(b), memo_tag(b)]
-    if released.get(b["id"]): out.append(f"⚠ released ×{released[b['id']]} before — read events")
-    return " ".join(t for t in out if t)
+    if released.get(b["id"]): out.append(f"⚠ released ×{released[b['id']]} — read events")
+    return [t for t in out if t]
 
 def prio(b):
     p = b.get("priority"); return p if isinstance(p, int) else 9
@@ -215,21 +248,28 @@ for b in gates:
 itemized.sort(key=order)
 queued = sum(len(m) for _, m in lanes.values())
 
-def gate_line(b):
-    return f"  • {b['id']} {age(b['created_at'])} P{prio(b) if prio(b) < 9 else '?'} {cut(b.get('title'), 110)}   {tags(b)}".rstrip()
+def prio_tag(b):
+    return f"P{prio(b)}" if prio(b) < 9 else "P?"
+
+def gate_block(b):
+    """A gate as a stacked mini-block: id·age·P (col 0), title wrapped ≤2 lines, tags — indented."""
+    rows = [cut(f"{b['id']} · {age(b['created_at'])} · {prio_tag(b)}", W)]
+    rows += [IND + l for l in wrap2(b.get("title"))]
+    rows += [IND + l for l in pack(tag_list(b))]
+    return rows
 
 def lane_block(label, d, members):
     members.sort(key=order)
     oldest = max(members, key=lambda b: days(b["created_at"]))
-    name = (d or {}).get("name", label)
+    name = (d or {}).get("name", label).upper()
     elevated = len(members) >= 20 or days(oldest["created_at"]) > 21
-    head = f"🔁 {'Run the ' + name + ' sitting' if elevated else name} — {len(members)} queued (oldest {age(oldest['created_at'])})"
-    out = []
+    out = [cut(f"🔁 {name} · {len(members)}", W), IND + cut(f"oldest {age(oldest['created_at'])}")]
+    if elevated: out.append(IND + "⚠ elevated — run this sitting")
     if not d:
-        out.append(f"  {head}{'  [ELEVATED]' if elevated else ''}  → work the queue")
+        out.append(IND + "→ work the queue")
     else:
         un = [b for b in members if d.get("unanimous") and extract(b, d["unanimous"])]
-        out.append(f"  {head}{'  [ELEVATED]' if elevated else ''} · {len(un)} unanimous · {len(members) - len(un)} split")
+        out.append(IND + f"{len(un)} unanimous · {len(members) - len(un)} split")
         for b in members:
             vals = {f: extract(b, spec) for f, spec in (d.get("fields") or {}).items()}
             vals["title"] = b.get("title", "")
@@ -239,31 +279,41 @@ def lane_block(label, d, members):
                 try: parts.append(s.format(**{k: v for k, v in vals.items() if v}))
                 except (KeyError, IndexError, ValueError): pass
             line = " · ".join(parts) or b.get("title", "")
-            out.append(f"    {'✓' if b in un else '·'} {b['id']} {age(b['created_at'])} {cut(line, 120)}   {fresh_tag(b)}")
-        if un: out.append(f"    → Accept all {len(un)} unanimous recommendations (✓), then walk the {len(members) - len(un)} split")
+            out.append(cut(f"{'✓' if b in un else '·'} {b['id']} · {age(b['created_at'])}", W))
+            out += [IND + l for l in wrap2(line)]
+            ft = fresh_tag(b)
+            if ft: out.append(IND + cut(ft))
+        if un: out.append(IND + cut(f"→ accept {len(un)} unanimous ✓"))
     unread = sum(1 for b in members if UUID.search(b.get("title", "")))
-    if unread > 5: out.append(f"    ⚠ {unread} unreadable titles (raw uuid/hash) — offer a re-title pass; fix the filer")
+    if unread > 5: out.append(IND + cut(f"⚠ {unread} unreadable titles — re-title"))
+    out.append("")
     return out
 
 def red_section():
-    if beads is None: return ["### 🔴 Blocking — ? gates (br_call list failed)"]
-    out = [f"### 🔴 Blocking — {len(itemized)} itemized · {queued} in lanes"]
-    if not gates: out.append("—")
-    for k, title in (("decision", "decisions"), ("action", "actions")):
+    if beads is None: return ["🔴 GATES · ?", IND + "br_call list failed", ""]
+    if not gates: return ["🔴 GATES · 0", IND + "—", ""]
+    out = []
+    for k, title in (("decision", "DECISIONS"), ("action", "ACTIONS")):
         rows = [b for b in itemized if kind(b) == k]
-        if rows: out.append(f"{title} ({len(rows)})"); out += [gate_line(b) for b in rows]
+        if not rows: continue
+        out.append(f"🔴 {title} · {len(rows)}")
+        for i, b in enumerate(rows):
+            if i: out.append("")
+            out += gate_block(b)
+        out.append("")
     for label, (d, members) in sorted(lanes.items(), key=lambda kv: -len(kv[1][1])):
         out += lane_block(label, d, members)
     return out
 
 up, _ = read("unpushed", "git log @{u}..HEAD")
 up = up.strip() or "?"
-unpushed = f"unpushed ledger: {'NOT-CHECKED (no upstream)' if up == 'no-upstream' else up}"
+unpushed = "no upstream" if up == "no-upstream" else f"{up} unpushed"
 
 if MODE == "gates":
-    print(f"## {os.path.basename(ROOT)} — {len(gates) if beads is not None else '?'} gates · {unpushed}")
-    print("\n".join(red_section()))
-    if failed: print("⚠ ? " + " · ".join(failed))
+    gc = len(gates) if beads is not None else "?"
+    print(cut(f"{os.path.basename(ROOT)} · {gc} gates · {unpushed}", W))
+    print("\n".join(red_section()).rstrip())
+    if failed: print("\n".join(cut(f"? {x}", W) for x in failed))
     sys.exit(0)
 
 # ── 🟡 plans awaiting sign-off ────────────────────────────────────────────
@@ -303,30 +353,30 @@ for dp, dns, fns in os.walk(bdir) if os.path.isdir(bdir) else []:
         fm = front(os.path.join(dp, f)); st = fm.get("status", "?")
         if st == "complete": continue
         path = os.path.relpath(os.path.join(dp, f), ROOT)
-        if st == "candidate": hopper.append(f"  • {path} [candidate · from {fm.get('source', '?')}] → approve into pool / discard")
-        elif top == "active" and st == "captured": hopper.append(f"  • {path} [captured] → plan (/ac-plan)")
+        if st == "candidate": hopper.append((path, f"candidate · {fm.get('source', '?')}", "→ approve into pool / discard"))
+        elif top == "active" and st == "captured": hopper.append((path, "captured", "→ /ac-plan"))
         elif top == "pool": pool += 1
         elif re.match(r"v\d", top): legacy += 1
 
 # ── cards ─────────────────────────────────────────────────────────────────
 def friction_card():
     raw, ok = read("frictions", "friction-rollup.py")
-    if not ok: return ["### 🧰 Frictions — ?"]
+    if not ok: return ["🧰 FRICTIONS · ?", ""]
     try: d = json.loads(raw)["dream"]
     except (ValueError, KeyError, TypeError) as e:
-        failed.append(f"friction-rollup.py: {e}"); return ["### 🧰 Frictions — ?"]
+        failed.append(f"friction-rollup.py: {e}"); return ["🧰 FRICTIONS · ?", ""]
     live = [e for e in d.get("entries", []) if e.get("status") in (None, "open")
             and (e.get("promotable") or (e.get("recurrence") or 0) >= 3)]
     live.sort(key=lambda e: -(e.get("weight") or 0))
-    out = [f"### 🧰 Frictions — top {min(3, len(live))} of {len(live)} open critical/common"]
-    for e in live[:3]:
+    out = [f"🧰 FRICTIONS · top {min(3, len(live))} of {len(live)}"]
+    for i, e in enumerate(live[:3], 1):
         mark = "·".join(m for m, on in (("critical", e.get("promotable")),
                                         ("common", (e.get("recurrence") or 0) >= 3)) if on)
-        out.append(f"  • [{mark}] {e['id']} ({e.get('skill')}) w{int(e.get('weight') or 0)}"
-                   f" ×{e.get('recurrence')} {e.get('perceptibility') or '?'}")
-        out.append(f"      fix: {cut(e.get('proposed_fix'), 200)}")
-        out.append(f"      ledger: {e.get('path')}")
-    out.append("  → per entry: Promote (skill-improvement bead) · Won't fix · Later" if live else "—")
+        out.append(f"{i}. [{mark}] w{int(e.get('weight') or 0)}")
+        out += [IND + l for l in whole(e["id"])]
+        out.append(IND + cut("fix: " + (e.get("proposed_fix") or "—")))
+    out.append(IND + "→ promote · won't fix · later" if live else IND + "—")
+    out.append("")
     return out
 
 def memory_card():
@@ -334,17 +384,21 @@ def memory_card():
     if not ok:
         why = (open(f"{T}/memory.err").read().strip().splitlines() or ["failed"])[0]
         failed.pop()
-        return [f"### 🧠 Memory — ? ({why})"]
+        return [cut(f"🧠 MEMORY · ? ({why})", W), ""]
     try:
         d = json.loads(raw); rows = sorted(d.get("rows", []), key=lambda r: -(r.get("score") or 0))
     except (ValueError, TypeError, AttributeError) as e:
-        failed.append(f"memory-rollup.py: {e}"); return ["### 🧠 Memory — ?"]
-    out = [f"### 🧠 Memory — top {min(3, len(rows))} of {len(rows)} findings"]
-    for r in rows[:3]:
-        out.append(f"  • [{r.get('kind')}] {' ↔ '.join(r.get('files') or [])}  score {r.get('score')} → {r.get('action')}")
-        out.append(f"      {cut(r.get('evidence'), 200)}")
-    out.append("  → per row: draft the edit + diff, then Apply · Keep (stamp verified_against: <HEAD sha>) · Later" if rows else "—")
-    for e in d.get("errors") or []: failed.append(f"memory-rollup.py: {cut(e, 120)}")
+        failed.append(f"memory-rollup.py: {e}"); return ["🧠 MEMORY · ?", ""]
+    out = [f"🧠 MEMORY · top {min(3, len(rows))} of {len(rows)}"]
+    for i, r in enumerate(rows[:3], 1):
+        out.append(cut(f"{i}. [{r.get('kind')}] {r.get('score')} → {r.get('action')}", W))
+        for j, f in enumerate(r.get("files") or []):
+            lead = "↔ " if j else ""
+            out += [IND + (lead if k == 0 else " " * len(lead)) + l
+                    for k, l in enumerate(whole(os.path.basename(f), W - len(IND) - len(lead)))]
+    out.append(IND + "→ apply · keep · later" if rows else IND + "—")
+    for e in d.get("errors") or []: failed.append(f"memory-rollup.py: {cut(e, 60)}")
+    out.append("")
     return out
 
 # ── stray human-pending (not gated) ───────────────────────────────────────
@@ -352,26 +406,48 @@ STRAY = re.compile(r"waiting on|needs manual|requires account|human decision", r
 stray = [b for b in beads or [] if on_docket(b) and not labels(b) & DOCKET
          and STRAY.search((b.get("description") or "") + " " + (b.get("notes") or ""))]
 
-# ── render ────────────────────────────────────────────────────────────────
+# ── render: one stacked block per section, every line inside W ────────────
 props = sum(1 for b in gates if "pipeline-proposal" in labels(b))
 est = 2 * (len(itemized) + len([p for p in plans if "approve" in p[4]]))
-out = [f"## Docket — {os.path.basename(ROOT)} · {TODAY}", "",
-       f"Needs you: {'?' if beads is None else len(itemized)} remaining · {len(plans)} plan(s) to sign off · "
-       f"{len(hopper)} in hopper — ~{est} min" + (f"  ⚠ {props} pipeline proposals pending" if props else "")]
+
+out = [cut(f"{os.path.basename(ROOT)} · {TODAY}", W), ""]
+
+need = [f"{len(plans)} plan(s) to sign off", f"{len(hopper)} in hopper — ~{est}min"]
+if props: need.append(f"⚠ {props} proposal(s) pending")
 for label, (d, members) in lanes.items():
-    out.append(f"🔁 {(d or {}).get('name', label)}: {len(members)} queued — collapsed; still this sitting")
-if itemized: out.append(f"next: {itemized[0]['id']} {cut(itemized[0].get('title'), 80)}")
-out.append(unpushed)
-out += [""] + red_section() + [""]
-out.append(f"### 🟡 Feed the builders — {len(plans)}")
-out += [f"  • {p[2]} [{p[3]} · touched {dt.datetime.fromtimestamp(p[1]):%Y-%m-%d}] {p[4]}" for p in plans[:10]] or ["—"]
-out += ["", f"### 🟢 Stock the hopper — {len(hopper)}"]
-out += hopper[:10] or ["—"]
-out.append(f"  pool: {pool}" + (f" · ⚠ {legacy} legacy v*/ items (→ /ac-align migration)" if legacy else ""))
-out += [""] + friction_card() + [""] + memory_card()
+    need.append(cut(f"🔁 {(d or {}).get('name', label)} {len(members)} queued"))
+if itemized: need.append(f"→ next {itemized[0]['id']}")
+need.append(unpushed)
+out.append(f"🧑 NEEDS YOU · {'?' if beads is None else len(itemized)} gates")
+out += [IND + cut(n) for n in need] + [""]
+
+out += red_section()
+
+out.append(f"🟡 PLANS · {len(plans)}")
+if not plans: out.append(IND + "—")
+for p in plans[:10]:
+    out.append(cut(os.path.basename(p[2]), W))
+    out.append(IND + cut(f"{p[3]} · {dt.datetime.fromtimestamp(p[1]):%m-%d}"))
+    out.append(IND + cut(p[4]))
+out.append("")
+
+out.append(f"🟢 HOPPER · {len(hopper)}")
+if not hopper: out.append(IND + "—")
+for path, tag, action in hopper[:10]:
+    out.append(cut(os.path.basename(path), W))
+    out.append(IND + cut(tag))
+    out.append(IND + cut(action))
+out.append(IND + cut(f"pool {pool}" + (f" · ⚠ {legacy} legacy" if legacy else "")))
+out.append("")
+
+out += friction_card() + memory_card()
+
 if stray or failed:
-    out += ["", "### ⚠ Also"]
-    out += [f"  • {b['id']} {age(b['created_at'])} {cut(b.get('title'), 90)} — reads human-pending, not gated" for b in stray[:5]]
-    if failed: out.append("  ? " + " · ".join(failed))
-print("\n".join(out))
+    out.append("⚠ ALSO")
+    for b in stray[:5]:
+        out.append(cut(f"{b['id']} · {age(b['created_at'])}", W))
+        out += [IND + l for l in wrap2(b.get("title"))]
+        out.append(IND + "human-pending, not gated")
+    if failed: out += [IND + cut(f"? {x}") for x in failed]
+print("\n".join(out).rstrip() + "\n")
 PY
