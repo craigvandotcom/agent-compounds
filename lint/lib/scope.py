@@ -39,6 +39,9 @@ Sets:
              NOT the walk: the adopter-local artifacts (ledgers, the bead board,
              _archive/) are gitignored yet present on a working machine. Check
              27's surface. Falls back to the walk outside a git checkout.
+  COMMITTABLE  tracked plus untracked-not-ignored — what a commit could contain.
+             LIVE_TEXT and HARNESSES are cut to it: a gitignored copy of the tree
+             (a scratch snapshot) is never doctrine and never a harness.
   SCRIPTS    the runnable scripts the registry ships: .sh and .py files under
               skills/ and scripts/, tests excluded — Check 36's audit surface.
   CACHES     directory names that are build/interpreter caches — excluded from
@@ -111,18 +114,12 @@ def _walk():
 _paths = frozenset(_walk())
 
 
-def _tracked():
-    """Every file git tracks — exactly what a clone of this repo receives.
-
-    Deliberately NOT the filesystem walk: the adopter-local artifacts (friction
-    ledgers, the bead board, _archive/, past reviews) are gitignored but still sit
-    on a working machine, and a check asking "what does the PUBLISHED tree contain"
-    must not see them. Falls back to the walk outside a git checkout, so a check
-    run against a fixture root still has a population.
-    """
+def _git_files(*args):
+    """`git ls-files <args>` as a path set; the walk outside a git checkout, so a
+    check run against a fixture root still has a population."""
     try:
         proc = subprocess.run(
-            ["git", "--no-optional-locks", "-C", ROOT, "ls-files", "-z"],
+            ["git", "--no-optional-locks", "-C", ROOT, "ls-files", "-z", *args],
             capture_output=True, text=True, timeout=60, check=False,
         )
     except (OSError, subprocess.SubprocessError):
@@ -132,7 +129,8 @@ def _tracked():
     return frozenset(p for p in proc.stdout.split("\0") if p)
 
 
-TRACKED = _tracked()
+TRACKED = _git_files()
+COMMITTABLE = _git_files("--cached", "--others", "--exclude-standard")
 
 
 def _in_dir(path, dirname):
@@ -181,10 +179,10 @@ for p in sorted(_paths):
        and (base == "SKILL.md" or _in_dir(p, "references") or _in_dir(p, "reference") or _in_dir(p, "workflows")):
         _live.add(p)
 
-LIVE_TEXT = frozenset(_live)
+LIVE_TEXT = frozenset(_live & COMMITTABLE)
 LEDGER = frozenset(_ledger)
 ARCHIVE = frozenset(_archive)
-HARNESSES = frozenset(_harnesses)
+HARNESSES = frozenset(_harnesses & COMMITTABLE)
 HOOKS = frozenset(_hooks)
 ENGINE = frozenset(_engine)
 TEMPLATES = frozenset(_templates)
