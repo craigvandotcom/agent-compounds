@@ -1,9 +1,13 @@
 # Root ruff config — the explicit rule set for every .py outside skills/expert-consensus/
-# (which carries its own [tool.ruff] in pyproject.toml). CI installs unpinned ruff, whose
-# DEFAULT rule set widens across releases; naming the rules here means a ruff upgrade cannot
-# change what the gate checks.
-target-version = "py39"
+# (which carries its own [tool.ruff] in pyproject.toml). CI pins ruff==0.16.8 (registry-lint.yml)
+# so the rule set cannot drift out from under this gate. F (pyflakes) runs everywhere — it
+# catches real defects (undefined names, unused imports). E/W/I (style) run only under lint/,
+# the one directory that gates the gate; style noise elsewhere is not worth the churn.
+target-version = "py312"
 line-length = 120
 
 [lint]
 select = ["E", "F", "W", "I"]
+
+[lint.per-file-ignores]
+"!lint/**" = ["E", "W", "I"]

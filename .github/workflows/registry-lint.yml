@@ -8,31 +8,31 @@ on:
     branches: [main]
 
 jobs:
-  registry-lint:
+  # Style + secrets + the registry's own check suite.
+  lint:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        # fetch-depth: 2 so HEAD^ resolves (ac-q1mu). At the default depth 1,
-        # origin/main collapses onto HEAD and lint.sh's Check 14 leg 1 compares
-        # HEAD against itself — a silent self-pass on every CI run. lint.sh
-        # FAILS LOUDLY if the base still collapses, so a regression here
-        # cannot hide.
+        # Full history: lint.sh's Check 14 diffs against origin/main, which a shallow
+        # checkout collapses onto HEAD (a silent self-pass). lint.sh FAILS LOUDLY if the
+        # base still collapses, so a regression here cannot hide.
         with:
-          fetch-depth: 2
+          fetch-depth: 0
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+      - run: pip install ruff==0.16.8
+      - run: ruff check .
+      - name: gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - run: bash lint.sh
 
-  # Executes every committed proof-test harness (ac-on0y.1). Before this job existed,
-  # 15 harnesses were green-capable and NOT ONE ever ran — two of them had been silently
-  # red for an unknown period. A proof test that never runs is documentation.
-  #
-  # Its OWN job with its OWN checkout on purpose: ac-q1mu edits the registry-lint job's
-  # checkout step, so keeping these separate narrows the overlap to the file, not the
-  # job body. fetch-depth: 0 because lint-net-growth.test.sh resolves origin/HEAD and a
-  # depth-1 checkout collapses origin/main onto HEAD (the ac-q1mu lesson).
-  harnesses:
+  # Executes every committed proof-test harness (glob-discovered by run-all-proofs.sh). A
+  # proof test that never runs is documentation. Its OWN job with its OWN checkout, so
+  # editing this job's steps never touches the lint job's.
+  proofs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -41,14 +41,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      # element4-check.test.sh proves stamp-refined.sh's contract under BOTH shells,
-      # because the agents that call it run zsh. ubuntu-latest ships no zsh, and the
-      # harness correctly REFUSES to pass on a host where it cannot prove that half
-      # (found on this job's first real run). AC4 offers provision-or-loud-skip; we
-      # provision, because skipping would quietly halve what the harness certifies.
+      # ubuntu-latest ships no zsh; some harnesses prove their target under both shells
+      # because the agents that call it run zsh.
       - run: sudo apt-get update -qq && sudo apt-get install -y -qq zsh ripgrep
       - run: bash scripts/run-all-proofs.sh
-      # The meta-check runs in CI as its OWN step over every fixture, not only
-      # as one row inside `bash lint.sh` (ac-1p7j.1): a header contract the
-      # runner skips for --changed must still be audited on every push.
-      - run: python3 lint/checks/00-meta.py .

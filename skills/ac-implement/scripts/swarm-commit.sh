@@ -19,7 +19,7 @@
 #               refusal rule, the lock, the scoping, the lint-staged repair and the
 #               non-worker second-process case
 #   SCHEDULE:   on every commit taken through the lane; and on every CI run via
-#               scripts/run-all-proofs.sh (registry-lint `harnesses` job)
+#               scripts/run-all-proofs.sh (registry-lint `proofs` job)
 #   MODE:       blocking
 #   ON-FAILURE: closed — a refusal exits non-zero BEFORE the commit, and a rejected commit
 #               can never reach the push. Silence is never success here: every refusal

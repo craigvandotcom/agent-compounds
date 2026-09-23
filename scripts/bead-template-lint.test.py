@@ -12,7 +12,6 @@
 # each case is checked with a Probe: line built from bead-schema.md's exact grammar
 # (`Probe: \`<command>\` — tier: <tier>`) so the module's own extractor is exercised, not
 # a hand-rolled shortcut.
-import glob
 import importlib.util
 import os
 import sys

@@ -131,7 +131,7 @@ def render(d):
         for r in cross:
             out.append("<tr>" + "".join(f"<td>{esc(c)}</td>" for c in r) + "</tr>")
         out.append("</table>")
-    out.append(f"<p class=small>rendered from map.json by seams-render.py — edit the data, never this page.</p>")
+    out.append("<p class=small>rendered from map.json by seams-render.py — edit the data, never this page.</p>")
     return "\n".join(out) + "\n"
 
 

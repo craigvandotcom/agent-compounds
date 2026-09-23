@@ -9,7 +9,6 @@ Run directly:  python3 skills/skill-builder/scripts/friction-rollup.test.py
 Discovered automatically by scripts/run-all-proofs.sh (glob over *.test.py).
 """
 
-import datetime
 import glob
 import json
 import os
