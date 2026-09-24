@@ -12,8 +12,8 @@ reservations, teardown, build slots. The MCP server provides the tools
 ## The two-minute version
 
 1. **Mint** a Tier-1 identity at session start if you will reserve files or commit under
-   your own name; capture `name` + `registration_token`
-   (`references/session-procedure.md` § Mint, § Export).
+   your own name; capture `name` + `registration_token` and pass both on EVERY call, reads
+   included (`references/session-procedure.md` § Mint, § Export).
 2. **Reserve** the files you are about to edit, at the work grain, BEFORE editing
    (§ Reserve). On `FILE_RESERVATION_CONFLICT`: skip or re-plan — never claim over it.
 3. **Release + self-deregister** as your true last act (§ Release) — own name only,

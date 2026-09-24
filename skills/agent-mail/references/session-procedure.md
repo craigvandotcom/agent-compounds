@@ -19,13 +19,16 @@ mcp__mcp-agent-mail__macro_start_session(
 Capture the returned `name` AND `registration_token`.
 
 > **Two call-scoped facts (`ac-g93`):**
-> (1) thread `registration_token` EXPLICITLY on EVERY privileged / mutating Agent Mail
-> call — file reservations (`file_reservation_paths`, `release_file_reservations`,
+> (1) thread `registration_token` EXPLICITLY on EVERY Agent Mail call that takes
+> `agent_name`, reads included (`search_messages`, `fetch_inbox`, `whois`) — file reservations (`file_reservation_paths`, `release_file_reservations`,
 > `renew_file_reservations`, `force_release_file_reservation`), build slots,
 > `send_message` / `reply_message` (as `sender_token`), and `deregister_agent` /
 > `retire_agent`. Do NOT rely on same-session auth carry — it is transport-conditional
 > and never inherited by a separate phase child (blanket rule + verdict:
 > `agent-mail/references/agent-identity.md` § Call-scoped facts).
+> `whois` authenticates the agent it names — call it on yourself only; discover other
+> agents via `resource://agents/{project_key}`. `CONTACT_BLOCKED` on a send usually means
+> the recipient has deregistered — note it and move on; never retry or handshake around it.
 > (2) `export` lives only in the bash call that ran it — every later bash call is a
 > fresh shell: re-assert `AGENT_NAME` (and any env the pre-commit guard reads) in the
 > SAME call as each `git commit`/`git push`, or the guard treats you as anonymous and
