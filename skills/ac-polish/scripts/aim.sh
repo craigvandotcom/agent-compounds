@@ -136,7 +136,7 @@ if [ "$MODE" = files ]; then
   TLIST=$(printf '%s' "$TERMS" | sed 's/ · /\n/g; s/ — /\n/g' | sed 's/^[ `]*//; s/[ `]*$//' | grep -v '^$')
   ARGS=(); while IFS= read -r term; do [ -n "$term" ] && ARGS+=(-e "$term"); done <<< "$TLIST"
   CONTRACT_RE='\.test\.|\.spec\.|__tests__|/tests?/|/Tests/|/dev/|__mocks__|/fixtures?/'
-  ALL=$(cd "$ROOT" && rg --no-messages -l -w -F "${ARGS[@]}" --type ts --type swift --type kotlin --type sql \
+  ALL=$(cd "$ROOT" && rg --no-messages -l -w -F "${ARGS[@]}" --type ts --type swift --type kotlin --type sql --type py --type sh \
         -g '!*.generated.*' -g '!*.lock' -g '!node_modules' -g '!dist' -g '!build' -g '!.next' -g '!Pods' . 2>/dev/null \
         | sed 's|^\./||' | grep -vE "$EXRE" | sort -u || true)
   # the declaring file: `export type X` / `export interface X` / `struct X` / `class X` for any term
@@ -148,7 +148,7 @@ if [ "$MODE" = files ]; then
   FILES=$(printf '%s\n' "$ALL" | grep -vE "$CONTRACT_RE" || true)
   OUT=$(printf '%s\n' "$ALL" | grep -E "$CONTRACT_RE" || true)
   n=$(printf '%s\n' "$FILES" | grep -c . || true); m=$(printf '%s\n' "$OUT" | grep -c . || true)
-  FB="rg -l -w -F $(printf -- "-e '%s' " $(printf '%s\n' "$TLIST" | sed "s/'/'\\\\''/g")) --type ts --type swift --type kotlin --type sql -g '!*.generated.*'"
+  FB="rg -l -w -F $(printf -- "-e '%s' " $(printf '%s\n' "$TLIST" | sed "s/'/'\\\\''/g")) --type ts --type swift --type kotlin --type sql --type py --type sh -g '!*.generated.*'"
   printf '# aim files — %s files name the terms (%s contract-only excluded) · excluded: %s\n\n' "$n" "$m" "$EXCLUDE"
   printf '## files — the seams `files:` fence (rows may cite only these)\n\n'
   [ "$n" -gt 0 ] && printf '%s\n' "$FILES" | while read -r f; do [ -n "$f" ] || continue
