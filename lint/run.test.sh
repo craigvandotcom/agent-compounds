@@ -33,6 +33,11 @@
 #   5. Exit-code precedence: a run with one FAIL (1) and one NOT-GATED (2)
 #      check exits 1 (findings outrank a bare NOT-GATED); a run selecting
 #      only a lone skip (77) check exits 0 (a skip never fails a run alone).
+#   6. The front door itself (`lint.sh`, not `lint/run.py`) survives a
+#      literal top-level SyntaxError in the WORKING TREE's lint/run.py on a
+#      `--staged` run: lint.sh's own first hop extracts the INDEX's
+#      lint/run.py + lint/lib + lint/checks via git (never parses Python)
+#      before ever touching the working tree's copy.
 #
 # Runs under bash. Exit 0 = every case passed.
 
@@ -40,6 +45,7 @@ set -uo pipefail
 
 REGISTRY="$(cd "$(dirname "$0")/.." && pwd)"
 [ -f "$REGISTRY/lint/run.py" ] || { echo "HARNESS FAIL: $REGISTRY/lint/run.py missing"; exit 1; }
+[ -f "$REGISTRY/lint.sh" ] || { echo "HARNESS FAIL: $REGISTRY/lint.sh missing"; exit 1; }
 
 PASS=0
 FAIL=0
@@ -56,7 +62,9 @@ cp "$REGISTRY/lint/run.py" "$W/lint/run.py"
 cp "$REGISTRY/lint/lib/scope.py" "$W/lint/lib/scope.py"
 cp "$REGISTRY/lint/lib/frontmatter.py" "$W/lint/lib/frontmatter.py"
 cp "$REGISTRY/lint/lib/verdict.py" "$W/lint/lib/verdict.py"
+cp "$REGISTRY/lint.sh" "$W/lint.sh"
 RUN_PY="$W/lint/run.py"
+LINT_SH="$W/lint.sh"
 
 git init -q "$W"
 git -C "$W" config user.email t@t.t
@@ -222,6 +230,7 @@ git -C "$W" add \
 git -C "$W" commit -qm base >/dev/null
 
 run_new() { ( cd "$W" && python3 "$RUN_PY" --root "$W" "$@" ); }
+run_lintsh() { ( cd "$W" && bash "$LINT_SH" "$@" ); }
 exit_of() { python3 -c 'import json,sys; d=json.load(sys.stdin); print(d["checks"][0]["exit"])' 2>/dev/null; }
 result_of() { python3 -c 'import json,sys; d=json.load(sys.stdin); print(d["checks"][0]["result"])' 2>/dev/null; }
 ids_of()  { python3 -c 'import json,sys; d=json.load(sys.stdin); print(",".join(sorted(c["id"] for c in d["checks"])))' 2>/dev/null; }
@@ -454,6 +463,33 @@ if [ "$res15" = "staged-marker" ] && [ "$resctl15" = "ok" ]; then
   ok "a --staged run shows the STAGED lint/run.py's own (observably different) label, not the plain working-tree copy's"
 else
   bad "expected staged='staged-marker' working-tree='ok', got staged='$res15' working-tree='$resctl15': $out15 / $outctl15"
+fi
+
+# --- Case 16: the FRONT DOOR itself (lint.sh, not lint/run.py) survives a
+# literal top-level SyntaxError in the WORKING-TREE lint/run.py on a
+# --staged run. Case 14 proves the equivalent property for code that DOES
+# parse (a runtime break reachable only once argument parsing succeeds) and
+# explains why a fix living INSIDE run.py can never rescue an unparseable
+# file — python3 cannot even launch it, so no in-file delegation logic gets
+# a turn. The fix for THIS case lives in lint.sh's own first hop (bash,
+# which never parses run.py): it extracts the INDEX's lint/run.py +
+# lint/lib + lint/checks via git before the working tree's (possibly
+# broken) run.py is ever exec'd — this case is why it drives lint.sh
+# directly rather than lint/run.py.
+git -C "$W" reset -q --hard >/dev/null
+cp "$REGISTRY/lint/run.py" "$W/lint/run.py"
+cp "$REGISTRY/lint/lib/scope.py" "$REGISTRY/lint/lib/frontmatter.py" "$REGISTRY/lint/lib/verdict.py" "$W/lint/lib/"
+git -C "$W" add "$W/lint/run.py" "$W/lint/lib/scope.py" "$W/lint/lib/frontmatter.py" "$W/lint/lib/verdict.py"
+printf '\ndef broken(:\n' >> "$W/lint/run.py"   # literal top-level SyntaxError in the WORKING TREE only, never staged
+if python3 -c "import ast; ast.parse(open('$W/lint/run.py').read())" 2>/dev/null; then
+  bad "case 16 setup: expected the working-tree lint/run.py to be unparseable"
+fi
+out16=$(run_lintsh --check 50 --staged --json 2>/dev/null); rc16=$?
+res16=$(echo "$out16" | result_of)
+if [ "$rc16" = "0" ] && [ "$res16" = "ok" ]; then
+  ok "bash lint.sh --staged survives a literal SyntaxError in the WORKING-TREE lint/run.py once a valid lint/run.py is staged"
+else
+  bad "expected rc=0 result=ok despite the syntax-broken working-tree runner, got rc='$rc16' result='$res16': $out16"
 fi
 
 echo "---"
