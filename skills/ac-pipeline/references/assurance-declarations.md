@@ -64,5 +64,5 @@ When a gate cannot verify, it must say so and FAIL. Silence is never success.
   run (`scripts/run-all-proofs.sh`), a closed decision bead invalidates its escape.
 
 Enforcement: `lint.sh` Check 18 (a guard can fire) · Check 21 (a mechanism declares its
-failure semantics), each with a `*.test.sh` harness that the `harnesses` CI job executes;
+failure semantics), each with a `*.test.sh` harness that the `proofs` CI job executes;
 that a proof test itself runs is `scripts/run-all-proofs.sh` + the CI `proofs` job.

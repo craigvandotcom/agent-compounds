@@ -4,7 +4,7 @@
 #
 # ASSURANCE-ROLE: test-harness
 # CALLER: scripts/run-all-proofs.sh (glob-discovered, executed by the registry-lint
-#   `harnesses` CI job) and lint.sh Check 21, which audits this declaration. Deliberately
+#   `proofs` CI job) and lint.sh Check 21, which audits this declaration. Deliberately
 #   UNWIRED in engine/hooks.wiring.json: it is the PROOF for build_memory_digest.py, not
 #   a hook itself.
 #
