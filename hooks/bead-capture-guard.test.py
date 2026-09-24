@@ -1,6 +1,6 @@
 # ASSURANCE-ROLE: test-harness
 # CALLER: scripts/run-all-proofs.sh (glob-discovered, executed by the registry-lint
-# `proofs` CI job since ac-on0y.1) and lint.sh Check 18, which drives the same cases.
+# `proofs` CI job).
 # Deliberately UNWIRED in engine/hooks.wiring.json: it is the PROOF for bead-capture-guard.py,
 # not a hook itself. Declared so orphan detection (lint Check 21) does not read a live
 # proof harness as a dead executable.
