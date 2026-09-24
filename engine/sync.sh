@@ -357,9 +357,9 @@ write_generated() {
 # prune_orphan_projections <src-agents-dir> <dest-dir> — delete STAMPED generated
 # agent projections whose source agent no longer exists. Deleting a registry agent
 # otherwise strands its projection in every harness home — a phantom subagent the
-# harness still offers (the exact failure mode 09-stray-alias-agents guards in the
-# registry, mirrored here at every projection boundary). Unstamped (hand-written)
-# files are never touched.
+# harness still offers (the exact failure mode 25-archived-names' RETIRED_NAMES
+# leg guards in the registry, mirrored here at every projection boundary).
+# Unstamped (hand-written) files are never touched.
 prune_orphan_projections() { # <src-agents-dir> <dest-dir>
   local src="$1" dest="$2" g name
   [ -d "$dest" ] || return 0
@@ -1432,6 +1432,48 @@ install_commit_msg_hook() { # <repo-root>
   fi
 }
 
+# install_precommit_chain <repo-root> — installs hooks/pre-commit-chain (the actual
+# runner git invokes) as <hooks-dir>/pre-commit. Was hand-copied into every repo;
+# this is the one place that keeps it converged. Same refusal discipline as
+# install_lint_hook/install_commit_msg_hook, with one addition for THIS exact
+# filename: a real (non-symlink) `pre-commit` predates this installer in every repo
+# here, so a real file byte-identical to the canon (a hand-copy of it, not a
+# script the user wrote) converges to a managed symlink; a real file whose content
+# differs IS the "pre-commit the user wrote" case and is reported, never touched.
+install_precommit_chain() { # <repo-root>
+  local repo="$1" hooks_dir dest want
+  hooks_dir="$(git -C "$repo" rev-parse --git-path hooks 2>/dev/null)"
+  if [ -z "$hooks_dir" ]; then
+    echo "  WARN: no hooks dir resolvable for $repo — pre-commit chain runner not installed"
+    return 0
+  fi
+  dest="$hooks_dir/pre-commit"
+  if [ -e "$dest" ] && [ ! -L "$dest" ]; then
+    if ! cmp -s "$AC_ROOT/hooks/pre-commit-chain" "$dest"; then
+      echo "  SKIP (real pre-commit present and not the chain runner — refusing to overwrite): $dest"
+      return 0
+    fi
+    # content-identical real file: a hand-copy of the canon, safe to converge below
+  fi
+  if [ -L "$dest" ] && ! hook_link_is_ours "$dest" "$AC_ROOT/hooks/pre-commit-chain"; then
+    echo "  SKIP (symlink points elsewhere): $dest -> $(readlink "$dest")"
+    return 0
+  fi
+  want="$(hook_link_target "$dest" "$AC_ROOT/hooks/pre-commit-chain")"
+  if [ "$DRY" = 1 ]; then
+    if [ "$(readlink "$dest" 2>/dev/null)" != "$want" ]; then
+      echo "  link $dest -> $want"; note_change
+    fi
+    return 0
+  fi
+  mkdir -p "$hooks_dir"
+  if [ "$(readlink "$dest" 2>/dev/null)" != "$want" ]; then
+    ln -sfn "$want" "$dest"
+    note_change
+    echo "  linked $dest -> $want"
+  fi
+}
+
 # --- target renderers -------------------------------------------------------------
 sync_target() { # <target-base-dir> ("app" mode: also runs deploy.sh for .claude layer)
   local base="$1" mode="${2:-app}" dep_extra=""
@@ -1450,6 +1492,7 @@ sync_target() { # <target-base-dir> ("app" mode: also runs deploy.sh for .claude
 
   install_lint_hook "$base"
   install_commit_msg_hook "$base"
+  install_precommit_chain "$base"
   ensure_scratch_ignored "$base"
 
   if [ "$mode" = "app" ] && [ "$EN_CLAUDE" = "true" ]; then
@@ -1756,6 +1799,7 @@ fi
 # list, so a targets-only install would leave every WS1/WS2 commit ungated.
 install_lint_hook "$AC_ROOT"
 install_commit_msg_hook "$AC_ROOT"
+install_precommit_chain "$AC_ROOT"
 ensure_scratch_ignored "$AC_ROOT"
 
 if [ "$DO_ALL" = 1 ]; then
@@ -1827,9 +1871,38 @@ if [ "$DRY" = 0 ] && [ -f "$STANCE_PROBE" ]; then
     echo "# WARNING: stance spawn probe red (non-blocking) — a stance cannot spawn or write scratch on a harness above"
 fi
 
+# --- deployed-consumer audits (moved from lint checks 07/12, W4 of the lint-system
+# upgrade) --------------------------------------------------------------------------
+# These audit DEPLOY TARGETS (a consumer's `.claude` tree), which sync.sh owns —
+# lint.sh gates only this repo's own tree, so 07/12 never ran in CI or pre-commit
+# there (lint-review liveness C1). --check only: a broken symlink or a dead name in
+# a consumer's every-prompt surface is DISCLOSED here, not written by --root/--all,
+# so it belongs in the drift signal rather than the write path. `lib/consumers.py`
+# (still `lint/lib/`, check 14 also imports it) resolves the union via
+# engine/machine.sh exactly as before the move — nothing here re-derives it.
+AUDIT_FAILURES=0
+if [ "$CHECK" = 1 ]; then
+  for audit in "$ENGINE_DIR/checks/consumer-symlinks.py" "$ENGINE_DIR/checks/deployed-app-conformance.py"; do
+    [ -f "$audit" ] || continue
+    echo
+    echo "== $(basename "$audit" .py)"
+    audit_out="$(python3 "$audit" 2>&1)"; audit_rc=$?
+    printf '%s\n' "$audit_out" | sed 's/^/  /'
+    if [ "$audit_rc" = 1 ]; then
+      note_change   # findings: real drift a re-sync of that target would not silently carry
+    elif [ "$audit_rc" != 0 ]; then
+      AUDIT_FAILURES=$((AUDIT_FAILURES + 1))
+    fi
+  done
+fi
+
 echo "Done. changes=$CHANGES$([ "$DRY" = 1 ] && echo ' (dry-run)')"
 if [ "$FAILURES" -gt 0 ]; then
   echo "ERROR: $FAILURES target(s) skipped by the public-target guard — fix their .gitignore and re-run" >&2
+  exit 1
+fi
+if [ "$AUDIT_FAILURES" -gt 0 ]; then
+  echo "ERROR: $AUDIT_FAILURES deployed-consumer audit(s) could not run — their machine facts are unresolved or refused; fix machine.json (see engine/machine.sh --help)" >&2
   exit 1
 fi
 if [ "$CHECK" = 1 ] && [ "$CHANGES" -gt 0 ]; then

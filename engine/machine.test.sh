@@ -25,9 +25,10 @@
 #     (only the `harnesses` value is merged, never the whole machine file)
 #   the DEPTH case's reader leg: the engine copied to a path of a different depth,
 #     AC_MACHINE_FILE at a fixture, and --targets resolving exactly the fixture's
-#     targets. The checks 07/12 and `sync.sh --all -n` legs cannot be green here —
-#     those readers switch in ac-vlje.8 and ac-vlje.5 — so they join this case at the
-#     epic's own pick.
+#     targets. engine/checks/{consumer-symlinks,deployed-app-conformance}.py (née
+#     lint checks 07/12, moved to sync.sh --check in W4 of the lint-system upgrade)
+#     and `sync.sh --all -n` legs cannot be green here — those readers switch in
+#     ac-vlje.8 and ac-vlje.5 — so they join this case at the epic's own pick.
 #
 # ASSURANCE
 #   PROBE:    bash engine/machine.test.sh
@@ -221,7 +222,8 @@ fi
 # The engine copied to a path of a different DEPTH. The reader derives its own root, so it
 # must still resolve exactly the fixture's targets wherever it lives.
 #
-# (checks 07/12 and `sync.sh --all -n` join this case at the epic's pick — ac-vlje.8 and
+# (engine/checks/{consumer-symlinks,deployed-app-conformance}.py — née lint checks
+#  07/12 — and `sync.sh --all -n` join this case at the epic's pick — ac-vlje.8 and
 #  ac-vlje.5 switch those readers; neither is switched yet.)
 DEEP="$W/deep/one/two/three/registry"
 mkdir -p "$DEEP"
