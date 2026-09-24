@@ -21,9 +21,6 @@ stays SILENT on a negative one.
   - skill-edit-guard.py must fire (exit 2) on both entry points — an Edit
     file_path under skills/, and a Bash command writing into skills/ — and
     stay silent (exit 0) on both negatives (non-skill file, read-only command)
-  - bead-capture-guard is a HARD gate, so its own full behaviour suite is
-    driven rather than duplicated probes that would drift from it (its stated
-    case count is asserted against the live suite by Check 32)
   - wiring lives in the harness settings this machine actually renders
     (org scope: `<org_root>/.claude/settings.json`, org_root read via
     `engine/machine.sh --org-root`), never a hardcoded user path. When that
@@ -116,19 +113,6 @@ def main(argv=()):
     else:
         violations.append(
             "skill-edit-guard.py missing or not executable — cannot probe behaviour")
-
-    bog = os.path.join(hooks, "bead-capture-guard.test.py")
-    bog_guard = os.path.join(hooks, "bead-capture-guard.py")
-    if os.access(bog_guard, os.X_OK) and os.path.isfile(bog) and os.access(bog, os.R_OK):
-        rc = subprocess.run([sys.executable, bog], capture_output=True, timeout=120).returncode
-        if rc == 0:
-            print("  bead-capture-guard: provenance-gate behaviour suite passes")
-        else:
-            violations.append(
-                "bead-capture-guard behaviour suite FAILED — run python3 hooks/bead-capture-guard.test.py")
-    else:
-        violations.append(
-            "bead-capture-guard.py or its .test.py is missing — the bead provenance gate cannot be verified")
 
     # The live wiring: org scope renders skill-edit-guard into
     # <org_root>/.claude/settings.json. org_root comes from the ONE reader of

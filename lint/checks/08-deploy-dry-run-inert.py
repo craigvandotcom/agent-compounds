@@ -10,18 +10,9 @@
 # ---
 """08-deploy-dry-run-inert — deploy.sh --dry-run must be inert.
 
-Run `engine/deploy.sh <tmp> --skills <first-skill> -n`; a nonzero exit is a
-finding, and any file left in the temp dir is a finding (a crash before any
-write would also leave the dir empty, so the exit code is checked too — or
-the inertness test passes for a broken deploy.sh).
-
-A "dry-run self-test could not find any skill to test with" is a finding, never
-NOT-GATED: an empty skills tree is exactly the state this check must flag.
-
-scope: LIVE_TEXT DEPLOY_SCRIPT is the nearest standing set, kept only for
-00-meta.py's header contract — there is no deploy-surface set. The check
-exercises deploy.sh and the first SKILL.md found, not a text scan; no
-selection reads the declared scope (every run means the whole suite).
+Runs `engine/deploy.sh <tmp> --skills <first-skill> -n` and fails if the exit
+is nonzero or any file lands in the temp dir. An empty skills tree is itself
+a finding, never NOT-GATED — the empty case is exactly what must be flagged.
 
 Exit: 0 dry run inert, 1 findings. Never 2 — the check always scans.
 """
@@ -74,13 +65,10 @@ def scan(root):
                     capture_output=True, text=True, timeout=120, check=False,
                 )
                 dryrun_exit = proc.returncode
-            except PermissionError:
-                dryrun_exit = 126  # what bash reports for a non-executable
-            except FileNotFoundError:
-                dryrun_exit = 127  # what bash reports for a missing script
-            except subprocess.TimeoutExpired:
-                dryrun_exit = 124
-            if dryrun_exit != 0:
+            except (OSError, subprocess.SubprocessError) as exc:
+                dryrun_exit = None
+                fail(f"deploy.sh --dry-run could not run: {exc}")
+            if dryrun_exit is not None and dryrun_exit != 0:
                 fail(f"deploy.sh --dry-run exited {dryrun_exit} (expected 0)")
             leaked = sorted(os.listdir(tmp)) if os.path.isdir(tmp) else []
             if leaked:

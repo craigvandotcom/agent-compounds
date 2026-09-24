@@ -14,15 +14,15 @@
 One check, three legs, one governed idea: a name that no longer exists must
 not survive in live text or on disk.
 
-  ARCHIVE-DERIVED LEG (unchanged): every directory name under _archive/skills/
-  that is NOT also a live skill dir and NOT a standing exclusion must be
-  absent from LIVE_TEXT (SKILL.md, references/, reference/, workflows/ —
-  lib.scope's set). The name set is DERIVED FROM THE FILES, never memory:
-  archive a dir and its name becomes illegal in live text in the same commit.
-  _archive/ is adopter-local and gitignored (a checkout without it has
-  nothing to derive) — this leg alone SKIPS when _archive/skills does not
-  exist; it never blocks the other two legs and never claims a pass on their
-  behalf.
+  ARCHIVE-DERIVED LEG: every directory name under _archive/skills/ that is
+  NOT also a live skill dir and NOT a standing exclusion must be absent from
+  LIVE_TEXT (SKILL.md, references/, reference/, workflows/ — lib.scope's
+  set). The name set is DERIVED FROM THE FILES, never memory: archive a dir
+  and its name becomes illegal in live text in the same commit — any hit is
+  a violation outright, no exceptions list. _archive/ is adopter-local and
+  gitignored (a checkout without it has nothing to derive) — this leg alone
+  SKIPS when _archive/skills does not exist; it never blocks the other two
+  legs and never claims a pass on their behalf.
 
   RETIRED_NAMES fixed list (one data list, one check guards every retired
   name): each entry is a name that died on disk and must never be copied
@@ -56,20 +56,6 @@ them):
       an archived v1 whose live successor has disappeared must be renamed out
       of the constant so its name joins the governed set.
 
-The allowlist lint/allowlists/25-archived-names.txt (absent today — 0 live
-carriers, nothing to admit) is, when it exists, DATED and SHRINK-ONLY per
-lib.ratchet, and applies to the archive-derived leg only — the fixed list is
-zero tolerance, never allowlisted:
-  - every entry must still carry at least one archived-name hit; a file the
-    sweeps cleaned must have its entry REMOVED in the same change;
-  - growth is refused against the committed base (lib.ratchet.base_ref,
-    honouring LINT_BASE_REF): an entry not present in the committed
-    allowlist fails the check. The file's first landing has no committed
-    version at base — that IS the seed, and the ratchet starts the moment
-    one exists. Adding an entry therefore fails the check from the next
-    commit on: the allowlist only shrinks. No file means no exceptions —
-    every carrier is a violation.
-
 Exit: 0 clean (at least one leg actually scanned something), 1 violations
 (any leg), 2 nothing scanned anywhere by any leg (NOT-GATED, never a pass).
 The archive-derived leg's own "nothing to derive" state is reported as a
@@ -82,11 +68,10 @@ import re
 import sys
 
 import _bootstrap  # noqa: F401
-from lib import ratchet, scope
+from lib import scope
 
 STANDING_EXCLUSIONS = ("audit", "planning", "openrouter")
 ARCHIVED_V1_SURVIVORS = ("ac-beadify", "ac-implement", "ac-publish")
-ALLOWLIST = "lint/allowlists/25-archived-names.txt"
 
 # The fixed retired-name list. Each entry is (kind, pattern, why); a pattern
 # or alias leaves this list only by dying on disk first.
@@ -130,8 +115,8 @@ def pattern_for(names):
         r"(?:^|[^A-Za-z0-9_-])(" + "|".join(re.escape(n) for n in names) + r")(?:[^A-Za-z0-9_-]|$)")
 
 
-def scan_archived(root, names, allowlist_path):
-    """The archive-derived leg. Appends to `violations`/`notes`; returns nothing."""
+def scan_archived(root, names):
+    """The archive-derived leg. Appends to `violations`; returns nothing."""
     pat = pattern_for(names)
     carriers = {}
     scanned = 0
@@ -143,45 +128,13 @@ def scan_archived(root, names, allowlist_path):
         if hits:
             carriers[rel] = hits
 
-    allowed = set()
-    if allowlist_path:
-        entries, defects = ratchet.load_allowlist(allowlist_path)
-        for d in defects:
-            violations.append(d)
-        allowed = {k for _, k in entries}
-        for entry in sorted(allowed - set(carriers)):
-            if not os.path.isfile(os.path.join(root, entry)):
-                violations.append(
-                    f"allowlist entry '{entry}' names a file that no longer exists "
-                    "— the list only shrinks: remove the entry")
-            else:
-                violations.append(
-                    f"allowlist entry '{entry}' no longer carries an archived name "
-                    "— the list only shrinks: remove the entry")
     for rel in sorted(carriers):
-        if rel not in allowed:
-            violations.append(
-                f"{rel} carries retired name(s) {', '.join(sorted(carriers[rel]))} and is not allowlisted "
-                "— replace the name(s) in the text; the allowlist is a dated shrinking rest home, not an amnesty")
-
-    if allowlist_path:
-        base = ratchet.base_ref(root)
-        if base:
-            committed = ratchet.committed_keys(root, base, ALLOWLIST)
-            if committed is None:
-                notes.append(
-                    f"allowlist has no committed version at base {base[:12]} "
-                    "— this is the seed; the shrink-only growth ratchet starts once it lands")
-            else:
-                for entry in ratchet.shrink_only(allowed, committed):
-                    violations.append(
-                        f"allowlist GREW vs base {base[:12]}: '{entry}' is not in the committed list "
-                        "— the allowlist only shrinks; clean the file and remove an entry instead")
-        else:
-            notes.append("no resolvable base ref — growth ratchet skipped this run (shallow or standalone checkout)")
+        violations.append(
+            f"{rel} carries retired name(s) {', '.join(sorted(carriers[rel]))} "
+            "— replace the name(s) in the text; an archived name is retired for good")
 
     print(f"25-archived-names: {scanned} live file(s) scanned, {len(names)} archived name(s) derived, "
-          f"{len(carriers)} carrier(s) on tree, {len(allowed)} allowlist entr(ies)")
+          f"{len(carriers)} carrier(s) on tree")
 
 
 def scan_dead_patterns(root):
@@ -251,10 +204,7 @@ def run(root):
     if names:
         if scope.LIVE_TEXT:
             scanned_any = True
-            allowlist_path = os.path.join(root, ALLOWLIST)
-            if not os.path.isfile(allowlist_path):
-                allowlist_path = None
-            scan_archived(root, names, allowlist_path)
+            scan_archived(root, names)
         else:
             notes.append(
                 "archive-derived leg NOT-CHECKED: archived name(s) derived but no live text "
@@ -285,8 +235,8 @@ def run(root):
         print(f"NOTE: {n}")
 
     if violations:
-        print("FAIL 25-archived-names: retired name(s) in live text, a non-shrinking allowlist, "
-              "a dead pattern, or a retired alias agent file:")
+        print("FAIL 25-archived-names: retired name(s) in live text, a dead pattern, "
+              "or a retired alias agent file:")
         for v in violations:
             print(f"  - {v}")
         return 1

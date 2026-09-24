@@ -3,8 +3,8 @@
 #
 #   RED: the committed static fixture (bad truncating redirects inside bash
 #        and sh fences) exits 1 naming both hits.
-#   GREEN: the real registry exits 0; prose, append, literal targets, tee,
-#          dcg-allow and non-bash fences do NOT fire; a *.sh file is not a
+#   GREEN: the real registry exits 0; prose, append, literal targets, tee
+#          and non-bash fences do NOT fire; a *.sh file is not a
 #          prescription.
 #   VACUOUS: a root with no *.md under skills/ exits 1 (the sweep itself
 #          accounts for nothing).
@@ -29,7 +29,7 @@ fail() { echo "  FAIL $1"; fails=$((fails + 1)); }
 out="$(python3 "$CHECK" "$ROOT/lint/fixtures/17-dcg-blocked-redirects" 2>&1)"; rc=$?
 if [ "$rc" = 1 ] \
    && printf '%s' "$out" | grep -q 'SKILL.md:9:bad_command > "\$OUT/results.md"' \
-   && printf '%s' "$out" | grep -q 'SKILL.md:17:also bad > "\$DIR/list"'; then
+   && printf '%s' "$out" | grep -q 'SKILL.md:16:also bad > "\$DIR/list"'; then
   pass "RED: both bad redirect lines named -> exit 1"
 else
   fail "RED fixture: expected 1 naming both hits, got $rc"; printf '%s\n' "$out"
@@ -43,12 +43,11 @@ cat > "$w/skills/allowed-skill/SKILL.md" <<'MD'
 append >> "$OUT/file" never truncates
 literal >/dev/null is fine
 tee "$OUT/x" is not a redirect
-documented > "$OUT/final.md" # dcg-allow
 ```
 MD
 out="$(python3 "$CHECK" "$w" 2>&1)"; rc=$?
 if [ "$rc" = 0 ]; then
-  pass "GREEN: append / literal / tee / dcg-allow -> exit 0"
+  pass "GREEN: append / literal / tee -> exit 0"
 else
   fail "allowed-shapes case: expected 0, got $rc"; printf '%s\n' "$out"
 fi

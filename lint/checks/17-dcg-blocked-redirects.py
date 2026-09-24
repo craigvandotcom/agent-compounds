@@ -25,9 +25,6 @@ command (probed against dcg 0.6.7). NOT matched, because all three are allowed:
   >/dev/null          fully-literal target
   tee "$VAR/path"     tee is not a redirect
 
-Escape hatch: put `dcg-allow` in a comment on the same line to document the
-antipattern deliberately (shell-guardrails.md does exactly that).
-
 The `/` is anchored directly after the variable name ON PURPOSE: a broader
 form like `[^"[:space:]]*/` matches NOTHING under macOS grep's
 leftmost-longest semantics (no backtracking), and a detector that silently
@@ -106,8 +103,6 @@ def main():
             if not in_fence:
                 continue
             for m in DCG_BAD_RE.finditer(line):
-                if "dcg-allow" in line:
-                    continue
                 findings.append(
                     "dcg-blocked truncating redirect to a variable path — "
                     f"{rel}:{i}:{line.strip()}")

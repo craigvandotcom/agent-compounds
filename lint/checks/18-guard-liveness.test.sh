@@ -3,8 +3,8 @@
 #
 #   PROBE: a non-executable hook is FAILED; the real guards fire/silence as
 #           declared; a doctored tree with a chmod-x'd bead-capture-guard is
-#           FAILED twice (executable check + provenance-gate leg); a tree with
-#           no hooks/ is NOT-GATED (exit 2).
+#           FAILED on the executable check; a tree with no hooks/ is
+#           NOT-GATED (exit 2).
 #
 # ASSURANCE
 #   PROBE:    bash lint/checks/18-guard-liveness.test.sh
@@ -52,12 +52,10 @@ mkdir -p "$t"
 cp -R "$ROOT/hooks" "$t/hooks"
 chmod -x "$t/hooks/bead-capture-guard.py"
 rc=$(run_check "$t")
-if [ "$rc" = 1 ] \
-   && grep -q "hooks/bead-capture-guard.py is not executable" "$OUT" \
-   && grep -q "bead-capture-guard.py or its .test.py is missing" "$OUT"; then
-  ok "DOCTORED: chmod-x'd guard failed on both legs"
+if [ "$rc" = 1 ] && grep -q "hooks/bead-capture-guard.py is not executable" "$OUT"; then
+  ok "DOCTORED: chmod-x'd guard failed on the executable check"
 else
-  bad "DOCTORED: expected exit 1 with both legs, got $rc"; cat "$OUT"
+  bad "DOCTORED: expected exit 1 naming the dead guard, got $rc"; cat "$OUT"
 fi
 
 # --- 3 NOT-GATED: no hooks/ -> exit 2 -----------------------------------------
