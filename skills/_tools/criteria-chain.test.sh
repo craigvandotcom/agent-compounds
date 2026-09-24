@@ -37,7 +37,7 @@ trap cleanup EXIT
 # ---------------------------------------------------------------------------------------
 vision_line='writes the vision back in plain prose'
 {
-  printf -- '---\nstatus: draft\ncreated: 2026-09-05\n---\n# Plan\n\n## Vision\n\n%s\n\n## Deliverables\n\n- D1 x\n\n## Decisions\n\n- **A fork?**\n  + options: a, b.\n  + settled: a (Alex).\n  + vision: "%s"\n\n## Seams\n\na\n\n## Out of scope\n\n- nothing\n\n## Success criterion\n\nSome criterion.\n' \
+  printf -- '---\nstatus: draft\ncreated: 2026-09-05\n---\n# Plan\n\n## Vision\n\n%s\n\n## Deliverables\n\n- D1 x\n  Done when: x exists.\n\n## Decisions\n\n- **A fork?**\n  + options: a, b.\n  + settled: a (Alex).\n  + vision: "%s"\n\n## Seams\n\na\n\n## Out of scope\n\n- nothing\n\n## Success criterion\n\nSome criterion.\n' \
     "$vision_line" "$vision_line"
 } >"$WORK/plan.md"
 bash "$APPROVE" approve "$WORK/plan.md" "Alex" >/dev/null
