@@ -1,6 +1,6 @@
 # web-promote — the web leg of the ship step, mechanics
 
-Called by `ac-publish/SKILL.md` § Ship, step 3. `$SHA` throughout is the **PROVEN** SHA that
+Called by `ac-publish/SKILL.md` § Ship, step 2. `$SHA` throughout is the **PROVEN** SHA that
 `ac-prove` returned — never `HEAD`, never your input `R`.
 
 ## There is nothing to build here
@@ -77,6 +77,6 @@ loop behind it.
 
 ## Not here
 
-Minting the version (step 1) · tagging (step 2) · the post-promotion check, which is an IDENTITY
+Minting the version (Phase 0) · tagging (step 1) · the post-promotion check, which is an IDENTITY
 check of the production alias's own deployment metadata against `$SHA`, never a version-string
-grep (step 5) · native and mobile artifacts (`ac-distribute`).
+grep (step 4) · native and mobile artifacts (step 3, `ac-distribute`).

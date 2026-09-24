@@ -1,9 +1,9 @@
 # Version Propagation (native build surfaces)
 
 **This file is the SOLE named owner of `CURRENT_PROJECT_VERSION` (the iOS build number)
-bumping.** It happens once per wave, at merge time, in lockstep with the marketing-version
+bumping.** It happens once per publish run, in lockstep with the marketing-version
 (`MARKETING_VERSION`) bump below. `ac-distribute` does NOT own or re-bump this counter — its
-ship gate verifies the merge already bumped it and defers here (see
+ship gate verifies the publish run already bumped it and defers here (see
 `skills/ac-distribute/SKILL.md` Workflow A Step 1). The only bump `ac-distribute`/
 `CORE/distribution.md` may own is a same-version **upload-retry** increment, when a build
 number is rejected/stuck and must move without a new marketing version — that is a narrow,

@@ -1,6 +1,6 @@
 ---
 name: ac-publish
-description: 'The ac2 ship gate — obtain a proof via ac-prove, assert its REQUIRED JOBS ACTUALLY EXECUTED, then version, tag the proven SHA and hand off to ac-distribute; labels external escapes with a catch-stage on arrival. Triggers: "ac2 publish", "ship the ac2 batch", "release this batch". Invoked BY the ac2 batch boundary. NOT the legacy ceremony (ac-publish), NOT the proof itself (ac-prove), NOT the store upload (ac-distribute).'
+description: 'The ac2 ship gate — obtain a proof via ac-prove, assert its REQUIRED JOBS ACTUALLY EXECUTED, then version, tag the proven SHA and hand off to ac-distribute; labels external escapes with a catch-stage on arrival. Triggers: "ac2 publish", "ship the ac2 batch", "release this batch" — run by the operator once a batch is ready to ship. NOT the proof itself (ac-prove), NOT the store upload (ac-distribute).'
 ---
 
 # ac-publish — a proven batch in, a shipped release out

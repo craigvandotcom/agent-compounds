@@ -44,9 +44,10 @@ current HEAD.
 
 ## Step 1 — Freshness Probe (always first, every mode)
 
-Before touching dispatch, always run the existing gate against the ref-or-HEAD:
+Before touching dispatch, always run the existing gate against the ref-or-HEAD — first confirming it exists, since a missing script exits 1 for module-not-found, not staleness:
 
 ```bash
+[ -f scripts/ci/publish-checkpoint-gate.mjs ] || { echo "NOT-GATED: publish-checkpoint-gate.mjs absent"; exit 2; }
 REF="${ref:-$(git rev-parse HEAD)}"
 node scripts/ci/publish-checkpoint-gate.mjs --release-sha "$REF"
 ```
@@ -69,6 +70,7 @@ node scripts/ci/publish-checkpoint-gate.mjs --release-sha "$REF"
 ## Step 2 — Dispatch-if-Stale (`ensure` and `ensure --fix-forward` only)
 
 ```bash
+[ -f .github/workflows/quality-gate.yml ] || { echo "NOT-GATED: quality-gate.yml absent"; exit 2; }
 gh workflow run quality-gate.yml -f reason=prove ${ref:+-f ref="$ref"}
 ```
 
@@ -224,9 +226,7 @@ scheduler entry).
 
 QA evidence/report schema: `ac-qa/references/qa-shared.md`.
 
-`+qa` depth (consumers a and d) = `ac-qa` (including the review-critical sim-PASS rule,
-memory `rule-review-critical-journeys-sim-pass-before-submission`) / `ac-qa` /
-`ui-elevate`, per Step 4's `+qa` layer above.
+`+qa` depth (consumers a and d): Step 4's `+qa` layer above — not restated here.
 
 **Explicitly NOT a consumer: loop-start.** Starting a new loop iteration does not call
 `ac-prove` — proof is a ship-time/checkpoint concern, not a work-intake concern.

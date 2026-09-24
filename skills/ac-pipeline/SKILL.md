@@ -76,8 +76,8 @@ Convention with no mechanical enforcer, claimed as nothing more: every pipeline 
   human's call, not a telemetry threshold. The invoking session is always the coordinator and
   never a worker, at every width — one procedure, no mode branch. **The ruling OVERRIDES this
   Calibration's original trigger, which was not met** (the measured runs were dependency-bound,
-  never worker-count-bound). The coordinator owns the batch boundary, the CI and review
-  trigger, the ledger and the telemetry rollup; a worker owns nothing but the bead in its hand.
+  never worker-count-bound). The coordinator owns the batch boundary, the CI trigger, the
+  ledger and the telemetry rollup; a worker owns nothing but the bead in its hand.
   The throughput layer — spawn/replace, liveness, Agent Mail
   reservations, roster — MUST carry: register + introduce at spawn; reserve before touching
   territory, renew on long beads, release at close and VERIFY by re-listing; roster from Agent Mail registrations, not the spawn plan; mail at bead

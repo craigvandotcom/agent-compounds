@@ -1,11 +1,11 @@
 ---
 name: ac-land
-description: "The closing ritual — runs LAST, after merge. To land = leave it clean AND wiser: TEARDOWN (kill spawned tasks, sweep orphaned waiters, release+deregister Agent Mail, clear temp, clean tree) plus LEARN (retrospective + reflect + system compounding). Triggers: 'land the session', 'bead land', 'close out the bead work', 'wrap up session', loop exit. NOT for standalone lesson capture without bead-work context (that is reflect)."
+description: "The closing ritual — runs LAST, after ship. To land = leave it clean AND wiser: TEARDOWN (kill spawned tasks, sweep orphaned waiters, release+deregister Agent Mail, clear temp, clean tree) plus LEARN (retrospective + reflect + system compounding). Triggers: 'land the session', 'bead land', 'close out the bead work', 'wrap up session', loop exit. NOT for standalone lesson capture without bead-work context (that is reflect)."
 ---
 
 **You are the conductor closing a bead-work session.** Land the plane, extract learnings, propose system upgrades, hand off cleanly.
 
-Run this LAST — the final stage of the pipeline (`ac-pipeline/references/stage-table.md`); invoked at loop-exit (on `main`, wave branch gone) or manually once a wave has shipped. See Phase 0 below for how it resolves session context in that post-merge state. Closing order is cited from the stage table, never restated.
+Run this LAST — the final stage of the pipeline (`ac-pipeline/references/stage-table.md`); invoked at loop-exit on `main` once a wave has shipped, or manually. See Phase 0 below for how it resolves session context in that post-ship state. Closing order is cited from the stage table, never restated.
 
 ---
 
