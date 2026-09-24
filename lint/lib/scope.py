@@ -9,9 +9,9 @@ Sets:
   LIVE_TEXT  skill text a human or agent reads as doctrine: SKILL.md files,
              references/ and reference/ and workflows/ trees. Ledger files are
              NEVER live text — they are dated sensor logs, not doctrine.
-             .github/ is excluded outright: `_in_dir` matches "workflows" as a
-             bare path component, and .github/workflows/*.yml (CI config, not
-             skill doctrine) matched it before this carve-out existed.
+             .github/ is excluded outright because `_in_dir` matches "workflows"
+             as a bare path component, which would otherwise catch
+             .github/workflows/*.yml (CI config, not skill doctrine).
   LEDGER     FRICTIONS.md and MAINTENANCE.md — exactly those two filenames,
              anywhere, including under _archive/. The FORMAT docs that teach
              their shape (skill-builder/references/maintenance-ledger.md,
@@ -46,15 +46,15 @@ Sets:
   CACHES     directory names that are build/interpreter caches — excluded from
               every walk.
   README             the root README.md — Check 04's audit surface. Named in
-                      04's header (`scope: LIVE_TEXT README`, 2026-09-12 item 2).
+                      04's header (`scope: LIVE_TEXT README`).
   AGENTS_DOC         the root AGENTS.md — Check 05's audit surface. Named in
                       05's header (`scope: LIVE_TEXT AGENTS_DOC`).
   AGENT_STANCES      agents/*.md, the 5 core stance files — the surface Checks
-                      03 (tier vs concrete model), 09 (retired alias names) and
-                      33 (named stances resolve) name as their subject. Named
-                      in each of those checks' headers (2026-09-12 item 2) —
-                      a header can list several set names separated by
-                      whitespace/commas (see the composite-alias note below).
+                      03 (tier vs concrete model), 25 (retired alias names)
+                      and 33 (named stances resolve) name as their subject.
+                      Named in each of those checks' headers — a header can
+                      list several set names separated by whitespace/commas
+                      (see the composite-alias note below).
   DEPLOY_SCRIPT      engine/deploy.sh alone — Check 08's actual subject (narrower
                       than LIVE_TEXT). Named in 08's header alongside LIVE_TEXT.
   HARNESS_MANIFEST   the root harnesses.json (per-harness agent-model/deploy
@@ -63,21 +63,18 @@ Sets:
   LINT_CONFIG        skills/packages.json (`_lint` section) — read at runtime
                        by several checks (14, 15, 25, 29, 31, 32), any of
                        which its thresholds can change. Not wired into any
-                       check's `scope:` header, and not read by run.py either
-                       since W3 (2026-09-24) deleted the scope-to-diff
-                       selection this set once fed — a config-file change is
-                       covered for free now that every run means the whole
-                       suite.
+                       check's `scope:` header, and not read by run.py —
+                       a config-file change is covered for free since every
+                       run means the whole suite.
 
 Multi-name scope headers: a check's `# scope:` line may name more than one
 set (`LIVE_TEXT AGENT_STANCES HARNESS_MANIFEST`); 00-meta.py's header
 validator does one literal `getattr(scope, header["scope"])`, so a small set
 of composite aliases is registered below under the exact literal strings the
 checks declare — purely so that simpler, single-name validator does not choke
-on a multi-word value. `scope:` is otherwise inert since W3 (2026-09-24)
-deleted lint/run.py's scope-to-diff selection (`intersect`/`resolve_scope`):
-every check runs on every invocation now, so these aliases exist only to keep
-00-meta's header contract satisfied, never to drive selection.
+on a multi-word value. `scope:` is otherwise inert: every check runs on every
+invocation, so these aliases exist only to keep 00-meta's header contract
+satisfied, never to drive selection.
 
 Excluded from every set: CACHES dirs, .git, node_modules, and the vendored
 harness layers (.claude, .agents, .factory, .codex — symlinks into this repo's
@@ -158,12 +155,12 @@ for p in sorted(_paths):
         _harnesses.add(p)
     if p.startswith(".github/workflows/"):
         _harnesses.add(p)
-    # engine/hooks.wiring.json is the wiring manifest — it moved out of hooks/ in
-    # ac-ys8f but is still the HOOKS surface, so name it beside the prefix rule.
+    # engine/hooks.wiring.json is the wiring manifest — still the HOOKS surface
+    # despite living outside hooks/, so name it beside the prefix rule.
     if p.startswith("hooks/") or p == ".beads/issues.jsonl" or p == "engine/hooks.wiring.json":
         _hooks.add(p)
-    # ENGINE — the relocated machinery (ac-ys8f). Its own surface, because Check 37
-    # asks a question no other scope does: does the engine hardcode a path to canon.
+    # ENGINE — its own surface, because Check 37 asks a question no other scope
+    # does: does the engine hardcode a path to canon.
     if p.startswith("engine/"):
         _engine.add(p)
     if p.startswith("templates/") or p == "lint/checks/19-bead-template-conformance.py":
@@ -202,10 +199,8 @@ LINT_CONFIG = _one("skills/packages.json")
 # 00-meta.py's header-contract validator does one literal `getattr(scope,
 # header["scope"])`; it has no notion of a `scope:` line naming several sets.
 # These aliases exist solely so 00-meta's simpler, single-name check does not
-# choke on the exact multi-word `scope:` values the 2026-09-12 lint audit's
-# item 2 put in check headers — nothing else reads them: lint/run.py deleted
-# its own scope-to-diff resolution in W3 (2026-09-24), so `scope:` no longer
-# drives which checks run.
+# choke on the exact multi-word `scope:` values check headers carry — nothing
+# else reads them: `scope:` no longer drives which checks run.
 _COMPOSITE_SCOPES = {
     "LIVE_TEXT AGENT_STANCES HARNESS_MANIFEST": LIVE_TEXT | AGENT_STANCES | HARNESS_MANIFEST,
     "LIVE_TEXT README": LIVE_TEXT | README,

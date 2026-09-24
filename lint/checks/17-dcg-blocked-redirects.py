@@ -7,19 +7,17 @@
 # severity: fail
 # fixture: lint/fixtures/17-dcg-blocked-redirects
 # ---
-"""17-dcg-blocked-redirects — the legacy lint.sh Check 17 block, ported.
+"""17-dcg-blocked-redirects — no published snippet prescribes a dcg-blocked redirect.
 
 dcg's `core.filesystem:redirect-truncate-dynamic-path` refuses a TRUNCATING
 redirect whose target is shell-expanded — it cannot prove the path before the
 file is opened O_TRUNC. A published snippet prescribing that shape is
 UNRUNNABLE on this fleet.
 
-Why this check exists (bd-scjgv): bd-5ndzm was closed as Fixed on 2026-07-30
-having scoped six skills and mechanically fixed exactly ONE. Nothing
-re-detected the rest, so the class read as "fixed" on the board while three
-separate published snippets still shipped it and kept costing conductors live
-time in Phase 0. The DETECTOR is the deliverable — without it the next snippet
-reintroduces the class and no one learns until someone loses a run.
+Why this check exists: a mechanical one-off fix does not re-detect a
+regression, so the class can read as "fixed" while other published snippets
+still ship it. The DETECTOR is the deliverable — without it the antipattern
+reintroduces itself unnoticed.
 
 The discriminator is literal-vs-variable TARGET, not compound-vs-simple
 command (probed against dcg 0.6.7). NOT matched, because all three are allowed:
@@ -30,11 +28,11 @@ command (probed against dcg 0.6.7). NOT matched, because all three are allowed:
 Escape hatch: put `dcg-allow` in a comment on the same line to document the
 antipattern deliberately (shell-guardrails.md does exactly that).
 
-The `/` is anchored directly after the variable name ON PURPOSE. An earlier
-form used `[^"[:space:]]*/` and matched NOTHING under macOS grep's
-leftmost-longest semantics (no backtracking) — a detector that silently
-matches nothing is worse than no detector, so this pattern is proved
-red-then-green against fixtures before being trusted.
+The `/` is anchored directly after the variable name ON PURPOSE: a broader
+form like `[^"[:space:]]*/` matches NOTHING under macOS grep's
+leftmost-longest semantics (no backtracking), and a detector that silently
+matches nothing is worse than no detector — prove any change to this pattern
+red-then-green against fixtures before trusting it.
 
 SCOPE: markdown PRESCRIPTIONS only, deliberately not `*.sh`. dcg intercepts
 commands an agent submits to its Bash tool; a shell script executed as a FILE

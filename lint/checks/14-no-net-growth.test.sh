@@ -1,11 +1,9 @@
 #!/usr/bin/env bash
-# 14-no-net-growth.test.sh — proof harness for the ported no-net-growth check (bd-oxmsf,
-# ported for lint v2 by ac-1p7j.2). Reworked 2026-09-23 to drive the check through its
-# NORMAL entry point (the root arg, run_full()) — the two parity-only CLI flags this
-# harness used to call directly (a single-repo-scan mode and a print-the-leg-1-base
-# mode) are gone: the port they served (ac-1p7j.2) is finished and lint/parity.sh is
-# deleted. leg1_base()'s trunk-direct HEAD^ fallback is now exercised the same way
-# every real invocation exercises it, not through a side door.
+# 14-no-net-growth.test.sh — proof harness for lint/checks/14-no-net-growth.py.
+#
+# Drives the check through its NORMAL entry point (the root arg, run_full()),
+# never a side-door CLI flag — leg1_base()'s trunk-direct HEAD^ fallback is
+# exercised the same way every real invocation exercises it.
 #
 # WHY: Check 14 leg 2 judges OTHER repos (deploy targets), so it cannot be exercised
 # without a target — and exercising it against a live app repo would mean dirtying
@@ -14,7 +12,7 @@
 # leg 2 always takes its documented disclosed skip (never a violation) and every case
 # below exercises leg 1 alone: default branch `master` (so origin/HEAD resolution is
 # proven, not assumed), growth, the wrong-token near-miss, the removed `net-growth-ok`
-# token (which must NOT exempt — ec5fa64), a shrink, a symlinked skill dir, already-
+# token (which must NOT exempt), a shrink, a symlinked skill dir, already-
 # committed-and-pushed growth (leg1_base's trunk-direct HEAD^ fallback), and the ac
 # family's creation-vs-growth rule. The fixture repo uses `skills/*/SKILL.md` — leg 1's
 # own hardcoded spec — throughout, and carries a real copy of this registry's
@@ -25,7 +23,7 @@
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT="$(cd "$HERE/../.." && pwd)"
 CHECK="$ROOT/lint/checks/14-no-net-growth.py"
-[ -f "$CHECK" ] || { echo "HARNESS FAIL: $CHECK missing — the ported check is gone"; exit 1; }
+[ -f "$CHECK" ] || { echo "HARNESS FAIL: $CHECK missing"; exit 1; }
 
 W="$(mktemp -d)"
 trap 'rm -rf "$W"' EXIT
@@ -69,15 +67,15 @@ echo "line 11" >> skills/foo/SKILL.md
 echo "line 12" >> skills/foo/SKILL.md
 expect "+2 growth -> FAILS" 1
 
-# the wrong-token near-miss case (bd-curate-...xu5tz's AC)
+# a wrong-token near-miss: a similar but non-matching comment must not exempt growth
 echo "<!-- evidence: i thought about it -->" >> skills/foo/SKILL.md
 expect "wrong token 'evidence:' -> still FAILS" 1
 
-# ec5fa64 removed the `net-growth-ok` escape hatch outright — "growth is bought with
-# deletion, not prose". NO comment token exempts growth any more. This case pins the
-# ABSENCE of the escape, so reintroducing one cannot pass unnoticed.
+# NO comment token exempts growth: it is paid for with deletion, never prose. This
+# case pins the ABSENCE of a `net-growth-ok` escape, so reintroducing one cannot
+# pass unnoticed.
 echo "<!-- net-growth-ok: proven exception -->" >> skills/foo/SKILL.md
-expect "former 'net-growth-ok' stamp -> STILL FAILS (escape removed, ec5fa64)" 1
+expect "former 'net-growth-ok' stamp -> STILL FAILS (no prose exemption)" 1
 
 git checkout -q -- skills/foo/SKILL.md
 for i in 1 2 3; do echo "line $i"; done > skills/foo/SKILL.md
@@ -108,11 +106,11 @@ for i in 1 2 3; do echo "line $i"; done > skills/foo/SKILL.md
 git add skills/foo/SKILL.md; git commit -qm "shrink SKILL.md"; git push -q origin master 2>/dev/null
 expect "already-pushed SHRINK is still a pass" 0
 
-# --- LEAN ac FAMILY: creation defers to the family cap, growth does not (ac-g2v4) ---
+# --- LEAN ac FAMILY: creation defers to the family cap, growth does not -------------
 # A brand-new SKILL.md always has `del = 0`, so the net is always positive and a
 # creation was ALWAYS a violation — which made the ac family uncreatable. Creation now
 # answers to the ac family TOTAL instead (the manifest's `_lint` section,
-# skills/packages.json, ac-6asz.3). Creation is distinguished
+# skills/packages.json). Creation is distinguished
 # from a pure-addition EDIT with --diff-filter=A: both print `N 0` on numstat, so
 # numstat alone cannot tell them apart.
 mkdir -p skills/ac-plan

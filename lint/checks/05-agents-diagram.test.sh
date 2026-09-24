@@ -22,7 +22,7 @@ bad() { echo "  FAIL  $1"; fails=$((fails + 1)); }
 
 # --- RED: the committed static fixture ------------------------------------------
 # _plans is skipped as a gitignored local-only path (the fixture lives inside
-# this repo, so the enclosing .gitignore governs — same as the legacy block).
+# this repo, so the enclosing .gitignore governs).
 out="$(python3 "$CHECK" "$ROOT/lint/fixtures/05-agents-diagram" 2>&1)"; rc=$?
 if [ "$rc" = 1 ] \
    && printf '%s' "$out" | grep -q "diagram path missing: engine" \

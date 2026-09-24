@@ -10,8 +10,7 @@
 # ---
 """13-skill-registry — description budget + invocation-graph rule.
 
-The legacy lint.sh Check 13 block delegated to ONE judge and this port keeps
-that judge unchanged, so the verdict cannot drift:
+Delegates to ONE judge:
 
     skills/skill-builder/scripts/validate-skill.sh --registry <root>/skills
 
@@ -48,7 +47,7 @@ JUDGE = "skills/skill-builder/scripts/validate-skill.sh"
 
 
 def manifest_leg(root):
-    """The registry THROUGH the manifest (ac-6asz.3): every package member must
+    """The registry THROUGH the manifest: every package member must
     name a dir carrying SKILL.md — the same dead-name refusal the README
     generator enforces, so the package set deploy.sh installs from cannot name
     a skill that is not there. A root without the manifest predates it
@@ -106,9 +105,8 @@ def main():
         print(f"{CHECK_ID} NOT-GATED: the judge verified nothing — "
               f"{(proc.stdout + proc.stderr).strip()}", file=sys.stderr)
         return 2
-    # Legacy parked the judge's full output in a temp file and named the path —
-    # mirror that: only the dedicated budget line and the generic line print,
-    # so the violation set stays the legacy block's violation set.
+    # The judge's full output is parked in a temp file and only its path is
+    # named: only the dedicated budget line and the generic line print.
     detail = "/tmp/ac-lint-registry.out"
     with open(detail, "w", encoding="utf-8") as fh:
         fh.write(proc.stdout + proc.stderr)

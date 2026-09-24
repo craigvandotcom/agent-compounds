@@ -75,11 +75,7 @@ guard = _load_guard(_REGISTRY_ROOT)
 PROBE = guard.PROBE  # the same shape the runtime capture guard scans for
 
 CUTOVER = "2026-08-23"  # rule 3: origin axis became a hard gate (hooks/hooks.json _doc)
-# rule 5/6: measured against the real board on 2026-09-23 — the last malformed WORKER
-# receipt and the last uncited close both landed 2026-09-22 (15:38/15:58 UTC); every close
-# and WORKER comment from 2026-09-23 on is clean, so the whole-board rewrite does not
-# relitigate history it was never scoped to catch under the old staged-only rules.
-RULE56_CUTOVER = "2026-09-23"
+RULE56_CUTOVER = "2026-09-23"  # rule 5/6: forward-only from this date — earlier receipts/closes are never re-judged
 IMPLEMENTABLE = ("task", "bug", "feature")  # element4's non-exempt types
 # canon status set — skills/beads-standards/SKILL.md § Status & priority canon
 STATUS_CANON = {"open", "in_progress", "blocked", "deferred", "closed", "tombstone"}

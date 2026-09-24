@@ -10,7 +10,7 @@
 # ---
 """03-frontmatter-conformance — frontmatter that parses, matches, and stamps.
 
-Three populations, the legacy lint.sh Check 3 block's exact legs:
+Three populations:
 
   skills/*/SKILL.md
     name: == directory name; description: non-empty; and BLOCK INTEGRITY —
@@ -31,9 +31,10 @@ Three populations, the legacy lint.sh Check 3 block's exact legs:
     of sync time.
 
 Exit: 0 every leg holds and something was scanned, 1 findings, 2 nothing
-scanned (NOT-GATED, never a pass). The judge here is this file's own
-implementation of the legacy block's legs — line-based, not lib.frontmatter —
-so the verdict cannot drift from what the bash block used to flag.
+scanned (NOT-GATED, never a pass). The judge is this file's own line-based
+implementation, not lib.frontmatter — a lenient YAML parser would swallow the
+block-integrity defects (stray prose, unknown keys) this check exists to
+catch.
 """
 
 import json

@@ -10,8 +10,7 @@
 # ---
 """05-agents-diagram — every AGENTS.md diagram path exists (or is declared local-only).
 
-The legacy lint.sh Check 5 block's exact leg: for each of
-skills, agents, deploy.sh, templates, _plans — the path must exist, UNLESS it
+For each of skills, agents, engine, templates, _plans — the path must exist, UNLESS it
 is gitignored (a dir-only ignore rule does NOT match the bare name when the
 directory is absent in a CI clone, so both the bare and trailing-slash forms
 are probed); a gitignored absent path is a NOTICE, never a failure.
@@ -28,8 +27,7 @@ import _bootstrap  # noqa: F401
 from lib import scope  # noqa: E402
 
 CHECK_ID = "05-agents-diagram"
-# ac-ys8f moved the machinery under engine/; the diagram names that directory now,
-# not the stamper script that used to sit at the root.
+# The diagram names engine/ (the machinery directory), not any script inside it.
 DIAGRAM_PATHS = ("skills", "agents", "engine", "templates", "_plans")
 
 
@@ -71,8 +69,7 @@ def main():
         if os.path.exists(os.path.join(root, path)):
             continue
         # git -C climbs to the enclosing repo, so a fixture inside this
-        # checkout inherits the registry's ignore rules — exactly what the
-        # legacy block did; no local-.git guard here.
+        # checkout inherits the registry's ignore rules — no local-.git guard here.
         if git_ignored(root, path):
             print(f"NOTICE: diagram path '{path}' is gitignored (local-only) and absent here — skipped")
             continue

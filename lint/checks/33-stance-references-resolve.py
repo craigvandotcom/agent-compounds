@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
 # ---
 # id: 33-stance-references-resolve
-# prevents: skill or hook text naming a subagent stance that no longer exists — "engineer" survived
-#   its 2026-06-11 rename for months and the review/* agents went spawn-orphaned because nothing
-#   checked that spawn instructions resolve to the roster
+# prevents: skill or hook text naming a subagent stance that no longer exists — a renamed or
+#   retired stance's old name surviving unnoticed in spawn instructions, orphaning the spawn
 # scope: LIVE_TEXT AGENT_STANCES
 # severity: fail
 # fixture: lint/fixtures/33-stance-references-resolve

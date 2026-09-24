@@ -8,23 +8,20 @@
 # severity: fail
 # fixture: lint/fixtures/08-deploy-dry-run-inert
 # ---
-"""08-deploy-dry-run-inert — deploy.sh --dry-run must be inert (ac-1p7j.14).
+"""08-deploy-dry-run-inert — deploy.sh --dry-run must be inert.
 
-Ported from the legacy Check 8 bash block in lint.sh (parity proven at port time
-against the extracted legacy block, before the block was removed). Same verdicts:
-run `engine/deploy.sh <tmp> --skills <first-skill> -n`; a nonzero exit is a finding, and
-any file left in the temp dir is a finding (a crash before any write would also
-leave the dir empty, so the exit code is checked too — or the inertness test
-passes for a broken deploy.sh).
+Run `engine/deploy.sh <tmp> --skills <first-skill> -n`; a nonzero exit is a
+finding, and any file left in the temp dir is a finding (a crash before any
+write would also leave the dir empty, so the exit code is checked too — or
+the inertness test passes for a broken deploy.sh).
 
 A "dry-run self-test could not find any skill to test with" is a finding, never
 NOT-GATED: an empty skills tree is exactly the state this check must flag.
 
 scope: LIVE_TEXT DEPLOY_SCRIPT is the nearest standing set, kept only for
-00-meta.py's header contract — there is no deploy-surface set, and adding one
-is outside this bead. The check exercises deploy.sh and the first SKILL.md
-found, not a text scan; no selection reads the declared scope (there is no
-scope-to-diff selection; every run means the whole suite).
+00-meta.py's header contract — there is no deploy-surface set. The check
+exercises deploy.sh and the first SKILL.md found, not a text scan; no
+selection reads the declared scope (every run means the whole suite).
 
 Exit: 0 dry run inert, 1 findings. Never 2 — the check always scans.
 """
@@ -47,7 +44,7 @@ def fail(msg):
 
 
 def first_skill(root):
-    """First SKILL.md under root/skills — the same pick the legacy block made."""
+    """First SKILL.md under root/skills, in `find`'s traversal order."""
     skills_dir = os.path.join(root, "skills")
     if not os.path.isdir(skills_dir):
         return ""

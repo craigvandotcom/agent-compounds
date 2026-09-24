@@ -101,10 +101,9 @@ def committed_keys(root, base, rel_path):
 
     None when the path did not exist there — the seed case: the file's
     first landing has no committed version, and the ratchet starts the
-    moment one does. Tolerant of the formats this allowlist carried before
-    this lib existed (a bare path or skill name, no date): a non-comment
-    line that is not `DATE key` is read whole as the key, so a migration
-    commit still diffs correctly against pre-migration history.
+    moment one does. Tolerant of a dateless format (a bare path or skill
+    name, no date): a non-comment line that is not `DATE key` is read
+    whole as the key.
     """
     proc = subprocess.run(
         ["git", "--no-optional-locks", "-C", root, "show", f"{base}:{rel_path}"],

@@ -11,8 +11,7 @@
 # ---
 """04-readme-disk — README.md and the disk agree in both directions.
 
-The legacy lint.sh Check 4 block's four legs over README.md, plus a fifth
-leg absorbed from the retired Check 26 (ac-1p7j.5, folded in 2026-09-12):
+Five legs over README.md:
 
   4a  every skills/<name>/ with a SKILL.md is mentioned in README.md
   4b  every agents/<name>.md is mentioned in README.md

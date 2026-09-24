@@ -8,11 +8,7 @@
 # severity: fail
 # fixture: lint/fixtures/14-no-net-growth
 # ---
-"""14-no-net-growth — the ported Check 14 judge (ac-1p7j.2).
-
-Ported VERBATIM from the legacy bash block (parity proven at port time against the
-extracted legacy functions, before the block was removed from lint.sh). Same
-shape, same verdict strings, same degrades:
+"""14-no-net-growth — per-file line-count ratchet for SKILL.md.
 
   leg 1  this registry: every skills/*/SKILL.md's net line delta vs a base ref
          must be <= 0. Under trunk-direct the merge base collapses onto HEAD, so
@@ -29,12 +25,12 @@ The ONE structural exception: a NEW lean-family SKILL.md answers to the family
 TOTAL (the manifest's `_lint` section) instead of its own per-file delta —
 a deferral to the cap, never an amnesty. Creation is told apart from a
 pure-addition edit by --diff-filter=A (both print `N 0` on numstat). Growth of
-an existing member never defers. There is NO prose token: ec5fa64 removed
-`net-growth-ok`, and this port keeps it removed.
+an existing member never defers. There is NO prose token: a written
+justification does not pay for growth — only file content does.
 
 Modes:
   <root>                    full run: leg 1 + leg 2 over the registry
-  --base-of <repo>          print the default-branch merge base (nng_base_of)
+  --base-of <repo>          print the default-branch merge base
 Exit: 0 clean, 1 violations, 2 population empty (no tree, no consumers).
 """
 
@@ -89,7 +85,7 @@ def leg1_base(root, base_ref):
 def load_config(root):
     """The check-14 lists (base_ref, lean_family, creation_exception,
     lean_family_cap), read from the manifest's `_lint` section through
-    lint/lib/manifest.py (ac-6asz.3) — the manifest is the only source.
+    lint/lib/manifest.py — the manifest is the only source.
     Raises ManifestMissing naming the defect,
     which the caller reports as a FAIL (never a traceback)."""
     section = manifest.packages(root).get("_lint")
@@ -173,12 +169,13 @@ def scan(repo, label, base, spec, cfg, staged=False):
 
 
 def consumer_dirs(root):
-    """The union checks 07 and 12 build — the ONE copy of that fact lives in lib.consumers.
+    """The union engine's consumer-symlinks and deployed-app-conformance checks
+    build — the ONE copy of that fact lives in lib.consumers.
 
     `root` is accepted for call-site compatibility but not otherwise used: the union is
     asked of engine/machine.sh (the one reader of this machine's facts), never derived
     here. This function is the seam the two reader states surface through, so leg 2
-    answers them the same way checks 07 and 12 do.
+    answers them the same way those two checks do.
     """
     del root  # kept for call-site compatibility; see docstring
     return consumers.consumer_dirs()
@@ -220,7 +217,7 @@ def run_full(root, cfg):
         return 1
     else:
         scan(root, "agent-compounds", base, "skills/*/SKILL.md", cfg)
-    # Leg 2's two reader states, the same two checks 07 and 12 answer: a NOT-CONFIGURED
+    # Leg 2's two reader states, the same two engine consumer checks answer: a NOT-CONFIGURED
     # machine is a disclosed skip (a fresh clone has no deploy targets to walk), a WRONG
     # one is NOT-CHECKED — nobody's green, because only a human can fix the machine file.
     leg2_dirs = ()

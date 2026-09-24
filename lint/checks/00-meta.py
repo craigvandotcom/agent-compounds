@@ -120,11 +120,11 @@ def fixture_goes_red(path, header):
     rel = os.path.relpath(path, scope.ROOT)
     if os.path.isfile(os.path.join(fx, "run.sh")):
         # run.sh fixtures build STATE — some run git init/clone/commit (14-no-net-growth).
-        # They must never see the CALLER's git env: an inherited GIT_DIR resolved the
-        # fixture's git calls into the real repo gitdir and wrote junk commits to local
-        # main (run 20260907-exhaust). GIT_DIR / GIT_WORK_TREE / GIT_INDEX_FILE are unset
-        # by construction: a clean dict REPLACES the environment, the same discipline the
-        # static-tree leg below applies to the check itself.
+        # They must never see the CALLER's git env: an inherited GIT_DIR would resolve
+        # the fixture's git calls into the real repo gitdir and write junk commits to
+        # local main. GIT_DIR / GIT_WORK_TREE / GIT_INDEX_FILE are unset by construction:
+        # a clean dict REPLACES the environment, the same discipline the static-tree leg
+        # below applies to the check itself.
         env = {
             "PATH": os.environ.get("PATH", "/usr/bin:/bin"),
             "HOME": os.environ.get("HOME", os.path.expanduser("~")),

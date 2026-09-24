@@ -1,18 +1,16 @@
 #!/usr/bin/env python3
 # ---
 # id: 37-engine-canon-literals
-# prevents: the engine hardcoding a path to canon instead of deriving it — the defect
-#   that made harness-sync unrunnable outside one machine's monorepo, rendered a dead
-#   hook path into all seven deploy targets, and 404'd the recall hook on every prompt
-#   (ac-9ahd). A literal survives a layout change silently: it still parses, still
-#   renders, and only the file at the end of it is missing.
+# prevents: the engine hardcoding a path to canon instead of deriving it — a literal
+#   survives a layout change silently: it still parses, still renders, and only the
+#   file at the end of it is missing
 # scope: ENGINE
 # severity: fail
 # fixture: lint/fixtures/37-engine-canon-literals
 # ---
 """37-engine-canon-literals — the engine must DERIVE its paths, never spell them.
 
-The boundary this mechanises (ac-ys8f): `engine/` holds machinery, the repo root holds
+The boundary this mechanises: `engine/` holds machinery, the repo root holds
 canon, and the machinery reaches canon through variables resolved from its own location
 (`AC_ROOT`, `ENGINE_DIR`, `ORG_ROOT`) — never through a literal that pins one machine's
 directory layout.
@@ -26,11 +24,11 @@ Forbidden in engine/ CODE:
      domain repo names itself differently per layout, so spelling either one is the
      same bug wearing a different name.
 
-PROSE IS OUT OF SCOPE, deliberately. Comments, docstrings and `_doc` fields explain this
-history and must be able to quote the very literals the check forbids — including the
-commit that relocated these files. A check that reddened on its own explanation would be
-removed within a week, so it reads code lines only: `#`-comments are stripped, and in the
-wiring manifest only the `command` fields are examined.
+PROSE IS OUT OF SCOPE, deliberately. Comments, docstrings and `_doc` fields must be able
+to quote the very literals the check forbids when they explain this boundary. A check
+that reddened on its own explanation would be removed within a week, so it reads code
+lines only: `#`-comments are stripped, and in the wiring manifest only the `command`
+fields are examined.
 
 Exit: 0 clean, 1 a literal found, 2 no engine/ under root (NOT-GATED, never a pass).
 """

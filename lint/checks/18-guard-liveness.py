@@ -8,11 +8,9 @@
 # severity: fail
 # fixture: lint/fixtures/18-guard-liveness
 # ---
-"""18-guard-liveness — the ported Check 18 (ac-1p7j.15).
+"""18-guard-liveness — every wired guard actually fires.
 
-Ported VERBATIM from the legacy bash block (parity proven at port time against
-the extracted block, before the block was removed from lint.sh). Same probes,
-same verdict strings. Executability alone is not the assertion: a hook that
+Executability alone is not the assertion: a hook that
 runs and always exits 0 is equally dead. So every guard asserts that it RUNS,
 and every guard we can drive asserts that it FIRES on a positive case and
 stays SILENT on a negative one.
@@ -34,8 +32,8 @@ stays SILENT on a negative one.
     unwired or partially-wired guard FAILs — it is exactly as dead as a
     non-executable one.
 
-The probe flag dir is a private mktemp (the legacy block used a shared
-/tmp/lint-guard-probe that concurrent runs clobbered).
+The probe flag dir is a private mktemp — a shared /tmp path would be
+clobbered by concurrent runs.
 
 Exit: 0 clean, 1 violations, 2 no hook scripts under root (NOT-GATED, never a
 pass).

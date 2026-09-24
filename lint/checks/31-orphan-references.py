@@ -8,7 +8,7 @@
 # severity: fail
 # fixture: lint/fixtures/31-orphan-references
 # ---
-"""31-orphan-references — reference files with no pointer in the registry (ac-1p7j.5).
+"""31-orphan-references — reference files with no pointer in the registry.
 
 A file under any skill's references/, reference/ or workflows/ tree is governed
 (the LIVE_TEXT members that are not SKILL.md). It is an ORPHAN when no file in

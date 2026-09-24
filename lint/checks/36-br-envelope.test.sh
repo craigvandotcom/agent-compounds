@@ -52,8 +52,7 @@ rc=$(run_check "$FIXTURE")
   && ok "the fixture's raw read is RED and names the caller" \
   || bad "fixture: rc=$rc out=$(cat "$OUT")"
 
-# --- RED: backslash-newline continuation evasion (ac-ia8g) --------------------
-# Distinct marker from sibling ac-1jkr's windowed-context cases.
+# --- RED: backslash-newline continuation evasion ------------------------------
 mkdir -p "$WORK/evasion-cont/skills/_tools"
 printf '#!/usr/bin/env bash\ndata=$(br \\\n  list --json --limit 0)\n' \
   > "$WORK/evasion-cont/skills/_tools/cont.sh"
@@ -62,7 +61,7 @@ rc=$(run_check "$WORK/evasion-cont")
   && ok "backslash-newline continuation evasion is RED" \
   || bad "evasion-cont: rc=$rc out=$(cat "$OUT")"
 
-# --- RED: quoted-binary evasion (ac-ia8g) -------------------------------------
+# --- RED: quoted-binary evasion ------------------------------------------------
 mkdir -p "$WORK/evasion-quoted/skills/_tools"
 printf 'data=$("br" list --json --limit 0)\n' \
   > "$WORK/evasion-quoted/skills/_tools/q.sh"
@@ -92,8 +91,7 @@ rc=$(run_check "$WORK/empty")
   && ok "a tree with no scripts is NOT-GATED (exit 2), never a pass" \
   || bad "empty: rc=$rc out=$(cat "$OUT")"
 
-# --- RED: a raw read split across lines, no backslash (ac-1jkr) -----------------
-# Marker: split — sibling ac-ia8g owns quote/continuation fixtures.
+# --- RED: a raw read split across lines, no backslash --------------------------
 mkdir -p "$WORK/split/skills/_tools"
 printf '#!/usr/bin/env bash\ndata=$(br list\n  --json --limit 0)\n' \
   > "$WORK/split/skills/_tools/split.sh"

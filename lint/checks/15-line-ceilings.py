@@ -8,13 +8,11 @@
 # severity: fail
 # fixture: lint/fixtures/15-line-ceilings
 # ---
-"""15-line-ceilings — the ported Check 15 judge (ac-1p7j.15).
+"""15-line-ceilings — coarse per-tier line-count ceilings for SKILL.md.
 
-Ported VERBATIM from the legacy bash block (parity proven at port time against
-the extracted block, before the block was removed from lint.sh). Same roster
-derivation, same ratchet arithmetic, same verdict strings. The constants moved
-to skills/packages.json (`_lint`: conductor_ceiling, standard_ceiling,
-conductor_skills) per the bead intent — a ceiling change is a manifest change.
+The constants live in skills/packages.json (`_lint`: conductor_ceiling,
+standard_ceiling, conductor_skills) — a ceiling change is a manifest change,
+never a script edit.
 
 These ceilings are a COARSE BACKSTOP for outliers and brand-new large skills
 — SECONDARY to Check 14's per-file no-net-growth ratchet, which is the
@@ -29,19 +27,17 @@ reviewed config edit, and this check catches the raise that outruns the
 measured tier.
 
 FAILS only when the manifest's `_lint` ceilings are raised above HEAD's
-committed value (2026-09-12 fix, ac-lint-audit): the check used to fail
-whenever the config constant exceeded the freshly-derived ceiling, which also
-fires when nobody touched the config but someone SHRANK the largest
-SKILL.md — the derived ceiling drops, the untouched constant is now above
+committed value. A naive comparison against the freshly-derived ceiling would
+also fire when nobody touched the config but someone SHRANK the largest
+SKILL.md — the derived ceiling drops, the untouched constant ends up above
 it, and the committer who improved things sees red. Comparing against HEAD's
 own committed config value tells a real raise (fail) apart from a stale
-constant that a shrink left behind (a NOTICE suggesting the constant be
-lowered, never a failure). HEAD's config unresolvable (shallow/standalone
-checkout, or the file is new) degrades to NOTICE, never a fail — a raise
-this check cannot prove is not a raise this check reports.
+constant that an unrelated shrink left behind (a NOTICE suggesting the
+constant be lowered, never a failure). HEAD's config unresolvable
+(shallow/standalone checkout, or the file is new) degrades to NOTICE, never a
+fail — a raise this check cannot prove is not a raise this check reports.
 
-  conductor tier  ceil_to_10(tier max x 1.15) — W3.2-pilot measured cap
-                  (live-run-accepted 2026-07-21; live tier max is ac-review)
+  conductor tier  ceil_to_10(tier max x 1.15)
   standard tier   ceil_to_10(tier max x 1.10) — deliberately TIGHTER than the
                   conductor multiplier so each re-measure is a real tightening
 
@@ -73,7 +69,7 @@ def ceil_to_10(max_lines, mult_pct):
 
 def load_config(root):
     """The ceiling constants, read from the manifest's `_lint` section through
-    lint/lib/manifest.py (ac-6asz.3) — the manifest is the only source.
+    lint/lib/manifest.py — the manifest is the only source.
     Raises ManifestMissing (an OSError) naming
     the defect, which run() reports as a FAIL."""
     section = manifest.packages(root).get(SECTION)

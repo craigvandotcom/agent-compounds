@@ -261,7 +261,7 @@ def violations():
     return out, scanned
 
 
-# --- probe-shape check (ac-attt) --------------------------------------------------
+# --- probe-shape check -------------------------------------------------------------
 PROBE_LINE = re.compile(r"Probe:\s*`([^`]*)`")
 VITEST_RUN = re.compile(r"\b(pnpm|npx)\s+vitest\s+run\b")
 # Regex, not shlex: `grep -c` reads as pass/fail just as often INSIDE a substitution

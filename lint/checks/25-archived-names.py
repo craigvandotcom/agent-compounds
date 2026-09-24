@@ -9,7 +9,7 @@
 # severity: fail
 # fixture: lint/fixtures/25-archived-names
 # ---
-"""25-archived-names — every retired name stays retired (ac-1p7j.4).
+"""25-archived-names — every retired name stays retired.
 
 One check, three legs, one governed idea: a name that no longer exists must
 not survive in live text or on disk.
@@ -24,10 +24,9 @@ not survive in live text or on disk.
   exist; it never blocks the other two legs and never claims a pass on their
   behalf.
 
-  RETIRED_NAMES fixed list (folded in from the former checks 1-dead-patterns
-  and 09-stray-alias-agents 2026-09-24 — one data list, one check guards every
-  retired name): each entry is a name that died on disk and must never be
-  copied back.
+  RETIRED_NAMES fixed list (one data list, one check guards every retired
+  name): each entry is a name that died on disk and must never be copied
+  back.
 
     kind "text" — a dead-pattern string, zero tolerance anywhere under
       skills/ or agents/ (every *.md file, not just LIVE_TEXT — a ledger or a
@@ -47,8 +46,8 @@ them):
 
   STANDING_EXCLUSIONS
       audit, planning, openrouter — two common nouns and the CLI the
-      multi-model skill must keep typing. WS1 archives all three dirs; the
-      words stay legal in text forever.
+      multi-model skill must keep typing; the words stay legal in text
+      forever even though all three source dirs are archived.
 
   ARCHIVED_V1_SURVIVORS
       ac-beadify, ac-implement, ac-publish — archived v1s of surviving skills.
@@ -93,20 +92,19 @@ ALLOWLIST = "lint/allowlists/25-archived-names.txt"
 # or alias leaves this list only by dying on disk first.
 #
 #   "text" — a dead-pattern string, zero tolerance under skills/ or agents/
-#            (every *.md file there, ported verbatim from 1-dead-patterns).
+#            (every *.md file there).
 #   "file" — a retired alias agent filename that must not exist under
-#            agents/ (ported verbatim from 09-stray-alias-agents).
+#            agents/.
 #
-# (`run /ac-plan first` / `Run /ac-plan ` were dead while the planner was
-# ac-plan-init. After the ac2->ac rename, ac-plan IS the planner and those
-# strings are correct. Retired 2026-09-02 — never added here.)
+# `run /ac-plan first` / `Run /ac-plan ` are current, valid strings — the
+# planner is ac-plan; do not add them here.
 RETIRED_NAMES = (
-    ("text", "persona-catalog", "retired 2026-06"),
-    ("text", "craigs-setup", "retired 2026-06"),
-    ("text", "browser-qa-agent", "retired 2026-06"),
+    ("text", "persona-catalog", "retired name"),
+    ("text", "craigs-setup", "retired name"),
+    ("text", "browser-qa-agent", "retired name"),
     ("text", "agent-compounds/commands/", "dead command-dir links (the /commands/ era)"),
-    ("file", "engineer.md", "retired alias agent (renamed to implementer 2026-06-11)"),
-    ("file", "reviewer.md", "retired alias agent (renamed to validator 2026-06-11)"),
+    ("file", "engineer.md", "retired alias agent (renamed to implementer)"),
+    ("file", "reviewer.md", "retired alias agent (renamed to validator)"),
 )
 
 violations = []
@@ -187,8 +185,8 @@ def scan_archived(root, names, allowlist_path):
 
 
 def scan_dead_patterns(root):
-    """The fixed-list TEXT leg (ported from 1-dead-patterns). Every *.md under
-    skills/ or agents/, zero tolerance, no allowlist. Returns (scanned, findings)."""
+    """The fixed-list TEXT leg. Every *.md under skills/ or agents/, zero
+    tolerance, no allowlist. Returns (scanned, findings)."""
     patterns = tuple(p for kind, p, _ in RETIRED_NAMES if kind == "text")
     scanned = 0
     findings = []
@@ -218,9 +216,9 @@ def scan_dead_patterns(root):
 
 
 def scan_retired_aliases(root):
-    """The fixed-list FILE leg (ported from 09-stray-alias-agents). agents/ existence
-    only, not text. Returns (checked, findings) — checked is False when agents/ itself
-    does not exist (nothing to verify, not a violation)."""
+    """The fixed-list FILE leg. agents/ existence only, not text. Returns
+    (checked, findings) — checked is False when agents/ itself does not
+    exist (nothing to verify, not a violation)."""
     aliases = tuple((p, why) for kind, p, why in RETIRED_NAMES if kind == "file")
     agents_dir = os.path.join(root, "agents")
     if not os.path.isdir(agents_dir):

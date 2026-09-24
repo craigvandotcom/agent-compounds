@@ -5,9 +5,9 @@
 #           manifest `_lint` ceiling RAISED beyond HEAD's committed value AND
 #           beyond its measured tier is FAILED by the one-way ratchet; an
 #           UNCHANGED constant left stranded above the derived ceiling by a
-#           tier-max skill SHRINKING is a NOTICE, never a fail (2026-09-12
-#           fix — the person who shrinks the biggest file must not go red);
-#           the same shrink with no git history at all (base unresolvable)
+#           tier-max skill SHRINKING is a NOTICE, never a fail (the person
+#           who shrinks the biggest file must not go red); the same shrink
+#           with no git history at all (base unresolvable)
 #           still degrades to NOTICE, never a false fail; a fully conforming
 #           tree PASSES; a tree with no skills is NOT-GATED (exit 2).
 #
@@ -86,8 +86,8 @@ fi
 # HEAD and the working tree agree on standard_ceiling: 730 — nobody raised
 # anything. The tier-max standard skill shrinks from 900 to 100 lines between
 # the base commit and the working tree, so the derived ceiling drops well
-# below 730. This must NOT fail: it is exactly the shrink the 2026-09-12 fix
-# protects.
+# below 730. This must NOT fail: it is exactly the shrink the ratchet must
+# never punish.
 t="$work/notice-shrink"
 mkdir -p "$t/skills/cond-lead" "$t/skills/big"
 write_manifest "$t" 1110 730
@@ -134,8 +134,8 @@ fi
 
 # --- 3 GREEN: everything under the ceilings -> exit 0 -------------------------
 # The one-way ratchet demands a plausible tier: a standard tier max below
-# ceil(730 / 1.10) would itself fail the ratchet leg (faithful legacy behavior),
-# so the green tree's standard tier max is 700 lines.
+# ceil(730 / 1.10) would itself fail the ratchet leg, so the green tree's
+# standard tier max is 700 lines.
 t="$work/green"
 mkdir -p "$t/skills/cond-lead" "$t/skills/small"
 write_manifest "$t" 1110 730

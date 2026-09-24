@@ -1,12 +1,11 @@
 #!/usr/bin/env python3
 """consumer-symlinks — every symlink in a consumer harness layer resolves.
 
-Moved out of the lint registry (was lint/checks/07-consumer-symlinks.py) into
-engine/sync.sh --check: this audits DEPLOY TARGETS, which sync.sh owns —
-lint.sh gates only this repo's own tree, never a consumer's. Called as a
-subprocess from sync.sh's --check leg; `lint/lib/consumers.py` stays put
-(lint check 14 also imports it), so this file reaches into `lint/` for it
-rather than duplicating the consumer-dir union logic.
+This audits DEPLOY TARGETS, which sync.sh owns — lint.sh gates only this
+repo's own tree, never a consumer's. Called as a subprocess from sync.sh's
+--check leg; `lint/lib/consumers.py` stays put (lint check 14 also imports
+it), so this file reaches into `lint/` for it rather than duplicating the
+consumer-dir union logic.
 
 Walks each consumer dir in the union (lib.consumers — the org root's
 `.claude` union every deploy target's `.claude`, both asked of
@@ -58,7 +57,8 @@ def scan():
     scanned = 0
     for d in dirs:
         if not os.path.isdir(d):
-            continue  # skip non-existent dirs silently — the legacy verdict
+            continue  # non-existent dirs are skipped silently: a consumer-less
+            # checkout is a disclosed SKIP above, not a per-dir failure here
         scanned += 1
         for dirpath, dirnames, filenames in os.walk(d):
             # Ambient job sandboxes (e.g. ~/.claude/jobs/*/tmp/...) are foreign

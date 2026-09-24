@@ -8,7 +8,7 @@
 # severity: fail
 # fixture: lint/fixtures/29-stage-conformance
 # ---
-"""29-stage-conformance — declared hand-offs must be carried by the stage table (ac-1p7j.8).
+"""29-stage-conformance — declared hand-offs must be carried by the stage table.
 
 For every live `skills/ac-*/SKILL.md`, every declared hand-off sentence is
 compared against the canonical stage table (read from the table file itself,
@@ -36,8 +36,8 @@ A target that resolves to nothing — not a table owner, not an alias — is RED
 
 The dated allowlist lint/allowlists/29-stage-conformance.txt (lib.ratchet's
 `DATE key  # why` format) is SHRINK-ONLY: entry = a skill dir name whose
-today's mismatches WS2 will reword; a clean allowlisted skill must have its
-entry REMOVED, and an entry not in the committed version at the base ref
+today's mismatches are pending a prose reword; a clean allowlisted skill must
+have its entry REMOVED, and an entry not in the committed version at the base ref
 (lib.ratchet.base_ref, honouring LINT_BASE_REF) fails the check (growth).
 The file's first landing has no committed version at base — that IS the
 seed.
@@ -167,7 +167,7 @@ def scan(root, chain, allowlist_path):
             "— the list only shrinks: remove the entry")
     for skill, msgs in sorted(hits_by_skill.items()):
         if skill in allowed:
-            notes.append(f"'{skill}' is allowlisted (WS2 will reword); {len(msgs)} mismatch(es) excused today")
+            notes.append(f"'{skill}' is allowlisted (prose reword pending); {len(msgs)} mismatch(es) excused today")
             continue
         for msg in msgs:
             violations.append(f"{skill}/SKILL.md: {msg}")

@@ -11,7 +11,7 @@
 # ---
 """36-br-envelope — every `br … --json` read routes through br_call (or the python twin).
 
-The D9 completeness sensor: the thirteen shell consumers converted to the
+A completeness sensor: the thirteen shell consumers converted to the
 envelope-aware helper (skills/_tools/br-call.sh) plus the python twin
 (skills/ac-polish/scripts/bead-artifact.py) are the routed population, and a
 future call site written raw is a RED COMMIT. The check senses; it never
@@ -38,10 +38,10 @@ CHECK_ID = "36-br-envelope"
 FLOOR = 13
 
 # The raw-read shape the conversions replaced: a `br … --json` whose output is
-# piped or captured without routing through the envelope-aware helper. The same
-# rg shape ac-heyt.4's derivation used, including the `"$BR"` variable form.
-# Quotes around the binary (`"br"` / `'br'`) are part of the token — a closing
-# quote is not whitespace, so `\bbr\b\s+` alone lets them through (ac-ia8g).
+# piped or captured without routing through the envelope-aware helper, including
+# the `"$BR"` variable form. Quotes around the binary (`"br"` / `'br'`) are part
+# of the token — a closing quote is not whitespace, so `\bbr\b\s+` alone lets
+# them through.
 RAW_READ = re.compile(r'(?:"?\$\{?BR\}?"?|[\'"]?\bbr\b[\'"]?)\s+.*--json')
 ROUTED_READ = re.compile(r"\bbr_call\b[^\n]*--json")
 BR_START = re.compile(r'(?:"?\$\{?BR\}?"?|[\'"]?\bbr\b[\'"]?)\s+')
@@ -60,7 +60,7 @@ def joined_lines(text):
     `br \\` + newline + `  list --json` is one raw read; a per-line scan never
     sees both tokens. Line numbers are those of the joined text. A `br` with
     `--json` on a following line and no backslash is the flag-continuation class
-    handled by flag_continuation (ac-1jkr).
+    handled by flag_continuation.
     """
     return enumerate(text.replace("\\\n", "").splitlines(), 1)
 
@@ -68,7 +68,7 @@ def joined_lines(text):
 def flag_continuation(rows, i):
     """The following line when it is a bare flag continuation of statement i.
 
-    `br list` then `  --json …` is one read (ac-1jkr). A following line that opens
+    `br list` then `  --json …` is one read. A following line that opens
     with anything else is a different statement: folding it in paired a plain
     `br doctor health` with a downstream routed `br_call … --json` and invented a
     raw read. Only a line whose first token is a `-flag` continues the statement.

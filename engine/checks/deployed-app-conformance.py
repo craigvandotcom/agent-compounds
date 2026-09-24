@@ -1,12 +1,11 @@
 #!/usr/bin/env python3
 """deployed-app-conformance — no dead names in every-prompt surfaces.
 
-Moved out of the lint registry (was lint/checks/12-deployed-app-conformance.py)
-into engine/sync.sh --check: this audits DEPLOY TARGETS, which sync.sh owns —
-lint.sh gates only this repo's own tree, never a consumer's. Called as a
-subprocess from sync.sh's --check leg; `lint/lib/consumers.py` stays put
-(lint check 14 also imports it), so this file reaches into `lint/` for it
-rather than duplicating the consumer-dir union logic.
+This audits DEPLOY TARGETS, which sync.sh owns — lint.sh gates only this
+repo's own tree, never a consumer's. Called as a subprocess from sync.sh's
+--check leg; `lint/lib/consumers.py` stays put (lint check 14 also imports
+it), so this file reaches into `lint/` for it rather than duplicating the
+consumer-dir union logic.
 
 Probes each consumer's hooks/workflow-reminder.md (C1 dead pipeline
 commands), its .codex/hooks twin where present, hooks/delegation-reminder.md
@@ -75,7 +74,8 @@ def scan():
     scanned = 0
     for d in dirs:
         if not os.path.isdir(d):
-            continue  # skip non-existent dirs silently — the legacy verdict
+            continue  # non-existent dirs are skipped silently: a consumer-less
+            # checkout is a disclosed SKIP above, not a per-dir failure here
         scanned += 1
         app_root = os.path.dirname(d)
         for hooks_dir in (os.path.join(d, "hooks"), os.path.join(app_root, ".codex", "hooks")):

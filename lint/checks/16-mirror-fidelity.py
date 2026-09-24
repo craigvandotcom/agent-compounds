@@ -8,11 +8,7 @@
 # severity: fail
 # fixture: lint/fixtures/16-mirror-fidelity
 # ---
-"""16-mirror-fidelity — the ported Check 16 judge (ac-1p7j.15).
-
-Ported VERBATIM from the legacy bash block (parity proven at port time against
-the extracted block, before the block was removed from lint.sh). Same marker
-grammar, same three buckets, same verdict strings.
+"""16-mirror-fidelity — every mandated verbatim mirror stays byte-identical to canon.
 
 Canon MANDATES this duplication: the child-spawn environment contract is
 pasted VERBATIM into every file that constructs a child prompt — a
@@ -33,8 +29,7 @@ parse is a false green:
                    cited path is a `<placeholder>`, not a file.
 
 Population: every *.md under skills/ that lib.scope tracks (LIVE_TEXT plus
-the dated ledger files) — the same corpus the legacy `grep -rn
---include='*.md'` walked.
+the dated ledger files).
 
 Exit: 0 clean, 1 violations, 2 no skills/ under root (NOT-GATED, never a pass).
 """
@@ -86,7 +81,7 @@ def markers(root):
 
 
 def classify(text):
-    """Marker payload -> (path, section) exactly as the legacy shell parsed it."""
+    """Marker payload -> (path, section)."""
     body = text.split("mirror:", 1)[1]
     body = body.split("--", 1)[0]
     body = body.split("— edit", 1)[0]

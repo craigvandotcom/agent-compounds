@@ -1,6 +1,6 @@
 """manifest — readers for the consumer/registry manifests lint v2 checks read.
 
-  packages(root)  -> skills/packages.json  (per-package budgets; lands with WS3)
+  packages(root)  -> skills/packages.json  (per-package budgets)
   factory(root)   -> templates/factory.json (consumer manifest schema)
   validate(path)  -> a filled instance checked against the template's keys
 

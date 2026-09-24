@@ -9,15 +9,7 @@
 # severity: fail
 # fixture: lint/fixtures/34-is-test-shaped-single-def
 # ---
-"""34-is-test-shaped-single-def — the ported legacy lint.sh "Check 25" block.
-
-Ported VERBATIM (2026-09-12, lint audit ac-b62c): the legacy block lived
-inline in lint.sh under the label "Check 25", which collided with the v2
-port's own lint/checks/25-archived-names.py — a second, unrelated check
-sharing the same numeral — and being inline it was invisible to 00-meta.py's
-header contract and to `./lint.sh --check <id>` scoping. This
-port lands on the first free numeral (34) with its own fixture; the verdict
-strings and the population (skills/ac-implement/scripts/) are unchanged.
+"""34-is-test-shaped-single-def — is_test_shaped() must be defined exactly once.
 
 The contract:
 
@@ -67,7 +59,7 @@ def main():
         named = " ".join(sites) if sites else "(none)"
         findings.append(
             f"is_test_shaped() has {len(sites)} definition site(s) ({named}) — the contract "
-            f"must live in exactly one place, {OWNER} (ac-b62c drift sensor)")
+            f"must live in exactly one place, {OWNER}")
 
     flight_check = f"{POPULATION_DIR}/flight-check.sh"
     if flight_check in files:
@@ -75,7 +67,7 @@ def main():
             if "is_test_shaped" in fh.read():
                 findings.append(
                     "flight-check.sh mentions is_test_shaped — it must carry no copy that "
-                    f"could drift from {OWNER}'s definition (ac-b62c)")
+                    f"could drift from {OWNER}'s definition")
 
     for f in findings:
         print(f"FAIL {CHECK_ID}: {f}")

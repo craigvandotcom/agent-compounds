@@ -1,8 +1,7 @@
 #!/usr/bin/env bash
 # 16-mirror-fidelity.test.sh — the contract harness for lint/checks/16-mirror-fidelity.py.
 #
-#   PROBE (inherits the three cases of the retired legacy-judge harness
-#   skills/ac-pipeline/scripts/mirror-fidelity.test.sh, bead ac-kdtg.3):
+#   PROBE:
 #     1. canon-extraction failure — the canon file lacks the § blockquote.
 #        Must fail on BOTH legs: the extraction failure AND the zero-marker
 #        accounting assertion (the vacuous-accounting path).

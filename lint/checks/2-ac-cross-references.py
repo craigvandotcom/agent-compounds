@@ -9,12 +9,9 @@
 # ---
 """2-ac-cross-references — every /ac-* invocation in live skill text resolves.
 
-The legacy lint.sh Check 2 block, ported to the runner.
-
-SCOPE: the pattern is `/ac-[a-z]...`. Since the pipeline rename it matches the
-WHOLE pipeline family — the former blind spot (invocations of the old prefixed
-family, invisible here and resolved by Check 23 instead) no longer exists. Do
-not widen the regex without re-reading that history — one engine per pattern.
+SCOPE: the pattern is `/ac-[a-z]...` and matches the WHOLE pipeline family.
+Do not widen the regex without checking what else in this registry depends
+on its exact shape — one engine per pattern.
 
 An INVOCATION is `/ac-<name>` at line start or after a non-path character
 (space, quote, backtick, bracket). Preceded by a letter, digit, dot or slash

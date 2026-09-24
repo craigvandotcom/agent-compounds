@@ -2,9 +2,8 @@
 # ---
 # id: 32-hooks-doc-names
 # prevents: engine/hooks.wiring.json documentation text (the `_doc` fields and `assurance` entries) naming
-#   skills that do not exist — prose pointing operators and agents at archived or never-built skills,
-#   the way the fail-open rationale once justified itself by naming the retired ac-loop and
-#   ac-bead-refine — and an assurance.PROBE stating a case count its suite no longer has, the figure
+#   skills that do not exist — prose pointing operators and agents at archived or never-built skills —
+#   and an assurance.PROBE stating a case count its suite no longer has, the figure
 #   an operator reads for orientation otherwise decaying silently every time a case is added
 # scope: LIVE_TEXT
 # severity: fail
@@ -17,8 +16,7 @@ The hook WIRING manifest's `_doc` fields and `assurance` entries are the
 doctrine an operator or agent reads to understand why a hook behaves as it
 does. When that prose names a skill, the name must resolve against the LIVE
 skill roster — a reference to an archived or missing skill is a stale claim
-that silently misdirects the reader (the fail-open rationale that named the
-retired ac-loop is the found instance).
+that silently misdirects the reader.
 
 Two reference shapes are resolved, the only unambiguous ones in prose:
   1. `skills/<segment>...` path references — the segment (or the full file

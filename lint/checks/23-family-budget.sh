@@ -50,11 +50,7 @@
 #                  load, so they are outside this leg (and reported as canon by Leg 3).
 #   3. canon       lines of pre-existing canon the lean skills point at are REPORTED,
 #                  never capped. A number nobody prints is a number nobody defends.
-#   4. RETIRED (a: retires with its subject) — asserted the standalone ac2-pipeline
-#                  constitution never grew a references/ or scripts/ dir. At the ac2→ac
-#                  merge the constitution moved INTO ac-pipeline, which legitimately hosts
-#                  the owner-hosted operating contracts there; the no-subdirs bound now
-#                  applies to the constitution CORE in SKILL.md, enforced by review.
+#   4. RETIRED (retires with its subject).
 #   5. assurance   every lean script declares PROBE / SCHEDULE / MODE / ON-FAILURE. lint
 #                  Check 21 reads only engine/hooks.wiring.json and structurally cannot see these.
 #                  Discovery set: the six workflow skills' scripts/*.sh PLUS the named
@@ -62,10 +58,7 @@
 #                  outside any member dir, so a glob-only set would silently report zero).
 #                  ac-pipeline/scripts/*.sh predate the triad convention, are shared
 #                  substrate (not family-owned machinery), and carry their own test files.
-#   6. RETIRED (a: retires with its subject) — resolved /ac2-* invocations because Check
-#                  2's /ac-[a-z] pattern structurally could not see them. The rename
-#                  erased that blind spot: Check 2 now resolves every invocation the
-#                  family makes.
+#   6. RETIRED (retires with its subject).
 #   7. package     per-package spine/loaded budgets read through skills/packages.json (via
 #                  lint/lib/manifest.py, the JSON reader every v2 check that reads the
 #                  manifest shares): every package's live-measured spine (member SKILL.md
