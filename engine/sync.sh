@@ -432,9 +432,9 @@ $A_BODY")"
 #
 # The agent's `tier:` (from the registry, carried through the .claude layer) is
 # RESOLVED here against harnesses.opencode.agent_models and stamped as `model:`.
-# Since the tier map landed (2026-09) the old "omit model, inherit the default"
-# posture is gone: opencode now runs a real 3-level gradient (orchestrator =
-# opencode.jsonc's "model" default; coordinator/worker stamped below).
+# The value "inherit" omits `model:` instead, so the stance runs on the model of the
+# primary agent that invoked it (https://opencode.ai/docs/agents). Any mix of inherit
+# and pinned ids works; a missing entry still fails loud (tier_model).
 #
 # `tools:` is deprecated upstream in favour of `permission:`. OpenCode's edit
 # key covers the write, edit, and patch tools together — it does not separate
@@ -471,6 +471,7 @@ gen_opencode_agents() { # <src-agents-dir> <dest-dir>
     [ -f "$f" ] || { echo "  WARN: stance $name.md missing in $src (skipped)"; continue; }
     parse_agent "$f"
     omodel="$(tier_model opencode "${A_TIER:-}" "$name")"
+    [ "$omodel" = inherit ] && omodel="" || omodel="model: $omodel"$'\n'
     relsrc="${f/#$ORG_ROOT\//}"
     tools="$(awk '/^---[[:space:]]*$/{c++; next} c==1 && /^tools:/{print; exit}' "$f")"
     # ac-oqfe: Edit listed -> allow; Write without Edit -> deny (opencode_edit_perm).
@@ -479,8 +480,7 @@ gen_opencode_agents() { # <src-agents-dir> <dest-dir>
 "---
 description: $A_DESC
 mode: subagent
-model: $omodel
-permission:
+${omodel}permission:
   edit: $edit_perm
   bash: allow
   task: deny
