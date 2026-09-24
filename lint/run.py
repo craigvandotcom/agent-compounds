@@ -270,6 +270,10 @@ def main():
             caller_index = os.environ.get("LINT_CALLER_GIT_INDEX_FILE")
             if caller_index:
                 extra_env["GIT_INDEX_FILE"] = caller_index
+            # The checks themselves come from the snapshot too: an unstaged or untracked
+            # check in the working tree is not part of this commit and never judges it.
+            staged_checks = [os.path.join(staged_worktree, os.path.relpath(c, _ROOT)) for c in selected]
+            selected = [c for c in staged_checks if os.path.isfile(c)]
         else:
             print("NOTICE: staged-lane materialisation failed — running against "
                   "the real checkout instead (an unrelated dirty file could affect this run)",

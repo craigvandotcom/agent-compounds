@@ -306,6 +306,16 @@ rc7=$?
 [ "$rc7" = "0" ] && ok "a lone SKIP (77) check never fails a run alone (rc=0)" \
                   || bad "expected rc=0 for a lone skip, got rc='$rc7'"
 
+# --- Case 8: an untracked check in the working tree is not part of the commit ---
+printf '#!/usr/bin/env python3\nimport sys\nsys.exit(1)\n' > "$W/lint/checks/59-untracked.py"
+out8=$(run_new --staged --json 2>/dev/null)
+if echo "$out8" | grep -q '59-untracked'; then
+  bad "an untracked check ran in the staged lane: $out8"
+else
+  ok "an untracked working-tree check never judges a staged commit"
+fi
+rm -f "$W/lint/checks/59-untracked.py"
+
 echo "---"
 echo "PASS=$PASS FAIL=$FAIL"
 [ "$FAIL" -eq 0 ]
