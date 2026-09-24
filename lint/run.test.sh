@@ -392,6 +392,70 @@ case "$root13" in
 esac
 rm -f "$W/lint/checks/60-demo-root.py"
 
+# --- Case 14: a broken WORKING-TREE lint/run.py never blocks a --staged run
+# once a valid lint/run.py (and its lint/lib) is staged. The pre-commit gate
+# (hooks/pre-commit -> lint.sh -> the WORKING-TREE lint/run.py) must judge a
+# commit with the STAGED snapshot's own runner, not this process's possibly
+# half-edited on-disk copy — the bug this bead fixes.
+#
+# The break lives inside run_check() (a runtime AttributeError, reached only
+# if that function is actually CALLED) rather than a literal top-level
+# SyntaxError: an unparseable syntax error stops `python3 lint/run.py` from
+# launching at all, before ANY code in that same file — including a fix
+# living in that file — gets a chance to run; no in-file delegation can
+# rescue that. This proves the equivalent property for the code that DOES
+# execute once argument parsing succeeds: the STAGED runner is what decides
+# the commit, and the working tree's own (broken) check-execution path is
+# never reached.
+git -C "$W" reset -q --hard >/dev/null
+git -C "$W" add "$W/lint/run.py" "$W/lint/lib/scope.py" "$W/lint/lib/frontmatter.py" "$W/lint/lib/verdict.py"
+python3 - "$W/lint/run.py" <<'PYEOF'
+import sys
+path = sys.argv[1]
+text = open(path).read()
+marker = "proc = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout, env=env)"
+assert marker in text, "run_check()'s subprocess call moved — update case 14's break"
+open(path, "w").write(text.replace(marker, marker.replace("subprocess.run(", "subprocess.rn_BROKEN(")))
+PYEOF
+out14=$(run_new --check 50 --staged --json 2>/dev/null); rc14=$?
+res14=$(echo "$out14" | result_of)
+if [ "$rc14" = "0" ] && [ "$res14" = "ok" ]; then
+  ok "a broken WORKING-TREE lint/run.py never blocks a --staged run once a valid lint/run.py is staged"
+else
+  bad "expected rc=0 result=ok despite the broken working-tree runner, got rc='$rc14' result='$res14': $out14"
+fi
+
+# --- Case 15: the STAGED lint/run.py's own behaviour is what a --staged run
+# shows, not the working tree's copy — the STAGED copy's label for one check
+# is made observably different, and that (not the plain working-tree copy's
+# label) is what appears.
+git -C "$W" reset -q --hard >/dev/null
+cp "$REGISTRY/lint/lib/scope.py" "$REGISTRY/lint/lib/frontmatter.py" "$REGISTRY/lint/lib/verdict.py" "$W/lint/lib/"
+cp "$REGISTRY/lint/run.py" "$W/lint/run.py"
+python3 - "$W/lint/run.py" <<'PYEOF'
+import sys
+path = sys.argv[1]
+text = open(path).read()
+marker = 'r["result"] = verdict.label(r["exit"])'
+assert marker in text, "results-labeling line moved — update case 15's marker"
+text = text.replace(
+    marker,
+    marker + '\n        if r["id"] == "50-demo-token":\n            r["result"] = "staged-marker"',
+)
+open(path, "w").write(text)
+PYEOF
+git -C "$W" add "$W/lint/run.py" "$W/lint/lib/scope.py" "$W/lint/lib/frontmatter.py" "$W/lint/lib/verdict.py"
+cp "$REGISTRY/lint/run.py" "$W/lint/run.py"   # working tree reverts to the PLAIN copy; the index keeps the marker version
+out15=$(run_new --check 50 --staged --json)
+res15=$(echo "$out15" | result_of)
+outctl15=$(run_new --check 50 --json)
+resctl15=$(echo "$outctl15" | result_of)
+if [ "$res15" = "staged-marker" ] && [ "$resctl15" = "ok" ]; then
+  ok "a --staged run shows the STAGED lint/run.py's own (observably different) label, not the plain working-tree copy's"
+else
+  bad "expected staged='staged-marker' working-tree='ok', got staged='$res15' working-tree='$resctl15': $out15 / $outctl15"
+fi
+
 echo "---"
 echo "PASS=$PASS FAIL=$FAIL"
 [ "$FAIL" -eq 0 ]

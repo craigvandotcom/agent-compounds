@@ -324,6 +324,33 @@ def main():
         caller_index = _resolve_caller_index()
         staged_worktree, git_dir = materialize_staged(args.root, caller_index)
         if staged_worktree:
+            staged_runner = os.path.join(staged_worktree, "lint", "run.py")
+            if not os.environ.get("LINT_STAGED_RUNNER"):
+                if os.path.isfile(staged_runner):
+                    # Delegate entirely to the STAGED snapshot's own run.py (and its own
+                    # lint/lib — __file__-derived _ROOT/_HERE resolve inside the snapshot
+                    # once this child launches there): the pre-commit gate must judge
+                    # what a commit will CONTAIN, never THIS process's working-tree
+                    # runner, which can be a half-edited, unstaged file mid-refactor
+                    # (measured: it blocked an unrelated commit). LINT_STAGED_RUNNER=1
+                    # is the flag that stops the child delegating again — it IS the
+                    # staged runner, materialising its own snapshot and running
+                    # normally in the block below.
+                    child_env = os.environ.copy()
+                    child_env["LINT_STAGED_RUNNER"] = "1"
+                    try:
+                        proc = subprocess.run(
+                            [sys.executable, staged_runner] + sys.argv[1:], env=child_env,
+                        )
+                        return proc.returncode
+                    finally:
+                        # This process's own snapshot was only needed to locate the
+                        # staged run.py above — the child materialises its own; clean
+                        # up ours here, same as the existing finally below would have.
+                        shutil.rmtree(staged_worktree, ignore_errors=True)
+                print("NOTICE: staged snapshot has no lint/run.py (this commit removes "
+                      "it) — running in-process against the working tree's runner "
+                      "instead", file=sys.stderr)
             run_root = staged_worktree
             extra_env = {"GIT_DIR": git_dir, "GIT_WORK_TREE": staged_worktree, "LINT_STAGED": "1"}
             # A check's own `--cached` read (14's leg 1) must see the SAME index this
