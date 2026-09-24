@@ -19,8 +19,8 @@ Sets:
   CORPUS     the trigger corpus (skill-builder/references/trigger-corpus.md).
   ARCHIVE    everything under _archive/.
   HARNESSES  proof-test harnesses (*.test.sh / *.test.py) plus the runner that
-             executes them and the workflow that schedules it — Check 20's
-             audit surface.
+             executes them and the workflow that schedules it — the population
+             scripts/run-all-proofs.sh + the CI `proofs` job actually run.
   ENGINE     engine/ — the renderer, the stamper and the wiring manifest.
   HOOKS      engine/hooks.wiring.json, the hooks/ executables it wires, and the bead
               board its PENDING-DECISION escapes resolve against — Check 21's
@@ -47,11 +47,9 @@ Sets:
               every walk.
   README             the root README.md — Check 04's audit surface. Named in
                       04's header (`scope: LIVE_TEXT README`).
-  AGENTS_DOC         the root AGENTS.md — Check 05's audit surface. Named in
-                      05's header (`scope: LIVE_TEXT AGENTS_DOC`).
   AGENT_STANCES      agents/*.md, the 5 core stance files — the surface Checks
                       03 (tier vs concrete model), 25 (retired alias names)
-                      and 33 (named stances resolve) name as their subject.
+                      and 28-citations (named stances resolve) name as their subject.
                       Named in each of those checks' headers — a header can
                       list several set names separated by whitespace/commas
                       (see the composite-alias note below).
@@ -61,7 +59,7 @@ Sets:
                       manifest) — distinct from HARNESSES (proof-test files)
                       above. Named in 03's header (it reads harnesses.json too).
   LINT_CONFIG        skills/packages.json (`_lint` section) — read at runtime
-                       by several checks (14, 15, 25, 29, 31, 32), any of
+                       by several checks (14, 15, 25), any of
                        which its thresholds can change. Not wired into any
                        check's `scope:` header, and not read by run.py —
                        a config-file change is covered for free since every
@@ -190,7 +188,6 @@ def _one(rel):
 
 
 README = _one("README.md")
-AGENTS_DOC = _one("AGENTS.md")
 DEPLOY_SCRIPT = _one("engine/deploy.sh")
 HARNESS_MANIFEST = _one("harnesses.json")
 LINT_CONFIG = _one("skills/packages.json")
@@ -204,9 +201,9 @@ LINT_CONFIG = _one("skills/packages.json")
 _COMPOSITE_SCOPES = {
     "LIVE_TEXT AGENT_STANCES HARNESS_MANIFEST": LIVE_TEXT | AGENT_STANCES | HARNESS_MANIFEST,
     "LIVE_TEXT README": LIVE_TEXT | README,
-    "LIVE_TEXT AGENTS_DOC": LIVE_TEXT | AGENTS_DOC,
     "LIVE_TEXT DEPLOY_SCRIPT": LIVE_TEXT | DEPLOY_SCRIPT,
     "LIVE_TEXT AGENT_STANCES": LIVE_TEXT | AGENT_STANCES,
+    "LIVE_TEXT AGENT_STANCES HOOKS": LIVE_TEXT | AGENT_STANCES | HOOKS,
 }
 globals().update(_COMPOSITE_SCOPES)
 

@@ -1,6 +1,0 @@
-# Check 28 allowlist — lib.ratchet format (`DATE key  # why`), dated, shrink-only.
-# `key` is the dangling path; `DATE` is when it was admitted. An entry whose path
-# resolves again FAILS the check — the fix landed; delete the line. Never add a
-# line without fixing the date to the admission day.
-2026-09-23 hooks/on-file-write.sh  # why: historical example in assurance-declarations.md — the file was deleted per ac-on0y.6's DELETE ruling; the sentence documents the incident on purpose
-2026-09-23 hooks/README.md  # why: historical example in verification-gate.md's PAT_DOC_TEST_CI comment (bd-mdbhr) — names a path from a past incident, not a live citation
