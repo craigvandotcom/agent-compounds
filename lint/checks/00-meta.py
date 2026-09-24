@@ -38,6 +38,11 @@ _HERE = os.path.dirname(os.path.abspath(__file__))
 
 REQUIRED_FIELDS = ("prevents", "fixture")
 
+# Overridable for the test only — a hung fixture must never crash this check
+# with an uncaught subprocess.TimeoutExpired traceback; it must be reported
+# as what it is (see fixture_goes_red below).
+FIXTURE_TIMEOUT = int(os.environ.get("LINT_META_FIXTURE_TIMEOUT", "120"))
+
 findings = []
 
 
@@ -104,8 +109,12 @@ def fixture_goes_red(path, header):
             "HOME": os.environ.get("HOME", os.path.expanduser("~")),
             "LANG": os.environ.get("LANG", "C.UTF-8"),
         }
-        proc = subprocess.run(["bash", os.path.join(fx, "run.sh")],
-                              capture_output=True, text=True, timeout=120, env=env)
+        try:
+            proc = subprocess.run(["bash", os.path.join(fx, "run.sh")],
+                                  capture_output=True, text=True, timeout=FIXTURE_TIMEOUT, env=env)
+        except subprocess.TimeoutExpired:
+            fail(f"{rel}: fixture leg NOT-GATED — {header['fixture']}/run.sh timed out after {FIXTURE_TIMEOUT}s")
+            return False
         # run.sh's contract is INVERTED from the raw check exit: it exits 0 when the
         # check went RED as required (the RED is demonstrated), 1 when the check
         # passed its RED case, anything else when the fixture could not build.
@@ -126,7 +135,11 @@ def fixture_goes_red(path, header):
         "LANG": os.environ.get("LANG", "C.UTF-8"),
         "LINT_ROOT": fx,
     }
-    proc = subprocess.run(cmd, capture_output=True, text=True, timeout=120, env=env)
+    try:
+        proc = subprocess.run(cmd, capture_output=True, text=True, timeout=FIXTURE_TIMEOUT, env=env)
+    except subprocess.TimeoutExpired:
+        fail(f"{rel}: fixture leg NOT-GATED — running against {header['fixture']} timed out after {FIXTURE_TIMEOUT}s")
+        return False
     # STATIC-TREE leg: the check under test's OWN exit code, read through the one
     # verdict contract (lib.verdict) — a `fail` (1) is the required RED. The run.sh
     # leg above reads a different, INVERTED contract and must never use this.

@@ -91,6 +91,26 @@ else
   bad "NOT-RED: expected exit 1 naming the RED leg, got $rc"
 fi
 
+# --- case TIMEOUT: a fixture that hangs past the (overridden) timeout --------
+# names the timeout, exits 1, never an uncaught subprocess.TimeoutExpired
+# traceback on stderr.
+mkdir -p "$work/fixtures/01-timeout"
+printf '# broken: deliberate RED case\n' > "$work/fixtures/01-timeout/SKILL.md"
+hdr="$(mktemp)"; printf '%s\n' \
+  '# ---' '# prevents: test stub - hangs past the fixture timeout' '# fixture: fixtures/01-timeout' '# ---' > "$hdr"
+sleep_body="$(mktemp)"; printf '%s\n' \
+  'import time' 'time.sleep(5)' 'sys.exit(1)' > "$sleep_body"
+write_stub "$work/lint/checks/01-timeout.py" "$hdr" "$sleep_body"
+rc=$(LINT_META_FIXTURE_TIMEOUT=1 python3 "$META" "$work" >"$OUT" 2>&1; echo $?)
+if [ "$rc" = 1 ] && grep -q "timed out after 1s" "$OUT" && ! grep -qi "traceback" "$OUT"; then
+  ok "hung fixture past overridden timeout -> failed, names the timeout, no traceback"
+else
+  cat "$OUT"
+  bad "TIMEOUT: expected exit 1 naming the timeout with no traceback, got $rc"
+fi
+rm -f "$work/lint/checks/01-timeout.py"
+rm -rf "$work/fixtures/01-timeout"
+
 # --- case EMPTY: no checks population -> NOT-GATED exit 2, never a pass ------
 empty="$(mktemp -d)"
 rc=$(run_meta "$empty")
