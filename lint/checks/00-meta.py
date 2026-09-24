@@ -32,7 +32,7 @@ import subprocess
 import sys
 
 import _bootstrap  # noqa: F401
-from lib import frontmatter, scope
+from lib import frontmatter, scope, verdict
 
 _HERE = os.path.dirname(os.path.abspath(__file__))
 
@@ -127,11 +127,15 @@ def fixture_goes_red(path, header):
         "LINT_ROOT": fx,
     }
     proc = subprocess.run(cmd, capture_output=True, text=True, timeout=120, env=env)
-    if proc.returncode == 1:
+    # STATIC-TREE leg: the check under test's OWN exit code, read through the one
+    # verdict contract (lib.verdict) — a `fail` (1) is the required RED. The run.sh
+    # leg above reads a different, INVERTED contract and must never use this.
+    lbl = verdict.label(proc.returncode)
+    if lbl == "fail":
         return True
-    if proc.returncode == 0:
+    if lbl == "ok":
         fail(f"{rel}: fixture {header['fixture']} does NOT go RED — the check passed against its own RED case")
-    elif proc.returncode == 77:
+    elif lbl == "skip":
         fail(f"{rel}: fixture leg NOT A RED — running against {header['fixture']} reported SKIP (77), "
              "not the required violation; a fixture must demonstrate a real RED, never an absent-input skip")
     else:

@@ -33,7 +33,7 @@ _ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 _HERE = os.path.join(_ROOT, "lint")
 sys.path.insert(0, _HERE)
 
-from lib import scope  # noqa: E402
+from lib import scope, verdict  # noqa: E402
 
 
 def discover():
@@ -301,14 +301,7 @@ def main():
     results.sort(key=lambda r: r["id"])
 
     for r in results:
-        if r["exit"] == 0:
-            r["result"] = "ok"
-        elif r["exit"] == 2:
-            r["result"] = "not-gated"
-        elif r["exit"] == 77:
-            r["result"] = "skip"
-        else:
-            r["result"] = "fail"
+        r["result"] = verdict.label(r["exit"])
 
     if args.as_json:
         print(json.dumps({"root": args.root, "checks": results}, indent=2))
@@ -318,7 +311,7 @@ def main():
             detail = "; ".join(r["findings"][:1])
             print(f"{r['id']:<14} {r['result']:<10} {r['seconds']:>6.2f}  {detail}")
         for r in results:
-            if r["result"] == "fail" and len(r["findings"]) > 1:
+            if r["result"] in ("fail", "error") and len(r["findings"]) > 1:
                 for line in r["findings"][1:]:
                     print(f"    {line}")
         # A skip is not a pass: a check whose own adopter-local input was absent
@@ -332,8 +325,10 @@ def main():
     # something AND another check scanned nothing must still report as a failure,
     # not a lesser NOT-GATED verdict. Skips (77) never appear here: they cannot
     # fail the run alone, per the 2026-09-20 adopter-local-input ruling.
-    # Any `fail` row fails the run — a crash or timeout is a fail, never a silent pass.
-    if any(r["result"] == "fail" for r in results):
+    # An `error` row (a code outside the 0/1/2/77 contract — a timeout, a crash,
+    # a killed process) fails the run exactly like a `fail`: lib.verdict is the
+    # one definition of what each label means, read here and in 00-meta.py.
+    if any(r["result"] in ("fail", "error") for r in results):
         return 1
     if any(r["result"] == "not-gated" for r in results):
         return 2

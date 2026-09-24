@@ -37,10 +37,15 @@ vacuous-check class.
 
 ## Exit codes
 
-`0` pass · `1` findings/fail · `2` NOT-GATED (scanned nothing, an old
-interpreter, or an incomplete checkout — never a pass) · `77` skip (its own
-adopter-local input was absent), reported `NOT-FULLY-GATED`, never `ok`. `1`
-outranks a bare `2`; skips alone never fail a run.
+The contract lives in one place, `lint/lib/verdict.py`, read by both
+`lint/run.py` and `lint/checks/00-meta.py`'s static-tree fixture leg — the
+one definition of what each answer means. `0` pass (`ok`) · `1`
+findings/fail (`fail`) · `2` NOT-GATED (`not-gated`; scanned nothing, an old
+interpreter, or an incomplete checkout — never a pass) · `77` skip (`skip`;
+its own adopter-local input was absent), reported `NOT-FULLY-GATED`, never
+`ok`. Any other exit code — a timeout, a crash, a killed process — is
+`error`: outside the contract, and it fails a run exactly like a `fail`.
+`fail`/`error` outrank a bare `not-gated`; skips alone never fail a run.
 
 ## Allowlists and the growth ratchet
 

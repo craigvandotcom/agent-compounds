@@ -55,6 +55,7 @@ mkdir -p "$W/lint/lib" "$W/lint/checks" "$W/skills/demo" "$W/skills/demo2" "$W/e
 cp "$REGISTRY/lint/run.py" "$W/lint/run.py"
 cp "$REGISTRY/lint/lib/scope.py" "$W/lint/lib/scope.py"
 cp "$REGISTRY/lint/lib/frontmatter.py" "$W/lint/lib/frontmatter.py"
+cp "$REGISTRY/lint/lib/verdict.py" "$W/lint/lib/verdict.py"
 RUN_PY="$W/lint/run.py"
 
 git init -q "$W"
@@ -222,6 +223,7 @@ git -C "$W" commit -qm base >/dev/null
 
 run_new() { ( cd "$W" && python3 "$RUN_PY" --root "$W" "$@" ); }
 exit_of() { python3 -c 'import json,sys; d=json.load(sys.stdin); print(d["checks"][0]["exit"])' 2>/dev/null; }
+result_of() { python3 -c 'import json,sys; d=json.load(sys.stdin); print(d["checks"][0]["result"])' 2>/dev/null; }
 ids_of()  { python3 -c 'import json,sys; d=json.load(sys.stdin); print(",".join(sorted(c["id"] for c in d["checks"])))' 2>/dev/null; }
 
 # --- Case 1: a staged run touching ONLY engine/hooks.wiring.json still runs
@@ -327,9 +329,13 @@ else
 fi
 rm -f "$W/lint/checks/58-crash.py"
 printf '#!/usr/bin/env python3\nimport sys\nsys.exit(5)\n' > "$W/lint/checks/53-odd-exit.py"
-run_new --check 53 >/dev/null 2>&1; rc10=$?
-[ "$rc10" = "1" ] && ok "an exit outside the contract fails the run (rc=1), never a pass" \
-                   || bad "expected rc=1 for exit 5, got rc='$rc10'"
+out10=$(run_new --check 53 --json 2>/dev/null); rc10=$?
+result10=$(echo "$out10" | result_of)
+if [ "$rc10" = "1" ] && [ "$result10" = "error" ]; then
+  ok "an exit outside the contract (5) rows as 'error' and fails the run (rc=1)"
+else
+  bad "expected rc=1 and result='error' for exit 5, got rc='$rc10' result='$result10': $out10"
+fi
 rm -f "$W/lint/checks/53-odd-exit.py"
 
 echo "---"
