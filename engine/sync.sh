@@ -1330,8 +1330,12 @@ guard_public() { # <target-base-dir> — 0 if every stamped harness path is giti
 # Installs hooks/pre-commit as chain entry 60-ac-lint beside the mcp-agent-mail
 # runner's 50-agent-mail.py, in each repo's RESOLVED hooks dir: every repo here is
 # a submodule (`.git` is a FILE, no `.git/hooks/`), so the dir comes from
-# `git rev-parse --git-path hooks`, which also honours a target's core.hooksPath
-# (a Husky `_` dir is one common example). Never clobbers the chain runner or a real
+# `resolve_hooks_dir` (git-path made ABSOLUTE — `git rev-parse --git-path hooks`
+# on its own returns a path relative to the repo, not to sync.sh's own cwd; the
+# three installers below used to build `$hooks_dir/...` straight off that and
+# silently inspect/write agent-compounds' own .git/hooks for every consumer app
+# instead), which also honours a target's core.hooksPath (a Husky `_`
+# dir is one common example). Never clobbers the chain runner or a real
 # pre-commit file — refuses loudly, like deploy.sh does for skills.
 # Hook symlinks are RELATIVE, always. An absolute target bakes one machine's layout
 # into a link that could be committed in some repos (a Husky `_` dir, e.g.) and would be
@@ -1349,6 +1353,26 @@ hook_link_is_ours() { # <dest> <canon-path>
   [ "$have" = "$(hook_link_target "$1" "$2")" ] || [ "$have" = "$2" ]
 }
 
+# resolve_hooks_dir <repo-root> -> absolute hooks dir on stdout (honours
+# core.hooksPath, e.g. a Husky `_` dir), or empty + non-zero when unresolvable.
+# `git rev-parse --git-path hooks` returns a path RELATIVE TO THE REPO, not to
+# sync.sh's own cwd — every installer here used to build `$hooks_dir/...` and
+# read/write it directly, which silently resolved against agent-compounds' own
+# cwd instead of the target repo for every consumer app. Prefer
+# git's own `--path-format=absolute` (2.31+); fall back to joining with $repo
+# when an older git hands back a relative path.
+resolve_hooks_dir() { # <repo-root>
+  local repo="$1" hd
+  hd="$(git -C "$repo" rev-parse --path-format=absolute --git-path hooks 2>/dev/null)" \
+    && [ -n "$hd" ] && { printf '%s\n' "$hd"; return 0; }
+  hd="$(git -C "$repo" rev-parse --git-path hooks 2>/dev/null)" || return 1
+  [ -n "$hd" ] || return 1
+  case "$hd" in
+    /*) printf '%s\n' "$hd" ;;
+    *) printf '%s\n' "$repo/$hd" ;;
+  esac
+}
+
 # ensure_scratch_ignored <repo-root> — `_scratch/` is the stances' in-tree scratch home
 # (a spawned subagent cannot write outside the project on claude). One idempotent
 # .gitignore line per target, so no repo ever tracks a worker's scratch.
@@ -1364,7 +1388,7 @@ ensure_scratch_ignored() {
 
 install_lint_hook() { # <repo-root>
   local repo="$1" hooks_dir chain_dir dest want
-  hooks_dir="$(git -C "$repo" rev-parse --git-path hooks 2>/dev/null)"
+  hooks_dir="$(resolve_hooks_dir "$repo")"
   if [ -z "$hooks_dir" ]; then
     echo "  WARN: no hooks dir resolvable for $repo — ac-lint hook not installed"
     return 0
@@ -1402,7 +1426,7 @@ install_lint_hook() { # <repo-root>
 # discipline as install_lint_hook — never clobber a real file or a foreign symlink.
 install_commit_msg_hook() { # <repo-root>
   local repo="$1" hooks_dir dest want
-  hooks_dir="$(git -C "$repo" rev-parse --git-path hooks 2>/dev/null)"
+  hooks_dir="$(resolve_hooks_dir "$repo")"
   if [ -z "$hooks_dir" ]; then
     echo "  WARN: no hooks dir resolvable for $repo — commit-msg hook not installed"
     return 0
@@ -1442,7 +1466,7 @@ install_commit_msg_hook() { # <repo-root>
 # differs IS the "pre-commit the user wrote" case and is reported, never touched.
 install_precommit_chain() { # <repo-root>
   local repo="$1" hooks_dir dest want
-  hooks_dir="$(git -C "$repo" rev-parse --git-path hooks 2>/dev/null)"
+  hooks_dir="$(resolve_hooks_dir "$repo")"
   if [ -z "$hooks_dir" ]; then
     echo "  WARN: no hooks dir resolvable for $repo — pre-commit chain runner not installed"
     return 0
@@ -1490,7 +1514,12 @@ sync_target() { # <target-base-dir> ("app" mode: also runs deploy.sh for .claude
     dep_extra="--require-ignored"
   fi
 
-  install_lint_hook "$base"
+  # 60-ac-lint's own hooks/pre-commit exits 0 immediately for "not the registry
+  # checkout" (see hooks/pre-commit) — installing it in a consumer app is dead
+  # weight, never runs. Install it only in agent-compounds itself (done once,
+  # unconditionally, near the bottom of this file); every OTHER target still
+  # gets the chain runner + commit-msg hook, with the same refusal discipline.
+  [ "$base" = "$AC_ROOT" ] && install_lint_hook "$base"
   install_commit_msg_hook "$base"
   install_precommit_chain "$base"
   ensure_scratch_ignored "$base"
