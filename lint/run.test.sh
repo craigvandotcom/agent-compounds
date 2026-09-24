@@ -225,6 +225,7 @@ run_new() { ( cd "$W" && python3 "$RUN_PY" --root "$W" "$@" ); }
 exit_of() { python3 -c 'import json,sys; d=json.load(sys.stdin); print(d["checks"][0]["exit"])' 2>/dev/null; }
 result_of() { python3 -c 'import json,sys; d=json.load(sys.stdin); print(d["checks"][0]["result"])' 2>/dev/null; }
 ids_of()  { python3 -c 'import json,sys; d=json.load(sys.stdin); print(",".join(sorted(c["id"] for c in d["checks"])))' 2>/dev/null; }
+findings_of() { python3 -c 'import json,sys; d=json.load(sys.stdin); print("\n".join(d["checks"][0]["findings"]))' 2>/dev/null; }
 
 # --- Case 1: a staged run touching ONLY engine/hooks.wiring.json still runs
 # EVERY discovered check, including the scope-LEDGER demo check named for
@@ -337,6 +338,59 @@ else
   bad "expected rc=1 and result='error' for exit 5, got rc='$rc10' result='$result10': $out10"
 fi
 rm -f "$W/lint/checks/53-odd-exit.py"
+
+# --- Case 11: a working-tree check absent from the staged snapshot (never
+# `git add`-ed) is no longer silently dropped — a NOTICE names it ---
+git -C "$W" reset -q --hard >/dev/null
+printf '#!/usr/bin/env python3\nimport sys\nsys.exit(1)\n' > "$W/lint/checks/59-untracked.py"
+out11=$(run_new --staged --json 2>&1 >/dev/null)
+if echo "$out11" | grep -q 'NOTICE: not staged, not run:.*59-untracked'; then
+  ok "an untracked check absent from the staged snapshot is named in a NOTICE"
+else
+  bad "expected a NOTICE naming 59-untracked, got: $out11"
+fi
+rm -f "$W/lint/checks/59-untracked.py"
+
+# --- Case 12: a LINT_CALLER_GIT_INDEX_FILE naming a file that no longer
+# exists is dropped with a NOTICE, and the staged snapshot is still built
+# from the REAL index (not the empty tree a dangling GIT_INDEX_FILE would
+# otherwise silently produce) — a staged check still sees the staged file ---
+git -C "$W" reset -q --hard >/dev/null
+echo "BANNEDTOKEN staged for case 12" >> "$W/skills/demo2/SKILL.md"
+git -C "$W" add "$W/skills/demo2/SKILL.md"
+CAP_OUT="$(mktemp)"; CAP_ERR="$(mktemp)"
+LINT_CALLER_GIT_INDEX_FILE="$W/.git/nonexistent-caller-index" \
+  run_new --check 50 --staged --json >"$CAP_OUT" 2>"$CAP_ERR"
+notice12=$(grep -c 'NOTICE: LINT_CALLER_GIT_INDEX_FILE does not exist' "$CAP_ERR")
+result12=$(result_of < "$CAP_OUT")
+if [ "$notice12" -ge 1 ] && [ "$result12" = "fail" ]; then
+  ok "a nonexistent LINT_CALLER_GIT_INDEX_FILE is dropped with a NOTICE, and a staged check still sees the staged file (built from the real index)"
+else
+  bad "expected a NOTICE + result=fail (staged content seen via the real index), got notice_count=$notice12 result='$result12': stderr=$(cat "$CAP_ERR") stdout=$(cat "$CAP_OUT")"
+fi
+rm -f "$CAP_OUT" "$CAP_ERR"
+
+# --- Case 13: the staged snapshot lives under $XDG_CACHE_HOME/ac-lint (or
+# ~/.cache/ac-lint as its fallback) — never /tmp (an orphan from a killed run
+# would sit in a shared, quota-limited dir) and never nested inside the
+# checkout (a snapshot nested under the checkout's own gitignored scratch
+# space is still walked UP INTO by a check's `git ls-files` call: discovery
+# finds the REAL repo and `--exclude-standard` reports an empty, ignored
+# tree instead of failing outright — measured: this broke checks 27/28/30's
+# fixture legs when the snapshot lived under `<root>/_scratch/`). ---
+CACHE_DIR="${XDG_CACHE_HOME:-$HOME/.cache}/ac-lint"
+git -C "$W" reset -q --hard >/dev/null
+printf '#!/usr/bin/env python3\n# ---\n# id: 60-demo-root\n# prevents: demo -- reports its own resolved root so the harness can\n#   assert WHERE the staged snapshot lives\n# scope: LEDGER\n# severity: fail\n# fixture: lint/checks/60-demo-root.py\n# ---\nimport os, sys\nprint("ROOT:" + os.path.abspath(sys.argv[1] if len(sys.argv) > 1 else "."))\nsys.exit(1)\n' > "$W/lint/checks/60-demo-root.py"
+git -C "$W" add "$W/lint/checks/60-demo-root.py"
+out13=$(run_new --check 60 --staged --json)
+root13=$(echo "$out13" | findings_of | sed -n 's/^ROOT://p')
+case "$root13" in
+  "$CACHE_DIR"/*) ok "a staged run's snapshot lives under \$XDG_CACHE_HOME (or ~/.cache)'s ac-lint dir, never /tmp and never nested in the checkout (got: $root13)" ;;
+  /tmp/*) bad "the staged snapshot is still under /tmp: $root13" ;;
+  "$W"/*) bad "the staged snapshot is nested INSIDE the checkout (breaks TRACKED/COMMITTABLE checks' git ls-files fallback): $root13" ;;
+  *) bad "expected the staged snapshot under $CACHE_DIR, got '$root13': $out13" ;;
+esac
+rm -f "$W/lint/checks/60-demo-root.py"
 
 echo "---"
 echo "PASS=$PASS FAIL=$FAIL"

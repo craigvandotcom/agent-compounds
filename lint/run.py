@@ -81,8 +81,8 @@ def _disclosure(line):
     return any(tok in line for tok in _DISCLOSURE_TOKENS)
 
 
-def _staged_index_env():
-    """Base env for a git call that must see the CALLER's staged content.
+def _resolve_caller_index():
+    """LINT_CALLER_GIT_INDEX_FILE, validated — or None (unset, or gone).
 
     A pathspec-scoped `git commit -F msg -- path` (this repo's mandated commit
     pattern) never touches the real `.git/index` — git builds a TEMPORARY index
@@ -94,9 +94,34 @@ def _staged_index_env():
     the real index and see NONE of a pathspec'd-but-never-`git add`-ed change —
     measured: a same-file edit to 14-no-net-growth.py landed via that exact
     pattern and 14-no-net-growth itself reported "skipped LIVE_TEXT".
+
+    That temporary index is removed once the hook that made it exits, so a
+    caller invoking this runner AFTER that point (or with a stale/bogus env
+    left over) would hand git a path that no longer exists — measured: `git
+    checkout-index` against a missing GIT_INDEX_FILE silently builds an EMPTY
+    snapshot and exits 0, so every check would judge an empty tree with no
+    indication why. Dropping it here (once, for every caller) is what stops
+    that: the real index is used instead, with a NOTICE explaining the swap.
+    """
+    caller_index = os.environ.get("LINT_CALLER_GIT_INDEX_FILE")
+    if not caller_index:
+        return None
+    if not os.path.isfile(caller_index):
+        print(f"NOTICE: LINT_CALLER_GIT_INDEX_FILE does not exist ({caller_index}) "
+              "— dropping it and building the staged snapshot from the real index",
+              file=sys.stderr)
+        return None
+    return caller_index
+
+
+def _staged_index_env(caller_index):
+    """Base env for a git call that must see the CALLER's staged content.
+
+    `caller_index` is the already-validated result of `_resolve_caller_index()`
+    — never re-read from the environment here, so a missing file is diagnosed
+    exactly once per run, not once per env-building call site.
     """
     env = os.environ.copy()
-    caller_index = os.environ.get("LINT_CALLER_GIT_INDEX_FILE")
     if caller_index:
         env["GIT_INDEX_FILE"] = caller_index
     return env
@@ -180,7 +205,37 @@ def _link_adopter_local(real_root, snapshot_dir):
             pass  # best-effort: a check that needs it reports its own honest skip
 
 
-def materialize_staged(root):
+def _scratch_root():
+    """Where a staged snapshot is built: never `/tmp`, never nested inside the checkout.
+
+    A snapshot dir nested under the checkout's own (necessarily gitignored)
+    scratch space is still WALKED UP INTO by git: a check running against a
+    path inside it calls `git ls-files` with a clean env (no GIT_DIR
+    override, see `fixture_goes_red`'s static-tree leg in 00-meta.py) and
+    git's `.git` discovery finds the REAL repo by walking up from inside the
+    snapshot — `--exclude-standard` then reports an empty, ignored tree
+    instead of failing outright, which is what let `lib/scope.py`'s
+    `_git_files` fall back to a plain directory walk in the first place.
+    Measured: nesting the snapshot under `<root>/_scratch/` broke checks
+    27/28/30's fixture legs (00-meta: `NOT-GATED`, scanned nothing) even
+    though `checkout-index` itself succeeded — reproduced with a real staged
+    file via a throwaway `GIT_INDEX_FILE`, both with and without the nested
+    snapshot; only the nested location fails, and only `27-instance-tokens`,
+    `28-citations` and `30-trigger-collisions` (the TRACKED/COMMITTABLE-scoped
+    checks) do so.
+
+    Living entirely outside the checkout (as `/tmp` always did) restores that
+    fallback; living outside `/tmp` avoids `/tmp`'s shared, machine-wide quota
+    (an orphan there took every shell down on 2026-09-24). `$XDG_CACHE_HOME`
+    is the XDG-correct location for regenerable, per-user cache data; its
+    fallback (`~/.cache`) is XDG's own documented default when the variable
+    is unset.
+    """
+    base = os.environ.get("XDG_CACHE_HOME") or os.path.join(os.path.expanduser("~"), ".cache")
+    return os.path.join(base, "ac-lint")
+
+
+def materialize_staged(root, caller_index=None):
     """Snapshot the INDEX — what a commit will actually contain — into a fresh temp dir.
 
     `git checkout-index` writes only what is IN the index; an unstaged edit or an
@@ -191,15 +246,22 @@ def materialize_staged(root):
     actually has, not an artifact of the snapshot's tracked-only contents.
     Returns (worktree_dir, git_dir) on success, (None, None) on any failure — the
     caller's cue to fall back to the real checkout, never a crash.
+
+    The snapshot lives under `_scratch_root()` (created here if absent) — see
+    that function for why neither `/tmp` nor a location nested inside `root`
+    will do.
     """
     git_dir = git_dir_of(root)
     if not git_dir:
         return None, None
-    tmp = tempfile.mkdtemp(prefix="ac-lint-staged-")
+    scratch_dir = _scratch_root()
+    os.makedirs(scratch_dir, exist_ok=True)
+    tmp = tempfile.mkdtemp(prefix="ac-lint-staged-", dir=scratch_dir)
     try:
         proc = subprocess.run(
             ["git", "checkout-index", "-a", "-f", f"--prefix={tmp}{os.sep}"],
-            cwd=root, capture_output=True, text=True, timeout=60, env=_staged_index_env(),
+            cwd=root, capture_output=True, text=True, timeout=60,
+            env=_staged_index_env(caller_index),
         )
     except (subprocess.SubprocessError, OSError):
         proc = None
@@ -256,20 +318,32 @@ def main():
     extra_env = None
     staged_worktree = None
     if args.staged:
-        staged_worktree, git_dir = materialize_staged(args.root)
+        # Resolved ONCE per run: _resolve_caller_index() prints its NOTICE at most
+        # once even though both materialize_staged() and the --cached env below
+        # need the same validated path.
+        caller_index = _resolve_caller_index()
+        staged_worktree, git_dir = materialize_staged(args.root, caller_index)
         if staged_worktree:
             run_root = staged_worktree
             extra_env = {"GIT_DIR": git_dir, "GIT_WORK_TREE": staged_worktree, "LINT_STAGED": "1"}
             # A check's own `--cached` read (14's leg 1) must see the SAME index this
             # materialisation used, not the real repo's ambient one — see
-            # _staged_index_env()'s docstring.
-            caller_index = os.environ.get("LINT_CALLER_GIT_INDEX_FILE")
+            # _resolve_caller_index()'s docstring.
             if caller_index:
                 extra_env["GIT_INDEX_FILE"] = caller_index
             # The checks themselves come from the snapshot too: an unstaged or untracked
             # check in the working tree is not part of this commit and never judges it.
+            # A check present in the working tree but ABSENT from the staged snapshot
+            # (never `git add`-ed, or added then unstaged again) must say so, not vanish
+            # from the table as if it never existed.
             staged_checks = [os.path.join(staged_worktree, os.path.relpath(c, _ROOT)) for c in selected]
-            selected = [c for c in staged_checks if os.path.isfile(c)]
+            present, not_staged = [], []
+            for c, sc in zip(selected, staged_checks):
+                (present if os.path.isfile(sc) else not_staged).append((c, sc))
+            if not_staged:
+                ids = ", ".join(sorted(check_id(c) for c, _ in not_staged))
+                print(f"NOTICE: not staged, not run: {ids}", file=sys.stderr)
+            selected = [sc for _, sc in present]
         else:
             print("NOTICE: staged-lane materialisation failed — running against "
                   "the real checkout instead (an unrelated dirty file could affect this run)",
