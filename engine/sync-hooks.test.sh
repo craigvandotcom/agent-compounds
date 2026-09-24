@@ -13,16 +13,20 @@
 #     hooks/commit-msg as relative symlinks resolving into THIS repo's hooks/,
 #     inside the APP's resolved hooks dir — honouring a custom core.hooksPath
 #     (a Husky `_` dir stands in for one) exactly as a plain .git/hooks.
-#   - 60-ac-lint (hooks.d/pre-commit/60-ac-lint) is installed ONLY in
-#     agent-compounds itself — never in a consumer app, where hooks/pre-commit's
-#     own "not the registry checkout" guard makes it dead weight.
-#   - agent-compounds' OWN hooks/hooks.d/pre-commit/60-ac-lint is untouched by
-#     syncing an unrelated app target.
+#   - 60-ac-lint (hooks.d/pre-commit/60-ac-lint) is installed in EVERY repo,
+#     consumer apps included, as a relative symlink into the registry (ac-4hpn) —
+#     a consumer runs only check 35 against its own root; the registry checkout
+#     still runs the full suite.
+#   - agent-compounds' OWN resolved-hooks 60-ac-lint is untouched by syncing an
+#     unrelated app target.
+#   - a repo whose pre-commit is a real, content-differing file is NOT taken over:
+#     sync reports BOARD NOT GATED, installs no dead 60-ac-lint entry and exits
+#     non-zero — under both a real sync and --check.
 #   - `--check` after the real sync reports no drift (exit 0).
 #
 # This is a slow harness (drives the full sync_target "app" path: deploy.sh's
 # whole skill/agent render, both hook flavours, memory-lint) — a few seconds
-# per invocation, four invocations. That cost buys end-to-end fidelity: this is
+# per invocation, six invocations. That cost buys end-to-end fidelity: this is
 # the exact code path ac-deploy-targets.list drives against real apps.
 #
 # AC_SYNC_UNDER_TEST overrides the sync.sh path under test (defaults to this
@@ -42,6 +46,9 @@ ROOT="$(cd "$HERE/.." && pwd)"
 SYNC="${AC_SYNC_UNDER_TEST:-$HERE/sync.sh}"
 [ -f "$SYNC" ] || { echo "sync-hooks.test.sh: $SYNC is missing"; exit 2; }
 
+# agent-compounds' OWN resolved hooks dir — where its managed 60-ac-lint lives.
+AC_HOOKS_DIR="$(git -C "$ROOT" rev-parse --path-format=absolute --git-path hooks 2>/dev/null)"
+
 fails=0
 ok()  { echo "  ok    $1"; }
 bad() { echo "  FAIL  $1"; fails=$((fails + 1)); }
@@ -59,8 +66,8 @@ git -C "$APP" -c user.email=t@example.com -c user.name=t commit -q --allow-empty
 # agent-compounds' OWN hook state, captured before touching the app at all, so
 # a change caused by syncing an UNRELATED target would show up as a diff here.
 ac_lint_before=""
-if [ -L "$ROOT/hooks/hooks.d/pre-commit/60-ac-lint" ]; then
-  ac_lint_before="$(readlink "$ROOT/hooks/hooks.d/pre-commit/60-ac-lint")"
+if [ -L "$AC_HOOKS_DIR/hooks.d/pre-commit/60-ac-lint" ]; then
+  ac_lint_before="$(readlink "$AC_HOOKS_DIR/hooks.d/pre-commit/60-ac-lint")"
 fi
 
 # --- --check on a never-synced app: DRIFT, naming a path INSIDE the app -------------------
@@ -82,11 +89,11 @@ else
   bad "check (pre-install): no pre-commit install line naming $APP/.git/hooks/pre-commit"
   printf '%s\n' "$out"
 fi
-if printf '%s\n' "$out" | grep -F "$APP" | grep -q '60-ac-lint'; then
-  bad "check (pre-install): 60-ac-lint was proposed for a consumer app (should never be)"
-  printf '%s\n' "$out"
+if printf '%s\n' "$out" | grep -qF "$APP/.git/hooks/hooks.d/pre-commit/60-ac-lint"; then
+  ok "check (pre-install): 60-ac-lint chain entry proposed inside the consumer app's own hooks dir"
 else
-  ok "check (pre-install): 60-ac-lint not proposed for the consumer app"
+  bad "check (pre-install): no 60-ac-lint install line naming $APP/.git/hooks/hooks.d/pre-commit/60-ac-lint"
+  printf '%s\n' "$out"
 fi
 
 # --- real (non-dry) sync of the app repo ---------------------------------------------------
@@ -112,17 +119,19 @@ else
   bad "pre-commit chain runner missing or resolves wrong: $(readlink -f "$APP/.git/hooks/pre-commit" 2>&1)"
 fi
 
-# 60-ac-lint must NOT exist anywhere under the app's hooks dir.
-if [ -e "$APP/.git/hooks/hooks.d/pre-commit/60-ac-lint" ]; then
-  bad "60-ac-lint was installed in the consumer app — must never be"
+# 60-ac-lint must land INSIDE the app's own hooks dir, as a relative symlink into
+# the registry — the shared implementation a consumer's check-35 run resolves.
+if [ -L "$APP/.git/hooks/hooks.d/pre-commit/60-ac-lint" ] \
+   && [ "$(readlink -f "$APP/.git/hooks/hooks.d/pre-commit/60-ac-lint")" = "$ROOT/hooks/pre-commit" ]; then
+  ok "60-ac-lint chain entry installed in the consumer app, resolving into the registry"
 else
-  ok "60-ac-lint absent from the consumer app"
+  bad "60-ac-lint missing or resolves wrong: $(readlink -f "$APP/.git/hooks/hooks.d/pre-commit/60-ac-lint" 2>&1)"
 fi
 
 # agent-compounds' own hooks must be untouched by syncing an unrelated target.
 ac_lint_after=""
-if [ -L "$ROOT/hooks/hooks.d/pre-commit/60-ac-lint" ]; then
-  ac_lint_after="$(readlink "$ROOT/hooks/hooks.d/pre-commit/60-ac-lint")"
+if [ -L "$AC_HOOKS_DIR/hooks.d/pre-commit/60-ac-lint" ]; then
+  ac_lint_after="$(readlink "$AC_HOOKS_DIR/hooks.d/pre-commit/60-ac-lint")"
 fi
 if [ "$ac_lint_before" = "$ac_lint_after" ]; then
   ok "agent-compounds' own 60-ac-lint hook is untouched by syncing the app target"
@@ -151,8 +160,10 @@ if [ "$rc" = 0 ] \
    && [ -L "$HAPP/.husky/_/commit-msg" ] \
    && [ "$(readlink -f "$HAPP/.husky/_/commit-msg")" = "$ROOT/hooks/commit-msg" ] \
    && [ -L "$HAPP/.husky/_/pre-commit" ] \
-   && [ "$(readlink -f "$HAPP/.husky/_/pre-commit")" = "$ROOT/hooks/pre-commit-chain" ]; then
-  ok "core.hooksPath honoured: hooks land in the app's custom hooks dir (.husky/_)"
+   && [ "$(readlink -f "$HAPP/.husky/_/pre-commit")" = "$ROOT/hooks/pre-commit-chain" ] \
+   && [ -L "$HAPP/.husky/_/hooks.d/pre-commit/60-ac-lint" ] \
+   && [ "$(readlink -f "$HAPP/.husky/_/hooks.d/pre-commit/60-ac-lint")" = "$ROOT/hooks/pre-commit" ]; then
+  ok "core.hooksPath honoured: hooks (incl. 60-ac-lint) land in the app's custom hooks dir (.husky/_)"
 else
   bad "core.hooksPath not honoured (rc=$rc)"; printf '%s\n' "$out"
 fi
@@ -160,6 +171,42 @@ if [ -e "$HAPP/.git/hooks/commit-msg" ] || [ -e "$HAPP/.git/hooks/pre-commit" ];
   bad "a hook also landed in the app's PLAIN .git/hooks despite core.hooksPath"
 else
   ok "nothing written to the app's plain .git/hooks when core.hooksPath is set"
+fi
+
+# --- a real, content-differing pre-commit: no dead 60-ac-lint, loud refusal -----
+# sync must not install a 60-ac-lint entry the user's pre-commit will never call,
+# nor claim success while the board is ungated. The user's file stays untouched.
+STUCK="$W/stuck-app"
+mkdir -p "$STUCK"
+git init -q "$STUCK"
+printf '#!/bin/sh\nexit 0\n' > "$STUCK/.git/hooks/pre-commit"
+chmod +x "$STUCK/.git/hooks/pre-commit"
+
+out="$(bash "$SYNC" "$STUCK" 2>&1)"; rc=$?
+if [ "$rc" != 0 ] && printf '%s\n' "$out" | grep -q 'BOARD NOT GATED' \
+   && printf '%s\n' "$out" | grep -q 'failed a sync guard'; then
+  ok "real pre-commit: sync reports BOARD NOT GATED and exits non-zero (rc=$rc)"
+else
+  bad "real pre-commit: expected BOARD NOT GATED and non-zero, got rc=$rc"; printf '%s\n' "$out"
+fi
+if [ -f "$STUCK/.git/hooks/pre-commit" ] && [ ! -L "$STUCK/.git/hooks/pre-commit" ] \
+   && [ "$(cat "$STUCK/.git/hooks/pre-commit")" = '#!/bin/sh
+exit 0' ]; then
+  ok "real pre-commit: the user's file is left untouched"
+else
+  bad "real pre-commit: the user's file was overwritten or replaced"
+fi
+if [ -e "$STUCK/.git/hooks/hooks.d/pre-commit/60-ac-lint" ]; then
+  bad "real pre-commit: a dead 60-ac-lint entry was left behind"
+else
+  ok "real pre-commit: no dead 60-ac-lint entry installed"
+fi
+
+out="$(bash "$SYNC" --check "$STUCK" 2>&1)"; rc=$?
+if [ "$rc" != 0 ] && printf '%s\n' "$out" | grep -q 'BOARD NOT GATED'; then
+  ok "real pre-commit: --check also reports BOARD NOT GATED and exits non-zero (rc=$rc)"
+else
+  bad "real pre-commit: --check expected BOARD NOT GATED and non-zero, got rc=$rc"; printf '%s\n' "$out"
 fi
 
 echo "sync-hooks.test.sh: ${fails} failure(s)"

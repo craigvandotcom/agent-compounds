@@ -1498,6 +1498,23 @@ install_precommit_chain() { # <repo-root>
   fi
 }
 
+# precommit_chain_unmanaged <repo-root> — 0 when the repo's pre-commit entry is
+# PRESENT on disk but is not the managed chain runner (a real file differing from
+# the canon, or a foreign symlink), so nothing will invoke 60-ac-lint there. An
+# ABSENT pre-commit is not this case: install_precommit_chain installs the runner
+# first. Used by sync_target to refuse a dead 60-ac-lint link and fail loudly.
+precommit_chain_unmanaged() { # <repo-root>
+  local repo="$1" hooks_dir dest
+  hooks_dir="$(resolve_hooks_dir "$repo")" || return 1
+  [ -n "$hooks_dir" ] || return 1
+  dest="$hooks_dir/pre-commit"
+  if [ -L "$dest" ]; then
+    ! hook_link_is_ours "$dest" "$AC_ROOT/hooks/pre-commit-chain"
+    return
+  fi
+  [ -e "$dest" ] && ! cmp -s "$AC_ROOT/hooks/pre-commit-chain" "$dest"
+}
+
 # --- target renderers -------------------------------------------------------------
 sync_target() { # <target-base-dir> ("app" mode: also runs deploy.sh for .claude layer)
   local base="$1" mode="${2:-app}" dep_extra=""
@@ -1514,14 +1531,24 @@ sync_target() { # <target-base-dir> ("app" mode: also runs deploy.sh for .claude
     dep_extra="--require-ignored"
   fi
 
-  # 60-ac-lint's own hooks/pre-commit exits 0 immediately for "not the registry
-  # checkout" (see hooks/pre-commit) — installing it in a consumer app is dead
-  # weight, never runs. Install it only in agent-compounds itself (done once,
-  # unconditionally, near the bottom of this file); every OTHER target still
-  # gets the chain runner + commit-msg hook, with the same refusal discipline.
-  [ "$base" = "$AC_ROOT" ] && install_lint_hook "$base"
-  install_commit_msg_hook "$base"
+  # 60-ac-lint is installed in EVERY repo, consumer apps included: in a consumer
+  # (no lint.sh) hooks/pre-commit runs the registry's check 35 against that
+  # repo's own board at commit time (ac-4hpn) — one shared implementation, no
+  # vendoring. In the registry checkout the same entry runs the full suite. Same
+  # refusal discipline everywhere: never clobber a real file or a foreign symlink,
+  # and core.hooksPath is honoured via resolve_hooks_dir.
+  #
+  # A repo whose pre-commit is NOT the managed chain runner can never invoke
+  # 60-ac-lint, so installing it there would leave a dead link and a gate that
+  # silently never runs. Refuse that instead — BOARD NOT GATED, a failed target.
   install_precommit_chain "$base"
+  if precommit_chain_unmanaged "$base"; then
+    echo "  BOARD NOT GATED: pre-commit is not the managed chain runner (real file or foreign symlink) — 60-ac-lint NOT installed, check 35 will not run at commit time" >&2
+    FAILURES=$((FAILURES + 1))
+  else
+    install_lint_hook "$base"
+  fi
+  install_commit_msg_hook "$base"
   ensure_scratch_ignored "$base"
 
   if [ "$mode" = "app" ] && [ "$EN_CLAUDE" = "true" ]; then
@@ -1902,7 +1929,7 @@ fi
 
 echo "Done. changes=$CHANGES$([ "$DRY" = 1 ] && echo ' (dry-run)')"
 if [ "$FAILURES" -gt 0 ]; then
-  echo "ERROR: $FAILURES target(s) skipped by the public-target guard — fix their .gitignore and re-run" >&2
+  echo "ERROR: $FAILURES target(s) failed a sync guard (public-target ignore rules, an unparseable app settings file, or a board that cannot be gated) — see the errors above and re-run" >&2
   exit 1
 fi
 if [ "$CHECK" = 1 ] && [ "$CHANGES" -gt 0 ]; then

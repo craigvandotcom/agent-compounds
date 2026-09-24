@@ -4,6 +4,11 @@
 # beside the mcp-agent-mail runner's 50-agent-mail.py. This file is the source
 # of truth; the installed entry is a symlink here.
 #
+# In the registry checkout it runs the whole suite (below). In a CONSUMER repo —
+# no lint.sh — the same installed entry runs only the registry's check 35 against
+# the consumer root, so an app board is judged at its own commit time without a
+# vendored copy (ac-4hpn).
+#
 # There is no scope-to-diff selection (deleted 2026-09-24 — W3 of the
 # lint-system upgrade): `lint.sh --staged` runs EVERY check under
 # lint/checks/, on this machine exactly as CI runs `bash lint.sh`, judging the
@@ -39,7 +44,31 @@ unset GIT_DIR GIT_WORK_TREE GIT_INDEX_FILE \
 
 ROOT="$(git rev-parse --show-toplevel 2>/dev/null)" || ROOT=""
 [ -n "$ROOT" ] || exit 0
-[ -f "$ROOT/lint.sh" ] || exit 0   # not the registry checkout — no lint to run
+
+if [ ! -f "$ROOT/lint.sh" ]; then
+  # A CONSUMER repo: no registry checkout, no lint.sh, so the full suite cannot run
+  # (this bead's reach gap — ac-4hpn). This hook is the registry's shared 60-ac-lint
+  # chain entry, installed by sync.sh as a RELATIVE symlink, so run the registry's
+  # own check 35 against the CONSUMER root — one source of enforcement, never a
+  # vendored copy. Exit 77 (no adopter-local board to gate) is a skip, not a
+  # refusal; every other non-zero (findings, NOT-GATED) refuses the commit.
+  #
+  # $BASH_SOURCE[0] is the symlink git invoked, not the canon: python3 realpath
+  # resolves it portably (macOS has no `readlink -f`) and python3 is already
+  # required by the check itself. A failure to resolve fails LOUD rather than
+  # silently skipping a gate that claims to run.
+  REGISTRY_ROOT="$(python3 -c 'import os,sys; print(os.path.realpath(sys.argv[1]))' "${BASH_SOURCE[0]}" 2>/dev/null)" || REGISTRY_ROOT=""
+  [ -n "$REGISTRY_ROOT" ] && REGISTRY_ROOT="$(cd "$(dirname "$REGISTRY_ROOT")/.." 2>/dev/null && pwd)"
+  CHECK="$REGISTRY_ROOT/lint/checks/35-board-integrity.py"
+  if [ -z "$REGISTRY_ROOT" ] || [ ! -f "$CHECK" ]; then
+    echo "NOT-GATED: cannot locate the registry's 35-board-integrity.py from ${BASH_SOURCE[0]} — this commit is not board-gated" >&2
+    exit 1
+  fi
+  python3 "$CHECK" "$ROOT"
+  rc=$?
+  [ "$rc" -eq 77 ] && exit 0
+  exit "$rc"
+fi
 
 # ruff — the same gate CI runs as `ruff check .` before `bash lint.sh`
 # (registry-lint.yml), pinned at ruff.toml's own version (0.16.8), scoped to
