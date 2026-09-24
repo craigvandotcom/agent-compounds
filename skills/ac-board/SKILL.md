@@ -34,12 +34,12 @@ BOARD="$(git rev-parse --show-toplevel)/.claude/skills/ac-board/scripts/board.sh
 Print its stdout verbatim — it is the board. `board.sh` runs every read of
 `ac-pipeline/references/board-scan.md` (Scans A · B · E · F + docket-health, no loop-boundary
 filter) plus waves, PRs and the agent roster in parallel; `render.py` derives the verdict
-(FLOWING · STALLED · STARVED · EMPTY), reduces every section to counts, and renders `?` plus the failing command
+(RUNNING · IDLE · STUCK · EMPTY), reduces every section to counts, and renders `?` plus the failing command
 for any read that cannot answer. Never re-derive a count it printed; never run the scans by hand.
 Its `🎯 NEXT` block (top three moves, ranked) is the routing — add nothing after it.
 
 Asked "org-wide" → run `board.sh --compact` inside each `.beads/` repo (in parallel) and print
-its one verdict line per repo.
+its one verdict line per repo. Asked for a live dashboard → point to `board.sh --watch [secs]`.
 
 ## Principles
 

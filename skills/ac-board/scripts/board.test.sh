@@ -49,53 +49,84 @@ BLOCKED='{"id":"ac-b1","title":"waits on the gate","issue_type":"task",'$B',"dep
 HELD='{"id":"ac-p1","title":"work underway","issue_type":"task","status":"in_progress","assignee":"BlueFox","created_at":"2026-09-22T11:00:00Z","updated_at":"2026-09-22T11:50:00Z"}'
 LIVE=$'BlueFox\tclaude-code\tclaude-opus-5-5\t2026-09-22T11:55:00+00:00'
 
-# STALLED on you: a gate, the bead it blocks, an unrefined bead — nothing ready.
+# STUCK on you: a gate, the bead it blocks, an unrefined bead — nothing ready.
 fixture stalled "[$GATE,$UNREF,$BLOCKED]" "[$GATE,$UNREF]" "$GATE
 $UNREF
 $BLOCKED" "$LIVE"
-check stalled "verdict word on its own line"   '^⛔ STALLED on you$'
-check stalled "its reasons stacked beneath"    '^   0 ready · 1 gate$'
-check stalled "YOU counts what gates block"    '^   blocking 1 · oldest 2d$'
-check stalled "blocked row counts yours"       '^   blocked +1  1 on you$'
+check stalled "verdict line under the header"  '^⛔ STUCK — waiting on you$'
+check stalled "human-gate row counts what it blocks" '^   human-gate +1 ▓+░* block 1$'
+check stalled "gate kinds and age beneath"     '^     0 decisions · 1 action · oldest 2d$'
+check stalled "a bar is its share of the section" '^   unrefined +1 ▓▓▓░{7}$'
+check stalled "blocked splits by its blocker"  '^     by gate 1$'
 check stalled "no bead is itemized"            'ac-b1|waits on the gate' absent
 check stalled "the jam is marked"              '▲ nothing refined'
 check stalled "NEXT leads with the gate"       '^1\. ac-g1$'
 check stalled "its detail and route stack"     '^   action · unblocks 1 bead$'
 check stalled "then the refinement jam"        '^2\. refine 1 bead$'
-check stalled "a live agent with no bead"      '^   0 working · 0 idle >1h · mail up$'
+check stalled "a live agent with no bead"      '^   agents +1 live · 0 working$'
+check stalled "no change marks outside watch"  '[+-][0-9]+$' absent
 
-# FLOWING: a ready bead and one held by a live agent.
+# RUNNING: a ready bead and one held by a live agent.
 fixture flowing "[$READY,$HELD]" "[$READY]" "$READY
 $HELD" "$LIVE"
-check flowing "verdict says it flows"          '^✅ FLOWING$'
-check flowing "agents count the held bead"     '^   1 working'
+check flowing "verdict says it runs"           '^✅ RUNNING — agents are building$'
+check flowing "agents count the held bead"     '^   agents +1 live · 1 working$'
 check flowing "no ready title leaks"           'a refined bead' absent
-check flowing "checks all clear on zeros"      '^   checks +✓ all clear$'
+check flowing "only non-zero checks show"      '^   checks +⚠ no epic 2$'
 put "$W/flowing/reads" truth 0 "board-truth: 3 cited-but-open"
-check flowing "only a non-zero check shows"    '^   checks +⚠ board-truth 3$'
+check flowing "each non-zero check is named"   '^   checks +⚠ board-truth 3$'
 check flowing "no jam when work is ready"      '▲' absent
 check flowing "NEXT has nothing for you"       '^1\. nothing needs you$'
 put "$W/flowing/reads" prs 0 '[{"number":42,"statusCheckRollup":[{"conclusion":"FAILURE","name":"build"}]}]'
 check flowing "a failing PR check is counted"  '^   PRs +1 open · 1 red$'
 check flowing "and surfaces in NEXT"           '^1\. PR #42 is red$'
 
-# STARVED: ready work, nobody live to take it.
+# IDLE: ready work, nobody holding it — whether or not an agent is live.
 fixture starved "[$READY]" "[$READY]" "$READY" ""
-check starved "verdict says starved, not empty" '^🥵 STARVED$'
-check starved "NEXT names the ready work"       '^1\. 1 ready bead$'
-check starved "and routes to implement"         '^   → /ac-implement$'
+check starved "verdict says idle, not empty"   '^🥵 IDLE — work waiting, no agent on it$'
+check starved "NEXT names the ready work"      '^1\. 1 ready bead$'
+check starved "and routes to implement"        '^   → /ac-implement$'
+fixture idlelive "[$READY]" "[$READY]" "$READY" "$LIVE"
+check idlelive "a live agent holding nothing is idle" '^🥵 IDLE'
 
 # EMPTY: nothing open at all.
 fixture empty '[]' '[]' '' ""
-check empty "verdict says empty"               '^⏸ EMPTY$'
+check empty "verdict says empty"               '^⏸ EMPTY — nothing planned$'
 check empty "NEXT routes to planning"          '^   → /ac-align$'
+check empty "checks all clear on zeros"        '^   checks +✓ all clear$'
+check empty "no plans renders none"            '^📋 PLANS · none$'
+
+# PLANS: each stage a row, the backlog pool counted, an unknown status named.
+fixture plans '[]' '[]' '' ""
+mkdir -p "$W/plans/repo/_plans" "$W/plans/repo/_backlog/pool"
+printf -- '---\nstatus: approved\n---\n' >"$W/plans/repo/_plans/a.md"
+printf -- '---\nstatus: findings\n---\n' >"$W/plans/repo/_plans/b.md"
+: >"$W/plans/repo/_backlog/pool/001-idea.md"
+check plans "live counts plans and pool"       '^📋 PLANS · 3 live$'
+check plans "refined shows at zero"            '^   refined +0 ░{10}$'
+check plans "approved is a row"                '^   approved +1 ▓▓▓░{7}$'
+check plans "the pool is a row"                '^   pool +1 ▓'
+check plans "an unknown status is named"       '^   other +1 ▓+░* findings$'
 
 # A failed read renders `?` and is named — never a guessed count.
 fixture failed "[$READY]" "[$READY]" "$READY" "$LIVE"
 put "$W/failed/reads" beads 1 ""; echo "br: database locked" >"$W/failed/reads/beads.err"
-check failed "verdict is unknown"              '^\? verdict unknown'
+check failed "verdict is unknown"              '^\? unknown — the bead reads failed$'
 check failed "the failing read is named"       '\? br_call list: br: database locked'
-check failed "no verdict state is claimed"     'STALLED|FLOWING|STARVED|EMPTY' absent
+check failed "no verdict state is claimed"     'RUNNING|IDLE|STUCK|EMPTY' absent
+
+# Watch mode: a count that moved since the last render shows its change.
+CASES=$((CASES + 1))
+AC_BOARD_STATE="$W/counts.json" render stalled >/dev/null
+got=$(AC_BOARD_STATE="$W/counts.json" render flowing)
+if grep -qE '^   ready +1 ▓+░* \+1$' <<<"$got"; then echo "ok   watch: a moved count shows +1"
+else echo "FAIL watch: expected 'ready 1 … +1' in:"; sed 's/^/     | /' <<<"$got"; FAILURES=$((FAILURES + 1)); fi
+
+# Colour only when asked — the skill's render stays plain text.
+CASES=$((CASES + 1))
+if AC_BOARD_COLOR=1 render stalled | grep -q $'\033\[1;31m⛔' && ! render stalled | grep -q $'\033'
+then echo "ok   colour: only under AC_BOARD_COLOR"
+else echo "FAIL colour: expected escapes only under AC_BOARD_COLOR=1"; FAILURES=$((FAILURES + 1)); fi
 
 # Compact is one verdict line per repo.
 CASES=$((CASES + 1))
@@ -104,7 +135,7 @@ else echo "FAIL compact: expected one line"; FAILURES=$((FAILURES + 1)); fi
 
 # Every line fits a phone: 40 columns, never wrapped.
 CASES=$((CASES + 1))
-wide=$(for c in stalled flowing starved empty failed; do render "$c"; done |
+wide=$(for c in stalled flowing starved empty plans failed; do render "$c"; render "$c" 1; done |
        python3 -c 'import sys; print(max(len(l.rstrip("\n")) for l in sys.stdin))')
 if [ "$wide" -le 40 ]; then echo "ok   width: widest line $wide"
 else echo "FAIL width: widest line $wide > 40"; FAILURES=$((FAILURES + 1)); fi
