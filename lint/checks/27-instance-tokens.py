@@ -205,14 +205,14 @@ def main():
     token_path = os.path.join(root, TOKEN_FILE)
 
     if not os.path.isfile(token_path):
-        print(f"27-instance-tokens skipped (token-hunt leg): no {TOKEN_FILE} in this checkout — "
+        print(f"27-instance-tokens: token-hunt leg skipped: no {TOKEN_FILE} in this checkout — "
               f"the banned-word list is deployment-local (gitignored); copy {EXAMPLE_FILE} "
               "to start one. Nothing hunted by this leg.")
         return combine(machine_rc, 77)
 
     tokens = read_tokens(token_path)
     if not tokens:
-        print(f"27-instance-tokens skipped (token-hunt leg): {TOKEN_FILE} lists no words — "
+        print(f"27-instance-tokens: token-hunt leg skipped: {TOKEN_FILE} lists no words — "
               "nothing hunted by this leg.")
         return combine(machine_rc, 77)
 

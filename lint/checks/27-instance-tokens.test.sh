@@ -118,10 +118,10 @@ t="$WORK/nolist"; build_tree "$t"
 printf 'names acme-widget\n' > "$t/skills/demo/SKILL.md"
 git -C "$t" add -A
 rc=$(run "$t")
-if [ "$rc" = 0 ] && grep -q "skipped (token-hunt leg)" "$WORK/out"; then
+if [ "$rc" = 0 ] && grep -q "token-hunt leg skipped" "$WORK/out"; then
   ok "no list: token-hunt leg skips, machine-file leg clean -> exit 0"
 else
-  bad "no-list: expected 0 carrying 'skipped (token-hunt leg)', got $rc"; cat "$WORK/out"
+  bad "no-list: expected 0 carrying 'token-hunt leg skipped', got $rc"; cat "$WORK/out"
 fi
 if grep -qE '^\s*ok:.*\(token-hunt leg\)' "$WORK/out"; then
   bad "no-list: printed a pass claim for the token-hunt leg while hunting nothing"
@@ -136,10 +136,10 @@ printf '# only comments here\n\n' > "$t/lint/instance-tokens.local.txt"
 printf 'names acme-widget\n' > "$t/skills/demo/SKILL.md"
 git -C "$t" add -A
 rc=$(run "$t")
-if [ "$rc" = 0 ] && grep -q "skipped (token-hunt leg)" "$WORK/out"; then
+if [ "$rc" = 0 ] && grep -q "token-hunt leg skipped" "$WORK/out"; then
   ok "empty list: token-hunt leg skips, machine-file leg clean -> exit 0"
 else
-  bad "empty-list: expected 0 carrying 'skipped (token-hunt leg)', got $rc"; cat "$WORK/out"
+  bad "empty-list: expected 0 carrying 'token-hunt leg skipped', got $rc"; cat "$WORK/out"
 fi
 
 # --- NOT-GATED: words to hunt, but nothing read --------------------------------
