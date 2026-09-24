@@ -7,6 +7,12 @@
 #           ADDED to a committed allowlist is refused (growth); the standing
 #           exclusions and archived-v1 survivors stay legal; a stale survivor
 #           declaration fails; an empty population is NOT-GATED (exit 2).
+#   PROBE (fixed RETIRED_NAMES list, folded in 2026-09-24 from the former
+#           checks 1-dead-patterns and 09-stray-alias-agents): the committed
+#           dead-patterns fixture and a fresh scratch hit are each FAILED
+#           naming the pattern; the committed stray-alias-agents fixture and
+#           a fresh reviewer.md are each FAILED naming the file — this leg
+#           never skips, unlike the archive-derived leg above.
 #
 # ASSURANCE
 #   PROBE:    bash lint/checks/25-archived-names.test.sh
@@ -151,6 +157,52 @@ if [ "$rc" = 2 ] && grep -qi "NOT-CHECKED" "$OUT"; then
   ok "EMPTY: no live text -> NOT-GATED exit 2"
 else
   bad "EMPTY: expected exit 2 NOT-CHECKED, got $rc"; cat "$OUT"
+fi
+
+# --- 9 RED (ported from 1-dead-patterns): committed dead-patterns fixture -----
+# The static fixture (lint/fixtures/25-archived-names/dead-patterns) has no
+# _archive/skills dir at all — the archive-derived leg has nothing to derive;
+# the fixed RETIRED_NAMES text leg must still fail on its own, naming all four
+# ported dead patterns.
+rc=$(run_check "$ROOT/lint/fixtures/25-archived-names/dead-patterns")
+if [ "$rc" = 1 ] \
+   && grep -q "dead pattern 'persona-catalog'" "$OUT" \
+   && grep -q "dead pattern 'craigs-setup'" "$OUT" \
+   && grep -q "dead pattern 'browser-qa-agent'" "$OUT" \
+   && grep -q "dead pattern 'agent-compounds/commands/'" "$OUT"; then
+  ok "RED (ex-1-dead-patterns): committed fixture -> exit 1, all four patterns named"
+else
+  bad "RED (ex-1-dead-patterns) fixture: expected exit 1 naming all four patterns, got $rc"; cat "$OUT"
+fi
+
+# --- 10 RED (ported from 1-dead-patterns): a fresh pattern hit in a scratch tree --
+t="$work/dead-pattern-fresh"
+mkdir -p "$t/skills/some-skill"
+printf 'spawns the browser-qa-agent\n' > "$t/skills/some-skill/SKILL.md"
+rc=$(run_check "$t")
+if [ "$rc" = 1 ] && grep -q "dead pattern 'browser-qa-agent' found in skills/some-skill/SKILL.md" "$OUT"; then
+  ok "RED (ex-1-dead-patterns): fresh skills/ hit -> exit 1 with relative path"
+else
+  bad "RED (ex-1-dead-patterns) fresh-hit: expected exit 1, got $rc"; cat "$OUT"
+fi
+
+# --- 11 RED (ported from 09-stray-alias-agents): committed engineer.md fixture ---
+rc=$(run_check "$ROOT/lint/fixtures/25-archived-names/stray-alias-agents")
+if [ "$rc" = 1 ] && grep -q "agents/engineer.md exists" "$OUT"; then
+  ok "RED (ex-09-stray-alias-agents): committed fixture -> exit 1, engineer.md named"
+else
+  bad "RED (ex-09-stray-alias-agents) fixture: expected exit 1 naming engineer.md, got $rc"; cat "$OUT"
+fi
+
+# --- 12 RED (ported from 09-stray-alias-agents): a stray reviewer.md -------------
+t="$work/stray-reviewer"
+mkdir -p "$t/agents"
+printf 'x\n' > "$t/agents/reviewer.md"
+rc=$(run_check "$t")
+if [ "$rc" = 1 ] && grep -q "agents/reviewer.md exists" "$OUT"; then
+  ok "RED (ex-09-stray-alias-agents): fresh reviewer.md -> exit 1"
+else
+  bad "RED (ex-09-stray-alias-agents) reviewer case: expected exit 1, got $rc"; cat "$OUT"
 fi
 
 echo

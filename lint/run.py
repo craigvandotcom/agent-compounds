@@ -75,8 +75,9 @@ def run_check(path, root, timeout=300, extra_env=None):
 
 
 # A check discloses a verdict on stderr (SKIP / WARN / NOT-GATED). The runner must surface
-# those lines: dropping them made a degraded run — e.g. Check 07/12 SKIPping on a bare
-# checkout — read as a clean one, the disclosure the check promises never reaching the report.
+# those lines: dropping them made a degraded run — e.g. an adopter-local-input check
+# (22/25/27/35) SKIPping on a checkout without that input — read as a clean one, the
+# disclosure the check promises never reaching the report.
 _DISCLOSURE_TOKENS = ("FAIL", "SKIP", "WARN", "NOTICE", "NOT-GATED", "NOT-CHECKED")
 
 
