@@ -11,7 +11,8 @@
 #   run-all-proofs.sh          run every discovered harness; exit 1 if any fails
 #   run-all-proofs.sh --list   print the harnesses that WOULD run (repo-relative,
 #                                 sorted, one per line) and exit 0 — this is the
-#                                 surface lint/checks/20-harness-scheduling.sh audits
+#                                 exact inventory the CI `proofs` job runs
+#                                 (.github/workflows/registry-lint.yml)
 #
 # Harness exit contract:
 #   0    pass
@@ -21,8 +22,9 @@
 #   any  fail
 #
 # Discovery is repo-wide on purpose. A harness that lands somewhere unexpected must be
-# RUN, not missed — and lint/checks/20-harness-scheduling.sh independently recomputes
-# this inventory so a narrowed glob here cannot quietly shrink coverage.
+# RUN, not missed — CI's `proofs` job invokes this script directly
+# (.github/workflows/registry-lint.yml), so a narrowed glob here is a visible diff in
+# that job's own definition, not a silent coverage loss.
 #
 set -uo pipefail
 

@@ -6,8 +6,8 @@
 # ASSURANCE
 #   PROBE:      bash skills/ac-implement/scripts/refly.test.sh
 #   SCHEDULE:   once per ac2 swarm run, in Phase 0 (SKILL.md), before the pool is counted;
-#               the harness runs on every scripts/run-all-proofs.sh invocation, which
-#               lint.sh Check 20 audits for scheduling.
+#               the harness runs on every scripts/run-all-proofs.sh invocation, scheduled
+#               by CI's `proofs` job.
 #   MODE:       advisory — a bead it cannot prove anything about stays exactly as it was
 #   ON-FAILURE: closed — br/jq missing or a gate script absent exits 2 and touches nothing
 #

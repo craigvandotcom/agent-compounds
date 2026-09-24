@@ -6,7 +6,7 @@
 #   PROBE:      bash skills/ac-implement/scripts/flight-check.test.sh
 #   SCHEDULE:   every ac2 worker claim (and again, before any fix, for a bead that delivers
 #               its own harness); the harness runs on every scripts/run-all-proofs.sh
-#               invocation, which lint.sh Check 20 audits for scheduling.
+#               invocation, scheduled by CI's `proofs` job.
 #   MODE:       blocking
 #   ON-FAILURE: closed
 #

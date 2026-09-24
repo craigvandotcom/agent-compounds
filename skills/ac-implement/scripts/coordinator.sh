@@ -5,7 +5,7 @@
 # ASSURANCE
 #   PROBE:      bash skills/ac-implement/scripts/coordinator.test.sh
 #   SCHEDULE:   once per ac2 swarm run, at close-out; the harness runs on every
-#               scripts/run-all-proofs.sh invocation, which lint.sh Check 20 audits.
+#               scripts/run-all-proofs.sh invocation, scheduled by CI's `proofs` job.
 #   MODE:       blocking
 #   ON-FAILURE: closed
 #

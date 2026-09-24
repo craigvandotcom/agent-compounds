@@ -5,7 +5,7 @@
 # ASSURANCE
 #   PROBE:      this file IS the probe — bash skills/ac-implement/scripts/flight-check.test.sh
 #   SCHEDULE:   every scripts/run-all-proofs.sh run (repo-wide *.test.sh discovery),
-#               which lint.sh Check 20 audits for scheduling.
+#               scheduled by CI's `proofs` job.
 #   MODE:       blocking
 #   ON-FAILURE: closed
 #

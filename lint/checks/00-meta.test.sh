@@ -8,7 +8,7 @@
 #
 # ASSURANCE
 #   PROBE:    bash lint/checks/00-meta.test.sh   (self-hosted; also scheduled
-#             by scripts/run-all-proofs.sh, audited by lint.sh Check 20)
+#             by scripts/run-all-proofs.sh, run by CI's `proofs` job)
 #   SCHEDULE: scripts/run-all-proofs.sh + CI harness job
 #   MODE:     blocking
 #   ON-FAILURE: closed

@@ -1,8 +1,0 @@
-# 29-stage-conformance allowlist — lib.ratchet format (`DATE key  # why`), DATED and
-# SHRINK-ONLY (ac-1p7j.8).
-#
-# Entry = a live ac-* skill whose hand-off prose names a route the stage table
-# does not carry, excused until WS2 rewords it. Entries may only be REMOVED; an
-# added entry fails the check (growth is refused against the committed base),
-# and an entry whose skill no longer violates must be removed the same change.
-2026-09-07 ac-hygiene  # hand-off prose names a route WS2 has not yet reworded

@@ -17,7 +17,7 @@ Every mechanism declares these AT BIRTH. In `engine/hooks.wiring.json` they live
 | Field | Says | Why it cannot be inferred |
 |---|---|---|
 | `PROBE` | how you would show it is alive | a mechanism nobody can test is untestable by construction |
-| `SCHEDULE` | what triggers it, and how often | an unscheduled proof test is documentation (lint Check 20) |
+| `SCHEDULE` | what triggers it, and how often | an unscheduled proof test is documentation — `scripts/run-all-proofs.sh` + the CI `proofs` job is the schedule that makes it assurance |
 | `MODE` | `blocking` \| `advisory` | event/matcher shape cannot distinguish them — advisory `skill-edit-guard` and blocking `bead-capture-guard` are BOTH `PreToolUse` |
 | `ON-FAILURE` | `open` \| `closed` | fail-open is a design choice; undeclared, it is discovered during an incident |
 
@@ -67,6 +67,6 @@ When a gate cannot verify, it must say so and FAIL. Silence is never success.
   that fires when they stop applying — a quarantined test that starts PASSING fails the
   run (`scripts/run-all-proofs.sh`), a closed decision bead invalidates its escape.
 
-Enforcement: `lint.sh` Check 18 (a guard can fire) · Check 20 (a proof test is run) ·
-Check 21 (a mechanism declares its failure semantics), each with a `*.test.sh` harness
-that the `harnesses` CI job executes.
+Enforcement: `lint.sh` Check 18 (a guard can fire) · Check 21 (a mechanism declares its
+failure semantics), each with a `*.test.sh` harness that the `harnesses` CI job executes;
+that a proof test itself runs is `scripts/run-all-proofs.sh` + the CI `proofs` job.

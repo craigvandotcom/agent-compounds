@@ -6,12 +6,11 @@
  * Serves 127.0.0.1 only. The FILES stay the truth and this face only READS them:
  * machine facts (targets, org root, harness overrides) come from the one reader,
  * engine/machine.sh; the package manifest from skills/packages.json. It has no
- * writer: every route is a read, and the two buttons run the engine's own
- * read-only checks.
+ * writer: every route is a read, and the one button runs the engine's own
+ * read-only check.
  *
  *   GET  /              the matrix UI (read-only)
  *   GET  /api/state     { root, org, order, pkgs, skills, targets, harnesses, enabled, notes }
- *   POST /api/verify    { target } — run lint/consumer.py for one listed target (streamed)
  *   POST /api/check     run engine/sync.sh --check (streamed) — drift
  *
  * Usage: node tools/factory-ui/serve.ts [--port N]   (default 8471)
@@ -28,7 +27,6 @@ type HarnessManifest = { harnesses?: Record<string, { enabled?: boolean }> };
 const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), "..", "..");
 const MANIFEST = path.join(ROOT, "skills", "packages.json");
 const MACHINE = path.join(ROOT, "engine", "machine.sh");
-const CONSUMER = path.join(ROOT, "lint", "consumer.py");
 const SYNC = path.join(ROOT, "engine", "sync.sh");
 
 // Every machine fact comes from the one reader. machine.sh self-locates from its own
@@ -104,15 +102,6 @@ function json(res: http.ServerResponse, code: number, obj: unknown): void {
   res.end(JSON.stringify(obj));
 }
 
-function readBody(req: http.IncomingMessage): Promise<unknown> {
-  return new Promise((resolve, reject) => {
-    let s = "";
-    req.on("data", (c) => { s += c; if (s.length > 1 << 20) reject(new Error("body too large")); });
-    req.on("end", () => { try { resolve(s ? JSON.parse(s) : {}); } catch (e) { reject(e); } });
-    req.on("error", reject);
-  });
-}
-
 function state(): object {
   const notes: string[] = [];
   let order: string[] = [], pkgs: Record<string, Pkg> = {};
@@ -144,7 +133,7 @@ const PAGE = `<!doctype html><html><head><meta charset="utf-8"><title>factory ma
 <h2>packages × skills <small>(read-only — edits live in skills/packages.json)</small></h2><div id="pkgs"></div>
 <h2>targets <small>(read-only — machine.sh --targets)</small></h2><div id="tgts"></div>
 <h2>harnesses <small>(read-only — machine.sh --harnesses)</small></h2><div id="harn"></div>
-<h2>run</h2><div id="v"></div>
+<h2>run</h2>
 <p><button onclick="run('/api/check')">Check drift (engine/sync.sh --check)</button></p>
 <pre id="out"></pre>
 <script>
@@ -156,13 +145,10 @@ document.getElementById('org').textContent=S.org||'(unknown)';
 let h='<table><tr><th>skill</th>'+S.order.map(p=>'<th>'+p+'</th>').join('')+'</tr>';
 for(const s of S.skills){h+='<tr><td>'+s+'</td>'+S.order.map(p=>'<td>'+(S.pkgs[p].skills.includes(s)?'✓':'·')+'</td>').join('')+'</tr>';}
 document.getElementById('pkgs').innerHTML=h+'</table>';
-h='<table><tr><th>target</th><th>public</th><th>packages</th><th></th></tr>';
-for(const t of S.targets){const eff=t.packages||S.order;h+='<tr><td>'+t.dir+'</td><td>'+(t.public?'yes':'no')+'</td><td>'+eff.join(', ')+'</td><td><button onclick="verify(\\''+t.dir+'\\')">verify</button></td></tr>';}
+h='<table><tr><th>target</th><th>public</th><th>packages</th></tr>';
+for(const t of S.targets){const eff=t.packages||S.order;h+='<tr><td>'+t.dir+'</td><td>'+(t.public?'yes':'no')+'</td><td>'+eff.join(', ')+'</td></tr>';}
 document.getElementById('tgts').innerHTML=(S.targets.length?h+'</table>':'<p>no targets</p>');
-document.getElementById('harn').innerHTML=S.harnesses.map(n=>'<span class="tag">'+n+': '+(S.enabled[n]?'enabled':'disabled')+'</span>').join('')||'<p>no harnesses</p>';
-let v='';for(const t of S.targets)v+='<button onclick="verify(\\''+t.dir+'\\')">verify '+t.dir+'</button> ';
-document.getElementById('v').innerHTML=v;}
-function verify(t){run('/api/verify',{target:t});}
+document.getElementById('harn').innerHTML=S.harnesses.map(n=>'<span class="tag">'+n+': '+(S.enabled[n]?'enabled':'disabled')+'</span>').join('')||'<p>no harnesses</p>';}
 async function run(u,b){const el=document.getElementById('out');el.textContent='running…\\n';
 const r=await fetch(u,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(b||{})});
 const rd=r.body.getReader(),dec=new TextDecoder();while(true){const{done,value}=await rd.read();if(done)break;el.textContent+=dec.decode(value);}el.textContent+='\\n[done]';}
@@ -175,14 +161,6 @@ const server = http.createServer(async (req, res) => {
       res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" }); res.end(PAGE); return;
     }
     if (req.method === "GET" && url.pathname === "/api/state") { json(res, 200, state()); return; }
-    if (req.method === "POST" && url.pathname === "/api/verify") {
-      const b = await readBody(req) as { target: string };
-      const { targets } = readTargets();
-      const hit = targets.find((t) => t.dir === String(b.target));
-      if (!hit) { json(res, 400, { error: `'${b.target}' is not a target machine.sh lists` }); return; }
-      if (!fs.existsSync(hit.dir)) { json(res, 400, { error: `target dir missing: ${hit.dir}` }); return; }
-      streamCmd(res, "python3", [CONSUMER, hit.dir], ROOT); return;
-    }
     if (req.method === "POST" && url.pathname === "/api/check") { streamCmd(res, "bash", [SYNC, "--all", "--check"], ROOT); return; }
     json(res, 404, { error: "not found" });
   } catch (e) { json(res, 500, { error: String(e) }); }

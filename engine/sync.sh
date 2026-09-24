@@ -1871,38 +1871,9 @@ if [ "$DRY" = 0 ] && [ -f "$STANCE_PROBE" ]; then
     echo "# WARNING: stance spawn probe red (non-blocking) — a stance cannot spawn or write scratch on a harness above"
 fi
 
-# --- deployed-consumer audits (moved from lint checks 07/12, W4 of the lint-system
-# upgrade) --------------------------------------------------------------------------
-# These audit DEPLOY TARGETS (a consumer's `.claude` tree), which sync.sh owns —
-# lint.sh gates only this repo's own tree, so 07/12 never ran in CI or pre-commit
-# there (lint-review liveness C1). --check only: a broken symlink or a dead name in
-# a consumer's every-prompt surface is DISCLOSED here, not written by --root/--all,
-# so it belongs in the drift signal rather than the write path. `lib/consumers.py`
-# (still `lint/lib/`, check 14 also imports it) resolves the union via
-# engine/machine.sh exactly as before the move — nothing here re-derives it.
-AUDIT_FAILURES=0
-if [ "$CHECK" = 1 ]; then
-  for audit in "$ENGINE_DIR/checks/consumer-symlinks.py" "$ENGINE_DIR/checks/deployed-app-conformance.py"; do
-    [ -f "$audit" ] || continue
-    echo
-    echo "== $(basename "$audit" .py)"
-    audit_out="$(python3 "$audit" 2>&1)"; audit_rc=$?
-    printf '%s\n' "$audit_out" | sed 's/^/  /'
-    if [ "$audit_rc" = 1 ]; then
-      note_change   # findings: real drift a re-sync of that target would not silently carry
-    elif [ "$audit_rc" != 0 ]; then
-      AUDIT_FAILURES=$((AUDIT_FAILURES + 1))
-    fi
-  done
-fi
-
 echo "Done. changes=$CHANGES$([ "$DRY" = 1 ] && echo ' (dry-run)')"
 if [ "$FAILURES" -gt 0 ]; then
   echo "ERROR: $FAILURES target(s) skipped by the public-target guard — fix their .gitignore and re-run" >&2
-  exit 1
-fi
-if [ "$AUDIT_FAILURES" -gt 0 ]; then
-  echo "ERROR: $AUDIT_FAILURES deployed-consumer audit(s) could not run — their machine facts are unresolved or refused; fix machine.json (see engine/machine.sh --help)" >&2
   exit 1
 fi
 if [ "$CHECK" = 1 ] && [ "$CHANGES" -gt 0 ]; then

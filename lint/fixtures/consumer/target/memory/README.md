@@ -1,1 +1,0 @@
-# Fixture memory root

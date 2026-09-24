@@ -1,1 +1,0 @@
-# Smoke journey (consumer fixture)

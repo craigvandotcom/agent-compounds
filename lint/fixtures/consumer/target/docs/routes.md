@@ -1,1 +1,0 @@
-# Routes (consumer fixture)
