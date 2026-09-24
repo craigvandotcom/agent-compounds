@@ -16,9 +16,12 @@ per-package absolute budget.
          whole, never only its tip. Locally (LINT_BASE_REF unset), the base
          is the manifest's `base_ref` (origin/main); under trunk-direct the
          merge base collapses onto HEAD, so the base falls back to HEAD^ (one
-         commit back — the unit of review). Base unresolvable (shallow/
-         standalone checkout) -> NOTICE + green: a false-green is safer than
-         a broken CI leg, and leg 2 still bounds absolute size.
+         commit back — the unit of review). Base unresolvable — an explicit
+         `LINT_BASE_REF` that does not verify in this checkout (a shallow
+         fetch or a misconfigured CI), or the local fallback exhausting
+         itself (no HEAD^ either — a standalone single-commit checkout) ->
+         exit 77 (honest skip), never a silent pass; leg 2 still runs and
+         still bounds absolute size regardless.
   leg 2  every package's live-measured spine (member SKILL.md lines, the
          always-loaded surface) and loaded (all Markdown under member dirs)
          must fit its manifest budget (skills/packages.json's top-level
@@ -37,7 +40,8 @@ not pay for growth — only file content does.
 
 Modes:
   <root>                    full run: leg 1 + leg 2 over the registry
-Exit: 0 clean, 1 violations, 2 population empty (no tree, no skills/ dir).
+Exit: 0 clean, 1 violations, 2 population empty (no tree, no skills/ dir),
+      77 skip (leg 1's base ref unresolvable and nothing else failed).
 """
 
 import os
@@ -49,7 +53,6 @@ import _bootstrap  # noqa: F401
 from lib import manifest, ratchet, scope  # noqa: E402
 
 violations = []
-notices = []
 
 
 def git(repo, *args):
@@ -75,6 +78,36 @@ def leg1_base(root, base_ref):
     return b
 
 
+def leg1_base_or_reason(root, base_ref):
+    """Leg 1's base commit, or ("", reason) when it cannot be determined —
+    the one place that decides "leg 1's input is absent".
+
+    An explicit `LINT_BASE_REF` that fails to verify in this checkout (a
+    shallow fetch, a misconfigured CI) is checked FIRST and reported as
+    itself — never silently swapped for the local default-ref/HEAD^
+    fallback `ratchet.base_ref` would otherwise recover through, which
+    would judge the wrong commits and call it green. The local fallback
+    exhausting itself (no LINT_BASE_REF, default ref unresolvable, and no
+    HEAD^ either — a standalone single-commit checkout) reports the same
+    way: both are leg 1 unable to gate, never a crash and never a silent
+    pass.
+    """
+    env_ref = os.environ.get("LINT_BASE_REF")
+    # `^{commit}` forces resolution to a real commit object: a bare
+    # `rev-parse --verify --quiet` passes the all-zero null SHA straight
+    # through as syntactically valid (git's own plumbing convention for
+    # "no ref"), which would otherwise slip past this guard undetected.
+    if env_ref and not git(root, "rev-parse", "--verify", "--quiet", f"{env_ref}^{{commit}}"):
+        return "", (f"LINT_BASE_REF '{env_ref}' does not resolve in this checkout "
+                     "(shallow fetch or a misconfigured CI checkout) — leg 1 "
+                     "no-net-growth not enforced this run")
+    base = leg1_base(root, base_ref)
+    if not base:
+        return "", (f"base ref '{base_ref}' unresolvable (shallow checkout, standalone "
+                     "clone, or no fetch of it) — leg 1 no-net-growth not enforced this run")
+    return base, ""
+
+
 def load_config(root):
     """The check-14 lists (base_ref, lean_family, lean_family_cap), read from
     the manifest's `_lint` section through lint/lib/manifest.py — the manifest
@@ -93,11 +126,15 @@ def load_config(root):
 
 
 def require_config(cfg_root):
+    """Load lint's `_lint` config or report why not. Never exits the process —
+    main() is the one owner of the return code; this only decides whether
+    the config is usable and prints the FAIL a missing/malformed manifest
+    deserves, returning None as the caller's cue."""
     try:
         return load_config(cfg_root)
     except manifest.ManifestMissing as exc:
         print(f"FAIL 14-no-net-growth: {exc} — the manifest is the only source of these lists")
-        sys.exit(1)
+        return None
 
 
 def member_of(path, members):
@@ -207,9 +244,14 @@ def check_package_budgets(root):
 
 
 def run_full(root, cfg):
+    """The one owner of leg 1 + leg 2's verdict. Priority when more than one
+    condition fires: a real finding (collapsed base or a violation) always
+    fails the run (1); a leg-1 skip with nothing else wrong is reported as
+    itself (77), never silently folded into a pass; otherwise clean (0)."""
     pkg_violations = check_package_budgets(root)
     collapsed = False
     head = ""
+    skip_reason = ""
 
     # The pre-commit staged lane (run.py --staged) sets LINT_STAGED=1 and
     # redirects GIT_DIR/GIT_WORK_TREE at the real repo around a staged-content
@@ -222,20 +264,16 @@ def run_full(root, cfg):
     if os.environ.get("LINT_STAGED") == "1":
         scan(root, "agent-compounds", "HEAD", "skills/*/SKILL.md", cfg, staged=True)
     else:
-        base = leg1_base(root, cfg["base_ref"])
-        head = git(root, "rev-parse", "HEAD")
-        if not base:
-            notices.append(f"Check 14 leg 1 skipped — base ref '{cfg['base_ref']}' unresolvable (shallow "
-                           "checkout, standalone clone, or no fetch of it) — no-net-growth not enforced "
-                           "for the registry this run.")
-        elif base == head:
-            collapsed = True
-        else:
-            scan(root, "agent-compounds", base, "skills/*/SKILL.md", cfg)
+        base, skip_reason = leg1_base_or_reason(root, cfg["base_ref"])
+        if not skip_reason:
+            head = git(root, "rev-parse", "HEAD")
+            if base == head:
+                collapsed = True
+            else:
+                scan(root, "agent-compounds", base, "skills/*/SKILL.md", cfg)
 
-    for n in notices:
-        print(f"NOTICE: {n}")
-
+    if skip_reason:
+        print(f"SKIP 14-no-net-growth: {skip_reason}")
     if collapsed:
         print(f"FAIL 14-no-net-growth: leg 1 base collapsed onto HEAD ({head[:12]}) — the ratchet "
               "would compare HEAD against itself; check checkout depth (HEAD^ must resolve)")
@@ -249,7 +287,11 @@ def run_full(root, cfg):
     for v in pkg_violations:
         print(f"FAIL 14-no-net-growth: {v}")
 
-    return 1 if (collapsed or violations or pkg_violations) else 0
+    if collapsed or violations or pkg_violations:
+        return 1
+    if skip_reason:
+        return 77
+    return 0
 
 
 def main():
@@ -261,11 +303,19 @@ def main():
         import importlib
         importlib.reload(scope)
         cfg_root = scope.ROOT
-    cfg = require_config(cfg_root)
-    rc = run_full(root, cfg)
-    if rc == 0 and not notices and not os.path.isdir(os.path.join(root, "skills")):
+
+    # Population-empty is decided BEFORE config is loaded — a missing 'skills'
+    # dir means no manifest either, and require_config's own FAIL must never
+    # shadow this one: the one owner of "nothing to scan" is this check right
+    # here, not a rewrite of some other verdict after the fact.
+    if not os.path.isdir(os.path.join(root, "skills")):
+        print(f"NOT-GATED 14-no-net-growth: no 'skills' dir under {root} — population empty")
         return 2
-    return rc
+
+    cfg = require_config(cfg_root)
+    if cfg is None:
+        return 1
+    return run_full(root, cfg)
 
 
 if __name__ == "__main__":

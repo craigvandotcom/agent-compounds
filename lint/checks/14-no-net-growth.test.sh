@@ -63,6 +63,18 @@ expect() { # <name> <want-violation-count>
 
 expect "clean target (no delta)" 0
 
+# --- UNRESOLVABLE BASE: an explicit LINT_BASE_REF that cannot verify (the all-zero
+# null SHA — git's own plumbing convention for "no ref", and syntactically valid to
+# `rev-parse --verify --quiet` even though it names no real commit) -> honest SKIP
+# (77), naming the reason, never a silent pass through the local HEAD^ fallback.
+OUT="$(AC_MACHINE_FILE=/nonexistent/machine.json LINT_BASE_REF=0000000000000000000000000000000000000000 python3 "$CHECK" "$W/app" 2>&1)"; RC=$?
+if [ "$RC" = 77 ] && printf '%s\n' "$OUT" | grep -q "SKIP 14-no-net-growth: LINT_BASE_REF '0000000000000000000000000000000000000000' does not resolve"; then
+  PASS=$((PASS+1)); printf 'ok   %-46s\n' "unresolvable LINT_BASE_REF -> SKIP (77), reason named"
+else
+  FAIL=$((FAIL+1)); printf 'FAIL %-46s rc=%s\n' "unresolvable LINT_BASE_REF -> SKIP (77), reason named" "$RC"
+  printf '%s\n' "$OUT" | sed 's/^/  | /'
+fi
+
 echo "line 11" >> skills/foo/SKILL.md
 echo "line 12" >> skills/foo/SKILL.md
 expect "+2 growth -> FAILS" 1
@@ -161,6 +173,19 @@ git reset -q skills/ac-polish/SKILL.md 2>/dev/null; rm -rf skills/ac-polish
 # under test — the rest of the registry's package members (absent here) just contribute
 # zero, harmlessly.
 pkg_check() { AC_MACHINE_FILE=/nonexistent/machine.json python3 "$CHECK" "$1"; }
+
+# --- POPULATION EMPTY: no 'skills' dir at all -> exit 2, decided BEFORE config load
+# (not a manifest-missing FAIL — the one owner of "nothing to scan" is this check,
+# never shadowed by require_config's own FAIL for the same missing directory).
+E="$(mktemp -d)"
+OUT="$(pkg_check "$E" 2>&1)"; RC=$?
+if [ "$RC" = 2 ] && printf '%s\n' "$OUT" | grep -q "population empty"; then
+  PASS=$((PASS+1)); printf 'ok   %-46s\n' "no 'skills' dir -> exit 2, one return path"
+else
+  FAIL=$((FAIL+1)); printf 'FAIL %-46s rc=%s\n' "no 'skills' dir -> exit 2, one return path" "$RC"
+  printf '%s\n' "$OUT" | sed 's/^/  | /'
+fi
+rm -rf "$E"
 
 P="$(mktemp -d)"
 mkdir -p "$P/skills/over-budget-skill"
