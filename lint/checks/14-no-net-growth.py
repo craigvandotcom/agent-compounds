@@ -1,13 +1,10 @@
 #!/usr/bin/env python3
 # ---
-# id: 14-no-net-growth
 # prevents: a SKILL.md spine growing unstamped, or a package's mandatory-load surface
 #   growing unstamped even while every individual file holds — the per-file ratchet (each
 #   SKILL.md holds or shrinks vs a base ref) closes the corpus-sum loophole where one
 #   file's shrink pays for another's growth; the per-package budget closes the loophole
 #   where references/ or workflows/ grows while no single file crosses a line
-# scope: LIVE_TEXT
-# severity: fail
 # fixture: lint/fixtures/14-no-net-growth
 # ---
 """14-no-net-growth — the registry's one size guard: a per-file ratchet plus a

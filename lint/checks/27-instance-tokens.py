@@ -1,10 +1,7 @@
 #!/usr/bin/env python3
 # ---
-# id: 27-instance-tokens
 # prevents: this deployment's own names (its apps, org, people, project ids) reaching the published
 #   tree, and machine.json — this machine's absolute paths — riding a commit as tracked or staged
-# scope: TRACKED
-# severity: fail
 # fixture: lint/fixtures/27-instance-tokens
 # ---
 """27-instance-tokens — the published tree names no specific deployment of it,

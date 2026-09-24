@@ -1,12 +1,9 @@
 #!/usr/bin/env bash
 # ---
-# id: 21-assurance-declarations
 # prevents: a mechanism that does not say what it does when it breaks — a hooks/ guard that stayed
 #   fail-open against a store that does not exist, an executable with no wiring at all, and a lean
 #   workflow script with no PROBE/SCHEDULE/MODE/ON-FAILURE header — none detectable while "wired" or
 #   "present" was the only claim anyone made
-# scope: HOOKS
-# severity: fail
 # fixture: lint/fixtures/21-assurance-declarations
 # ---
 #

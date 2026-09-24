@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 # 00-meta.test.sh — the fixture proving lint/checks/00-meta.py's contract.
 #
-#   PROBE: a check file missing any of id/prevents/scope/severity/fixture,
-#           or a fixture that does not go RED, is FAILED by 00-meta; a
-#           complete check whose fixture fires is PASSED; an empty checks
-#           population is NOT-GATED (exit 2), never a silent pass.
+#   PROBE: a check file missing either prevents or fixture, or a fixture
+#           that does not go RED, is FAILED by 00-meta; a complete check
+#           whose fixture fires is PASSED; an empty checks population is
+#           NOT-GATED (exit 2), never a silent pass.
 #
 # ASSURANCE
 #   PROBE:    bash lint/checks/00-meta.test.sh   (self-hosted; also scheduled
@@ -44,10 +44,7 @@ mkdir -p "$work/lint/checks" "$work/fixtures"
 
 GOOD_HDR="$(mktemp)"; printf '%s\n' \
   '# ---' \
-  '# id: 01-good' \
   '# prevents: test stub - the good case' \
-  '# scope: LIVE_TEXT' \
-  '# severity: fail' \
   '# fixture: fixtures/01-good' \
   '# ---' > "$GOOD_HDR"
 RED_BODY="$(mktemp)"; printf '%s\n' \
@@ -62,13 +59,13 @@ printf '# broken: deliberate RED case\n' > "$work/fixtures/01-good/SKILL.md"
 write_stub "$work/lint/checks/01-good.py" "$GOOD_HDR" "$RED_BODY"
 rc=$(run_meta "$work"); [ "$rc" = 0 ] && ok "GOOD case passes (exit 0)" || { cat "$OUT"; bad "GOOD case: expected 0, got $rc"; }
 
-# --- cases MISSINGx5: each missing header field is failed by name ------------
-for field in id prevents scope severity fixture; do
+# --- cases MISSINGx2: each missing header field is failed by name ------------
+for field in prevents fixture; do
   hdr="$(mktemp)"
   local_scoped="$work/lint/checks/01-missing-$field.py"
   mkdir -p "$work/fixtures/01-missing-$field"
   { echo '# ---'
-    for f in id prevents scope severity fixture; do
+    for f in prevents fixture; do
       [ "$f" = "$field" ] || printf '# %s: placeholder\n' "$f"
     done
     echo '# ---'
@@ -82,23 +79,10 @@ for field in id prevents scope severity fixture; do
   fi
 done
 
-# --- case BAD-SCOPE: scope naming no set in lib.scope ------------------------
-hdr="$(mktemp)"; printf '%s\n' \
-  '# ---' '# id: 01-badscope' '# prevents: test stub' \
-  '# scope: NOT_A_SET' '# severity: fail' '# fixture: fixtures/01-good' '# ---' > "$hdr"
-write_stub "$work/lint/checks/01-bad-scope.py" "$hdr" "$RED_BODY"
-rc=$(run_meta "$work")
-if [ "$rc" = 1 ] && grep -q "names no set in lib.scope" "$OUT"; then
-  ok "scope naming no scope set -> failed"
-else
-  bad "BAD-SCOPE: expected exit 1 naming lib.scope, got $rc"
-fi
-
 # --- case NOT-RED: fixture exists but the check passes against it ------------
 mkdir -p "$work/fixtures/01-notred"
 hdr="$(mktemp)"; printf '%s\n' \
-  '# ---' '# id: 01-notred' '# prevents: test stub' \
-  '# scope: LIVE_TEXT' '# severity: fail' '# fixture: fixtures/01-notred' '# ---' > "$hdr"
+  '# ---' '# prevents: test stub' '# fixture: fixtures/01-notred' '# ---' > "$hdr"
 write_stub "$work/lint/checks/01-notred.py" "$hdr" "$CLEAN_BODY"
 rc=$(run_meta "$work")
 if [ "$rc" = 1 ] && grep -q "does NOT go RED" "$OUT"; then

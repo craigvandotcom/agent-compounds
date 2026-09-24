@@ -30,10 +30,8 @@ it can go RED on — a check that can never fail is worse than no check.
 ## The check header contract
 
 Every `lint/checks/` file (test harnesses excluded) opens with a `# ---` fenced
-header carrying `id`, `prevents`, `scope`, `severity`, `fixture` (`severity:
-warn` also needs an unexpired `expires: YYYY-MM-DD`). Enforced by
-`lint/checks/00-meta.py`: the header must parse, `id` must match the filename
-stem, `scope` must name a real set in `lib.scope`, and the check must go RED
+header carrying `prevents` and `fixture`. Enforced by `lint/checks/00-meta.py`:
+the header must parse, both fields must be present, and the check must go RED
 (exit 1) against its own `fixture` — a passing or skipping fixture is the
 vacuous-check class.
 

@@ -1,11 +1,8 @@
 #!/usr/bin/env python3
 # ---
-# id: 03-frontmatter-conformance
 # prevents: an unparseable or lying frontmatter block — a prose sentence mis-inserted between name:
 #   and description: that both presence greps read as green, a name that does not match its directory,
 #   and an agent declaring a concrete model instead of a tier
-# scope: LIVE_TEXT AGENT_STANCES
-# severity: fail
 # fixture: lint/fixtures/03-frontmatter-conformance
 # ---
 """03-frontmatter-conformance — frontmatter that parses, matches, and stamps.

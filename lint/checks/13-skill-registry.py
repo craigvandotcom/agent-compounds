@@ -1,11 +1,8 @@
 #!/usr/bin/env python3
 # ---
-# id: 13-skill-registry
 # prevents: the always-loaded skill-listing budget being breached, a description over the per-skill
 #   1024-char cap, and a skill flagged disable-model-invocation being invoked from another skill's
 #   body — the invocation graph recomputed from the files on every run, never from memory
-# scope: LIVE_TEXT
-# severity: fail
 # fixture: lint/fixtures/13-skill-registry
 # ---
 """13-skill-registry — description budget + invocation-graph rule.

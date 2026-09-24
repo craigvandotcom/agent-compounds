@@ -1,11 +1,8 @@
 #!/usr/bin/env python3
 # ---
-# id: 18-guard-liveness
 # prevents: a dead guard — a hook that is wired but not executable, or a guard that no longer fires
 #   on its positive case (or fires on its negative one); doctrine that never reaches the actor is
 #   this registry's most expensive failure mode
-# scope: HOOKS
-# severity: fail
 # fixture: lint/fixtures/18-guard-liveness
 # ---
 """18-guard-liveness — every wired guard actually fires.

@@ -1,11 +1,8 @@
 #!/usr/bin/env python3
 # ---
-# id: 30-trigger-collisions
 # prevents: two skills both quoting the same trigger phrase, so one phrase selects two skills and skill
 #   selection is ambiguous — the mechanical half of ac-registry-audit's trigger-collision pass (the
 #   WS1 fold that retired that workflow)
-# scope: LIVE_TEXT
-# severity: fail
 # fixture: lint/fixtures/30-trigger-collisions
 # ---
 """30-trigger-collisions — the quoted-trigger-phrase uniqueness gate.

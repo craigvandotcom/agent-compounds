@@ -1,12 +1,9 @@
 #!/usr/bin/env python3
 # ---
-# id: 25-archived-names
 # prevents: a retired name surviving where it can be revived — an archived skill's name
 #   left standing in live doctrine (Check 2 resolves only /ac-* slash refs, so a bare-text
 #   ghost passes unseen), a dead pattern string copied back into skills/ or agents/ text, or
 #   a retired alias agent file returning to agents/ and re-splitting the stance registry
-# scope: LIVE_TEXT AGENT_STANCES
-# severity: fail
 # fixture: lint/fixtures/25-archived-names
 # ---
 """25-archived-names — every retired name stays retired.

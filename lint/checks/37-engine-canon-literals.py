@@ -1,11 +1,8 @@
 #!/usr/bin/env python3
 # ---
-# id: 37-engine-canon-literals
 # prevents: the engine hardcoding a path to canon instead of deriving it — a literal
 #   survives a layout change silently: it still parses, still renders, and only the
 #   file at the end of it is missing
-# scope: ENGINE
-# severity: fail
 # fixture: lint/fixtures/37-engine-canon-literals
 # ---
 """37-engine-canon-literals — the engine must DERIVE its paths, never spell them.

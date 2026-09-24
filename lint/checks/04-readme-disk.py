@@ -1,12 +1,9 @@
 #!/usr/bin/env python3
 # ---
-# id: 04-readme-disk
 # prevents: README drift — a skill or agent that exists on disk but is never mentioned, a README table
 #   row linking to a skill or agent that is not there, the committed package-map block falling out of
 #   sync with skills/packages.json, and the link-existence sub-checks silently no-oping when README.md
 #   itself is missing
-# scope: LIVE_TEXT README
-# severity: fail
 # fixture: lint/fixtures/04-readme-disk
 # ---
 """04-readme-disk — README.md and the disk agree in both directions.

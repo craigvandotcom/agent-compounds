@@ -1,20 +1,16 @@
 #!/usr/bin/env python3
 # ---
-# id: 00-meta
-# prevents: an undeclared or unfired check (no id/prevents/scope/severity/fixture, or a fixture
+# prevents: an undeclared or unfired check (no prevents/fixture, or a fixture
 #   that does not go RED) scans nothing and passes
-# scope: CHECKS
-# severity: fail
 # fixture: lint/checks/00-meta.test.sh
 # ---
 """00-meta — the check on checks.
 
 Every lint/checks file (test harnesses excluded) must carry a header declaring
-id, prevents, scope, severity and fixture; `scope` must name a set that
-lib.scope actually exposes; `warn` must carry an unexpired `expires` date; and
-— except for this file, whose RED is its own test harness — running the check
-against its declared fixture must go RED (exit 1). A check whose fixture exits
-0 or 2 has a fixture that does not go RED, which is the vacuous-check class.
+prevents and fixture; and — except for this file, whose RED is its own test
+harness — running the check against its declared fixture must go RED (exit
+1). A check whose fixture exits 0 or 2 has a fixture that does not go RED,
+which is the vacuous-check class.
 
 The check-file contract both this file and run.py honour:
   invocation   `python3 <check>.py [root]` / `bash <check>.sh [root]`
@@ -32,19 +28,15 @@ The check-file contract both this file and run.py honour:
 """
 
 import os
-import re
 import subprocess
 import sys
-from datetime import date
 
 import _bootstrap  # noqa: F401
 from lib import frontmatter, scope
 
 _HERE = os.path.dirname(os.path.abspath(__file__))
 
-REQUIRED_FIELDS = ("id", "prevents", "scope", "severity", "fixture")
-DATE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
-SELF_ID = "00-meta"
+REQUIRED_FIELDS = ("prevents", "fixture")
 
 findings = []
 
@@ -73,7 +65,7 @@ def check_header(path):
     rel = os.path.relpath(path, os.path.join(scope.ROOT))
     header = frontmatter.parse_file(path)
     if not header:
-        fail(f"{rel}: no header block — id/prevents/scope/severity/fixture are undeclared")
+        fail(f"{rel}: no header block — prevents/fixture are undeclared")
         return False
     ok = True
     for field in REQUIRED_FIELDS:
@@ -82,24 +74,6 @@ def check_header(path):
             ok = False
     if not ok:
         return False
-    stem = os.path.basename(path).rsplit(".", 1)[0]
-    if header["id"] != stem:
-        fail(f"{rel}: id '{header['id']}' does not match filename stem '{stem}'")
-        ok = False
-    if not isinstance(getattr(scope, header["scope"], None), frozenset):
-        fail(f"{rel}: scope '{header['scope']}' names no set in lib.scope")
-        ok = False
-    if header["severity"] not in ("fail", "warn"):
-        fail(f"{rel}: severity '{header['severity']}' is neither fail nor warn")
-        ok = False
-    if header["severity"] == "warn":
-        exp = str(header.get("expires", ""))
-        if not DATE.match(exp):
-            fail(f"{rel}: severity warn requires expires: YYYY-MM-DD")
-            ok = False
-        elif exp < date.today().isoformat():
-            fail(f"{rel}: severity warn expired {exp} — it must now fail")
-            ok = False
     fx = str(header["fixture"])
     if not os.path.exists(os.path.join(scope.ROOT, fx)):
         fail(f"{rel}: fixture '{fx}' does not exist")

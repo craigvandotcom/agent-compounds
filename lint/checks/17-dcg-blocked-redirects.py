@@ -1,10 +1,7 @@
 #!/usr/bin/env python3
 # ---
-# id: 17-dcg-blocked-redirects
 # prevents: a published markdown snippet prescribing a truncating redirect to a shell-expanded path —
 #   a shape dcg refuses, so the snippet is unrunnable on this fleet
-# scope: LIVE_TEXT
-# severity: fail
 # fixture: lint/fixtures/17-dcg-blocked-redirects
 # ---
 """17-dcg-blocked-redirects — no published snippet prescribes a dcg-blocked redirect.

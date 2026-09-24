@@ -1,14 +1,11 @@
 #!/usr/bin/env python3
 # ---
-# id: 35-board-integrity
 # prevents: a duplicate board record (rule 2); a line that is not JSON (rule 1); an OPEN
 #   post-cutover implementable bead sitting origin-less or probe-less (rule 3); a closed bead
 #   whose landing record cites no evidence (rule 6) — the create-time guards fail open on
 #   unparseable shell (a body passed as `-d "$(cat file)"` or a heredoc blinds the born-probe
 #   check) and close-gate.sh's bypass leaves no other sensor, so the committed board itself is
 #   the backstop every one of these rules reads.
-# scope: HOOKS
-# severity: fail
 # fixture: lint/fixtures/35-board-integrity
 # ---
 """35-board-integrity — the board stays well-formed, origin-tagged and receipt-honest.

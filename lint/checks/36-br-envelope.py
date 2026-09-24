@@ -1,12 +1,9 @@
 #!/usr/bin/env python3
 # ---
-# id: 36-br-envelope
 # prevents: a raw `br … --json` read that bypasses the envelope-aware helper — with --json a br
 #   failure is a VALID error envelope on STDOUT and an EMPTY stderr, so a raw piped/captured read
 #   converts a dead read into EMPTY DATA and the gate downstream reads "no labels", "no beads",
 #   "nothing stale" — and passes
-# scope: SCRIPTS
-# severity: fail
 # fixture: lint/fixtures/36-br-envelope
 # ---
 """36-br-envelope — every `br … --json` read routes through br_call (or the python twin).

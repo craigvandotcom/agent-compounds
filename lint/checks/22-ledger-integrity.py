@@ -1,12 +1,9 @@
 #!/usr/bin/env python3
 # ---
-# id: 22-ledger-integrity
 # prevents: a friction ledger and its controls drifting apart — entries citing controls the
 #   constitution does not define, receipts nobody kept, a friction re-observed after its control
 #   landed accruing silently instead of surfacing as a FAILED CONTROL, and an entry with no scorable
 #   ordinal going unreported
-# scope: LEDGER
-# severity: fail
 # fixture: lint/fixtures/22-ledger-integrity
 # ---
 """22-ledger-integrity — the lean family's friction sensor: one check, two surfaces.

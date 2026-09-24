@@ -1,12 +1,9 @@
 #!/usr/bin/env python3
 # ---
-# id: 28-citations
 # prevents: any citation in live registry text — a `/ac-x` invocation, a file path (three
 #   grammar forms), a named subagent stance, or a bare `ac-x` skill reference in hook-wiring
 #   prose — pointing at something that does not exist; and the inverse: a references/,
 #   reference/ or workflows/ file nothing in the registry cites
-# scope: LIVE_TEXT AGENT_STANCES HOOKS
-# severity: fail
 # fixture: lint/fixtures/28-citations
 # ---
 """28-citations — every citation form in the registry's live text resolves, both directions.

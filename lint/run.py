@@ -33,7 +33,7 @@ _ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 _HERE = os.path.join(_ROOT, "lint")
 sys.path.insert(0, _HERE)
 
-from lib import frontmatter, scope  # noqa: E402
+from lib import scope  # noqa: E402
 
 
 def discover():
@@ -45,10 +45,6 @@ def discover():
         if fn.endswith(".py") or fn.endswith(".sh"):
             out.append(os.path.join(_ROOT, rel))
     return out
-
-
-def header_of(path):
-    return frontmatter.parse_file(path)
 
 
 def check_id(path):
