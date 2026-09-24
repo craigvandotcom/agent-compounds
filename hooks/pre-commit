@@ -27,6 +27,8 @@ set -uo pipefail
 # calls, never leaks as ambient env into a check's unrelated fixture-building
 # subprocess the way the raw variable did (below).
 export LINT_CALLER_GIT_INDEX_FILE="${GIT_INDEX_FILE:-}"
+# Absolute, so every later step resolves it the same way whatever its cwd.
+case "$LINT_CALLER_GIT_INDEX_FILE" in ""|/*) ;; *) LINT_CALLER_GIT_INDEX_FILE="$PWD/$LINT_CALLER_GIT_INDEX_FILE" ;; esac
 
 # Git exports GIT_DIR/GIT_WORK_TREE/etc. into hook env. They leak into every
 # subprocess lint spawns (fixture run.sh legs inherit the raw env) and redirect
@@ -61,9 +63,17 @@ if [ "${#STAGED_PY[@]}" -gt 0 ]; then
   fi
   if [ "${#RUFF_CMD[@]}" -eq 0 ]; then
     echo "NOT-GATED: ruff $RUFF_PIN not on PATH and uvx unavailable — ruff did NOT run; this commit is not ruff-gated" >&2
-  elif ! ( cd "$ROOT" && "${RUFF_CMD[@]}" check "${STAGED_PY[@]}" ); then
-    echo "ruff check failed on the staged .py file(s) — commit refused" >&2
-    exit 1
+  else
+    # Lint each file's STAGED blob, not the working-tree copy: they differ after a partial add.
+    ruff_failed=0
+    for f in "${STAGED_PY[@]}"; do
+      GIT_INDEX_FILE="$LINT_CALLER_GIT_INDEX_FILE" git --no-optional-locks -C "$ROOT" show ":$f" \
+        | ( cd "$ROOT" && "${RUFF_CMD[@]}" check --stdin-filename "$f" - ) || ruff_failed=1
+    done
+    if [ "$ruff_failed" -ne 0 ]; then
+      echo "ruff check failed on the staged .py file(s) — commit refused" >&2
+      exit 1
+    fi
   fi
 fi
 
