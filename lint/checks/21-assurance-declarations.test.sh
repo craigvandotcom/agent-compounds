@@ -25,15 +25,17 @@ WORK="$(mktemp -d "${TMPDIR:-/tmp}/assurance-decl.XXXXXX")"
 cleanup() { rm -rf "$WORK"; }
 trap cleanup EXIT
 
-N=0
 GOOD='{"PROBE":"p","SCHEDULE":"s","MODE":"advisory","ON-FAILURE":"open"}'
 
 # fixture <assurance-json-or-empty> [extra-hook-file-content] -> root path on stdout
 # Builds a root whose single wiring entry runs hooks/wired.sh with the given declaration.
+# `mktemp -d`, never a shared counter: `$(fixture ...)` command substitution runs in a
+# SUBSHELL, so a counter incremented there never propagates back — every call would
+# collide on the same path (proven: two sequential `X="$(fixture ...)"` calls both
+# resolved to "f1"), silently layering one case's files onto the next's directory.
 fixture() {
   local decl="$1" extra="${2:-}"
-  N=$((N + 1))
-  local root="$WORK/f$N"
+  local root; root="$(mktemp -d "$WORK/f.XXXXXX")"
   mkdir -p "$root/hooks" "$root/engine" "$root/.beads"
 
   printf '#!/bin/bash\nexit 0\n' > "$root/hooks/wired.sh"
@@ -155,6 +157,29 @@ run_check 1 "unknown ASSURANCE-ROLE -> FAILS" \
   "$(fixture "$GOOD" '#!/bin/bash
 # ASSURANCE-ROLE: vibes
 exit 0')"
+
+echo "--- lean-script header declarations (moved from the retired Check 23's leg 5) ---"
+LEAN="$(fixture "$GOOD")"
+mkdir -p "$LEAN/skills/ac-plan/scripts"
+printf '#!/usr/bin/env bash\necho hi\n' > "$LEAN/skills/ac-plan/scripts/undeclared.sh"
+run_check_grep 1 "skills/ac-plan/scripts/undeclared.sh declares no" \
+  "lean script with no PROBE/SCHEDULE/MODE/ON-FAILURE header -> FAILS, named" "$LEAN"
+
+DECLARED="$(fixture "$GOOD")"
+mkdir -p "$DECLARED/skills/ac-polish/scripts"
+cat > "$DECLARED/skills/ac-polish/scripts/demo.sh" <<'EOF'
+#!/usr/bin/env bash
+# PROBE:      demo.test.sh
+# SCHEDULE:   every polish round
+# MODE:       blocking
+# ON-FAILURE: closed
+EOF
+run_check 0 "lean script WITH a conforming header -> PASSES" "$DECLARED"
+
+NOSCRIPTS="$(fixture "$GOOD")"
+mkdir -p "$NOSCRIPTS/skills/ac-plan"
+run_check_grep 1 "NOT-GATED — the lean-script discovery set resolved to zero scripts" \
+  "skills/ present but the lean-script discovery set is empty -> FAILS (not silently gated green)" "$NOSCRIPTS"
 
 echo "--- NOT-GATED: verified nothing is never a pass (exit 2) ---"
 NOJSON="$WORK/no-hooks-json"; mkdir -p "$NOJSON/hooks" "$NOJSON/.beads"

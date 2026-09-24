@@ -1,5 +1,5 @@
 {
-  "_doc": "packages.json — the deploy units (ac-6asz.1). One object per package: blurb (one-line display text the README generator renders), skills[] (registry member dirs under skills/ — every entry MUST name a dir carrying SKILL.md; render-readme-packages.py refuses a dead name), agents[] / hooks[] (empty: the five agent stances are global, generated per harness from harnesses.json agent_models, and hook wiring is global in engine/hooks.wiring.json — no package owns either), requires[] (top-level templates/factory.json keys the package's skills read; live bindings are store + triage + design_spec/routes_manifest/routes_public_manifest/ui_audit, the rest are plan-declared per the factory.json _doc and land when WS4 migrates the readers), budget {spine, loaded} (spine = member SKILL.md line cap, the always-loaded surface; loaded = all-Markdown-under-member-dirs cap; measured 2026-09-13 in _measured, budgets set above measured with headroom — Checks 13/23 read these through lint/lib/manifest.py, next bead). skills/_tools/ is stamped by EVERY package, never owned by one. ac-board ships unpackaged by design (read-only window, in no plan package list). Member lists follow the AGENTS.md v2 map (plan §WS3), corrected to on-disk names: ac-human (not ac-human-session), ui-brainstorm stays in library (ui-elevate did not absorb it).",
+  "_doc": "packages.json — the deploy units (ac-6asz.1). One object per package: blurb (one-line display text the README generator renders), skills[] (registry member dirs under skills/ — every entry MUST name a dir carrying SKILL.md; render-readme-packages.py refuses a dead name), agents[] / hooks[] (empty: the five agent stances are global, generated per harness from harnesses.json agent_models, and hook wiring is global in engine/hooks.wiring.json — no package owns either), requires[] (top-level templates/factory.json keys the package's skills read; live bindings are store + triage + design_spec/routes_manifest/routes_public_manifest/ui_audit, the rest are plan-declared per the factory.json _doc and land when WS4 migrates the readers), budget {spine, loaded} (spine = member SKILL.md line cap, the always-loaded surface; loaded = all-Markdown-under-member-dirs cap; measured 2026-09-13 in _measured, budgets set above measured with headroom — Checks 13/14 read these through lint/lib/manifest.py). skills/_tools/ is stamped by EVERY package, never owned by one. ac-board ships unpackaged by design (read-only window, in no plan package list). Member lists follow the AGENTS.md v2 map (plan §WS3), corrected to on-disk names: ac-human (not ac-human-session), ui-brainstorm stays in library (ui-elevate did not absorb it).",
   "_measured": {
     "date": "2026-09-13",
     "factory-core": {
@@ -32,17 +32,9 @@
     }
   },
   "_lint": {
-    "_doc": "relocated lint v2 constants (ac-6asz.3): this section is the only source. Checks 14/15 read caps, ceilings and base_ref through lint/lib/manifest.py; Checks 13/23 read the per-package budgets above the same way. Values moved verbatim — a constant change is a manifest change, never a script edit. The README renderer skips '_' keys, so the 7-package map is unaffected.",
+    "_doc": "relocated lint v2 constants (ac-6asz.3): this section is the only source. Check 14 reads base_ref/lean_family/lean_family_cap (leg 1, the per-file ratchet + its lean-family creation deferral) and the per-package budgets above (leg 2) through lint/lib/manifest.py; Check 13 reads the per-package budgets the same way. Values moved verbatim — a constant change is a manifest change, never a script edit. The README renderer skips '_' keys, so the 7-package map is unaffected.",
     "base_ref": "origin/main",
     "lean_family_cap": 800,
-    "conductor_ceiling": 170,
-    "standard_ceiling": 530,
-    "conductor_skills": [
-      "ac-implement",
-      "ac-review",
-      "ac-publish",
-      "ac-land"
-    ],
     "lean_family": [
       "ac-plan",
       "ac-polish",
@@ -51,19 +43,6 @@
       "ac-publish",
       "ac-pipeline",
       "ac-review"
-    ],
-    "creation_exception": [
-      "ac-plan",
-      "ac-polish",
-      "ac-beadify",
-      "ac-implement",
-      "ac-publish",
-      "ac-pipeline",
-      "multi-model",
-      "ac-qa",
-      "ui-elevate",
-      "ac-board",
-      "ac-tidy"
     ]
   },
   "factory-core": {

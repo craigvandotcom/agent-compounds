@@ -1,37 +1,46 @@
 #!/usr/bin/env python3
 # ---
 # id: 14-no-net-growth
-# prevents: a SKILL.md spine growing unstamped — the per-file ratchet (each SKILL.md holds or shrinks
-#   vs a base ref) is the primary shrink mechanism, and per-file scoping closes the corpus-sum
-#   loophole where one file's shrink pays for another's growth
+# prevents: a SKILL.md spine growing unstamped, or a package's mandatory-load surface
+#   growing unstamped even while every individual file holds — the per-file ratchet (each
+#   SKILL.md holds or shrinks vs a base ref) closes the corpus-sum loophole where one
+#   file's shrink pays for another's growth; the per-package budget closes the loophole
+#   where references/ or workflows/ grows while no single file crosses a line
 # scope: LIVE_TEXT
 # severity: fail
 # fixture: lint/fixtures/14-no-net-growth
 # ---
-"""14-no-net-growth — per-file line-count ratchet for SKILL.md.
+"""14-no-net-growth — the registry's one size guard: a per-file ratchet plus a
+per-package absolute budget.
 
-  leg 1  this registry: every skills/*/SKILL.md's net line delta vs a base ref
-         must be <= 0. Under trunk-direct the merge base collapses onto HEAD, so
-         the base falls back to HEAD^ (one commit back — the unit of review).
-         Base unresolvable (shallow/standalone checkout) -> NOTICE + green: a
-         false-green is safer than a broken CI leg, and Check 15's ceilings
-         still bound absolute size.
-  leg 2  every deploy target's own REAL local .claude/skills/*/SKILL.md (a
-         symlinked dir is invisible to a git pathspec — exactly the blind spot
-         this leg exists to cover). Untracked local skills are named, never
-         read as checked.
+  leg 1  every skills/*/SKILL.md's net line delta vs a base ref must be <= 0.
+         The base honours `LINT_BASE_REF` (lib.ratchet.base_ref) — CI sets it
+         to the pre-push/PR-base sha, so a multi-commit push is judged as a
+         whole, never only its tip. Locally (LINT_BASE_REF unset), the base
+         is the manifest's `base_ref` (origin/main); under trunk-direct the
+         merge base collapses onto HEAD, so the base falls back to HEAD^ (one
+         commit back — the unit of review). Base unresolvable (shallow/
+         standalone checkout) -> NOTICE + green: a false-green is safer than
+         a broken CI leg, and leg 2 still bounds absolute size.
+  leg 2  every package's live-measured spine (member SKILL.md lines, the
+         always-loaded surface) and loaded (all Markdown under member dirs)
+         must fit its manifest budget (skills/packages.json's top-level
+         package entries, keyed by name -> {skills: [...], budget: {spine,
+         loaded}}). Bounds new-skill and references/ growth even when every
+         file individually holds.
 
-The ONE structural exception: a NEW lean-family SKILL.md answers to the family
-TOTAL (the manifest's `_lint` section) instead of its own per-file delta —
-a deferral to the cap, never an amnesty. Creation is told apart from a
-pure-addition edit by --diff-filter=A (both print `N 0` on numstat). Growth of
-an existing member never defers. There is NO prose token: a written
-justification does not pay for growth — only file content does.
+The ONE structural exception to leg 1: a NEW lean-family SKILL.md (a member
+of the manifest's `lean_family` list) answers to the family TOTAL instead of
+its own per-file delta — a deferral to the cap, never an amnesty. Creation is
+told apart from a pure-addition edit by --diff-filter=A (both print `N 0` on
+numstat). Growth of an existing member never defers, and a skill outside
+`lean_family` never qualifies — it is bounded by the plain per-file ratchet
+like any other skill. There is NO prose token: a written justification does
+not pay for growth — only file content does.
 
 Modes:
   <root>                    full run: leg 1 + leg 2 over the registry
-  --base-of <repo>          print the default-branch merge base
-Exit: 0 clean, 1 violations, 2 population empty (no tree, no consumers).
+Exit: 0 clean, 1 violations, 2 population empty (no tree, no skills/ dir).
 """
 
 import os
@@ -40,9 +49,7 @@ import subprocess
 import sys
 
 import _bootstrap  # noqa: F401
-
-# consumers: leg 2's consumer union — the ONE copy of this fact. manifest: check-14 lists.
-from lib import consumers, manifest, scope  # noqa: E402
+from lib import manifest, ratchet, scope  # noqa: E402
 
 violations = []
 notices = []
@@ -56,24 +63,13 @@ def git(repo, *args):
     return proc.stdout.strip()
 
 
-def base_of(repo, base_ref):
-    ref = git(repo, "symbolic-ref", "--quiet", "refs/remotes/origin/HEAD")
-    if not ref:
-        for cand in (base_ref, "origin/main", "origin/master"):
-            if git(repo, "rev-parse", "--verify", "--quiet", cand):
-                ref = cand
-                break
-    if not ref:
-        return ""
-    return git(repo, "merge-base", ref, "HEAD") or ""
-
-
 def leg1_base(root, base_ref):
-    b = ""
-    if git(root, "rev-parse", "--verify", "--quiet", base_ref):
-        b = git(root, "merge-base", base_ref, "HEAD") or ""
-    if not b:
-        b = base_of(root, base_ref)
+    """The commit leg 1 diffs against — lib.ratchet.base_ref (LINT_BASE_REF-aware),
+    with the trunk-direct collapse silently recovered to HEAD^ (one commit back):
+    the unit of review, not a FAIL. A base that is STILL HEAD after that recovery
+    (single-commit history, no HEAD^ to fall back to) is left for run_full() to
+    report — an unresolvable base is a checkout-depth defect, not a silent skip."""
+    b = ratchet.base_ref(root, base_ref)
     if not b:
         return ""
     head = git(root, "rev-parse", "HEAD")
@@ -83,16 +79,15 @@ def leg1_base(root, base_ref):
 
 
 def load_config(root):
-    """The check-14 lists (base_ref, lean_family, creation_exception,
-    lean_family_cap), read from the manifest's `_lint` section through
-    lint/lib/manifest.py — the manifest is the only source.
-    Raises ManifestMissing naming the defect,
+    """The check-14 lists (base_ref, lean_family, lean_family_cap), read from
+    the manifest's `_lint` section through lint/lib/manifest.py — the manifest
+    is the only source. Raises ManifestMissing naming the defect,
     which the caller reports as a FAIL (never a traceback)."""
     section = manifest.packages(root).get("_lint")
     if not isinstance(section, dict):
         raise manifest.ManifestMissing(
             f"manifest missing the '_lint' section: {os.path.join(root, 'skills', 'packages.json')}")
-    for key in ("base_ref", "lean_family", "creation_exception", "lean_family_cap"):
+    for key in ("base_ref", "lean_family", "lean_family_cap"):
         if key not in section:
             raise manifest.ManifestMissing(
                 f"manifest '_lint' section lacks '{key}': "
@@ -125,7 +120,7 @@ def family_total(root, skills_dir, cfg):
 
 
 def scan(repo, label, base, spec, cfg, staged=False):
-    """The per-file judge. Returns True when anything under the spec was seen.
+    """The per-file judge (leg 1). Returns True when anything under the spec was seen.
 
     `staged=True` (the pre-commit lane) judges the INDEX against HEAD
     (`git diff --cached`) instead of `base` against the working tree — a
@@ -151,7 +146,7 @@ def scan(repo, label, base, spec, cfg, staged=False):
         if net <= 0:
             print(f"no-net-growth: {label}/{path} net {net} line(s) vs {base_label} — PASS (neutral or shrinking)")
             continue
-        member = member_of(path, cfg["creation_exception"])
+        member = member_of(path, cfg["lean_family"])
         if member and path in added:
             skills_dir = path[: path.rfind("skills/") + len("skills")]
             fam = family_total(repo, skills_dir, cfg)
@@ -168,99 +163,85 @@ def scan(repo, label, base, spec, cfg, staged=False):
     return seen
 
 
-def consumer_dirs(root):
-    """The union engine's consumer-symlinks and deployed-app-conformance checks
-    build — the ONE copy of that fact lives in lib.consumers.
-
-    `root` is accepted for call-site compatibility but not otherwise used: the union is
-    asked of engine/machine.sh (the one reader of this machine's facts), never derived
-    here. This function is the seam the two reader states surface through, so leg 2
-    answers them the same way those two checks do.
+def check_package_budgets(root):
+    """Leg 2 — every package's live-measured spine (member SKILL.md lines) and
+    loaded (all Markdown under member dirs) must fit its manifest budget
+    (skills/packages.json's top-level package entries). Ported from the
+    retired Check 23's leg 7: the manifest is already required by leg 1's
+    require_config, so a missing manifest cannot reach here. Returns a list
+    of violation strings; prints a PASS line per conforming package as it goes.
     """
-    del root  # kept for call-site compatibility; see docstring
-    return consumers.consumer_dirs()
+    pkgs = manifest.packages(root)
+    failures = []
+    for name, pkg in sorted(pkgs.items()):
+        if name.startswith("_") or not isinstance(pkg, dict):
+            continue
+        members = pkg.get("skills", [])
+        budget = pkg.get("budget", {})
+        if not isinstance(budget, dict) or "spine" not in budget or "loaded" not in budget:
+            failures.append(f"package '{name}' carries no spine/loaded budget — "
+                             "a package without a budget is unbudgeted growth")
+            continue
+        spine = 0
+        loaded = 0
+        for skill in members:
+            smd = os.path.join(root, "skills", skill, "SKILL.md")
+            if os.path.isfile(smd):
+                with open(smd, encoding="utf-8", errors="replace") as fh:
+                    spine += sum(1 for _ in fh)
+            sdir = os.path.join(root, "skills", skill)
+            for dirpath, _dirnames, filenames in os.walk(sdir):
+                for fn in filenames:
+                    if fn.endswith(".md"):
+                        with open(os.path.join(dirpath, fn), encoding="utf-8", errors="replace") as fh:
+                            loaded += sum(1 for _ in fh)
+        legs = []
+        if spine > budget["spine"]:
+            legs.append(f"spine {spine} > {budget['spine']}")
+        if loaded > budget["loaded"]:
+            legs.append(f"loaded {loaded} > {budget['loaded']}")
+        if legs:
+            failures.append(f"package '{name}' over budget — {', '.join(legs)} "
+                             f"({len(members)} member(s)) — diet the package or raise the budget deliberately")
+        else:
+            print(f"  PASS  {name:<22} spine {spine:>6}/{budget['spine']:<6} "
+                  f"loaded {loaded:>6}/{budget['loaded']:<6}")
+    return failures
 
 
 def run_full(root, cfg):
+    pkg_violations = check_package_budgets(root)
+    collapsed = False
+    head = ""
+
     # The pre-commit staged lane (run.py --staged) sets LINT_STAGED=1 and
     # redirects GIT_DIR/GIT_WORK_TREE at the real repo around a staged-content
     # snapshot (lint/run.py's materialize_staged). Leg 1 then judges the INDEX
     # against HEAD directly — the ratchet must score what THIS commit contains, not
     # a merge-base diff that also picks up a sibling writer's unrelated dirty file
-    # in the shared checkout. Leg 2 shells to OTHER repos entirely (`git -C <that
-    # repo>`); the redirected GIT_DIR/GIT_WORK_TREE would misdirect those calls, and
-    # those repos' local state is not this commit's to fix anyway, so leg 2 sits out
-    # the staged lane and still runs in full/CI (`bash lint.sh`, no --staged).
+    # in the shared checkout. Leg 2 reads the working tree directly (no git diff at
+    # all), so it runs unchanged in both lanes — the staged snapshot IS the tree it
+    # reads.
     if os.environ.get("LINT_STAGED") == "1":
         scan(root, "agent-compounds", "HEAD", "skills/*/SKILL.md", cfg, staged=True)
-        notices.append("Check 14 leg 2 (other repos' local .claude/skills) sits out the staged "
-                       "pre-commit lane — it audits state this commit cannot change; it still runs "
-                       "in the full/CI lane.")
-        for n in notices:
-            print(f"NOTICE: {n}")
-        if violations:
-            print("FAIL 14-no-net-growth: net-positive SKILL.md file(s): " + ", ".join(violations)
-                  + " — core is loaded every invocation, so it holds or shrinks. Move the content to "
-                    "references/, or delete an equivalent amount from THIS file.")
-            return 1
-        return 0
-
-    base = leg1_base(root, cfg["base_ref"])
-    head = git(root, "rev-parse", "HEAD")
-    if not base:
-        notices.append(f"Check 14 leg 1 skipped — base ref '{cfg['base_ref']}' unresolvable (shallow "
-                       "checkout, standalone clone, or no fetch of it) — no-net-growth not enforced "
-                       "for the registry this run.")
-    elif base == head:
-        print(f"FAIL 14-no-net-growth: leg 1 base collapsed onto HEAD ({head[:12]}) — the ratchet "
-              "would compare HEAD against itself; check checkout depth (HEAD^ must resolve)")
-        return 1
     else:
-        scan(root, "agent-compounds", base, "skills/*/SKILL.md", cfg)
-    # Leg 2's two reader states, the same two engine consumer checks answer: a NOT-CONFIGURED
-    # machine is a disclosed skip (a fresh clone has no deploy targets to walk), a WRONG
-    # one is NOT-CHECKED — nobody's green, because only a human can fix the machine file.
-    leg2_dirs = ()
-    leg2_wrong = None
-    try:
-        leg2_dirs = consumer_dirs(root)
-    except consumers.MachineNotConfigured as exc:
-        notices.append(f"Check 14 leg 2 skipped — {exc} — no deploy-target union to walk, so "
-                       "other repos' local SKILL.md files are NOT net-growth checked this run.")
-    except consumers.MachineWrong as exc:
-        leg2_wrong = exc
-    for d in leg2_dirs:
-        skills = os.path.join(d, "skills")
-        if not os.path.isdir(skills):
-            continue
-        local = []
-        for name in sorted(os.listdir(skills)):
-            p = os.path.join(skills, name, "SKILL.md")
-            if os.path.isfile(p) and not os.path.islink(p):
-                local.append(p)
-        if not local:
-            continue
-        repo = git(d, "rev-parse", "--show-toplevel")
-        if not repo or os.path.normpath(repo) == os.path.normpath(root):
-            continue
-        label = os.path.basename(repo)
-        rel = os.path.relpath(d, repo)
-        b = base_of(repo, cfg["base_ref"])
-        if not b:
-            notices.append(f"Check 14 leg 2 skipped for {label} — no resolvable default-branch ref — "
-                           "its local SKILL.md files are NOT net-growth checked this run.")
-            continue
-        scan(repo, label, b, os.path.join(rel, "skills", "*", "SKILL.md"), cfg)
-        for f in local:
-            rf = os.path.relpath(f, repo)
-            if subprocess.run(["git", "--no-optional-locks", "-C", repo, "ls-files", "--error-unmatch", "--", rf],
-                              capture_output=True).returncode != 0:
-                with open(f, encoding="utf-8", errors="replace") as fh:
-                    n = sum(1 for _ in fh)
-                notices.append(f"no-net-growth: {label}/{rf} is UNTRACKED/gitignored ({n} lines) — "
-                               "real local skill, not diff-checkable there.")
+        base = leg1_base(root, cfg["base_ref"])
+        head = git(root, "rev-parse", "HEAD")
+        if not base:
+            notices.append(f"Check 14 leg 1 skipped — base ref '{cfg['base_ref']}' unresolvable (shallow "
+                           "checkout, standalone clone, or no fetch of it) — no-net-growth not enforced "
+                           "for the registry this run.")
+        elif base == head:
+            collapsed = True
+        else:
+            scan(root, "agent-compounds", base, "skills/*/SKILL.md", cfg)
+
     for n in notices:
         print(f"NOTICE: {n}")
+
+    if collapsed:
+        print(f"FAIL 14-no-net-growth: leg 1 base collapsed onto HEAD ({head[:12]}) — the ratchet "
+              "would compare HEAD against itself; check checkout depth (HEAD^ must resolve)")
     if violations:
         print("FAIL 14-no-net-growth: net-positive SKILL.md file(s): " + ", ".join(violations)
               + " — core is loaded every invocation, so it holds or shrinks. Move the content to "
@@ -268,21 +249,15 @@ def run_full(root, cfg):
                 "is not a payment, and a shrink in another file does NOT offset it. (An "
                   "'ac-family-cap' entry is a CREATION over the family total — diet the family, do not "
                   "raise the cap.)")
-        return 1
-    if leg2_wrong is not None:
-        print(f"14-no-net-growth: {leg2_wrong} — leg 2 could not resolve the deploy-target union; "
-              "NOT-CHECKED, nothing verified there")
-        return 2
-    return 0
+    for v in pkg_violations:
+        print(f"FAIL 14-no-net-growth: {v}")
+
+    return 1 if (collapsed or violations or pkg_violations) else 0
 
 
 def main():
     args = sys.argv[1:]
     cfg_root = scope.ROOT
-    if args and args[0] == "--base-of":
-        cfg = require_config(cfg_root)
-        print(base_of(args[1], cfg["base_ref"]))
-        return 0
     root = args[0] if args else scope.ROOT
     if os.path.abspath(root) != scope.ROOT:
         os.environ["LINT_ROOT"] = os.path.abspath(root)

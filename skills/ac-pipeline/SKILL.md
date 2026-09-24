@@ -17,9 +17,9 @@ below) stays ~<=90 lines; tuning is NET-ZERO — every addition swaps out a line
 plan's record or retires a Calibration; never a grown core. `references/` and `scripts/` of this skill are
 NOT constitution overflow — they are the pre-existing owner-hosted operating contracts (§ below), cited
 by the ceremonies that need them and carried outside the core's bound. The family budget is mechanical:
-check `23-family-budget` — family <=800 lines of SKILL.md across the lean corpus,
-<=1,200 loaded; ac-review hosts the review stage but is a fat retained skill outside that cap arithmetic
-(its diet is the no-net-growth ratchet, lint Check 14).
+check `14-no-net-growth` bounds it — leg 1 caps a NEW lean-family SKILL.md's family total at 800 lines;
+leg 2 bounds each package's references/workflows total. ac-review hosts the review stage but is a fat
+retained skill outside the family cap — its diet is the plain per-file ratchet alone.
 
 ## Invariants
 

@@ -1,22 +1,24 @@
 #!/usr/bin/env bash
 # 14-no-net-growth.test.sh — proof harness for lint/checks/14-no-net-growth.py.
 #
-# Drives the check through its NORMAL entry point (the root arg, run_full()),
-# never a side-door CLI flag — leg1_base()'s trunk-direct HEAD^ fallback is
-# exercised the same way every real invocation exercises it.
+# Drives the check through its NORMAL entry point (the root arg, run_full()) — no
+# side-door CLI flag — leg1_base()'s trunk-direct HEAD^ fallback is exercised the
+# same way every real invocation exercises it.
 #
-# WHY: Check 14 leg 2 judges OTHER repos (deploy targets), so it cannot be exercised
-# without a target — and exercising it against a live app repo would mean dirtying
-# someone else's checkout. This runs lint/checks/14-no-net-growth.py against a throwaway
-# repo in a mktemp dir, always with AC_MACHINE_FILE pointed at a path that cannot exist so
-# leg 2 always takes its documented disclosed skip (never a violation) and every case
-# below exercises leg 1 alone: default branch `master` (so origin/HEAD resolution is
-# proven, not assumed), growth, the wrong-token near-miss, the removed `net-growth-ok`
-# token (which must NOT exempt), a shrink, a symlinked skill dir, already-
-# committed-and-pushed growth (leg1_base's trunk-direct HEAD^ fallback), and the ac
-# family's creation-vs-growth rule. The fixture repo uses `skills/*/SKILL.md` — leg 1's
-# own hardcoded spec — throughout, and carries a real copy of this registry's
-# skills/packages.json so require_config() reads real base_ref/lean_family/cap values.
+# Leg 1 (the per-file ratchet) is exercised in a throwaway repo in a mktemp dir:
+# default branch `master` (so falling through to HEAD^ when the manifest's literal
+# `origin/main` does not resolve is proven, not assumed), growth, the wrong-token
+# near-miss, the removed `net-growth-ok` token (which must NOT exempt), a shrink, a
+# symlinked skill dir, already-committed-and-pushed growth (leg1_base's trunk-direct
+# HEAD^ fallback), and the lean family's creation-vs-growth rule. The fixture repo
+# uses `skills/*/SKILL.md` — leg 1's own hardcoded spec — throughout, and carries a
+# real copy of this registry's skills/packages.json so require_config() reads real
+# base_ref/lean_family/lean_family_cap values (also exercising leg 2, the per-package
+# spine/loaded budget, harmlessly PASSing throughout since the fixture's skill dirs
+# are a few dozen lines against thousand-line package budgets — leg 2's own RED and
+# NOTGATED cases get dedicated fixtures further down). AC_MACHINE_FILE is set to a
+# nonexistent path throughout — inert now that leg 1 no longer shells to other repos,
+# kept only so a future re-add of a cross-repo leg fails closed by default.
 #
 # Runs under bash AND zsh. Exit 0 = all cases pass.
 
@@ -58,8 +60,6 @@ expect() { # <name> <want-violation-count>
     printf '%s\n' "$LAST_OUT" | sed 's/^/  | /'
   fi
 }
-
-echo "base-ref resolution -> $(python3 "$CHECK" --base-of "$W/app" | cut -c1-8) (origin/HEAD = master, NOT origin/main)"
 
 expect "clean target (no delta)" 0
 
@@ -153,16 +153,58 @@ else
   printf '%s\n' "$LAST_OUT" | sed 's/^/  | /'
 fi
 
-# --- NOT-CONFIGURED: leg 1 stays unconditional, leg 2 discloses its SKIP -------------
-# Every case above already ran with AC_MACHINE_FILE pointed at nothing, so leg 2's
-# disclosed skip is proven implicitly by every 'ok' line above (run_full still returns a
-# real leg-1 verdict, never an early return, on the reader's absence). This asserts its
-# exact wording once, reusing the still-dirty over-cap state from the previous case.
-if printf '%s\n' "$LAST_OUT" | grep -q 'FAIL 14-no-net-growth' && printf '%s\n' "$LAST_OUT" | grep -q 'leg 2 skipped'; then
-  PASS=$((PASS+1)); printf 'ok   %-46s leg 1 still fails, leg 2 skipped\n' "not-configured machine facts"
+git reset -q skills/ac-polish/SKILL.md 2>/dev/null; rm -rf skills/ac-polish
+
+# --- LEG 2: per-package spine/loaded budget (ported from Check 23 leg 7) ------------
+# A dedicated throwaway root: leg 2 reads the CURRENT tree directly (no git diff), so
+# no commit history is needed. member skill dirs are named to match the package entry
+# under test — the rest of the registry's package members (absent here) just contribute
+# zero, harmlessly.
+pkg_check() { AC_MACHINE_FILE=/nonexistent/machine.json python3 "$CHECK" "$1"; }
+
+P="$(mktemp -d)"
+mkdir -p "$P/skills/over-budget-skill"
+seq 1 50 | sed 's/^/line /' > "$P/skills/over-budget-skill/SKILL.md"
+cat > "$P/skills/packages.json" <<'EOF'
+{
+  "_lint": {"base_ref": "origin/main", "lean_family": [], "lean_family_cap": 800},
+  "tiny-pkg": {"skills": ["over-budget-skill"], "budget": {"spine": 10, "loaded": 10}}
+}
+EOF
+OUT="$(pkg_check "$P" 2>&1)"; RC=$?
+if [ "$RC" = 1 ] && printf '%s\n' "$OUT" | grep -q "package 'tiny-pkg' over budget — spine 50 > 10"; then
+  PASS=$((PASS+1)); printf 'ok   %-46s\n' "leg 2: package over spine budget -> FAILS, named"
 else
-  FAIL=$((FAIL+1)); printf 'FAIL %-46s rc=%s want leg-2-skip notice present\n' "not-configured machine facts" "$LAST_RC"
-  printf '%s\n' "$LAST_OUT" | sed 's/^/  | /'
+  FAIL=$((FAIL+1)); printf 'FAIL %-46s rc=%s\n' "leg 2: package over spine budget -> FAILS, named" "$RC"
+  printf '%s\n' "$OUT" | sed 's/^/  | /'
+fi
+rm -rf "$P"
+
+P="$(mktemp -d)"
+mkdir -p "$P/skills/some-skill"
+echo "l" > "$P/skills/some-skill/SKILL.md"
+cat > "$P/skills/packages.json" <<'EOF'
+{
+  "_lint": {"base_ref": "origin/main", "lean_family": [], "lean_family_cap": 800},
+  "no-budget-pkg": {"skills": ["some-skill"]}
+}
+EOF
+OUT="$(pkg_check "$P" 2>&1)"; RC=$?
+if [ "$RC" = 1 ] && printf '%s\n' "$OUT" | grep -q "package 'no-budget-pkg' carries no spine/loaded budget"; then
+  PASS=$((PASS+1)); printf 'ok   %-46s\n' "leg 2: package with no budget key -> FAILS, named"
+else
+  FAIL=$((FAIL+1)); printf 'FAIL %-46s rc=%s\n' "leg 2: package with no budget key -> FAILS, named" "$RC"
+  printf '%s\n' "$OUT" | sed 's/^/  | /'
+fi
+rm -rf "$P"
+
+# --- LIVE: the real registry satisfies both legs --------------------------------------
+OUT="$(pkg_check "$ROOT" 2>&1)"; RC=$?
+if [ "$RC" = 0 ]; then
+  PASS=$((PASS+1)); printf 'ok   %-46s\n' "LIVE: the real registry passes leg 1 + leg 2"
+else
+  FAIL=$((FAIL+1)); printf 'FAIL %-46s rc=%s\n' "LIVE: the real registry passes leg 1 + leg 2" "$RC"
+  printf '%s\n' "$OUT" | sed 's/^/  | /'
 fi
 
 echo "---"

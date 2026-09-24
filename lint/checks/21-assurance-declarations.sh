@@ -2,19 +2,21 @@
 # ---
 # id: 21-assurance-declarations
 # prevents: a mechanism that does not say what it does when it breaks — a hooks/ guard that stayed
-#   fail-open against a store that does not exist, and an executable with no wiring at all, neither
-#   detectable while "wired" was the only claim anyone made
+#   fail-open against a store that does not exist, an executable with no wiring at all, and a lean
+#   workflow script with no PROBE/SCHEDULE/MODE/ON-FAILURE header — none detectable while "wired" or
+#   "present" was the only claim anyone made
 # scope: HOOKS
 # severity: fail
 # fixture: lint/fixtures/21-assurance-declarations
 # ---
 #
 # 21-assurance-declarations.sh — every mechanism DECLARES its failure semantics,
-# and no executable hides in hooks/ undeclared.
+# no executable hides in hooks/ undeclared, and no lean workflow script hides its
+# own failure semantics behind this check's hooks.json-only reach.
 #
-# Check 18 proves a guard CAN fire; Check 20 proves a proof test IS RUN. This
-# proves a mechanism SAYS WHAT IT DOES WHEN IT BREAKS — because "wired" and
-# "working" are different claims.
+# Check 18 proves a guard CAN fire; scripts/run-all-proofs.sh + the CI `proofs`
+# job prove a proof test IS RUN. This check proves a mechanism SAYS WHAT IT DOES
+# WHEN IT BREAKS — because "wired" and "working" are different claims.
 #
 # Usage:  21-assurance-declarations.sh [<repo root>]     (default: this checkout)
 #
@@ -42,7 +44,17 @@
 # role is a failure. Roles: `ASSURANCE-ROLE: utility|test-harness` + `CALLER:` naming its
 # real caller, or `ASSURANCE-ROLE: orphan` + the same PENDING-DECISION escape.
 #
-#   Exit 0   every wiring entry and hooks/ executable carries a conforming declaration
+# LEAN-SCRIPT HEADERS (moved from the retired Check 23's leg 5 — that check was
+# hooks.json-scoped and could not see them): the lean family's own scripts/*.sh
+# (ac-plan, ac-polish, ac-beadify, ac-implement, ac-publish, plus the named
+# skills/_tools/polish-fixpoint.sh) each declare the same four fields in their
+# first 40 lines. `*.test.sh` is excluded — a harness IS a probe; requiring one
+# to declare its own probe is circular, and run-all-proofs.sh already proves
+# every harness IS RUN. Skipped entirely when `$ROOT/skills` does not exist (a
+# hooks-only checkout has no lean scripts to find).
+#
+#   Exit 0   every wiring entry, hooks/ executable and lean script carries a conforming
+#            declaration
 #   Exit 1   at least one does not (each reported as FAIL: ...)
 #   Exit 2   NOT-GATED — verified nothing: engine/hooks.wiring.json is missing, or it
 #            declares zero wiring entries
@@ -172,6 +184,31 @@ for f in "$ROOT"/hooks/*.py "$ROOT"/hooks/*.sh; do
       ;;
   esac
 done
+
+# --- lean-script header declarations (moved from the retired Check 23's leg 5) --------
+REF_SKILLS="ac-plan ac-polish ac-beadify ac-implement ac-publish"
+if [ -d "$ROOT/skills" ]; then
+  LEAN_SCRIPTS=""
+  for name in $REF_SKILLS; do
+    for s in "$ROOT/skills/$name"/scripts/*.sh; do
+      [ -f "$s" ] || continue
+      case "$s" in *.test.sh) continue ;; esac
+      LEAN_SCRIPTS="$LEAN_SCRIPTS $s"
+    done
+  done
+  [ -f "$ROOT/skills/_tools/polish-fixpoint.sh" ] && LEAN_SCRIPTS="$LEAN_SCRIPTS $ROOT/skills/_tools/polish-fixpoint.sh"
+  if [ -z "${LEAN_SCRIPTS// /}" ]; then
+    ad_fail "NOT-GATED — the lean-script discovery set resolved to zero scripts under $ROOT/skills; the header-declaration leg verified nothing"
+  else
+    for s in $LEAN_SCRIPTS; do
+      missing=""
+      for field in "PROBE:" "SCHEDULE:" "MODE:" "ON-FAILURE:"; do
+        head -40 "$s" | grep -q "$field" || missing="$missing $field"
+      done
+      [ -z "$missing" ] || ad_fail "${s#$ROOT/} declares no$missing — a lean script that does not say what it does when it breaks is not assured"
+    done
+  fi
+fi
 
 if [ "$FAILURES" -eq 0 ]; then
   echo "  ok: $CHECK_ID — $COUNT wiring entries + hooks/ executables all declared"
