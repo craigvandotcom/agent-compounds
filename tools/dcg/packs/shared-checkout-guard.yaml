@@ -1,7 +1,7 @@
 schema_version: 1
 id: guard.stashguard
 name: shared-checkout safety
-version: 1.1.0
+version: 1.2.0
 destructive_patterns:
   - name: unscoped-stash-save
     pattern: 'git\s+(?:-\S+\s+)*stash'
@@ -11,6 +11,10 @@ destructive_patterns:
     pattern: 'git\s+(?:(?:-C|--git-dir|--work-tree)\s+\S+\s+|-\S+\s+)*add\s+(?:-\S+\s+)*(?:-A|--all|-u|--update|\.)(?:\s|$)'
     severity: high
     description: "THE STAGING AREA IS SHARED STATE — it is per-worktree, not per-agent, so add-then-commit is not atomic across agents. A whole-tree add sweeps in whatever a concurrent agent has already staged and commits it under YOUR bead's message (measured: commit 40eb9177 carries three bd-gcrhc files under a bd-jk3j6 message). Nothing fails; the damage is to the record — blame, bisect, review-by-range and revert-a-bead all misattribute. Skip the index entirely: git commit -- path/one path/two. Scoping only the add is NOT enough, because a bare commit publishes the whole index (proof: tools/dcg/shared-checkout-steal-probe.sh Case 2). Deliberate whole-tree intent remains available as git add -A -- . — the guard makes the sweep explicit, not impossible."
+  - name: hook-bypass
+    pattern: 'git\s+(?:(?:-C|--git-dir|--work-tree)\s+\S+\s+|-\S+\s+)*(?:(?:commit|push)\b[^|;&]*\s--no-verify\b|commit\b[^|;&]*\s-n(?:\s|$))'
+    severity: high
+    description: "Skipping the git hooks skips the pre-commit gate (gitleaks, ruff, the whole lint suite on the staged snapshot) — CI then catches the defect only after it has landed on main. Fix what the gate reports instead. A human who truly must bypass does it by hand in a terminal, outside the agent."
 safe_patterns:
   - name: scoped-stash-push
     pattern: 'git\s+(?:-\S+\s+)*stash\s+push\b[^|;&]*\s--\s+\S'

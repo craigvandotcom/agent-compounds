@@ -68,6 +68,12 @@ add-named-file|ALLOW|ALLOW|git add lib/foo.ts
 add-relative-path|ALLOW|ALLOW|git add ./lib/foo.ts
 add-patch|ALLOW|ALLOW|git add -p lib/foo.ts
 control-commit|ALLOW|ALLOW|git commit -m wip
+commit-no-verify|BLOCK|BLOCK|git commit --no-verify -m wip
+commit-n|BLOCK|BLOCK|git commit -n -m wip
+push-no-verify|BLOCK|BLOCK|git push --no-verify origin main
+push-dry-run|ALLOW|ALLOW|git push -n origin main
+control-push|ALLOW|ALLOW|git push origin main
+commit-msg-dash-n|ALLOW|ALLOW|git commit -m wip-n
 '
 
 pass=0; fail=0; defect=0
