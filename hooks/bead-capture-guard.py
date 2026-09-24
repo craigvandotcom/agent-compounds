@@ -9,7 +9,10 @@ Enforced here:
   - `origin:<skill>` on every bead — which workflow created it.
   - a readiness label on every NON-EPIC bead — `unrefined` / `human-gate`.
   - a `Probe:` line on every IMPLEMENTABLE bead (`bug` / `task` / `feature`) — born
-    probe-bearing; `epic` / `decision` / `investigation` are exempt.
+    probe-bearing; `epic` / `decision` / `investigation` are exempt. The probe itself
+    must MEASURE: `probe_shape_violation` refuses three shapes that pass `no probe, no
+    bead` while proving nothing (`pnpm <script> -- <file>`, a bare `vitest run <file>`,
+    `grep -c` as pass/fail).
   - exactly one `impact:<class>` label on every bead from an AUTOMATED origin — the class
     of damage if it ships; human/plan origins and `human-gate` fork beads are exempt.
   - a subagent files NOTHING — every `br create` is refused and returned to the
@@ -94,7 +97,45 @@ REFINED_LABEL = "refined"
 # yet — a filer that cannot name one files `investigation`, the type that says so.
 IMPLEMENTABLE_TYPES = {"bug", "task", "feature"}
 PROBE_EXEMPT_TYPES = {"epic", "decision", "investigation"}
-PROBE = re.compile(r"Probe:\s*`[^`]+`[^\n]*\btier:")
+PROBE = re.compile(r"Probe:\s*`([^`]+)`[^\n]*\btier:")
+
+# Probe-shape predicates (moved here from lint/checks/19-bead-template-conformance.py,
+# ac-review ruling 5, 2026-09-24: the population that actually bit — six app-repo beads
+# carrying these shapes — was bead bodies at CREATE time, not skill docs, so the
+# predicate lives where the shapes are born. 19 imports it, so the two enforcers cannot
+# drift.
+VITEST_RUN = re.compile(r"\b(pnpm|npx)\s+vitest\s+run\b")
+GREP_C = re.compile(r"\bgrep\b(?:\s+-[A-Za-z]+\b)*\s+(-[A-Za-z]*c[A-Za-z]*\b|--count\b)")
+
+
+def probe_shape_violation(cmd):
+    """Reason string when `cmd` — a `Probe:` line's captured command text — is one of
+    three shapes that pass `no probe, no bead` (a runnable command with no syntax error)
+    while measuring nothing, else None:
+      1. `pnpm <script> -- <file>` — pnpm forwards the literal `--` to the script, so a
+         bare test-runner script sees `-- <file>` as its OWN args and runs its default
+         (whole-suite) target instead of the named file.
+      2. a bare `pnpm|npx vitest run <file>` — the vitest-affected plugin can silently
+         drop the named file on a busy trunk; VITEST_AFFECTED_DISABLED=1 or an explicit
+         --config (the integration lane) makes the run reliable.
+      3. `grep -c` read as pass/fail — it exits 1 when the count is 0, so a probe built
+         on "returns 0" reads green in the unfixed state; `grep -q` / `! grep -q` do not
+         have this failure mode.
+    """
+    seen_pnpm = False
+    for tok in cmd.split():
+        if tok.rsplit("/", 1)[-1] == "pnpm":
+            seen_pnpm = True
+        elif seen_pnpm and tok == "--":
+            return ("uses `pnpm <script> -- <file>` — pnpm forwards the literal `--`, so "
+                    "this does not scope to <file>; use `pnpm test:one <file>`")
+    if VITEST_RUN.search(cmd) and "VITEST_AFFECTED_DISABLED=1" not in cmd and "--config" not in cmd:
+        return ("uses a bare vitest run that vitest-affected can silently drop — set "
+                "VITEST_AFFECTED_DISABLED=1, add --config <integration config>, or use "
+                "`pnpm test:one <file>`")
+    if GREP_C.search(cmd):
+        return "uses `grep -c` as a pass/fail check — exits 1 on a zero count; use `grep -q` / `! grep -q`"
+    return None
 
 # The impact axis (ac-wp8i.3): the class of damage if this bead's failure ships. CLOSED
 # set — a new class is a contract change first, then this tuple. An automated origin must
@@ -161,17 +202,20 @@ so it is now gated rather than advised.\
 """
 
 PROBE_MESSAGE = """\
-BLOCKED: `br {sub}` (type `{typ}`) without a `Probe:` line in the body.
+BLOCKED: `br {sub}` (type `{typ}`): {reason}.
 
 An implementable bead (bug / task / feature) is born probe-bearing: `## Acceptance
 Criteria` carries at least one bullet of the shape
 
     - Probe: `grep -q '<string>' <file>` — tier: none
 
-so pickup has something runnable to verify against. `epic`, `decision` and
-`investigation` are exempt — containers, forks and unconfirmed leads own no
-probe yet. A filer that cannot name a probe files the bead as `investigation`
-— the type that says so — never as a probe-less task.
+so pickup has something runnable to verify against — and the probe itself must
+MEASURE: `pnpm <script> -- <file>` (pnpm forwards the literal `--`), a bare
+`pnpm|npx vitest run <file>` (vitest-affected can silently drop it), and `grep -c`
+read as pass/fail all pass `no probe, no bead` while proving nothing. `epic`,
+`decision` and `investigation` are exempt — containers, forks and unconfirmed
+leads own no probe yet. A filer that cannot name a probe files the bead as
+`investigation` — the type that says so — never as a probe-less task.
 
 Canon: beads-standards/reference/bead-create-contract.md § Required axes.\
 """
@@ -513,8 +557,12 @@ def probe_body(cmd):
     return d
 
 
-def has_probe(cmd):
-    """True when the body carries a `Probe: `<command>`` ... tier: line.
+def probe_reason(cmd):
+    """None when the body carries at least one SOUND `Probe: `<command>`` ... tier: line,
+    else the reason it does not: no Probe: line at all, or every Probe: line present is
+    one of the three lying shapes `probe_shape_violation` catches. A body with several
+    Probe: lines where only some lie still passes — "at least one runnable acceptance
+    probe" is the bar, not "every line is perfect".
 
     An absent description BLOCKS (a probe-less create is exactly what this axis exists
     to refuse). An unsubstituted template placeholder skips, the same doctrine as
@@ -529,10 +577,20 @@ def has_probe(cmd):
     """
     body = probe_body(cmd)
     if body is True:
-        return True
+        return None
     if not body:
-        return False
-    return bool(PROBE.search(body))
+        return "no `Probe:` line in the body"
+    matches = list(PROBE.finditer(body))
+    if not matches:
+        return "no `Probe:` line in the body"
+    reasons = [probe_shape_violation(m.group(1)) for m in matches]
+    if all(reasons):
+        return "the `Probe:` line " + reasons[0]
+    return None
+
+
+def has_probe(cmd):
+    return probe_reason(cmd) is None
 
 
 def origin_skill(cmd):
@@ -580,9 +638,11 @@ def scan_tokens(tokens, is_subagent):
         if typ is not None and typ not in READINESS_EXEMPT_TYPES and not has_readiness(cmd):
             print(READINESS_MESSAGE.format(sub=sub, typ=typ), file=sys.stderr)
             sys.exit(2)
-        if typ is not None and typ in IMPLEMENTABLE_TYPES and not has_probe(cmd):
-            print(PROBE_MESSAGE.format(sub=sub, typ=typ), file=sys.stderr)
-            sys.exit(2)
+        if typ is not None and typ in IMPLEMENTABLE_TYPES:
+            reason = probe_reason(cmd)
+            if reason is not None:
+                print(PROBE_MESSAGE.format(sub=sub, typ=typ, reason=reason), file=sys.stderr)
+                sys.exit(2)
         origin = origin_skill(cmd)
         if (
             origin in IMPACT_REQUIRED_ORIGINS

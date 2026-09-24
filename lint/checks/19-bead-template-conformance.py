@@ -30,18 +30,10 @@ Checked against every template found:
     `human-gate` template needs a `Gate-reason:` body marker, and a canonical
     title prefix (`DECISION:`/`HUMAN:`/`ACTION:`) must agree with `-t <type>`.
 
-Also lints every `Probe:` line for three shapes that pass `no probe, no bead`
-(a runnable command with no syntax error) and still cannot measure the AC they
-claim to:
-  1. `pnpm <script> -- <file>` — pnpm forwards the literal `--` to the script,
-     so a bare test-runner script sees `-- <file>` as its OWN args and runs its
-     default (whole-suite) target instead of the named file.
-  2. a bare `pnpm|npx vitest run <file>` — the vitest-affected plugin can
-     silently drop the named file on a busy trunk; `VITEST_AFFECTED_DISABLED=1`
-     or an explicit `--config` (the integration lane) makes the run reliable.
-  3. `grep -c` read as pass/fail — it exits 1 when the count is 0, so a probe
-     built on "returns 0" reads green in the unfixed state; `grep -q` / `! grep
-     -q` do not have this failure mode.
+Also lints every `Probe:` line through `guard.probe_shape_violation` — the same
+predicate `br create` now refuses AT CREATE (moved there ac-review ruling 5,
+2026-09-24: the population that actually shipped a lying shape was bead bodies,
+not skill docs). Imported, not reimplemented, so the two enforcers cannot drift.
 
 Check 18 proves the runtime guard fires on what an agent TYPES; this proves the
 templates the registry SHIPS are themselves conformant — the two are not the
@@ -95,6 +87,13 @@ CATCH_STAGE = ("qa-finding", "review-finding", "hygiene-finding", "ci-finding", 
 # type. The runtime guard is the other half of this contract; this is its static twin.
 GATE_REASON = re.compile(r"Gate-reason:\s*(fork|authorization|intent|action)\b")
 PREFIX_KIND = {"DECISION": "decision", "HUMAN": "decision", "ACTION": "task"}
+
+
+def _tokens(cmd):
+    try:
+        return shlex.split(cmd, comments=False, posix=True)
+    except ValueError:
+        return cmd.split()  # unparseable prose/placeholder — best-effort, never crash
 
 
 def human_gate_violation(cmd):
@@ -263,11 +262,6 @@ def violations():
 
 # --- probe-shape check -------------------------------------------------------------
 PROBE_LINE = re.compile(r"Probe:\s*`([^`]*)`")
-VITEST_RUN = re.compile(r"\b(pnpm|npx)\s+vitest\s+run\b")
-# Regex, not shlex: `grep -c` reads as pass/fail just as often INSIDE a substitution
-# (`[ "$(grep -c foo file)" -eq 0 ]`) as bare — shlex collapses the quoted `$(...)` into
-# one opaque token and never sees the inner `grep`, so a token walk misses that shape.
-GREP_C = re.compile(r"\bgrep\b(?:\s+-[A-Za-z]+\b)*\s+(-[A-Za-z]*c[A-Za-z]*\b|--count\b)")
 
 
 def probes(path):
@@ -282,69 +276,21 @@ def probes(path):
             yield i + 1, m.group(1)
 
 
-def _tokens(cmd):
-    try:
-        return shlex.split(cmd, comments=False, posix=True)
-    except ValueError:
-        return cmd.split()  # unparseable prose/placeholder — best-effort, never crash
-
-
-def has_pnpm_passthrough(cmd):
-    """`pnpm <script> -- <file>` — a bare `--` token anywhere after a `pnpm` token means
-    pnpm forwards it (and everything after) to the script verbatim, so this probe does
-    not scope to `<file>` the way it appears to."""
-    toks = _tokens(cmd)
-    seen_pnpm = False
-    for tok in toks:
-        if tok.rsplit("/", 1)[-1] == "pnpm":
-            seen_pnpm = True
-        elif seen_pnpm and tok == "--":
-            return True
-    return False
-
-
-def is_bare_affected_vitest(cmd):
-    """A bare `pnpm|npx vitest run <file>` with neither the affected-plugin disable env
-    var nor an explicit `--config` (the integration lane) can silently drop the named
-    file under vitest-affected. `pnpm test:one <file>` never matches `VITEST_RUN`."""
-    if not VITEST_RUN.search(cmd):
-        return False
-    if "VITEST_AFFECTED_DISABLED=1" in cmd:
-        return False
-    if "--config" in cmd:
-        return False
-    return True
-
-
-def has_grepc_probe(cmd):
-    """`grep -c`/`--count` in command position — the exit-code failure mode. `grep -q`
-    and `! grep -q` carry no `c` in their flags and never match."""
-    return bool(GREP_C.search(cmd))
-
-
 def probe_shape_violations():
-    """Returns (violations, probes_scanned) for the three lying probe shapes above,
-    scanned across the same registry the template check covers. Same doctrine as
-    `violations()`: an unscanned corpus must never read as a clean pass."""
+    """Returns (violations, probes_scanned) for the three lying probe shapes, scanned
+    across the same registry the template check covers, through the SAME predicate
+    (`guard.probe_shape_violation`) `br create` now refuses at the moment of capture.
+    Same doctrine as `violations()`: an unscanned corpus must never read as a clean pass.
+    """
     out = []
     scanned = 0
     for path in sorted(glob.glob(os.path.join(ROOT, "skills", "**", "*.md"), recursive=True)):
         rel = os.path.relpath(path, ROOT)
         for line_no, cmd in probes(path):
             scanned += 1
-            if has_pnpm_passthrough(cmd):
-                out.append((rel, line_no,
-                    "probe uses `pnpm <script> -- <file>` — pnpm forwards the literal "
-                    "`--`, so this does not scope to <file>; use `pnpm test:one <file>`"))
-            elif is_bare_affected_vitest(cmd):
-                out.append((rel, line_no,
-                    "probe uses a bare vitest run that vitest-affected can silently drop "
-                    "— set VITEST_AFFECTED_DISABLED=1, add --config <integration config>, "
-                    "or use `pnpm test:one <file>`"))
-            elif has_grepc_probe(cmd):
-                out.append((rel, line_no,
-                    "probe uses `grep -c` as a pass/fail check — exits 1 on a zero count; "
-                    "use `grep -q` / `! grep -q`"))
+            reason = guard.probe_shape_violation(cmd)
+            if reason:
+                out.append((rel, line_no, f"probe {reason}"))
     return out, scanned
 
 

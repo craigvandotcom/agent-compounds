@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# 22-ledger-integrity.test.sh — the proof harness for lint/checks/22-ledger-integrity.sh.
+# 22-ledger-integrity.test.sh — the proof harness for lint/checks/22-ledger-integrity.py.
 #
 #   PROBE: an entry citing a control the constitution does not define is RED; an entry
 #          re-observed after its control landed is RED as a FAILED CONTROL; an entry with
@@ -21,7 +21,7 @@
 set -uo pipefail
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-CHECK="$HERE/22-ledger-integrity.sh"
+CHECK="$HERE/22-ledger-integrity.py"
 ROOT="$(cd "$HERE/../.." && pwd)"
 
 fails=0
@@ -66,7 +66,7 @@ ledger() {  # ledger <file> <entry-blocks...>
 }
 
 run_check() {  # run_check <ledger path> -> sets OUT/RC (flag-override, real ROOT for the parser)
-  OUT=$(bash "$CHECK" --ledger "$1" --constitution "$CONSTITUTION" "$ROOT" 2>&1); RC=$?
+  OUT=$(python3 "$CHECK" --ledger "$1" --constitution "$CONSTITUTION" "$ROOT" 2>&1); RC=$?
 }
 
 # --- Case 1: an explicitly named ABSENT ledger fails CLOSED with NOT-GATED -----------
@@ -154,7 +154,7 @@ fi
 # --- Case 10: control direction — an invariant with no Prevents: is REJECTED --------
 BADC="$WORK/bad-constitution.md"
 sed 's/Prevents: perishable tree-state/it is good practice, generally,/' "$CONSTITUTION" >"$BADC"
-OUT=$(bash "$CHECK" --ledger "$WORK/good.md" --constitution "$BADC" "$ROOT" 2>&1); RC=$?
+OUT=$(python3 "$CHECK" --ledger "$WORK/good.md" --constitution "$BADC" "$ROOT" 2>&1); RC=$?
 if [ "$RC" -ne 0 ] && echo "$OUT" | grep -qi "names no failure"; then
   ok "Case 10: an invariant naming no failure it prevents is REJECTED"
 else
@@ -164,7 +164,7 @@ fi
 # --- Case 11: control direction — a calibration with no retires-when is REJECTED ----
 BADC2="$WORK/bad-constitution-2.md"
 sed 's/\*retires when:\* the receipt tools take/it stays forever because/' "$CONSTITUTION" >"$BADC2"
-OUT=$(bash "$CHECK" --ledger "$WORK/good.md" --constitution "$BADC2" "$ROOT" 2>&1); RC=$?
+OUT=$(python3 "$CHECK" --ledger "$WORK/good.md" --constitution "$BADC2" "$ROOT" 2>&1); RC=$?
 if [ "$RC" -ne 0 ] && echo "$OUT" | grep -qi "retires"; then
   ok "Case 11: a calibration naming no retiring measurement is REJECTED"
 else
@@ -215,7 +215,7 @@ last_pass: never
 # --- Case 13: SKIP — a checkout that ships no ledger at all (default path) ----------
 w="$(mktemp -d)"
 build_tree "$w" EMPTY yes
-out="$(bash "$CHECK" "$w" 2>&1)"; rc=$?
+out="$(python3 "$CHECK" "$w" 2>&1)"; rc=$?
 if [ "$rc" = 77 ] && printf '%s' "$out" | grep -q "skipped"; then
   ok "Case 13: no ledger in the checkout (default path) -> exit 77, reported as a skip"
 else
@@ -230,7 +230,7 @@ rm -rf "$w"
 # a hand-kept header (the ledgers carry no 'entries:' field) --------------------------
 w="$(mktemp -d)"
 build_tree "$w" "$LEDGER_OK" yes
-out="$(bash "$CHECK" "$w" 2>&1)"; rc=$?
+out="$(python3 "$CHECK" "$w" 2>&1)"; rc=$?
 if [ "$rc" = 0 ] && printf '%s' "$out" | grep -q "1 entr(y|ies)"; then
   ok "Case 14: default-path GREEN, entry count derived from the parsed ledger"
 else
@@ -243,7 +243,7 @@ rm -rf "$w"
 # REPORT ROW, never a mutation; the frictions docket consumes it.
 w="$(mktemp -d)"
 build_tree "$w" "$(printf '%s' "$LEDGER_OK" | sed 's/^- frequency: every-run$/- frequency: sometimes/')" yes
-out="$(bash "$CHECK" "$w" 2>&1)"; rc=$?
+out="$(python3 "$CHECK" "$w" 2>&1)"; rc=$?
 if [ "$rc" = 1 ] && printf '%s' "$out" | grep -q "NOT-SCORABLE: fixture-friction" \
    && ! printf '%s' "$out" | grep -q "FAILED CONTROL"; then
   ok "Case 15: default-path unscorable ordinal -> exit 1 naming NOT-SCORABLE only"
@@ -255,7 +255,7 @@ rm -rf "$w"
 # --- Case 16: NOT-GATED — the shared parser is missing from the audited tree --------
 w="$(mktemp -d)"
 build_tree "$w" "$LEDGER_OK" no
-out="$(bash "$CHECK" "$w" 2>&1)"; rc=$?
+out="$(python3 "$CHECK" "$w" 2>&1)"; rc=$?
 if [ "$rc" = 2 ] && printf '%s' "$out" | grep -q "NOT-GATED"; then
   ok "Case 16: missing shared parser -> exit 2, verified nothing"
 else
@@ -265,7 +265,7 @@ rm -rf "$w"
 
 # --- Case 17: the real registry is GREEN, or SKIPs (ledgers are adopter-local and
 # gitignored, so this checkout may carry none) ---------------------------------------
-out="$(bash "$CHECK" "$ROOT" 2>&1)"; rc=$?
+out="$(python3 "$CHECK" "$ROOT" 2>&1)"; rc=$?
 if [ "$rc" = 77 ]; then
   ok "Case 17: no friction ledger in this checkout (adopter-local) -> 77, never ok"
 elif [ "$rc" = 0 ] && ! printf '%s' "$out" | grep -q "NOT-SCORABLE"; then

@@ -105,35 +105,11 @@ def check(name, fn, cmd, want):
         print(f"ok    {name}: {'FLAG' if want else 'CLEAR':5}  {cmd!r}")
 
 
-# --- unit-level: each shape-detector function in isolation -----------------------
-cases = [
-    (lint.has_pnpm_passthrough, "pnpm test:integration:local -- __tests__/x.test.ts", True,
-     "pnpm -- passthrough"),
-    (lint.has_pnpm_passthrough, "pnpm test:one __tests__/x.test.ts", False,
-     "pnpm test:one, no --, not flagged"),
-    (lint.has_pnpm_passthrough, "npx vitest run --config vitest.integration.local.config.mts __tests__/x.test.ts", False,
-     "npx form has no pnpm token, not flagged"),
-    (lint.is_bare_affected_vitest, "pnpm vitest run __tests__/x.test.ts", True,
-     "bare pnpm vitest run"),
-    (lint.is_bare_affected_vitest, "npx vitest run __tests__/x.test.ts", True,
-     "bare npx vitest run"),
-    (lint.is_bare_affected_vitest, "VITEST_AFFECTED_DISABLED=1 npx vitest run __tests__/x.test.ts", False,
-     "affected-disabled env var clears it"),
-    (lint.is_bare_affected_vitest, "npx vitest run --config vitest.integration.local.config.mts __tests__/x.test.ts", False,
-     "--config integration lane clears it"),
-    (lint.is_bare_affected_vitest, "pnpm test:one __tests__/x.test.ts", False,
-     "pnpm test:one never matches VITEST_RUN"),
-    (lint.has_grepc_probe, "grep -c foo file.ts", True,
-     "grep -c as pass/fail"),
-    (lint.has_grepc_probe, "[ \"$(grep -c foo file.ts)\" -eq 0 ]", True,
-     "grep -c inside a count comparison"),
-    (lint.has_grepc_probe, "grep -q foo file.ts", False,
-     "grep -q not flagged"),
-    (lint.has_grepc_probe, "! grep -q foo file.ts", False,
-     "! grep -q not flagged"),
-]
-for fn, cmd, want, name in cases:
-    check(name, fn, cmd, want)
+# The three probe-shape predicates (pnpm --passthrough, bare affected vitest, grep -c
+# pass/fail) moved to hooks/bead-capture-guard.py (ac-review ruling 5, 2026-09-24) — unit
+# cases for them now live in hooks/bead-capture-guard.test.py. This check imports the
+# guard's `probe_shape_violation`, exercised below at the integration level.
+cases = []
 
 # --- unit-level: the human-gate card contract (human_gate_violation) ---------------
 hg_cases = [

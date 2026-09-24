@@ -28,31 +28,27 @@ whose guarded failure is IRREVERSIBLE — a destructive command, a force-push, a
 fails `closed`: a broken safety interlock stops the line, because the moment the guard has crashed
 is the moment the environment is least trustworthy. "A guard must not wedge a 3am run" was ruled
 for the first kind and does not transfer to the second. Fail-`closed` needs no escape clause;
-fail-`open` on a blocking guard needs `BACKSTOP:` or `PENDING-DECISION:`, and "the human will
-notice" is neither.
+fail-`open` on a blocking guard needs `BACKSTOP:`, and "the human will notice" is not one.
 
 **Fail-open is legal only for `MODE: advisory`.** A blocking mechanism declaring
-`ON-FAILURE: open` needs exactly one of two escapes, each with its own sensor:
+`ON-FAILURE: open` needs exactly one escape:
 
-- **`PENDING-DECISION: <bead-id>`** — the fail-open is an UNRESOLVED fork. Valid only
-  while that bead is `issue_type == "decision"` AND `status == "open"`, resolved by
-  parsing the committed `.beads/issues.jsonl` (no `br` dependency — `br` is a local
-  binary absent from CI runners). **Self-expiring:** citing a closed, missing, or
-  non-decision bead FAILS lint. A ruled decision must be executed, not squatted on, and
-  a stray open task cannot host the escape. `.beads/**` is in the registry-lint trigger
-  paths so closing the cited bead actually re-runs the check.
 - **`BACKSTOP: <named mechanism>`** — the fail-open is a RULED design with something
   else catching what slips through. When the value names a path, that path must EXIST:
   a backstop nobody kept is not a backstop. Use this ONLY for a decided design, never
   to dodge a fork that is genuinely open.
 
+(A prior `PENDING-DECISION: <bead-id>` escape — an unresolved-fork citation resolved by
+parsing the committed `.beads/issues.jsonl` — was cut 2026-09-24: it had no users, and
+`.beads/**` is gitignored, so any future use would fail in CI regardless of what it cited.)
+
 ## Orphan roles
 
 An executable with no wiring entry declares why it is there, or lint fails it:
-`ASSURANCE-ROLE: utility|test-harness` plus `CALLER: <its real caller>`, or
-`ASSURANCE-ROLE: orphan` plus the `PENDING-DECISION` escape above. An undeclared
-executable reads as coverage — which is how `hooks/on-file-write.sh` sat with
-zero wiring references and nobody noticed until ac-on0y.6's DELETE ruling removed it.
+`ASSURANCE-ROLE: utility|test-harness` plus `CALLER: <its real caller>`. An orphan hook
+is wired or deleted, never declared into invisibility — an undeclared executable reads
+as coverage, which is how `hooks/on-file-write.sh` sat with zero wiring references and
+nobody noticed until ac-on0y.6's DELETE ruling removed it.
 
 ## NOT-GATED — the refusal shape
 

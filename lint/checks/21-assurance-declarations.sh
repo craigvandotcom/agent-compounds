@@ -29,20 +29,16 @@
 #   ON-FAILURE  open | closed
 #
 # FAIL-OPEN IS LEGAL ONLY FOR ADVISORY. A blocking mechanism declaring ON-FAILURE: open
-# needs exactly one of two escapes, each self-expiring or verifiable:
-#   PENDING-DECISION: <bead-id>  the fail-open is an UNRESOLVED fork. Valid only while the
-#       cited bead is issue_type=="decision" AND status=="open", resolved by parsing the
-#       committed .beads/issues.jsonl directly — NO br dependency, because br is a locally
-#       installed binary absent from CI runners. Citing a closed, missing, or non-decision
-#       bead FAILS: a ruled decision must be executed, not squatted on, and a stray open
-#       task cannot host the escape.
-#   BACKSTOP: <named mechanism>  the fail-open is a RULED design with something else
-#       catching what slips through. When the value names a path, that path must EXIST,
-#       so a backstop cannot be a comforting sentence about a file nobody kept.
+# needs a BACKSTOP: <named mechanism> — the fail-open is a RULED design with something
+# else catching what slips through. When the value names a path, that path must EXIST,
+# so a backstop cannot be a comforting sentence about a file nobody kept. (A prior
+# PENDING-DECISION escape — an unresolved-fork citation into .beads/issues.jsonl — is
+# cut: it had no users and resolved against a gitignored file, so any future use would
+# FAIL in CI regardless of what it cited.)
 #
 # ORPHAN DETECTION: an executable in hooks/ with neither a wiring entry nor a declared
 # role is a failure. Roles: `ASSURANCE-ROLE: utility|test-harness` + `CALLER:` naming its
-# real caller, or `ASSURANCE-ROLE: orphan` + the same PENDING-DECISION escape.
+# real caller — an orphan hook is wired or deleted, never declared into invisibility.
 #
 # LEAN-SCRIPT HEADERS (moved from the retired Check 23's leg 5 — that check was
 # hooks.json-scoped and could not see them): the lean family's own scripts/*.sh
@@ -62,7 +58,6 @@ set -uo pipefail
 
 ROOT="${1:-$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)}"
 HOOKS_JSON="$ROOT/engine/hooks.wiring.json"
-BOARD="$ROOT/.beads/issues.jsonl"
 CHECK_ID="21-assurance-declarations"
 FAILURES=0
 
@@ -72,40 +67,6 @@ if [ ! -r "$HOOKS_JSON" ]; then
   echo "$CHECK_ID NOT-GATED: engine/hooks.wiring.json missing — wiring and its declarations unverifiable" >&2
   exit 2
 fi
-
-# resolve_pending <bead-id> -> 0 if it is an OPEN DECISION bead, else 1 with a reason
-resolve_pending() {
-  local id="$1" line count
-  if [ ! -r "$BOARD" ]; then
-    echo "board .beads/issues.jsonl unreadable — cannot resolve PENDING-DECISION"
-    return 1
-  fi
-  # The committed board is a DERIVED file with a prose-only one-committer rule: two writers
-  # exporting overlapping content leave DUPLICATE records for one id. Picking the first row
-  # resolves against an arbitrary record — refuse instead: the escape does not resolve.
-  count=$(jq -s -c --arg id "$id" '[.[] | select(.id == $id)] | length' "$BOARD" 2>/dev/null)
-  if [ "${count:-0}" -gt 1 ]; then
-    echo "cites '$id', which has $count records on the board — a duplicate export; the escape does not resolve"
-    return 1
-  fi
-  line=$(jq -c --arg id "$id" 'select(.id == $id)' "$BOARD" 2>/dev/null)
-  if [ -z "$line" ]; then
-    echo "cites '$id', which does not exist on the board"
-    return 1
-  fi
-  local t s
-  t=$(printf '%s' "$line" | jq -r '.issue_type // ""')
-  s=$(printf '%s' "$line" | jq -r '.status // ""')
-  if [ "$t" != "decision" ]; then
-    echo "cites '$id', whose issue_type is '$t' — only a decision bead may host this escape"
-    return 1
-  fi
-  if [ "$s" != "open" ]; then
-    echo "cites '$id', which is '$s' — a ruled decision must be EXECUTED, not squatted on"
-    return 1
-  fi
-  return 0
-}
 
 COUNT=$(jq '.wiring | length' "$HOOKS_JSON" 2>/dev/null || echo 0)
 if [ "$COUNT" -eq 0 ]; then
@@ -134,20 +95,15 @@ while [ "$i" -lt "$COUNT" ]; do
   case "$onf"  in open|closed|"")       ;; *) ad_fail "wiring '$hid' ON-FAILURE '$onf' is not open|closed" ;; esac
 
   if [ "$mode" = "blocking" ] && [ "$onf" = "open" ]; then
-    pend=$(printf '%s' "$entry" | jq -r '.assurance["PENDING-DECISION"] // ""')
     back=$(printf '%s' "$entry" | jq -r '.assurance.BACKSTOP // ""')
-    if [ -n "$pend" ]; then
-      if ! why=$(resolve_pending "$pend"); then
-        ad_fail "wiring '$hid' is blocking + fail-open and its PENDING-DECISION $why"
-      fi
-    elif [ -n "$back" ]; then
+    if [ -n "$back" ]; then
       # A backstop naming a path must name one that exists.
       bpath=$(printf '%s' "$back" | grep -oE '^[A-Za-z0-9_][A-Za-z0-9_./-]*\.[A-Za-z0-9]+' | head -1)
       if [ -n "$bpath" ] && [ ! -e "$ROOT/$bpath" ]; then
         ad_fail "wiring '$hid' BACKSTOP names '$bpath', which does not exist — a backstop nobody kept is not a backstop"
       fi
     else
-      ad_fail "wiring '$hid' is MODE: blocking with ON-FAILURE: open and no escape — declare PENDING-DECISION: <open decision bead> or BACKSTOP: <named mechanism>"
+      ad_fail "wiring '$hid' is MODE: blocking with ON-FAILURE: open and no escape — declare BACKSTOP: <named mechanism>"
     fi
   fi
   i=$(( i + 1 ))
@@ -168,19 +124,11 @@ for f in "$ROOT"/hooks/*.py "$ROOT"/hooks/*.sh; do
       grep -qE 'CALLER:[[:space:]]*[^[:space:]]' "$f" \
         || ad_fail "hooks/$base declares role '$role' but names no CALLER — an unnamed caller cannot be checked"
       ;;
-    orphan)
-      pend=$(grep -oE 'PENDING-DECISION:[[:space:]]*[A-Za-z0-9_.-]+' "$f" | head -1 | sed -E 's/.*:[[:space:]]*//')
-      if [ -z "$pend" ]; then
-        ad_fail "hooks/$base declares role 'orphan' with no PENDING-DECISION — wire it or delete it"
-      elif ! why=$(resolve_pending "$pend"); then
-        ad_fail "hooks/$base is a declared orphan whose PENDING-DECISION $why"
-      fi
-      ;;
     "")
       ad_fail "hooks/$base has NO hooks.json wiring and NO ASSURANCE-ROLE — an undeclared executable reads as coverage"
       ;;
     *)
-      ad_fail "hooks/$base declares unknown ASSURANCE-ROLE '$role' (expected utility|test-harness|orphan)"
+      ad_fail "hooks/$base declares unknown ASSURANCE-ROLE '$role' (expected utility|test-harness) — an orphan hook is wired or deleted, never declared into invisibility"
       ;;
   esac
 done

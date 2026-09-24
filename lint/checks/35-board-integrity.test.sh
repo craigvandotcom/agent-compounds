@@ -6,14 +6,13 @@
 #           implementable bead (task/bug/feature) without a Probe: line is RED;
 #           a probed task and an exempt decision are GREEN; closed beads and
 #           pre-cutover beads are NEVER scanned for origin/probe (GREEN); a clean
-#           board is GREEN; an off-canon status is RED regardless of lane or
-#           open/closed; every rule scans the WHOLE board — no git checkout
-#           required anywhere in this file; a malformed WORKER: receipt is RED
-#           when its own created_at is on/after the rule-5/6 cutover and GREEN
-#           (never re-judged) before it; a closed bead's landing record must cite
+#           board is GREEN; every rule scans the WHOLE board — no git checkout
+#           required anywhere in this file; a closed bead's landing record must cite
 #           evidence resolving against its own row when closed_at is on/after the
-#           cutover, and is never re-judged before it; an empty board is
-#           NOT-GATED (exit 2); a missing board skips (exit 77).
+#           rule-6 cutover, and is never re-judged before it; an empty board is
+#           NOT-GATED (exit 2); a missing board skips (exit 77). (Rules 4 "status
+#           outside the canon set" and 5 "malformed WORKER: receipt" were cut,
+#           2026-09-24 — see lint/checks/35-board-integrity.py's module docstring.)
 #
 # ASSURANCE
 #   PROBE:    bash lint/checks/35-board-integrity.test.sh
@@ -85,57 +84,20 @@ board "$WORK/e" "$OPEN_TAGGED"
 rc=$(run_check "$WORK/e")
 [ "$rc" -eq 0 ] && ok "clean board is GREEN" || bad "clean board: rc=$rc out=$(cat "$OUT")"
 
-# --- RED: off-canon status, unconditional (fires even on a non-open row) -------
-board "$WORK/status-red" '{"id":"ac-donebad","status":"done","created_at":"2026-08-01T10:00:00Z","labels":[],"title":"off canon status"}'
-rc=$(run_check "$WORK/status-red")
-[ "$rc" -eq 1 ] && grep -q "outside the canon set" "$OUT" && grep -q 'ac-donebad' "$OUT" \
-  && ok "off-canon status is RED even when status != open" \
-  || bad "off-canon status: rc=$rc out=$(cat "$OUT")"
+# --- GREEN: an off-canon status is no longer judged (rule 4 cut, 2026-09-24 — `br`
+# --- validates status on write; only a hand-edited JSONL could ever trip this) ------
+board "$WORK/status-cut" '{"id":"ac-donebad","status":"done","created_at":"2026-08-01T10:00:00Z","labels":[],"title":"off canon status"}'
+rc=$(run_check "$WORK/status-cut")
+[ "$rc" -eq 0 ] && ok "an off-canon status is GREEN now that rule 4 is cut" \
+  || bad "status-cut: rc=$rc out=$(cat "$OUT")"
 
-# --- GREEN: every canon status, including the newly-admitted blocked -----------
-board "$WORK/status-green" \
-  '{"id":"ac-s1","status":"open","created_at":"2026-08-01T10:00:00Z","labels":["origin:manual"],"title":"o"}' \
-  '{"id":"ac-s2","status":"in_progress","created_at":"2026-08-01T10:00:00Z","labels":["origin:manual"],"title":"i"}' \
-  '{"id":"ac-s3","status":"blocked","created_at":"2026-08-01T10:00:00Z","labels":["origin:manual"],"title":"b"}' \
-  '{"id":"ac-s4","status":"deferred","created_at":"2026-08-01T10:00:00Z","labels":["origin:manual"],"title":"d"}' \
-  '{"id":"ac-s5","status":"closed","created_at":"2026-08-01T10:00:00Z","closed_at":"2026-08-01T10:00:00Z","labels":["origin:manual"],"title":"c"}' \
-  '{"id":"ac-s6","status":"tombstone","created_at":"2026-08-01T10:00:00Z","labels":["origin:manual"],"title":"t"}'
-rc=$(run_check "$WORK/status-green")
-[ "$rc" -eq 0 ] && ok "every canon status (incl. blocked) is GREEN" || bad "canon statuses: rc=$rc out=$(cat "$OUT")"
-
-# =====================================================================
-# Rule 5 — WORKER: receipt grammar, whole-board, forward-only by the
-# comment's own created_at against the rule-5/6 cutover (2026-09-23).
-# =====================================================================
-
-# --- RED: a malformed WORKER: receipt whose created_at is on/after the cutover -
+# --- GREEN: a malformed WORKER: comment is no longer judged (rule 5 cut, 2026-09-24 —
+# --- nothing reads a WORKER: field) --------------------------------------------------
 WORKER_BAD='{"id":"ac-workerbad","status":"open","created_at":"2026-08-25T10:00:00Z","labels":["origin:manual"],"title":"bad worker stamp","comments":[{"id":1,"issue_id":"ac-workerbad","author":"x","text":"WORKER: model=foo session=bar skill@version=abc duration=1m","created_at":"2026-09-23T10:01:00Z"}]}'
-board "$WORK/worker-red" "$OPEN_TAGGED" "$WORKER_BAD"
-rc=$(run_check "$WORK/worker-red")
-[ "$rc" -eq 1 ] && grep -q "does not match the canon grammar" "$OUT" && grep -q 'ac-workerbad' "$OUT" \
-  && ok "malformed WORKER: receipt on/after the cutover is RED" \
-  || bad "worker-red: rc=$rc out=$(cat "$OUT")"
-
-# --- GREEN: a canon WORKER: receipt on/after the cutover -----------------------
-WORKER_GOOD='{"id":"ac-workerok","status":"open","created_at":"2026-08-25T10:00:00Z","labels":["origin:manual"],"title":"good worker stamp","comments":[{"id":2,"issue_id":"ac-workerok","author":"x","text":"WORKER: model=claude-sonnet-5 actor=ac-123 tree=abc1234","created_at":"2026-09-23T10:01:00Z"}]}'
-board "$WORK/worker-green" "$OPEN_TAGGED" "$WORKER_GOOD"
-rc=$(run_check "$WORK/worker-green")
-[ "$rc" -eq 0 ] && ok "canon WORKER: receipt (model=/actor=/tree=) on/after the cutover is GREEN" \
-  || bad "worker-green: rc=$rc out=$(cat "$OUT")"
-
-# --- GREEN: a malformed WORKER: receipt BEFORE the cutover is never re-judged --
-WORKER_BAD_PRE='{"id":"ac-workerlegacy","status":"open","created_at":"2026-08-25T10:00:00Z","labels":["origin:manual"],"title":"legacy bad worker stamp","comments":[{"id":3,"issue_id":"ac-workerlegacy","author":"x","text":"WORKER: model=foo session=bar skill@version=abc duration=1m","created_at":"2026-09-22T23:59:59Z"}]}'
-board "$WORK/worker-legacy" "$OPEN_TAGGED" "$WORKER_BAD_PRE"
-rc=$(run_check "$WORK/worker-legacy")
-[ "$rc" -eq 0 ] && ok "a malformed WORKER: receipt before the cutover is never re-judged" \
-  || bad "worker-legacy: rc=$rc out=$(cat "$OUT")"
-
-# --- GREEN: a multi-line canon receipt (canon first line + a note line) --------
-WORKER_MULTILINE='{"id":"ac-multiline","status":"open","created_at":"2026-08-25T10:00:00Z","labels":["origin:manual"],"title":"multi-line worker stamp","comments":[{"id":4,"issue_id":"ac-multiline","author":"x","text":"WORKER: model=claude-sonnet-5 actor=ac-123 tree=abc1234\nnote: closed after review","created_at":"2026-09-23T10:01:00Z"}]}'
-board "$WORK/worker-multiline" "$OPEN_TAGGED" "$WORKER_MULTILINE"
-rc=$(run_check "$WORK/worker-multiline")
-[ "$rc" -eq 0 ] && ok "a multi-line canon receipt (first line + note) stays green" \
-  || bad "worker-multiline: rc=$rc out=$(cat "$OUT")"
+board "$WORK/worker-cut" "$OPEN_TAGGED" "$WORKER_BAD"
+rc=$(run_check "$WORK/worker-cut")
+[ "$rc" -eq 0 ] && ok "a malformed WORKER: comment is GREEN now that rule 5 is cut" \
+  || bad "worker-cut: rc=$rc out=$(cat "$OUT")"
 
 # =====================================================================
 # Rule 6 — a closed bead's landing record cites its evidence, whole-board,

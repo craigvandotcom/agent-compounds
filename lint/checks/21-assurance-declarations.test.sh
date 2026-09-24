@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
 # 21-assurance-declarations.test.sh — proof harness for lint/checks/21-assurance-declarations.sh:
-# the four-field schema, fail-open-only-for-advisory, the PENDING-DECISION/BACKSTOP escapes,
-# orphan detection over hooks/, and the NOT-GATED (exit 2) paths.
+# the four-field schema, fail-open-only-for-advisory, the BACKSTOP escape (PENDING-DECISION was
+# cut — no users, and it resolved against a gitignored board), orphan detection over hooks/, and
+# the NOT-GATED (exit 2) paths.
 #
-# Every case builds a throwaway root under $TMPDIR with its own engine/hooks.wiring.json, its own
-# hooks/ executables, and its own .beads/issues.jsonl. Fixture beads are synthetic jsonl lines fed
-# to the parser — NEVER live board mutations. The final case runs the check against the REAL repo
-# so the fixtures cannot drift into proving something it does not do.
+# Every case builds a throwaway root under $TMPDIR with its own engine/hooks.wiring.json and its
+# own hooks/ executables. The final case runs the check against the REAL repo so the fixtures
+# cannot drift into proving something it does not do.
 #
 # ASSURANCE
 #   PROBE:    bash lint/checks/21-assurance-declarations.test.sh
@@ -36,7 +36,7 @@ GOOD='{"PROBE":"p","SCHEDULE":"s","MODE":"advisory","ON-FAILURE":"open"}'
 fixture() {
   local decl="$1" extra="${2:-}"
   local root; root="$(mktemp -d "$WORK/f.XXXXXX")"
-  mkdir -p "$root/hooks" "$root/engine" "$root/.beads"
+  mkdir -p "$root/hooks" "$root/engine"
 
   printf '#!/bin/bash\nexit 0\n' > "$root/hooks/wired.sh"
 
@@ -48,13 +48,6 @@ fixture() {
     jq -n '{_doc:"fixture", wiring:[{id:"wired", event:"PreToolUse", command:"{HOOKS}/wired.sh", harnesses:["claude"], scope:["org"]}]}' \
       > "$root/engine/hooks.wiring.json"
   fi
-
-  # A synthetic board: one OPEN decision, one CLOSED decision, one OPEN task.
-  {
-    printf '%s\n' '{"id":"bd-open-dec","issue_type":"decision","status":"open"}'
-    printf '%s\n' '{"id":"bd-closed-dec","issue_type":"decision","status":"closed"}'
-    printf '%s\n' '{"id":"bd-open-task","issue_type":"task","status":"open"}'
-  } > "$root/.beads/issues.jsonl"
 
   [ -n "$extra" ] && printf '%s\n' "$extra" > "$root/hooks/loose.sh"
   printf '%s' "$root"
@@ -108,21 +101,10 @@ run_check_grep 1 "MODE: blocking with ON-FAILURE: open and no escape" \
   "blocking + fail-open with NO escape -> FAILS" \
   "$(fixture '{"PROBE":"p","SCHEDULE":"s","MODE":"blocking","ON-FAILURE":"open"}')"
 
-echo "--- PENDING-DECISION is self-expiring ---"
-run_check 0 "escape citing an OPEN DECISION bead -> PASSES" \
+echo "--- PENDING-DECISION is cut: no escape but BACKSTOP remains ---"
+run_check_grep 1 "MODE: blocking with ON-FAILURE: open and no escape" \
+  "a PENDING-DECISION field is no longer an escape -> FAILS same as no escape at all" \
   "$(fixture '{"PROBE":"p","SCHEDULE":"s","MODE":"blocking","ON-FAILURE":"open","PENDING-DECISION":"bd-open-dec"}')"
-run_check 1 "escape citing a CLOSED decision bead -> FAILS (a ruling must be executed)" \
-  "$(fixture '{"PROBE":"p","SCHEDULE":"s","MODE":"blocking","ON-FAILURE":"open","PENDING-DECISION":"bd-closed-dec"}')"
-run_check 1 "escape citing an OPEN NON-decision bead -> FAILS" \
-  "$(fixture '{"PROBE":"p","SCHEDULE":"s","MODE":"blocking","ON-FAILURE":"open","PENDING-DECISION":"bd-open-task"}')"
-run_check 1 "escape citing a NONEXISTENT id -> FAILS" \
-  "$(fixture '{"PROBE":"p","SCHEDULE":"s","MODE":"blocking","ON-FAILURE":"open","PENDING-DECISION":"bd-nope"}')"
-
-echo "--- duplicate board records (the wedge head -1 cannot survive) ---"
-DUP="$(fixture '{"PROBE":"p","SCHEDULE":"s","MODE":"blocking","ON-FAILURE":"open","PENDING-DECISION":"bd-open-dec"}')"
-# The exact wedge shape: the SAME id exported twice, one record open, one closed.
-printf '%s\n' '{"id":"bd-open-dec","issue_type":"decision","status":"closed"}' >> "$DUP/.beads/issues.jsonl"
-run_check 1 "duplicate board records for a cited id -> FAILS naming the count, not head -1" "$DUP"
 
 echo "--- BACKSTOP: a ruled fail-open, not a pending one ---"
 run_check 0 "BACKSTOP naming an EXISTING path -> PASSES" \
@@ -143,15 +125,9 @@ run_check 1 "declared utility with NO CALLER -> FAILS" \
   "$(fixture "$GOOD" '#!/bin/bash
 # ASSURANCE-ROLE: utility
 exit 0')"
-run_check 0 "declared orphan citing an OPEN decision -> PASSES" \
+run_check 1 "declared role 'orphan' -> FAILS (the escape was cut; wire it or delete it)" \
   "$(fixture "$GOOD" '#!/bin/bash
 # ASSURANCE-ROLE: orphan
-# PENDING-DECISION: bd-open-dec
-exit 0')"
-run_check 1 "declared orphan citing a CLOSED decision -> FAILS" \
-  "$(fixture "$GOOD" '#!/bin/bash
-# ASSURANCE-ROLE: orphan
-# PENDING-DECISION: bd-closed-dec
 exit 0')"
 run_check 1 "unknown ASSURANCE-ROLE -> FAILS" \
   "$(fixture "$GOOD" '#!/bin/bash

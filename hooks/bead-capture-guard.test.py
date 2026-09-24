@@ -180,6 +180,29 @@ cases += [
   (BLOCK, _labelled + '--description-file -',
           "description-file from stdin cannot be verified and is refused"),
 ]
+
+# --- probe-shape axis (moved from lint Check 19, ac-review ruling 5): a `Probe:` line
+# that runs must still MEASURE — these three shapes pass `no probe, no bead` (a runnable
+# command with no syntax error) while measuring nothing, so they are born-refused here
+# rather than caught later as a stale skill-doc template.
+cases += [
+  (BLOCK, _labelled + '-d "- AC: x. Probe: `pnpm test:integration:local -- __tests__/x.test.ts` - tier: supabase-integration"',
+          "pnpm -- passthrough probe -> refused"),
+  (BLOCK, _labelled + '-d "- AC: x. Probe: `npx vitest run __tests__/x.test.ts` - tier: standing-vitest"',
+          "bare vitest run probe -> refused"),
+  (BLOCK, _labelled + '-d "- AC: x. Probe: `grep -c foo file.ts` - tier: none"',
+          "grep -c pass/fail probe -> refused"),
+  (ALLOW, _labelled + '-d "- AC: x. Probe: `pnpm test:one __tests__/x.test.ts` - tier: standing-vitest"',
+          "pnpm test:one probe -> admitted"),
+  (ALLOW, _labelled + '-d "- AC: x. Probe: `VITEST_AFFECTED_DISABLED=1 npx vitest run __tests__/x.test.ts` - tier: standing-vitest"',
+          "affected-disabled vitest probe -> admitted"),
+  (ALLOW, _labelled + '-d "- AC: x. Probe: `npx vitest run --config vitest.integration.local.config.mts __tests__/x.test.ts` - tier: supabase-integration"',
+          "integration-config vitest probe -> admitted"),
+  (ALLOW, _labelled + '-d "- AC: x. Probe: `grep -q foo file.ts` - tier: none"',
+          "grep -q probe -> admitted"),
+  (ALLOW, _labelled + '-d "- AC: x. Probe: `! grep -q foo file.ts` - tier: none"',
+          "! grep -q probe -> admitted"),
+]
 fails = 0
 for case in cases:
     want, cmd, name = case[0], case[1], case[2]
