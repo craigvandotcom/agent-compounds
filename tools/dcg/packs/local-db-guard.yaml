@@ -1,5 +1,5 @@
 schema_version: 1
-id: localdbguard
+id: guard.localdbguard
 name: local Supabase reset guard
 version: 1.0.0
 keywords:

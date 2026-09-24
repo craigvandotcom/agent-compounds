@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# dcg pack probe for stashguard — BOTH its rules, despite the historical
+# dcg pack probe for guard.stashguard — BOTH its rules, despite the historical
 # filename: unscoped-stash-save and whole-tree-add (bd-ctlqg). Fixtures live in
 # this FILE, never on the dcg-scanned command line — the matcher is string-based
 # and fires on its own test payloads.
@@ -30,6 +30,9 @@
 # fixes it this harness goes RED on those rows — which is the point: that red is
 # the signal to flip the expectation and finish bd-ctlqg's rung 3.
 #
+# FLIPPED 2026-09-24: dcg 0.14.3 evaluates `git add` at the hook, so the
+# whole-tree-add rows now expect hook=BLOCK. The rule is live, not inert.
+#
 # usage: bash probe.sh [path-to-config.toml]
 CFG="${1:-}"
 DCG="$HOME/.local/bin/dcg"
@@ -52,13 +55,13 @@ stash-show|ALLOW|ALLOW|git stash show -p
 stash-pop|ALLOW|ALLOW|git stash pop
 stash-apply|ALLOW|ALLOW|git stash apply
 control-status|ALLOW|ALLOW|git status
-add-A|ALLOW|BLOCK|git add -A
-add-all-long|ALLOW|BLOCK|git add --all
-add-dot|ALLOW|BLOCK|git add .
-add-u|ALLOW|BLOCK|git add -u
-add-update-long|ALLOW|BLOCK|git add --update
-add-A-with-C|ALLOW|BLOCK|git -C /repo add -A
-add-v-then-A|ALLOW|BLOCK|git add -v -A
+add-A|BLOCK|BLOCK|git add -A
+add-all-long|BLOCK|BLOCK|git add --all
+add-dot|BLOCK|BLOCK|git add .
+add-u|BLOCK|BLOCK|git add -u
+add-update-long|BLOCK|BLOCK|git add --update
+add-A-with-C|BLOCK|BLOCK|git -C /repo add -A
+add-v-then-A|BLOCK|BLOCK|git add -v -A
 add-A-scoped|ALLOW|ALLOW|git add -A -- .
 add-scoped-paths|ALLOW|ALLOW|git add -- lib/foo.ts lib/bar.ts
 add-named-file|ALLOW|ALLOW|git add lib/foo.ts
