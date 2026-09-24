@@ -25,7 +25,7 @@
 | **Write this machine's settings** | copy `machine.example.json` to `machine.json` (gitignored) and edit by hand — this machine's org root, deploy targets and harness overrides; reader: `engine/machine.sh` |
 | **Selective one-off stamp (non-target project)** | `./engine/deploy.sh <target> --skills a,b --agents x,y` (or `--all`) |
 | **Dry run** | `./engine/sync.sh --all -n` / `./engine/deploy.sh <target> --all -n` |
-| Lint (invariants) | `./lint.sh` |
+| Lint (invariants) | `./lint.sh` — docs: `lint/README.md` |
 | Proof tests | `bash scripts/run-all-proofs.sh` |
 
 ## Distribution policy

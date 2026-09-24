@@ -1,55 +1,23 @@
 #!/usr/bin/env python3
-"""run.py — the lint v2 runner.
+"""run.py — the lint v2 runner. Full contract: lint/README.md.
 
-Discovers lint/checks/* (harness *.test.sh files excluded), runs EVERY one of
-them in parallel — there is no scope-to-diff selection, on this machine or in
-CI: one run always means the whole suite. Prints ONE table and exits:
+Usage: `python3 lint/run.py [--root DIR] [--check ID]... [--staged] [--json]`
+(normally invoked via `./lint.sh`, which is the documented front door).
 
-  0   every executed check green (skips alone never fail the run)
-  1   at least one check reported findings — outranks a bare NOT-GATED
-  2   NOT-GATED — an executed check scanned zero files (the check itself
-      exits 2), and no check exited 1. An empty scan is never read as a pass.
+  --check ID   run only this check (filename NN prefix or full stem); repeatable
+  --staged     run the whole suite against the STAGED index (what a commit
+               would contain) instead of the working tree on disk
+  --json       emit results as JSON instead of the table
+  --root DIR   repo root to lint (default: this checkout)
 
-Invocation contract for a check: `python3 <check>.py [root]` / `bash <check>.sh
-[root]`; root defaults to the real repo root. Exit 0 green, 1 findings, 2
-scanned-nothing, 77 skip (the check's own adopter-local input — a friction
-ledger, the board, an instance-token list — is absent from this checkout;
-honest of a skip, never tabulated `ok`). The header contract the checks
-declare is enforced by 00-meta.py; the runner only executes and tabulates.
+Exit 0 pass · 1 fail (outranks a bare 2) · 2 NOT-GATED (an executed check
+scanned zero files). See lint/README.md for the full exit-code and check
+header contract.
 
-Flags: --check <id> (repeatable, id is the filename's NN prefix or the full
-stem), --staged (run the whole suite against the STAGED index — what a commit
-would contain — instead of the working tree on disk), --json (machine
-output).
-
-The `--staged` lane (the pre-commit hook's mode; also this machine's manual
-`bash lint.sh --staged`) judges what a commit will contain, not the checkout
-on disk: every SELECTED check (still the whole suite) is run against a temp
-dir holding the INDEX snapshot (`materialize_staged()`), never the working
-tree — a sibling writer's dirty, half-finished file sitting in the same
-shared checkout must not fail this committer's commit (measured: a foreign
-edit refused a worker's commit until it happened to land, FRICTIONS.md:711).
-Checks that shell out to git (14, 25, 29, 31 today) still need a real `.git`
-to resolve base refs / `git show` a committed blob / diff `--cached`; rather
-than special-case their invocation, the snapshot dir is handed `GIT_DIR` (the
-real repo's) and `GIT_WORK_TREE` (the snapshot dir) as environment, so any
-git command a check runs resolves against real history while "the working
-tree" IS the staged snapshot — `git diff <base>` (no `--cached`) then already
-compares base against staged content, with no per-check code required. The
-one exception is 14's leg 2, which shells to OTHER repos entirely (`git -C
-<that repo>`); an inherited GIT_DIR/GIT_WORK_TREE pointing at THIS repo would
-misdirect those calls, so leg 2 reads the LINT_STAGED=1 env var this runner
-also sets and skips itself in the staged lane (it audits other repos' local
-state, which this commit cannot fix anyway — see that check's own docstring).
-
-`materialize_staged()` also links this machine's ADOPTER-LOCAL inputs
-(gitignored, so `git checkout-index` never writes them) into the snapshot —
-`.beads/issues.jsonl`, `lint/instance-tokens.local.txt`, `_archive/`, any
-untracked FRICTIONS.md/MAINTENANCE.md under skills/, and machine.json — so
-checks 22/25/27/35 (and anything else that reads them) run for real at commit
-time on a machine that HAS the input, instead of reporting a skip that was
-only ever an artifact of the snapshot missing gitignored content (see
-`_adopter_local_paths` / `_link_adopter_local`).
+The `--staged` lane's rationale (why a temp INDEX snapshot, GIT_DIR/
+GIT_WORK_TREE redirection, and adopter-local linking) lives beside the code
+that does it: see `materialize_staged()`, `_adopter_local_paths()` and the
+staged-lane block in `main()` below.
 """
 
 import concurrent.futures
