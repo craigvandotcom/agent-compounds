@@ -23,21 +23,8 @@ phrase quoted twice inside ONE description (not a collision — the rule is
 about selection across skills, and a description re-quoting its own phrase
 still selects one skill).
 
-Known collisions land in a dated SHRINK-ONLY allowlist
-(lint/allowlists/30-trigger-collisions.txt, absent today — 0 live collisions,
-nothing to admit), a multi-field format of its own (a collision names two
-skills, not one key, so it does not fit lib.ratchet's single-key `DATE key
-[# why]` shape):
-
-    # seeded: YYYY-MM-DD
-    <date> | <phrase> | <skill>,<skill>
-
-An entry dated after the seed is refused (the allowlist only shrinks); an
-entry whose collision no longer reproduces is refused (a description edit
-that separates the phrases forces its line out in the same change); a
-malformed allowlist (missing seed header, bad date, phrase not in the live
-collision set) fails loud. No file means no exceptions — every collision is
-a violation.
+No allowlist: every live collision is a violation. Fix it by separating the
+phrases in the same commit that introduced the collision.
 
 Exit: 0 clean (and at least one description scanned), 1 findings, 2 scanned
 nothing.
@@ -50,10 +37,6 @@ import sys
 import _bootstrap  # noqa: F401
 from lib import frontmatter, scope  # noqa: E402
 
-ALLOWLIST = "lint/allowlists/30-trigger-collisions.txt"
-SEED_RE = re.compile(r"^#\s*seeded:\s*(\d{4}-\d{2}-\d{2})\s*$")
-ENTRY_RE = re.compile(r"^(\d{4}-\d{2}-\d{2})\s*\|\s*([^|]+?)\s*\|\s*(\S+)\s*$")
-DATE_OK = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 SKILL_RE = re.compile(r"^skills/([^/]+)/SKILL\.md$")
 
 
@@ -97,42 +80,6 @@ def scan_skills(root):
     return owners, scanned
 
 
-def read_allowlist(root, live_collisions):
-    """Parse the allowlist. Returns (seed_date, entries, problems)."""
-    problems = []
-    entries = []
-    seed = None
-    path = os.path.join(root, ALLOWLIST)
-    if not os.path.isfile(path):
-        return None, entries, problems
-    seen = set()
-    with open(path, encoding="utf-8") as fh:
-        for ln, raw in enumerate(fh, 1):
-            line = raw.rstrip("\n")
-            if not line.strip() or line.lstrip().startswith("#"):
-                m = SEED_RE.match(line.strip()) if line.lstrip().startswith("#") else None
-                if m:
-                    seed = m.group(1)
-                continue
-            m = ENTRY_RE.match(line)
-            if not m:
-                problems.append(f"{ALLOWLIST}:{ln}: malformed entry (want '<date> | <phrase> | <skill>,<skill>')")
-                continue
-            date, phrase, carriers = m.groups()
-            if not DATE_OK.match(date):
-                problems.append(f"{ALLOWLIST}:{ln}: bad date '{date}'")
-                continue
-            key = (phrase, carriers)
-            if key in seen:
-                problems.append(f"{ALLOWLIST}:{ln}: duplicate entry for '{phrase}'")
-                continue
-            seen.add(key)
-            entries.append((date, phrase, carriers))
-    if seed is None:
-        problems.append(f"{ALLOWLIST}: no '# seeded: YYYY-MM-DD' header — the shrink-only ratchet has no anchor")
-    return seed, entries, problems
-
-
 def main():
     root = sys.argv[1] if len(sys.argv) > 1 else scope.ROOT
     if os.path.abspath(root) != scope.ROOT:
@@ -148,44 +95,14 @@ def main():
 
     collisions = {p: sorted(s) for p, s in owners.items() if len(s) > 1}
 
-    seed, entries, problems = read_allowlist(root, collisions)
-    violations = []
-    carried = set()
-    for date, phrase, carriers in entries:
-        carried.add(phrase)
-        live = collisions.get(phrase)
-        if live is None:
-            violations.append(
-                f"allowlist STALE: entry '{phrase}' ({carriers}) matches no live collision "
-                f"— the descriptions no longer share the phrase; remove the line (the allowlist only shrinks)")
-            continue
-        if sorted(c.strip() for c in carriers.split(",")) != live:
-            violations.append(
-                f"allowlist MISMATCH: entry '{phrase}' claims {carriers} but the live collision is "
-                f"{','.join(live)} — re-derive, then shrink or fix the descriptions")
-        if seed is not None and date > seed:
-            violations.append(
-                f"allowlist GROWTH: entry '{phrase}' dated {date} is after the seed date {seed} "
-                f"— the allowlist only shrinks; separate the phrases instead")
-    for phrase in sorted(collisions):
-        if phrase not in carried:
-            violations.append(
-                f"trigger collision: '{phrase}' is quoted by {', '.join(collisions[phrase])} "
-                f"— one phrase selecting two skills is ambiguous; separate the phrases or allowlist this collision")
+    if collisions:
+        print("FAIL 30-trigger-collisions: quoted trigger phrase(s) selecting more than one skill:")
+        for phrase in sorted(collisions):
+            print(f"    trigger collision: '{phrase}' is quoted by {', '.join(collisions[phrase])} "
+                  f"— one phrase selecting two skills is ambiguous; separate the phrases")
+        return 1
 
-    for f in problems:
-        print(f"FAIL 30-trigger-collisions: {f}")
-    if violations:
-        print("FAIL 30-trigger-collisions: quoted trigger phrase(s) selecting more than one skill ("
-              + ALLOWLIST + " is SHRINK-ONLY — an entry may be removed once the collision is fixed, never added):")
-        for v in violations:
-            print(f"    {v}")
-        return 1
-    if problems:
-        return 1
-    allowlist_note = f"{len(entries)} entries, seed {seed}" if seed else "no allowlist file — none admitted"
-    print(f"  ok: 30-trigger-collisions — {scanned} description(s) tokenised, {len(collisions)} collision(s), "
-          f"all carried by the seeded allowlist ({allowlist_note})")
+    print(f"  ok: 30-trigger-collisions — {scanned} description(s) tokenised, 0 collisions")
     return 0
 
 

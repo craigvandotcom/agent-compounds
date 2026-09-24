@@ -1,7 +1,13 @@
 #!/bin/bash
 # Validate skill meets standards
 # Usage: ./validate-skill.sh /path/to/skill/            (single-skill checks)
-#        ./validate-skill.sh --registry /path/to/skills/ (budget + dup-fingerprint audit)
+#        ./validate-skill.sh --registry /path/to/skills/ [--fast]
+#                                                         (budget + dup-fingerprint audit;
+#                                                          --fast skips the two ADVISORY
+#                                                          scans below — lint mode wants the
+#                                                          hard budget/cap/graph legs only,
+#                                                          not the O(n^2) dup/shingle scans
+#                                                          whose output it discards on green)
 #        ./validate-skill.sh --diff /path/to/skill/ <git-ref>  (enforcement-regression backstop)
 #
 # Checks (single skill):
@@ -71,6 +77,8 @@ is_accessory() {
 # --registry mode: audit the always-loaded description budget across a skills dir
 if [ "$1" = "--registry" ]; then
     SKILLS_DIR="${2:-skills}"
+    FAST=0
+    [ "${3:-}" = "--fast" ] && FAST=1
     if [ ! -d "$SKILLS_DIR" ]; then
         echo -e "${RED}❌ Error: Directory not found: $SKILLS_DIR${NC}"
         exit 1
@@ -137,6 +145,10 @@ if [ "$1" = "--registry" ]; then
         fi
     done
 
+    if [ "$FAST" = "1" ]; then
+        echo "  (--fast: cross-skill duplicate and near-duplicate shingle scans skipped)"
+        echo ""
+    else
     # --- Cross-skill duplicate-block fingerprint (advisory: _shared/ promotion candidates) ---
     DUP_TMP=$(mktemp)
     ACCESSORY_SKIPPED=0
@@ -189,6 +201,7 @@ if [ "$1" = "--registry" ]; then
         echo "  none above threshold"
     fi
     echo ""
+    fi
 
     echo -e "${BLUE}📊 Registry description budget — $SKILLS_DIR${NC}"
     echo "  Model-invocable skills: $COUNT, total description chars: $TOTAL"

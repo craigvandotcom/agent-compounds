@@ -4,9 +4,8 @@
 #   PROBE: two skills quoting the same trigger phrase is RED naming both
 #           skills; separating the phrases is GREEN; the same phrase twice in
 #           ONE description is not a collision; the single-quote/double-quote
-#           crossing artifact does not collide; a stale allowlist entry is RED
-#           naming STALE; an empty scan is NOT-GATED (exit 2); the real tree
-#           is green via its seeded allowlist.
+#           crossing artifact does not collide; an empty scan is NOT-GATED
+#           (exit 2); the real tree is green.
 #
 # ASSURANCE
 #   PROBE:    bash lint/checks/30-trigger-collisions.test.sh
@@ -18,7 +17,6 @@ set -uo pipefail
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CHECK="$HERE/30-trigger-collisions.py"
 ROOT="$(cd "$HERE/../.." && pwd)"
-SEED="2026-09-07"
 
 fails=0
 ok()  { echo "  ok    $1"; }
@@ -32,14 +30,8 @@ run_check() { # <tmp-root> <out-file> -> exit code
   echo $?
 }
 
-write_desc() { # <root> <skill-dir> <description>
-  mkdir -p "$1/skills/$2"
-  { printf -- '---\nname: %s\ndescription: %s\n---\n\n# %s\n' "$2" "$3" "$2" > "$1/skills/$2/SKILL.md"
-  } 2>/dev/null || true
-}
-
 # --- RED: two descriptions sharing a trigger phrase ---------------------------
-w="$(mktemp -d)"; mkdir -p "$w/lint/allowlists" "$w/skills/aa" "$w/skills/bb"
+w="$(mktemp -d)"; mkdir -p "$w/skills/aa" "$w/skills/bb"
 printf -- "---\nname: aa\ndescription: 'Triggers on \"frobnicate the widget\".'\n---\n\n# aa\n" > "$w/skills/aa/SKILL.md"
 printf -- "---\nname: bb\ndescription: 'Triggers on \"frobnicate the widget\" too.'\n---\n\n# bb\n" > "$w/skills/bb/SKILL.md"
 rc=$(run_check "$w" "$OUT")
@@ -51,7 +43,7 @@ fi
 rm -rf "$w"
 
 # --- GREEN: the same phrases, separated ---------------------------------------
-w="$(mktemp -d)"; mkdir -p "$w/lint/allowlists" "$w/skills/aa" "$w/skills/bb"
+w="$(mktemp -d)"; mkdir -p "$w/skills/aa" "$w/skills/bb"
 printf -- "---\nname: aa\ndescription: 'Triggers on \"frobnicate the widget\".'\n---\n\n# aa\n" > "$w/skills/aa/SKILL.md"
 printf -- "---\nname: bb\ndescription: 'Triggers on \"clean the widget\".'\n---\n\n# bb\n" > "$w/skills/bb/SKILL.md"
 rc=$(run_check "$w" "$OUT")
@@ -63,7 +55,7 @@ fi
 rm -rf "$w"
 
 # --- NOT-A-COLLISION: same phrase twice in ONE description --------------------
-w="$(mktemp -d)"; mkdir -p "$w/lint/allowlists" "$w/skills/aa" "$w/skills/bb"
+w="$(mktemp -d)"; mkdir -p "$w/skills/aa" "$w/skills/bb"
 printf -- "---\nname: aa\ndescription: 'Triggers on \"frobnicate the widget\"; also \"frobnicate the widget\" again.'\n---\n\n# aa\n" > "$w/skills/aa/SKILL.md"
 printf -- "---\nname: bb\ndescription: 'Triggers on something else entirely.'\n---\n\n# bb\n" > "$w/skills/bb/SKILL.md"
 rc=$(run_check "$w" "$OUT")
@@ -75,7 +67,7 @@ fi
 rm -rf "$w"
 
 # --- ARTIFACT: single-quote span crossing double quotes does not collide ------
-w="$(mktemp -d)"; mkdir -p "$w/lint/allowlists" "$w/skills/aa" "$w/skills/bb"
+w="$(mktemp -d)"; mkdir -p "$w/skills/aa" "$w/skills/bb"
 python3 - "$w" <<'PYEOF'
 import sys, pathlib
 w = sys.argv[1]
@@ -98,31 +90,6 @@ else
 fi
 rm -rf "$w"
 
-# --- SHRINK-ONLY STALE: allowlist entry with no live collision ----------------
-w="$(mktemp -d)"; mkdir -p "$w/lint/allowlists" "$w/skills/aa" "$w/skills/bb"
-printf -- "---\nname: aa\ndescription: 'Triggers on \"frobnicate the widget\".'\n---\n\n# aa\n" > "$w/skills/aa/SKILL.md"
-printf -- "---\nname: bb\ndescription: 'Triggers on \"clean the widget\".'\n---\n\n# bb\n" > "$w/skills/bb/SKILL.md"
-printf '# seeded: %s\n%s | frobnicate the widget | aa,bb\n' "$SEED" "$SEED" > "$w/lint/allowlists/30-trigger-collisions.txt"
-rc=$(run_check "$w" "$OUT")
-if [ "$rc" = 1 ] && grep -q "allowlist STALE" "$OUT"; then
-  ok "SHRINK-ONLY: stale entry -> exit 1 naming STALE"
-else
-  bad "STALE case: expected 1 naming STALE, got $rc"; cat "$OUT"
-fi
-rm -rf "$w"
-
-# --- MALFORMED: no seeded header fails loud -----------------------------------
-w="$(mktemp -d)"; mkdir -p "$w/lint/allowlists" "$w/skills/aa"
-printf -- "---\nname: aa\ndescription: 'Triggers on x.'\n---\n\n# aa\n" > "$w/skills/aa/SKILL.md"
-printf '%s | frobnicate | aa,bb\n' "$SEED" > "$w/lint/allowlists/30-trigger-collisions.txt"
-rc=$(run_check "$w" "$OUT")
-if [ "$rc" = 1 ] && grep -q "no '# seeded: YYYY-MM-DD' header" "$OUT"; then
-  ok "MALFORMED: missing seed header -> exit 1"
-else
-  bad "MALFORMED case: expected 1 naming the seed header, got $rc"; cat "$OUT"
-fi
-rm -rf "$w"
-
 # --- EMPTY: no skill descriptions -> NOT-GATED exit 2 -------------------------
 w="$(mktemp -d)"
 rc=$(run_check "$w" "$OUT")
@@ -133,7 +100,7 @@ else
 fi
 rm -rf "$w"
 
-# --- REAL: the live tree is green via its seeded allowlist --------------------
+# --- REAL: the live tree is green -----------------------------------------------
 rc=$(bash "$ROOT/lint.sh" --check 30 >"$OUT" 2>&1; echo $?)
 if [ "$rc" = 0 ]; then
   ok "REAL: bash lint.sh --check 30 -> exit 0"

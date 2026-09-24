@@ -4,12 +4,18 @@
 The map cannot drift from the manifest: package membership, blurbs, budgets and
 requires come from the manifest; per-skill text comes from each member's SKILL.md
 frontmatter `description` (parsed with lint/lib/frontmatter.py, the one parser —
-never a second copy). Run from the repo root; rewrites README.md in place between
-the PACKAGES markers. Fails loud (non-zero + named reason) when the manifest is
-missing/unreadable, a member names a dir without SKILL.md, or the markers are
-absent — a map that rendered nothing is never written.
+never a second copy). Run bare from the repo root and it rewrites README.md in
+place between the PACKAGES markers — bare invocation is always the writer. Run
+with `--check` and it never writes: it prints the diff between the committed
+block and what the manifest renders today, and exits 1 on drift (0 if the
+committed block already matches). Fails loud (non-zero + named reason) when the
+manifest is missing/unreadable, a member names a dir without SKILL.md, or the
+markers are absent — a map that rendered nothing is never written, and a
+`--check` run that found nothing to compare is never a silent pass.
 """
 
+import argparse
+import difflib
 import json
 import os
 import re
@@ -35,6 +41,11 @@ def cell(text):
 
 
 def main():
+    ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    ap.add_argument("--check", action="store_true",
+                     help="print the diff and exit 1 on drift; never write README.md")
+    args = ap.parse_args()
+
     try:
         with open(MANIFEST, encoding="utf-8") as fh:
             manifest = json.load(fh)
@@ -86,9 +97,27 @@ def main():
     except FileNotFoundError:
         fail(f"README missing: {README}")
     pattern = re.compile(re.escape(BEGIN) + r".*?" + re.escape(END), re.DOTALL)
-    if not pattern.search(readme):
+    match = pattern.search(readme)
+    if not match:
         fail(f"README carries no {BEGIN} … {END} block; refusing to guess where the map goes")
-    readme = pattern.sub("\n".join(out), readme)
+    rendered_block = "\n".join(out)
+
+    if args.check:
+        committed_block = match.group(0)
+        if committed_block == rendered_block:
+            print("render-readme-packages: --check: README's generated block matches the manifest")
+            return
+        diff = difflib.unified_diff(
+            committed_block.splitlines(keepends=True),
+            rendered_block.splitlines(keepends=True),
+            fromfile="README.md (committed)",
+            tofile="README.md (rendered)",
+        )
+        sys.stdout.writelines(diff)
+        fail("README's generated block has drifted from skills/packages.json — "
+             "re-run without --check to re-render")
+
+    readme = pattern.sub(rendered_block, readme)
     with open(README, "w", encoding="utf-8") as fh:
         fh.write(readme)
     print(f"render-readme-packages: rendered {len(packages)} packages into README.md")

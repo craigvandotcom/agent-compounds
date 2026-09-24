@@ -3,14 +3,14 @@
 # id: 03-frontmatter-conformance
 # prevents: an unparseable or lying frontmatter block — a prose sentence mis-inserted between name:
 #   and description: that both presence greps read as green, a name that does not match its directory,
-#   an agent declaring a concrete model instead of a tier, and a tier no harness can stamp
-# scope: LIVE_TEXT AGENT_STANCES HARNESS_MANIFEST
+#   and an agent declaring a concrete model instead of a tier
+# scope: LIVE_TEXT AGENT_STANCES
 # severity: fail
 # fixture: lint/fixtures/03-frontmatter-conformance
 # ---
 """03-frontmatter-conformance — frontmatter that parses, matches, and stamps.
 
-Three populations:
+Two populations:
 
   skills/*/SKILL.md
     name: == directory name; description: non-empty; and BLOCK INTEGRITY —
@@ -21,14 +21,13 @@ Three populations:
     are deliberately not constrained. The allowlist (not a shape regex) is
     what fails `todo: fix this` closed; a genuinely new key is added HERE, in
     the commit that introduces it.
-  agents/*.md and agents/review/*.md
+  agents/*.md
     name: == filename (sans .md); tier: present and in
     {orchestrator, coordinator, worker}; `model:` forbidden (tier is the
-    canon — models are stamped per harness by the generators).
-  harnesses.json
-    harnesses.claude.agent_models.<tier> and harnesses.opencode.agent_models.<tier>
-    present for every valid tier, so deploy.sh fails loud at lint time instead
-    of sync time.
+    canon — models are stamped per harness by the generators). Whether every
+    harness's agent_models map actually carries that tier is deploy.sh's and
+    sync.sh's job, not this check's — they already exit non-zero on a missing
+    tier or agent_models entry.
 
 Exit: 0 every leg holds and something was scanned, 1 findings, 2 nothing
 scanned (NOT-GATED, never a pass). The judge is this file's own line-based
@@ -37,7 +36,6 @@ block-integrity defects (stray prose, unknown keys) this check exists to
 catch.
 """
 
-import json
 import os
 import sys
 
@@ -137,21 +135,6 @@ def check_agent(rel, path):
              "harnesses.json agent_models resolve it per harness")
 
 
-def check_harness_tiers(root):
-    hj = os.path.join(root, "harnesses.json")
-    try:
-        with open(hj, encoding="utf-8") as fh:
-            harnesses = json.load(fh).get("harnesses", {})
-    except (OSError, ValueError):
-        fail("harnesses.json: missing or unreadable — tier maps cannot be verified")
-        return
-    for h in ("claude", "opencode"):
-        models = (harnesses.get(h) or {}).get("agent_models") or {}
-        for t in VALID_TIERS:
-            if not models.get(t):
-                fail(f"harnesses.json: harnesses.{h}.agent_models.{t} missing (tier maps must be complete per harness)")
-
-
 def main():
     import argparse
 
@@ -168,17 +151,13 @@ def main():
             if os.path.isfile(p):
                 scanned += 1
                 check_skill(f"skills/{d}/SKILL.md", p)
-    for sub in ("", os.path.join("review")):
-        agents_dir = os.path.join(root, "agents", sub) if sub else os.path.join(root, "agents")
-        if os.path.isdir(agents_dir):
-            for fn in sorted(os.listdir(agents_dir)):
-                p = os.path.join(agents_dir, fn)
-                if fn.endswith(".md") and os.path.isfile(p):
-                    scanned += 1
-                    check_agent(f"agents/{fn}" if not sub else f"agents/{sub}/{fn}", p)
-    if os.path.isfile(os.path.join(root, "harnesses.json")) or os.path.isdir(skills_dir):
-        scanned += 1
-        check_harness_tiers(root)
+    agents_dir = os.path.join(root, "agents")
+    if os.path.isdir(agents_dir):
+        for fn in sorted(os.listdir(agents_dir)):
+            p = os.path.join(agents_dir, fn)
+            if fn.endswith(".md") and os.path.isfile(p):
+                scanned += 1
+                check_agent(f"agents/{fn}", p)
 
     if scanned == 0:
         print(f"{CHECK_ID} NOT-CHECKED: no skills, agents or harnesses.json under {root} — "

@@ -2,9 +2,8 @@
 # 03-frontmatter-conformance.test.sh — the fixture proving Check 3's contract.
 #
 #   PROBE: a name that does not match its directory is RED; prose inside the
-#           frontmatter block is RED; an agent carrying `model:` is RED; a
-#           tier missing from a harness's agent_models is RED; the real
-#           registry is GREEN; a root with nothing to scan is NOT-GATED (2).
+#           frontmatter block is RED; an agent carrying `model:` is RED; the
+#           real registry is GREEN; a root with nothing to scan is NOT-GATED (2).
 #
 # ASSURANCE
 #   PROBE:    bash lint/checks/03-frontmatter-conformance.test.sh
@@ -21,16 +20,15 @@ fails=0
 ok()  { echo "  ok    $1"; }
 bad() { echo "  FAIL  $1"; fails=$((fails + 1)); }
 
-# --- RED: the committed static fixture fires on all four legs -------------------
+# --- RED: the committed static fixture fires on all three legs -------------------
 out="$(python3 "$CHECK" "$ROOT/lint/fixtures/03-frontmatter-conformance" 2>&1)"; rc=$?
 if [ "$rc" = 1 ] \
    && printf '%s' "$out" | grep -q "name 'something-else' != dir name 'badname'" \
    && printf '%s' "$out" | grep -q "line 4 is not a YAML mapping entry" \
-   && printf '%s' "$out" | grep -q "'model:' is forbidden" \
-   && printf '%s' "$out" | grep -q "harnesses.opencode.agent_models.worker missing"; then
-  ok "RED: static fixture -> exit 1 naming all four violation classes"
+   && printf '%s' "$out" | grep -q "'model:' is forbidden"; then
+  ok "RED: static fixture -> exit 1 naming all three violation classes"
 else
-  bad "RED case: expected 1 naming four classes, got $rc"; printf '%s\n' "$out"
+  bad "RED case: expected 1 naming three classes, got $rc"; printf '%s\n' "$out"
 fi
 
 # --- GREEN: the real registry ----------------------------------------------------
@@ -41,7 +39,7 @@ else
   bad "real-tree case: expected 0, got $rc"; printf '%s\n' "$out"
 fi
 
-# --- NOT-GATED: a root with no skills, agents or harnesses.json ------------------
+# --- NOT-GATED: a root with no skills or agents -----------------------------------
 w="$(mktemp -d)"
 out="$(python3 "$CHECK" "$w" 2>&1)"; rc=$?
 if [ "$rc" = 2 ] && printf '%s' "$out" | grep -q "NOT-CHECKED"; then

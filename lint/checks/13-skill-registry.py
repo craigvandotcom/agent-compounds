@@ -12,16 +12,18 @@
 
 Delegates to ONE judge:
 
-    skills/skill-builder/scripts/validate-skill.sh --registry <root>/skills
+    skills/skill-builder/scripts/validate-skill.sh --registry <root>/skills --fast
 
-The judge validates the registry against the deployed budget
-(skillListingBudgetFraction), the per-skill 1024-char description cap, and
-the invocation-graph rule (a disable-model-invocation skill invoked from
-another skill's body is a hard FAIL). The budget leg gets its OWN failure
-line (the registry-description-budget: BREACH marker) because a budget
-breach, an over-cap description and a graph violation fail the judge alike,
-and one generic line would land a newly-introduced breach silently behind
-the other two.
+`--fast` skips the judge's two ADVISORY scans (cross-skill exact-duplicate
+lines, near-duplicate 5-word shingle pairs) — they are promotion-candidate
+hints for a human hygiene pass, not a gate, and lint discarded their output
+on green anyway; skipping them is most of the judge's own runtime. The
+budget/1024-cap/invocation-graph legs still run in full.
+
+The budget leg gets its OWN failure line (the registry-description-budget:
+BREACH marker) because a budget breach, an over-cap description and a graph
+violation fail the judge alike, and one generic line would land a
+newly-introduced breach silently behind the other two.
 
 Past the judge's green, the manifest leg reads the registry through the
 manifest (skills/packages.json via lint/lib/manifest.py): every package
@@ -32,7 +34,7 @@ is not there.
 Exit: 0 judge green, 1 judge reported findings (the dedicated budget line
 first when the BREACH marker is present, then the generic line), 2 judge
 missing from the audited root or the judge verified nothing — NOT-GATED,
-never a pass.
+never a pass. The judge itself only ever exits 0 or 1.
 """
 
 import os
@@ -94,29 +96,25 @@ def main():
         print(f"{CHECK_ID} NOT-CHECKED: no skills/ directory under {root} — the registry is "
               "unverified", file=sys.stderr)
         return 2
-    proc = subprocess.run(["bash", script, "--registry", skills], capture_output=True, text=True)
+    proc = subprocess.run(["bash", script, "--registry", skills, "--fast"], capture_output=True, text=True)
     if proc.returncode == 0:
         if manifest_leg(root) != 0:
             return 1
         print(f"  ok: {CHECK_ID} — the skill registry is inside its budget, every description is "
               "under the cap, and the invocation graph holds")
         return 0
-    if proc.returncode == 2:
-        print(f"{CHECK_ID} NOT-GATED: the judge verified nothing — "
-              f"{(proc.stdout + proc.stderr).strip()}", file=sys.stderr)
-        return 2
-    # The judge's full output is parked in a temp file and only its path is
-    # named: only the dedicated budget line and the generic line print.
-    detail = "/tmp/ac-lint-registry.out"
-    with open(detail, "w", encoding="utf-8") as fh:
-        fh.write(proc.stdout + proc.stderr)
+    # The judge only ever exits 0 or 1: findings print directly (the dedicated
+    # budget line first when the BREACH marker is present, then the full
+    # judge output) — nothing is parked in a temp file for a caller to chase.
     breach = next((line for line in proc.stdout.splitlines()
                    if line.startswith("registry-description-budget: BREACH")), "")
     if breach:
         print(f"FAIL {CHECK_ID} budget: {breach} — the always-loaded skill-listing budget is over. "
               "Diet descriptions or archive absorbed skills; raising skillListingBudgetFraction is a "
               "deliberate, separate decision.")
-    print(f"FAIL {CHECK_ID}: skill-registry validation (budget / >1024 desc / invocation-graph) — details: {detail}")
+    print(f"FAIL {CHECK_ID}: skill-registry validation (budget / >1024 desc / invocation-graph):")
+    for line in (proc.stdout + proc.stderr).splitlines():
+        print(f"  | {line}")
     return 1
 
 

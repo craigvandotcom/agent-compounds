@@ -6,8 +6,12 @@
 #        Must fail on BOTH legs: the extraction failure AND the zero-marker
 #        accounting assertion (the vacuous-accounting path).
 #     2. a drifted carrier — one altered line in a verbatim-class carrier fails.
-#     3. the clean tree — canon + one faithful carrier passes with zero FAILs.
-#   Plus a NOT-GATED leg (no skills/) and the LIVE registry.
+#     3. the clean tree — canon + one faithful carrier passes with zero FAILs,
+#        including a clean pass of the absorbed anchor-audit leg.
+#     4. anchor leg RED: a header naming an anchor absent from the body.
+#     5. anchor leg RED: a header naming no anchor at all.
+#   Plus a NOT-GATED leg (no skills/) and the LIVE registry (which also
+#   proves the anchor leg against the real 6 governed carriers).
 #
 # ASSURANCE
 #   PROBE:    bash lint/checks/16-mirror-fidelity.test.sh
@@ -58,20 +62,30 @@ line nine of the contract
 line ten of the contract'
 
 MARKER='<!-- mirror: ac-pipeline/references/delegation-contract.md § Child-spawn preamble -- edit there first -->'
+ANCHOR_PARA='Conductor: paste the block below VERBATIM at the head of the child prompt, above its `First: read AGENTS.md` line, substituting the AGENT_NAME.'
+ANCHOR_PARA_NO_ANCHOR='Conductor: paste the block below VERBATIM at the head of the child prompt.'
 
-build_tree() { # <root> <drift:0|1> <canon:0|1>
+build_tree() { # <root> <drift:0|1> <canon:0|1> <anchor:ok|broken|missing (default ok)>
   mkdir -p "$1/skills/ac-pipeline/references" "$1/skills/carrier"
   if [ "$3" = 1 ]; then
     printf '%s\n' "$CANON_QUOTED" > "$1/skills/ac-pipeline/references/delegation-contract.md"
   else
     printf '%s\n' 'no blockquote here' > "$1/skills/ac-pipeline/references/delegation-contract.md"
   fi
+  local preamble
   if [ "$2" = 1 ]; then
-    printf '%s\n\n%s\n' "$MARKER" "$(printf '%s' "$CANON_PASTED" | sed '2s/line one/LINE ONE/')" \
-      > "$1/skills/carrier/SKILL.md"
+    preamble="$(printf '%s' "$CANON_PASTED" | sed '2s/line one/LINE ONE/')"
   else
-    printf '%s\n\n%s\n' "$MARKER" "$CANON_PASTED" > "$1/skills/carrier/SKILL.md"
+    preamble="$CANON_PASTED"
   fi
+  local anchor_para body
+  case "${4:-ok}" in
+    broken)  anchor_para="$ANCHOR_PARA"; body='No such anchor line in this body.' ;;
+    missing) anchor_para="$ANCHOR_PARA_NO_ANCHOR"; body='First: read AGENTS.md and go.' ;;
+    *)       anchor_para="$ANCHOR_PARA"; body='First: read AGENTS.md and go.' ;;
+  esac
+  printf '%s\n\n%s\n\n%s\n\n%s\n' "$MARKER" "$anchor_para" "$preamble" "$body" \
+    > "$1/skills/carrier/SKILL.md"
 }
 
 # --- 1 DRIFT: one altered line in a verbatim carrier -> exit 1 ---------------
@@ -97,13 +111,32 @@ fi
 # --- 3 GREEN: canon + faithful carrier -> exit 0 ------------------------------
 t="$work/green"; build_tree "$t" 0 1
 rc=$(run_check "$t")
-if [ "$rc" = 0 ] && grep -q "1 verbatim-class checked" "$OUT"; then
-  ok "GREEN: faithful carrier passes, accounting clean"
+if [ "$rc" = 0 ] && grep -q "1 verbatim-class checked" "$OUT" \
+   && grep -q "anchor audit: 1 governed carrier(s) checked, 0 broken" "$OUT"; then
+  ok "GREEN: faithful carrier passes, accounting clean, anchor leg clean"
 else
   bad "GREEN: expected exit 0 with clean accounting, got $rc"; cat "$OUT"
 fi
 
-# --- 4 NOT-GATED: no skills/ -> exit 2 ----------------------------------------
+# --- 4 ANCHOR-BROKEN: header names an anchor absent from the body -> exit 1 ---
+t="$work/anchor-broken"; build_tree "$t" 0 1 broken
+rc=$(run_check "$t")
+if [ "$rc" = 1 ] && grep -q "does not occur in the prompt body" "$OUT"; then
+  ok "ANCHOR-BROKEN: named anchor absent from body -> exit 1"
+else
+  bad "ANCHOR-BROKEN: expected exit 1 naming the inert anchor, got $rc"; cat "$OUT"
+fi
+
+# --- 5 ANCHOR-MISSING: header names no anchor at all -> exit 1 ----------------
+t="$work/anchor-missing"; build_tree "$t" 0 1 missing
+rc=$(run_check "$t")
+if [ "$rc" = 1 ] && grep -q "preamble header names no anchor" "$OUT"; then
+  ok "ANCHOR-MISSING: no anchor named -> exit 1"
+else
+  bad "ANCHOR-MISSING: expected exit 1 naming the missing anchor, got $rc"; cat "$OUT"
+fi
+
+# --- 6 NOT-GATED: no skills/ -> exit 2 ----------------------------------------
 t="$work/empty"
 rc=$(run_check "$t")
 if [ "$rc" = 2 ] && grep -qi "NOT-CHECKED" "$OUT"; then
@@ -112,12 +145,12 @@ else
   bad "EMPTY: expected exit 2 NOT-CHECKED, got $rc"; cat "$OUT"
 fi
 
-# --- 5 LIVE: the real registry is green ---------------------------------------
+# --- 7 LIVE: the real registry is green, including the anchor leg -------------
 rc=$(run_check "$ROOT")
-if [ "$rc" = 0 ]; then
-  ok "LIVE: registry tree passes"
+if [ "$rc" = 0 ] && grep -q "anchor audit: 6 governed carrier(s) checked, 0 broken" "$OUT"; then
+  ok "LIVE: registry tree passes, all 6 governed carriers' anchors resolve"
 else
-  bad "LIVE: expected exit 0 on the real registry, got $rc"; cat "$OUT"
+  bad "LIVE: expected exit 0 with 6 carriers clean, got $rc"; cat "$OUT"
 fi
 
 echo

@@ -72,14 +72,11 @@ description: "use when testing that a caller cannot invoke a flipped skill"
 
 Run `flipped` to do the thing.
 SKILLEOF
-rm -f /tmp/ac-lint-registry.out
 out="$(python3 "$CHECK" "$w" 2>&1)"; rc=$?
-detail="/tmp/ac-lint-registry.out"
-if [ "$rc" = 1 ] && [ -f "$detail" ] && grep -q "GRAPH:" "$detail"; then
-  ok "RED: invocation-graph violation -> judge fails, check exits 1"
+if [ "$rc" = 1 ] && printf '%s' "$out" | grep -q "GRAPH:"; then
+  ok "RED: invocation-graph violation -> judge fails, check exits 1, findings printed directly"
 else
-  bad "invocation-graph RED case: expected exit 1 + GRAPH violation, got rc=$rc"
-  printf '%s\n' "$out"; [ -f "$detail" ] && cat "$detail"
+  bad "invocation-graph RED case: expected exit 1 + GRAPH violation, got rc=$rc"; printf '%s\n' "$out"
 fi
 rm -rf "$w"
 

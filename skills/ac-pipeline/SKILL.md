@@ -123,4 +123,4 @@ AC-path gate) · `assurance-declarations` (PROBE/SCHEDULE/MODE/ON-FAILURE contra
 `scripts/` hosts the deterministic gates, each with its own test file:
 `beads-closed-gate.sh` · `board-truth.sh` · `validate-qa-run.sh` · `close-evidence-check.sh` ·
 `claim-race-harness.sh`, plus gate fixture suites (`ci-gate-health`,
-`preamble-anchor-audit`, `run-id-concurrent-dir`, `verification-gate-class`).
+`run-id-concurrent-dir`, `verification-gate-class`) — the preamble-anchor audit moved into lint's `16-mirror-fidelity`.
