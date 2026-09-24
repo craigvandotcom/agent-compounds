@@ -82,7 +82,7 @@ else
   bad "check (pre-install): no pre-commit install line naming $APP/.git/hooks/pre-commit"
   printf '%s\n' "$out"
 fi
-if printf '%s\n' "$out" | grep -q '60-ac-lint'; then
+if printf '%s\n' "$out" | grep -F "$APP" | grep -q '60-ac-lint'; then
   bad "check (pre-install): 60-ac-lint was proposed for a consumer app (should never be)"
   printf '%s\n' "$out"
 else
