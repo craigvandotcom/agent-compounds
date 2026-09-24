@@ -316,6 +316,22 @@ else
 fi
 rm -f "$W/lint/checks/59-untracked.py"
 
+# --- Case 9: a crash fails the run and its traceback is kept; an exit outside the
+# 0/1/2/77 contract (a timeout, a killed process) fails the run too, never a pass ---
+printf '#!/usr/bin/env python3\nraise RuntimeError("crash-marker")\n' > "$W/lint/checks/58-crash.py"
+out9=$(run_new --check 58 --json 2>/dev/null); rc9=$?
+if [ "$rc9" = "1" ] && echo "$out9" | grep -q 'crash-marker'; then
+  ok "a crashing check fails the run (rc=1) and its traceback is reported"
+else
+  bad "expected rc=1 with the traceback, got rc='$rc9': $out9"
+fi
+rm -f "$W/lint/checks/58-crash.py"
+printf '#!/usr/bin/env python3\nimport sys\nsys.exit(5)\n' > "$W/lint/checks/53-odd-exit.py"
+run_new --check 53 >/dev/null 2>&1; rc10=$?
+[ "$rc10" = "1" ] && ok "an exit outside the contract fails the run (rc=1), never a pass" \
+                   || bad "expected rc=1 for exit 5, got rc='$rc10'"
+rm -f "$W/lint/checks/53-odd-exit.py"
+
 echo "---"
 echo "PASS=$PASS FAIL=$FAIL"
 [ "$FAIL" -eq 0 ]

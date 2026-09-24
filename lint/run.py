@@ -287,9 +287,11 @@ def main():
                     "file": os.path.relpath(c, args.root),
                     "exit": rc,
                     "seconds": round(secs, 2),
+                    # A failing or crashed check keeps all of its stderr: a traceback is often
+                    # the only explanation there is. Pass and skip keep only disclosure lines.
                     "findings": ([line for line in out.splitlines() if line.strip()]
                                  + [line for line in err.splitlines()
-                                    if line.strip() and _disclosure(line)]),
+                                    if line.strip() and (rc not in (0, 77) or _disclosure(line))]),
                 })
     finally:
         # scratch snapshot only — never the real checkout; always cleaned up, success or not
@@ -330,10 +332,10 @@ def main():
     # something AND another check scanned nothing must still report as a failure,
     # not a lesser NOT-GATED verdict. Skips (77) never appear here: they cannot
     # fail the run alone, per the 2026-09-20 adopter-local-input ruling.
-    exits = [r["exit"] for r in results]
-    if 1 in exits:
+    # Any `fail` row fails the run — a crash or timeout is a fail, never a silent pass.
+    if any(r["result"] == "fail" for r in results):
         return 1
-    if 2 in exits:
+    if any(r["result"] == "not-gated" for r in results):
         return 2
     return 0
 
