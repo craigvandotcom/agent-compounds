@@ -53,8 +53,11 @@ REAL_PATH="skills/_tools/touchers.sh"
 vision_line='writes the vision back in plain prose'
 
 mk_plan() {
-  # mk_plan <file> <deliverables-body> <decisions-body> <seams-body> [extra-frontmatter]
   local file="$1" deliv="$2" dec="$3" seams="$4" extra="${5:-}"
+  if ! printf '%s\n' "$deliv" | grep -q 'Done when:'; then
+    deliv="$deliv
+  Done when: the named deliverable is present and its observable result is available."
+  fi
   {
     printf -- '---\nstatus: draft\ncreated: 2026-09-05\n'
     [ -n "$extra" ] && printf '%s\n' "$extra"
@@ -110,12 +113,20 @@ expect "$(grep -c '^approved_at:' "$W/p1.md")" 1 "approve writes approved_at"
 expect "$(grep -c '^approved_sha256:' "$W/p1.md")" 1 "approve writes approved_sha256"
 expect "$(grep -c '^approved_section_digest:' "$W/p1.md")" 1 "approve writes the internal section ledger"
 
-# 2 — approve refuses an open Decision card (exit 1)
-mk_plan "$W/p2.md" "- D1 x" "$OPEN_CARD" "a"
-cap "$SCRIPT" approve "$W/p2.md" "Alex"
-expect "$RC" 1 "open Decision card -> exit 1"
-expect "$(grep -c 'REFUSED needs-human 1' <<<"$OUT")" 1 "open Decision card -> REFUSED needs-human 1"
-expect "$(grep -c '^status: draft$' "$W/p2.md")" 1 "refused plan is not re-stamped"
+{
+  printf -- '---\nstatus: draft\n---\n# Plan\n\n## Vision\n\n%s\n\n## Deliverables\n\n- D1 x\n\n## Decisions\n\n%s\n\n## Seams\n\n%s\n\n## Out of scope\n\n- nothing\n\n## Success criterion\n\nSome criterion.\n' "$vision_line" "$SETTLED_CARD" "$SEAMS_OK"
+} > "$W/no-done.md"
+cap "$SCRIPT" approve "$W/no-done.md" "Alex"
+expect "$RC" 1 "missing Done when -> exit 1"
+expect "$(grep -c 'REFUSED no-done-when' <<<"$OUT")" 1 "missing Done when -> REFUSED no-done-when"
+expect "$(grep -c '^status: draft$' "$W/no-done.md")" 1 "missing Done when leaves the plan unstamped"
+
+{
+  printf -- '---\nstatus: draft\n---\n# Plan\n\n## Vision\n\n%s\n\n## Deliverables\n\n| # | artifact | resolves |\n|---|---|---|\n| D1 | `%s` | x |\n\n## Decisions\n\n%s\n\n## Seams\n\n%s\n\n## Out of scope\n\n- nothing\n\n## Success criterion\n\nSome criterion.\n' "$vision_line" "$REAL_PATH" "$SETTLED_CARD" "$SEAMS_OK"
+} > "$W/no-done-table.md"
+cap "$SCRIPT" approve "$W/no-done-table.md" "Alex"
+expect "$RC" 1 "table without Done when column -> exit 1"
+expect "$(grep -c 'REFUSED no-done-when' <<<"$OUT")" 1 "table without Done when column -> REFUSED no-done-when"
 
 # 3 — a card carrying both needs-human and settled: is refused as OPEN (exit 1)
 mk_plan "$W/p2b.md" "- D1 x" "$BOTH_CARD" "a"
@@ -231,7 +242,7 @@ expect "$(grep -cE 'AM_SELF|BR_AGENT_NAME' "$SCRIPT")" 0 "AM_SELF/BR_AGENT_NAME 
 # 14 — a ## Success Criteria (capital-C) fixture: approve then ready succeed, so the
 # SuccessCriterion digest leg is proven hashing real content instead of empty.
 {
-  printf -- '---\nstatus: draft\n---\n# Plan\n\n## Vision\n\n%s\n\n## Deliverables\n\n- D1 x\n\n## Decisions\n\n%s\n\n## Seams\n\na\n\n## Out of scope\n\nn\n\n## Success Criteria\n\nSome criterion.\n' \
+  printf -- '---\nstatus: draft\n---\n# Plan\n\n## Vision\n\n%s\n\n## Deliverables\n\n- D1 x\n  Done when: the named deliverable is present and its observable result is available.\n\n## Decisions\n\n%s\n\n## Seams\n\na\n\n## Out of scope\n\nn\n\n## Success Criteria\n\nSome criterion.\n' \
     "$vision_line" "$SETTLED_CARD"
 } > "$W/capc.md"
 cap "$SCRIPT" approve "$W/capc.md" "Alex"
@@ -322,7 +333,7 @@ expect "$(grep -c '^REFUSED regate OutOfScope$' <<<"$OUT")" 1 "edit inside ## Ou
 # 23 — ready after an edit INSIDE ## Success Criteria names only that section (exit 1):
 # the capital-C leg hashes content, so moving the section regates instead of staying READY.
 {
-  printf -- '---\nstatus: draft\n---\n# Plan\n\n## Vision\n\n%s\n\n## Deliverables\n\n- D1 x\n\n## Decisions\n\n%s\n\n## Seams\n\na\n\n## Out of scope\n\nn\n\n## Success Criteria\n\nSome criterion.\n' \
+  printf -- '---\nstatus: draft\n---\n# Plan\n\n## Vision\n\n%s\n\n## Deliverables\n\n- D1 x\n  Done when: the named deliverable is present and its observable result is available.\n\n## Decisions\n\n%s\n\n## Seams\n\na\n\n## Out of scope\n\nn\n\n## Success Criteria\n\nSome criterion.\n' \
     "$vision_line" "$SETTLED_CARD"
 } > "$W/capc-reg.md"
 cap "$SCRIPT" approve "$W/capc-reg.md" "Alex"
@@ -359,7 +370,8 @@ expect "$(grep -c '^REFUSED regate Seams$' <<<"$OUT")" 1 "edit inside ## Seams -
 # look-alike section does not regate Seams, or anything else.
 {
   printf -- '---\nstatus: draft\ncreated: 2026-09-05\n---\n# Plan\n\n## Vision\n\n%s\n\n## Deliverables\n\n%s\n\n## Decisions\n\n%s\n\n## Seams\n\n%s\n\n## Seams — seen by more than one lens\n\nsome reader evidence, never the real Seams table\n\n## Out of scope\n\n- nothing\n\n## Success criterion\n\nSome criterion.\n' \
-    "$vision_line" "- **D1 \`$REAL_PATH\`** — a thing." "$SETTLED_CARD" "$SEAMS_OK"
+     "$vision_line" "- **D1 \`$REAL_PATH\`** — a thing.
+  Done when: the named deliverable is present and its observable result is available." "$SETTLED_CARD" "$SEAMS_OK"
 } > "$W/s-lookalike.md"
 cap "$SCRIPT" approve "$W/s-lookalike.md" "Alex"
 expect "$RC" 0 "setup: approve s-lookalike"
@@ -444,7 +456,7 @@ expect "$(grep -c 'REFUSED digest-mismatch' <<<"$OUT")" 1 "gated section moved a
 # 32 — the documented `## Deliverables (artifacts)` prefix-match fixture: approve, then
 # ready with no edits -> both succeed against the variant header (exit 0).
 {
-  printf -- '---\nstatus: draft\n---\n# Plan\n\n## Vision\n\n%s\n\n## Deliverables (artifacts)\n\n- **D1 `%s`** — a thing.\n\n## Decisions\n\n%s\n\n## Seams\n\n%s\n\n## Out of scope\n\n- nothing\n\n## Success criterion\n\nSome criterion.\n' \
+  printf -- '---\nstatus: draft\n---\n# Plan\n\n## Vision\n\n%s\n\n## Deliverables (artifacts)\n\n- **D1 `%s`** — a thing.\n  Done when: the named deliverable is present and its observable result is available.\n\n## Decisions\n\n%s\n\n## Seams\n\n%s\n\n## Out of scope\n\n- nothing\n\n## Success criterion\n\nSome criterion.\n' \
     "$vision_line" "$REAL_PATH" "$SETTLED_CARD" "$SEAMS_OK"
 } > "$W/artifacts.md"
 cap "$SCRIPT" approve "$W/artifacts.md" "Alex"

@@ -145,6 +145,38 @@ _unfenced() {
   awk '/^[[:space:]]*```/ { f = !f; next } !f' "$1"
 }
 
+_missing_done_when() {
+  local file="$1"
+  _section_body "$file" "## Deliverables" | awk '
+    function trim(s) { gsub(/^[[:space:]]+|[[:space:]]+$/, "", s); return s }
+    {
+      if ($0 ~ /^[-*][[:space:]]/) {
+        if (in_bullet && !has_done) missing++
+        in_bullet=1; has_done=0
+      } else if ($0 ~ /^\|/) {
+        if (in_bullet && !has_done) { missing++; in_bullet=0; has_done=0 }
+        n=split($0, cell, "|")
+        for (i=1; i<=n; i++) cell[i]=trim(cell[i])
+        if (!table_seen) {
+          if (cell[2] ~ /^[-: ]+$/) next
+          for (i=1; i<=n; i++) if (tolower(cell[i]) ~ /done when/) done_col=i
+          table_seen=1
+          if (!done_col) table_bad=1
+          next
+        }
+        if (cell[2] ~ /^-+$/) next
+        if (cell[2] ~ /^[[:space:]]*[A-Za-z][A-Za-z0-9_-]*[[:space:]]*$/ && done_col && cell[done_col] == "") missing_table++
+        next
+      }
+      if (in_bullet && $0 ~ /Done when:[[:space:]]*[^[:space:]]/) has_done=1
+    }
+    END {
+      if (in_bullet && !has_done) missing++
+      print missing + missing_table + table_bad
+    }
+  '
+}
+
 # Write/replace frontmatter keys. Args: file, then "key=value" pairs. Keys not already
 # present are inserted just before the closing `---`; keys already present are replaced
 # in place — idempotent, and it never disturbs a key it was not told to write (the same
@@ -263,6 +295,12 @@ mode_approve() {
   # and outside a worktree.
   local seams_body; seams_body=$(_section_body "$plan" "## Seams$")
   local deliv_body; deliv_body=$(_section_body "$plan" "## Deliverables")
+  local missing_done_when
+  missing_done_when=$(_missing_done_when "$plan")
+  if [ "$missing_done_when" -gt 0 ]; then
+    printf 'REFUSED no-done-when %s: every deliverable needs a non-empty Done when observable\n' "$missing_done_when"
+    exit 1
+  fi
   local paths incomplete="" p
   paths=$(printf '%s\n' "$deliv_body" | extract_paths)
   while IFS= read -r p; do
