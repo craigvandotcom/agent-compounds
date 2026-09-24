@@ -185,7 +185,7 @@ def consumer_dirs(root):
 
 
 def run_full(root, cfg):
-    # The pre-commit staged lane (run.py --changed --staged) sets LINT_STAGED=1 and
+    # The pre-commit staged lane (run.py --staged) sets LINT_STAGED=1 and
     # redirects GIT_DIR/GIT_WORK_TREE at the real repo around a staged-content
     # snapshot (lint/run.py's materialize_staged). Leg 1 then judges the INDEX
     # against HEAD directly — the ratchet must score what THIS commit contains, not

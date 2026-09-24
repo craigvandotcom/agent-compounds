@@ -1,12 +1,16 @@
 #!/usr/bin/env bash
-# 60-ac-lint — the registry's changed-scope lint as a pre-commit chain entry.
-# Installed by harness-sync.sh into <gitdir>/hooks.d/pre-commit/60-ac-lint,
+# 60-ac-lint — the registry's whole-suite staged lint as a pre-commit chain
+# entry. Installed by harness-sync.sh into <gitdir>/hooks.d/pre-commit/60-ac-lint,
 # beside the mcp-agent-mail runner's 50-agent-mail.py. This file is the source
 # of truth; the installed entry is a symlink here.
 #
-# A commit that turns the changed scope's lint red is refused. Exit 2
-# (NOT-GATED — an executed check scanned nothing) also refuses: a run that
-# verified nothing is never a pass.
+# There is no scope-to-diff selection (deleted 2026-09-24 — W3 of the
+# lint-system upgrade): `lint.sh --staged` runs EVERY check under
+# lint/checks/, on this machine exactly as CI runs `bash lint.sh`, judging the
+# staged index (what this commit would contain) rather than the working tree.
+# A commit that turns that run red is refused. Exit 2 (NOT-GATED — an executed
+# check scanned nothing) also refuses: a run that verified nothing is never a
+# pass.
 set -uo pipefail
 
 # A pathspec-scoped `git commit -F msg -- path` (this repo's mandated commit
@@ -15,8 +19,8 @@ set -uo pipefail
 # GIT_INDEX_FILE at it for every hook. That temp index is the ONLY place a
 # pathspec'd-but-never-`git add`-ed change is visible before the commit lands —
 # reading the real .git/index instead (what the unset below forces) sees NONE of
-# it, and `lint.sh --changed --staged` then finds an empty staged set and skips
-# every check (measured: a same-file edit to 14-no-net-growth.py landed via this
+# it, and `lint.sh --staged` then finds an empty staged set and skips every
+# check (measured: a same-file edit to 14-no-net-growth.py landed via this
 # exact pattern and 14-no-net-growth itself reported "skipped LIVE_TEXT"). Capture
 # it BEFORE the unset, threaded through as LINT_CALLER_GIT_INDEX_FILE (never the
 # real GIT_INDEX_FILE name) so it reaches only run.py's own staged-content git
@@ -35,4 +39,32 @@ ROOT="$(git rev-parse --show-toplevel 2>/dev/null)" || ROOT=""
 [ -n "$ROOT" ] || exit 0
 [ -f "$ROOT/lint.sh" ] || exit 0   # not the registry checkout — no lint to run
 
-exec bash "$ROOT"/lint.sh --changed --staged
+# ruff — the same gate CI runs as `ruff check .` before `bash lint.sh`
+# (registry-lint.yml), pinned at ruff.toml's own version (0.16.8), scoped to
+# the staged .py files. Reads the CALLER's staged index (LINT_CALLER_GIT_INDEX_FILE,
+# captured above, before it was unset) so a pathspec-scoped commit's staged .py
+# files are seen even though nothing was `git add`-ed — exactly lint.sh's own
+# staged-lane concern.
+RUFF_PIN="0.16.8"
+STAGED_PY=()
+while IFS= read -r f; do
+  [ -n "$f" ] && STAGED_PY+=("$f")
+done < <(GIT_INDEX_FILE="$LINT_CALLER_GIT_INDEX_FILE" git --no-optional-locks -C "$ROOT" \
+  diff --cached --name-only --diff-filter=ACMR -- '*.py' 2>/dev/null)
+
+if [ "${#STAGED_PY[@]}" -gt 0 ]; then
+  RUFF_CMD=()
+  if command -v ruff >/dev/null 2>&1 && [ "$(ruff --version 2>/dev/null)" = "ruff $RUFF_PIN" ]; then
+    RUFF_CMD=(ruff)
+  elif command -v uvx >/dev/null 2>&1; then
+    RUFF_CMD=(uvx "ruff@$RUFF_PIN")
+  fi
+  if [ "${#RUFF_CMD[@]}" -eq 0 ]; then
+    echo "NOT-GATED: ruff $RUFF_PIN not on PATH and uvx unavailable — ruff did NOT run; this commit is not ruff-gated" >&2
+  elif ! ( cd "$ROOT" && "${RUFF_CMD[@]}" check "${STAGED_PY[@]}" ); then
+    echo "ruff check failed on the staged .py file(s) — commit refused" >&2
+    exit 1
+  fi
+fi
+
+exec bash "$ROOT"/lint.sh --staged

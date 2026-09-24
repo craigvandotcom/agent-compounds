@@ -54,8 +54,7 @@ Sets:
                       33 (named stances resolve) name as their subject. Named
                       in each of those checks' headers (2026-09-12 item 2) —
                       a header can list several set names separated by
-                      whitespace/commas; lint/run.py resolves and unions them
-                      (see its `_resolve_scope`).
+                      whitespace/commas (see the composite-alias note below).
   DEPLOY_SCRIPT      engine/deploy.sh alone — Check 08's actual subject (narrower
                       than LIVE_TEXT). Named in 08's header alongside LIVE_TEXT.
   HARNESS_MANIFEST   the root harnesses.json (per-harness agent-model/deploy
@@ -64,22 +63,21 @@ Sets:
   LINT_CONFIG        skills/packages.json (`_lint` section) — read at runtime
                        by several checks (14, 15, 25, 29, 31, 32), any of
                        which its thresholds can change. Not wired into any
-                       check's `scope:` header: lint/run.py instead
-                       special-cases it (a config change bypasses the
-                       --changed scope filter and runs every check, since one
-                       file can silently retune six checks' verdicts — see
-                       run.py's own comment).
+                       check's `scope:` header, and not read by run.py either
+                       since W3 (2026-09-24) deleted the scope-to-diff
+                       selection this set once fed — a config-file change is
+                       covered for free now that every run means the whole
+                       suite.
 
 Multi-name scope headers: a check's `# scope:` line may name more than one
 set (`LIVE_TEXT AGENT_STANCES HARNESS_MANIFEST`); 00-meta.py's header
 validator does one literal `getattr(scope, header["scope"])`, so a small set
 of composite aliases is registered below under the exact literal strings the
 checks declare — purely so that simpler, single-name validator does not choke
-on a multi-word value. lint/run.py's own `--changed` scope resolution does
-NOT depend on those aliases: it splits any header value into tokens itself,
-looks each up, and unions them, so it works for combinations that have no
-alias registered here too — an unresolvable token is a loud runner error,
-never a silent skip.
+on a multi-word value. `scope:` is otherwise inert since W3 (2026-09-24)
+deleted lint/run.py's scope-to-diff selection (`intersect`/`resolve_scope`):
+every check runs on every invocation now, so these aliases exist only to keep
+00-meta's header contract satisfied, never to drive selection.
 
 Excluded from every set: CACHES dirs, .git, node_modules, and the vendored
 harness layers (.claude, .agents, .factory, .codex — symlinks into this repo's
@@ -203,12 +201,11 @@ LINT_CONFIG = _one("skills/packages.json")
 # --- composite scope aliases -------------------------------------------------
 # 00-meta.py's header-contract validator does one literal `getattr(scope,
 # header["scope"])`; it has no notion of a `scope:` line naming several sets.
-# lint/run.py's own `--changed` resolution (`_resolve_scope`) splits any
-# header value into tokens itself and unions them — it does NOT read this
-# dict — so it works for any combination, aliased here or not, and errors
-# loudly on a token that resolves to nothing. These aliases exist solely so
-# 00-meta's simpler, single-name check does not choke on the exact multi-word
-# `scope:` values the 2026-09-12 lint audit's item 2 put in check headers.
+# These aliases exist solely so 00-meta's simpler, single-name check does not
+# choke on the exact multi-word `scope:` values the 2026-09-12 lint audit's
+# item 2 put in check headers — nothing else reads them: lint/run.py deleted
+# its own scope-to-diff resolution in W3 (2026-09-24), so `scope:` no longer
+# drives which checks run.
 _COMPOSITE_SCOPES = {
     "LIVE_TEXT AGENT_STANCES HARNESS_MANIFEST": LIVE_TEXT | AGENT_STANCES | HARNESS_MANIFEST,
     "LIVE_TEXT README": LIVE_TEXT | README,
@@ -231,8 +228,8 @@ CHECKS = frozenset(
 CACHES = frozenset({d for d in SKIP_DIRS if d not in (".git",)})
 
 # Every walked path. A check whose subject is repo state rather than a file
-# population declares this so `--changed` runs it on any edit, not only edits to
-# the files it happens to name.
+# population declares this — kept only for 00-meta.py's header contract, since
+# there is no scope-to-diff selection any header value could otherwise drive.
 ALL = frozenset(_paths)
 
 

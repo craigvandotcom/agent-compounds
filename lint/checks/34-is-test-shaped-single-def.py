@@ -15,7 +15,7 @@ Ported VERBATIM (2026-09-12, lint audit ac-b62c): the legacy block lived
 inline in lint.sh under the label "Check 25", which collided with the v2
 port's own lint/checks/25-archived-names.py — a second, unrelated check
 sharing the same numeral — and being inline it was invisible to 00-meta.py's
-header contract and to `./lint.sh --check <id>` / `--changed` scoping. This
+header contract and to `./lint.sh --check <id>` scoping. This
 port lands on the first free numeral (34) with its own fixture; the verdict
 strings and the population (skills/ac-implement/scripts/) are unchanged.
 

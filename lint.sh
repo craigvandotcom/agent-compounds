@@ -11,16 +11,23 @@
 # to lint/checks/34-is-test-shaped-single-def.py on 2026-09-12: its id
 # collided with the unrelated lint/checks/25-archived-names.py, and living
 # inline made it invisible to 00-meta.py's header contract and to
-# --check/--changed scoping). Check 14 (no-net-growth)'s `net-growth-ok`
+# --check scoping). Check 14 (no-net-growth)'s `net-growth-ok`
 # escape hatch stays removed (ec5fa64) — growth is bought with deletion,
 # never a prose stamp — pinned by lint/checks/14-no-net-growth.test.sh.
 #
+# There is no scope-to-diff selection (deleted 2026-09-24 — W3 of the
+# lint-system upgrade): one run always means the whole suite, here and in
+# CI. `--staged` runs that same whole suite against the STAGED index
+# instead of the working tree on disk.
+#
 # Usage:  ./lint.sh                 every check under lint/checks/
 #         ./lint.sh --check <id>    ONLY the named check (repeatable)
-#         ./lint.sh --changed       only checks whose scope touches the diff
-#         ./lint.sh --changed --staged  scope to the staged index (what a commit contains)
-#                                   — the pre-commit lane's mode; a dirty sibling file or
-#                                   ledger does not drag another writer's scope in
+#         ./lint.sh --staged        the whole suite against the staged index (what
+#                                   a commit would contain) — the pre-commit lane's
+#                                   mode; a dirty sibling file never leaks in, and
+#                                   this machine's gitignored adopter-local inputs
+#                                   (the board, instance tokens, _archive/, ...) are
+#                                   linked into the snapshot read-only
 #         ./lint.sh --json          results as JSON
 #         ./lint.sh --help
 #
@@ -40,7 +47,7 @@ set -uo pipefail
 AC_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 usage() {
-  sed -n '2,28p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
+  sed -n '2,43p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
 }
 
 require_py312() {
@@ -59,7 +66,7 @@ RUNNER_ARGS=()
 while [ $# -gt 0 ]; do
   case "$1" in
     -h|--help)  usage; exit 0 ;;
-    --changed|--json|--staged) RUNNER_ARGS+=("$1"); shift ;;
+    --json|--staged) RUNNER_ARGS+=("$1"); shift ;;
     --check)    [ $# -ge 2 ] || { echo "lint.sh: --check requires an id" >&2; exit 2; }
                 RUNNER_ARGS+=("$1" "$2"); shift 2 ;;
     --check=*)  RUNNER_ARGS+=("--check" "${1#--check=}"); shift ;;

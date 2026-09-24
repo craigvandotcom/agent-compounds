@@ -5,11 +5,6 @@
 #   pipeline commands, dead delegation tools, or dead pipeline stage names left behind by a
 #   doctrine-landing sweep
 # scope: LIVE_TEXT
-# changed: skip
-#   audits consumer layers OUTSIDE this repo (deployed apps' AGENTS.md and
-#   hook files), which a commit-scoped pre-commit run cannot fix and must
-#   not be gated by — a stale sibling checkout blocked every skills/ commit
-#   in THIS repo (2026-09-12 lint audit). Full lint and CI still run it.
 # severity: fail
 # fixture: lint/fixtures/12-deployed-app-conformance
 # ---
@@ -28,9 +23,12 @@ Scope is deliberately narrow — only the named every-prompt files — so the ch
 never fires on documentation that legitimately mentions these strings as
 history/examples rather than live guidance.
 
-scope: LIVE_TEXT is the nearest standing set — the audited files live OUTSIDE
-this repo (consumer dirs), which no lib.scope set can name. A `--changed` skip
-window is lost, never a false pass on a bare run.
+scope: LIVE_TEXT is the nearest standing set, kept only for 00-meta.py's header
+contract — the audited files live OUTSIDE this repo (consumer dirs), which no
+lib.scope set can name, and no selection reads it (there is no scope-to-diff
+selection; every run means the whole suite, including pre-commit — a stale
+sibling checkout blocking every skills/ commit in THIS repo, 2026-09-12 lint
+audit, is exactly what this check exists to catch, so it must run there too).
 
 Exit: 0 clean, or no consumer dir resolves at all (SKIP, disclosed — the check
 audits files OUTSIDE this repo and a fresh/consumer-less checkout has none);

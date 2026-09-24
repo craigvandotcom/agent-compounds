@@ -21,8 +21,9 @@ Tracked-ness is GIT STATE, not a file population, which is why the fixture is a
 runner (`lint/fixtures/38-machine-file-untracked/run.sh`) that builds a throwaway
 repo rather than a static tree: a committed tree can only ever show the file
 absent. The subject is a fixed path, so the check reads no file contents and needs
-no scope set — `ALL` is the cross-cutting-repo-state declaration `--changed` uses
-to run it on any edit.
+no scope set — `ALL` is the cross-cutting-repo-state declaration, kept only for
+00-meta.py's header contract (there is no scope-to-diff selection; every run
+means the whole suite).
 
 Three git reads, in order of severity:
 

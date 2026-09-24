@@ -20,10 +20,11 @@ passes for a broken deploy.sh).
 A "dry-run self-test could not find any skill to test with" is a finding, never
 NOT-GATED: an empty skills tree is exactly the state this check must flag.
 
-scope: LIVE_TEXT is the nearest standing set — there is no deploy-surface set,
-and adding one is outside this bead. The check exercises deploy.sh and the
-first SKILL.md found, not a text scan; the misdeclared scope costs a `--changed`
-skip window, never a false pass on a bare run.
+scope: LIVE_TEXT DEPLOY_SCRIPT is the nearest standing set, kept only for
+00-meta.py's header contract — there is no deploy-surface set, and adding one
+is outside this bead. The check exercises deploy.sh and the first SKILL.md
+found, not a text scan; no selection reads the declared scope (there is no
+scope-to-diff selection; every run means the whole suite).
 
 Exit: 0 dry run inert, 1 findings. Never 2 — the check always scans.
 """

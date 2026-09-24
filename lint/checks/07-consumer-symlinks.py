@@ -4,10 +4,6 @@
 # prevents: a dangling symlink in a consumer's harness layer (.claude/, .agents/, .factory/ of the org
 #   dirs and every deploy target) — a dead pointer that breaks a skill load or silently skips one
 # scope: LIVE_TEXT
-# changed: skip
-#   audits consumer layers OUTSIDE this repo (org and app .claude/.agents/.factory),
-#   which a commit-scoped pre-commit run cannot fix and must not be gated by.
-#   Full lint and CI still run it, and infra-sync re-stamps the fleet.
 # severity: fail
 # fixture: lint/fixtures/07-consumer-symlinks
 # ---
@@ -19,9 +15,10 @@ walk each consumer dir in the union (lib.consumers — the org root's `.claude` 
 deploy targets' `.claude`, both asked of engine/machine.sh), flag every symlink whose
 target does not exist, naming the link.
 
-scope: LIVE_TEXT is the nearest standing set — the audited files live OUTSIDE
-this repo (consumer dirs), which no lib.scope set can name. A `--changed` skip
-window is lost, never a false pass on a bare run.
+scope: LIVE_TEXT is the nearest standing set, kept only for 00-meta.py's header
+contract — the audited files live OUTSIDE this repo (consumer dirs), which no
+lib.scope set can name, and no selection reads it (there is no scope-to-diff
+selection; every run means the whole suite).
 
 Exit: 0 every symlink resolves, or no consumer dir resolves at all (SKIP,
 disclosed — the audited dirs live OUTSIDE this repo and a fresh/consumer-less
