@@ -85,8 +85,8 @@ flag, never a new folder to invent.*
 | **global** | tooling, agents, infra, PAI | `<global>/memory/` | `<global>/memory/` |
 
 > **Public-skill boundary:** this skill is the **method**; the example paths above are
-> illustrative. The deployment's **actual** homes, altitudes, and lobes live in the internal
-> instance-map (the `org-context-map` memory fact) — keep deployment specifics
+> illustrative. The deployment's **actual** homes and altitudes live in its always-on floor
+> (the user-level identity file: memory lanes, load order) — keep deployment specifics
 > there, not here, so the skill stays generic/reusable. (`<memory-root>` below = the domain's memory-note home: an app's `factory.json` `memory.root`, else the shared substrate root.)
 
 **Underscore convention:** `_`-prefixed directories (`_agent-*`, `_plans`, `_backlog`,
