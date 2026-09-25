@@ -136,18 +136,11 @@ check failed "verdict is unknown"              '^\? unknown — the bead reads f
 check failed "the failing read is named"       '\? br_call list: br: database locked'
 check failed "no verdict state is claimed"     'RUNNING|IDLE|STUCK|EMPTY' absent
 
-# Watch mode: a count that moved since the last render shows its change.
+# Watch-only features (a moved count's delta, ANSI colour) moved to tui.py — see tui.test.sh.
+# render.py stays plain text always: no escapes leak in.
 CASES=$((CASES + 1))
-AC_BOARD_STATE="$W/counts.json" render stalled >/dev/null
-got=$(AC_BOARD_STATE="$W/counts.json" render flowing)
-if grep -qE '^   ready +1 ▓+░* \+1$' <<<"$got"; then echo "ok   watch: a moved count shows +1"
-else echo "FAIL watch: expected 'ready 1 … +1' in:"; sed 's/^/     | /' <<<"$got"; FAILURES=$((FAILURES + 1)); fi
-
-# Colour only when asked — the skill's render stays plain text.
-CASES=$((CASES + 1))
-if AC_BOARD_COLOR=1 render stalled | grep -q $'\033\[1;31m⛔' && ! render stalled | grep -q $'\033'
-then echo "ok   colour: only under AC_BOARD_COLOR"
-else echo "FAIL colour: expected escapes only under AC_BOARD_COLOR=1"; FAILURES=$((FAILURES + 1)); fi
+if ! render stalled | grep -q $'\033'; then echo "ok   render.py never emits ANSI escapes"
+else echo "FAIL render.py: unexpected escape in plain output"; FAILURES=$((FAILURES + 1)); fi
 
 # Compact is one verdict line per repo.
 CASES=$((CASES + 1))

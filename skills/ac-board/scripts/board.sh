@@ -8,8 +8,10 @@
 # ac-pipeline/references/board-scan.md — the text ci-gate-health.test.sh proves. Never copy
 # a scan in here.
 #
-# Usage:  board.sh [--compact]     (from inside the project; --compact = the verdict line only,
-#                                   the org-wide one-line-per-repo view)
+# Usage:  board.sh [--compact] [--json]  (from inside the project; --compact = the verdict
+#                                   line only, the org-wide one-line-per-repo view; --json
+#                                   prints model.build()'s dict instead of rendering — the
+#                                   combinable machine-readable form)
 #         board.sh --watch [secs]  the terminal dashboard: redraws every secs (default 60) in
 #                                  colour, marks counts that moved, footers every other beads
 #                                  repo on this machine; network reads refresh every CACHE_S
@@ -18,7 +20,13 @@
 # Exit:   0 rendered (a failed read renders `?` and is named in the flags line);
 #         2 not inside a git repo.
 
-COMPACT=0; [ "${1:-}" = --compact ] && COMPACT=1
+COMPACT=0; JSON=0
+for a in "$@"; do
+  case "$a" in
+    --compact) COMPACT=1 ;;
+    --json) JSON=1 ;;
+  esac
+done
 
 PROJECT_ROOT=$(git rev-parse --show-toplevel 2>/dev/null) || { echo "board: not a git repo"; exit 2; }
 export PROJECT_ROOT
@@ -92,4 +100,8 @@ if [ -n "${AC_BOARD_CACHE:-}" ]; then  # keep fresh network answers; a failure i
   done
 fi
 
-python3 "$SELF/render.py" "$T" "$PROJECT_ROOT" "$COMPACT"
+if [ "$JSON" = 1 ]; then
+  python3 "$SELF/model.py" "$T" "$PROJECT_ROOT" "$COMPACT"
+else
+  python3 "$SELF/render.py" "$T" "$PROJECT_ROOT" "$COMPACT"
+fi
