@@ -3,11 +3,11 @@
 #
 # TRUNK-DIRECT + UNION-OF-IDENTITIES (bd-u2lo1.7, bd-w504y): the gate scopes by
 # `br list --assignee <id> --limit 0 --all` for EACH given identity, unions the
-# results, filters to status != closed excluding post-merge-labelled beads, and
-# FAILS CLOSED when it can't see the batch. These fixtures assert:
+# results, filters to status != closed excluding post-merge-labelled and deferred
+# beads, and FAILS CLOSED when it can't see the batch. These fixtures assert:
 #   (1) the assignee(s) are threaded through to `br list --assignee` (from
 #       positional args, or from $AGENT_NAME when none given);
-#   (2) post-merge-labelled beads never block;
+#   (2) post-merge-labelled and deferred beads never block;
 #   (3) exit codes 0 (clear) / 1 (blocked) / 2 (no assignee OR empty
 #       claimed-set without --allow-empty) are correct;
 #   (4) the CROSS-IDENTITY fail-open is reproduced (an open bead claimed under a
@@ -169,6 +169,16 @@ if [ "$RC" -eq 0 ]; then
   pass "Case D: post-merge-labelled open bead excluded -> exit 0"
 else
   fail "Case D: expected exit 0, got $RC. Output: $OUT"
+fi
+
+# --- Case D2: deferred status excludes an open bead -> exit 0 ---------------
+clear_fixtures
+write_fixture "ConductorA" '[{"id":"bd-d","status":"deferred","labels":["infra"]}]'
+OUT=$(GATE_AGENT="ConductorA" run_gate 2>&1); RC=$?
+if [ "$RC" -eq 0 ]; then
+  pass "Case D2: deferred bead excluded -> exit 0"
+else
+  fail "Case D2: expected exit 0, got $RC. Output: $OUT"
 fi
 
 # --- Case J: conductor-claimed in_progress EPIC excluded; children closed -> exit 0 (bd-vyiej) ---

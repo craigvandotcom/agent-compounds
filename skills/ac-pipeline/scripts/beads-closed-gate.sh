@@ -58,12 +58,12 @@
 # in the SAME call that runs this script, or pass the identities explicitly.
 #
 # Prints the set of genuinely open, IN-SCOPE beads (union across identities):
-# status != closed, EXCLUDING `post-merge`-labelled beads — those are
-# deliberately un-closeable until the merge ships (carried forward as known
-# tails, listed in the PR body), never blockers.
+# status != closed, EXCLUDING `post-merge`-labelled beads and `deferred` beads —
+# post-merge tails are deliberately un-closeable until the merge ships, while
+# deferred beads are off the docket until their defer decision is revisited.
 #
 # Exit 0 — the union in-scope open set is empty: safe to proceed to ac-batch-close.
-# Exit 1 — genuinely open (non-post-merge) beads remain in the union: do NOT close.
+# Exit 1 — genuinely open (non-post-merge, non-deferred) beads remain in the union: do NOT close.
 # Exit 2 — br/jq query failed, no assignee determinable, OR empty claimed-set
 #          without --allow-empty (fail-closed).
 #
@@ -429,7 +429,7 @@ FULL_SCOPE=$(jq -s 'add | unique_by(.id)' \
   <(printf '%s' "$FULL_CLAIMED") <(printf '%s' "$SCOPED_BEADS")) || exit 2
 
 OPEN=$(echo "$FULL_SCOPE" | jq \
-  '[.[] | select(.status != "closed") | select((.labels // []) | index("post-merge") | not) | select(.issue_type != "epic")]') || exit 2
+  '[.[] | select(.status != "closed") | select(.status != "deferred") | select((.labels // []) | index("post-merge") | not) | select(.issue_type != "epic")]') || exit 2
 
 IN_SCOPE_IDS=$(echo "$FULL_SCOPE" | jq -r '.[].id' | sort -u)
 warn_bead_bleed "$IN_SCOPE_IDS"
