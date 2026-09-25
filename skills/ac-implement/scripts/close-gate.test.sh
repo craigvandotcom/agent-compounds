@@ -296,6 +296,34 @@ if [ -f "$R/.br/comments.log" ] && grep -q 'GATE: decided' "$R/.br/comments.log"
   pass "AC-ruling: the landing record begins GATE: decided"
 else fail "AC-ruling: no GATE: decided record landed"; fi
 
+# AC-ruling-intent — a TASK closes on a human ruling only with an intent verb AND a ruling.
+board_task_ruled() { # <root> — a task (not decision, not human-gate) with no probes
+  jq -n --arg id "$BEAD" --rawfile d "$1/body.md" \
+    '{id:$id,title:"fixture task",issue_type:"task",status:"open",assignee:"",labels:[],description:$d}' \
+    >"$1/.br/$BEAD.json"
+}
+R="$(mkcase_decision ruling-intent-accept)"; board_task_ruled "$R"
+add_ruling "$R" "DECISION (Alice): merge into the carrier bead — superseded here"
+out="$(gate "$R" --reason "superseded: merged into the carrier bead per the recorded ruling")"
+GATE_RC=$(cat "$RCFILE")
+if [ "$GATE_RC" -eq 0 ] && grep -q 'GATE: decided' "$R/.br/comments.log" 2>/dev/null \
+   && [ "$(jq -r .status "$R/.br/$BEAD.json")" = "closed" ]; then
+  pass "AC-ruling-intent: a ruled superseded: task closes via the ruling path with a GATE: decided record"
+else fail "AC-ruling-intent accept: rc=$GATE_RC out=$out"; fi
+
+R="$(mkcase_decision ruling-intent-no-ruling)"; board_task_ruled "$R"
+out="$(gate "$R" --reason "superseded: merged elsewhere")"
+if ! grep -q 'GATE: decided' "$R/.br/comments.log" 2>/dev/null && [ "$(jq -r .status "$R/.br/$BEAD.json")" != "closed" ]; then
+  pass "AC-ruling-intent: superseded: with no ruling never takes the ruling path"
+else fail "AC-ruling-intent no-ruling: out=$out"; fi
+
+R="$(mkcase_decision ruling-intent-shipped)"; board_task_ruled "$R"
+add_ruling "$R" "DECISION (Alice): ship it"
+out="$(gate "$R" --reason "shipped: the work landed")"
+if ! grep -q 'GATE: decided' "$R/.br/comments.log" 2>/dev/null && [ "$(jq -r .status "$R/.br/$BEAD.json")" != "closed" ]; then
+  pass "AC-ruling-intent: a ruling never lets a shipped: close skip the probe legs"
+else fail "AC-ruling-intent shipped: out=$out"; fi
+
 R="$(mkcase_decision ruling-refuse)"
 board_decision "$R" open ""     # unclaimed; NO ruling comment recorded at all
 out="$(gate "$R" --reason "decided: nothing was ruled")"

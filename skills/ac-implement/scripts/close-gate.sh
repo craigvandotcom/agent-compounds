@@ -282,7 +282,20 @@ EOF
   return 0
 }
 
-if [ "$BEAD_TYPE" = "decision" ] || has_label "human-gate"; then
+# A human's intent close on any bead (superseded / duplicate / wontfix) rides the ruling path
+# too — but only when an authorized ruling is recorded; without one it falls through to the
+# probe-checked disposition legs below, unchanged.
+RULED_INTENT=0
+if [ "$BEAD_TYPE" != "decision" ] && ! has_label "human-gate"; then
+  case "$(printf '%s' "$REASON" | sed -E 's/^[[:space:]]+//')" in
+    superseded:*|duplicate:*|wontfix:*|wont-fix:*)
+      find_authorized_ruling \
+        || not_checked "DECISION" "comments list refused for $BEAD — a ruling cannot be verified"
+      [ -n "$RULING" ] && RULED_INTENT=1 ;;
+  esac
+fi
+
+if [ "$BEAD_TYPE" = "decision" ] || has_label "human-gate" || [ "$RULED_INTENT" = 1 ]; then
   find_authorized_ruling \
     || not_checked "DECISION" "comments list refused for $BEAD — a ruling cannot be verified"
   if [ -z "$RULING" ]; then
@@ -300,7 +313,9 @@ if [ "$BEAD_TYPE" = "decision" ] || has_label "human-gate"; then
   # The landing record commits ATOMICALLY with the close via --transition-comment (br
   # 0.5.12) — no separate post-close write, so no post-close RECORD-FAILED can follow a
   # close that already landed.
-  "$BR" close "$BEAD" --reason "$REASON" --transition-comment "$RULE_TEXT" </dev/null >/dev/null 2>&1 || true
+  # A ruled intent close supersedes the bead, so its open blockers are no longer premises.
+  FORCE=""; [ "$RULED_INTENT" = 1 ] && FORCE="--force"
+  "$BR" close "$BEAD" $FORCE --reason "$REASON" --transition-comment "$RULE_TEXT" </dev/null >/dev/null 2>&1 || true
   POST_STATUS=$(br_field "$BEAD" status)
   [ "$POST_STATUS" = "closed" ] \
     || refuse "LANDING" "the close did not land — $BEAD reads '$POST_STATUS' after the write"
