@@ -94,7 +94,8 @@ Gate the comment on the claim's exit status. A lost race must not comment.
 - **exit 0** — premises hold, a RED was observed, the receipt is banked. Continue.
 - **exit 1** — `PREMISE-FAILED: <CLASS>`. This is a ROUTING decision, not an error: the script
   has already commented, prefixed the title and unclaimed. Add the id to `$BURNED`, go to §1.
-- **exit 2** — `NOT-GATED`. The gate could not verify. Stop on this bead; never read it as a pass.
+- **exit 2** — `NOT-GATED`. Verification was unavailable: run §9's verification-unavailable
+  handback with this exact refusal. Never read it as a pass or pick another bead.
 
 **If this bead DELIVERS ITS OWN HARNESS**, the RED banked at claim is only "the harness does
 not exist". That is a real RED but a weak one. Write the harness, **see it fail for the reason
@@ -138,9 +139,11 @@ must name a `## Delivers` artifact the evidence core resolves.
 
 - **exit 0** — closed. Post the worker receipt (§7) and go to §1.
 - **exit 1** — `CLOSE-REFUSED` — the staleness claim was wrong or unprovable (a red probe,
-  an unresolved artifact, an open blocker). Fall back to the routing you were on: comment,
-  unclaim, §1. The refusal IS the finding; do not retry with different wording.
-- **exit 2** — `NOT-CHECKED` — never a close. Fall back as above.
+  an unresolved artifact, an open blocker). Retain the claim while you repair the evidence;
+  if the claim remains disproved, comment, unclaim, and go to §1. The refusal IS the finding;
+  do not retry with different wording. This is repair-in-place, never the exit-2 handback.
+- **exit 2** — `NOT-CHECKED` — verification was unavailable, never a close. Run §9's
+  verification-unavailable handback with this exact refusal; do not continue to §1.
 
 `wontfix:` is not yours to file — "we decided not to build this" is intent, and intent stays
 human. Stale beads you do NOT hold (premise-stamped, blockers closed around them) are the
@@ -234,10 +237,12 @@ route: they are attempted while you still hold the claim, never after flight-che
 unclaimed you.
 
 - **exit 0** — every leg held and the close was READ BACK as landed.
-- **exit 1** — `CLOSE-REFUSED: <LEG>`. Fix what the leg names and re-run. Do not close around it.
-- **exit 2** — `NOT-CHECKED`. The gate verified nothing. Never a pass, never a close.
+- **exit 1** — `CLOSE-REFUSED: <LEG>`. Retain the claim, fix what the leg names, and re-run.
+  Do not close around it and do not run the exit-2 handback.
+- **exit 2** — `NOT-CHECKED`. The gate verified nothing. Run §9's verification-unavailable
+  handback with this exact refusal; this branch NEVER posts a WORKER receipt or picks again.
 
-Then post the worker receipt (body through a file) and go to §1:
+Only after exit 0, post the worker receipt (body through a file) and go to §1:
 
     f=$(mktemp) && printf 'WORKER: model=%s actor=%s tree=%s\n' "<model>" "$ACTOR" "$(git rev-parse --short HEAD)" > "$f" && RUST_LOG=error br comments add <id> -f "$f"
 
@@ -262,9 +267,24 @@ bounces the same way — an epic never closes on an empty probe set.
 
 ## 9 — HAND BACK
 
-**Not a batch boundary — that is the coordinator's.** Release your reservations and return:
-closed / blocked / premise-failed ids, your unverified tiers with the tool's verbatim output,
-and anything you noticed but did not fix.
+**Verification-unavailable handback (any gate exit 2).** Preserve the gate's exact stdout/stderr
+refusal. Unclaim only this bead:
+
+    RUST_LOG=error br update <id> --status open --assignee "" --actor "$ACTOR" --json
+
+If that write fails, retain this bead's reservations and fail loudly. If it succeeds, read
+`RUST_LOG=error br show <id> --json` back and require `status: open` plus an empty `assignee`; a
+failed read or mismatch is UNKNOWN, so retain the reservations and fail loudly. Only after the
+verified read-back, release this bead's `## Territory` reservations with the plain
+`release_file_reservations` tool, then re-read
+`resource://file_reservations/{project_key}?active_only=true` and verify no `$ACTOR` reservation
+overlaps that Territory. Post NO `WORKER` receipt, do not pick again, and return the bead id plus
+the exact refusal. This handback applies to verification-unavailable exits only; `CLOSE-REFUSED`
+exit 1 stays in its repair branch with the claim held.
+
+**Not a batch boundary — that is the coordinator's.** Release any remaining reservations and
+return closed / blocked / premise-failed ids, your unverified tiers with the tool's verbatim
+output, and anything you noticed but did not fix.
 
 Discovered PRODUCT work is never filed by you: your hand-back returns PROPOSED-BEAD blocks
 (title · files · `User impact:`) for the conductor to confirm at the batch boundary. Process

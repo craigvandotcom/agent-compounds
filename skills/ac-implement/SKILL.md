@@ -39,16 +39,12 @@ always the coordinator and never a worker, at every width; a cap bounds a run yo
 claims and the beads' own `## Consumes` / `## Delivers`. A coordinator that starts working
 is a worker that has stopped coordinating.
 
-**Phase 0 — orient.** First run `bash <scripts>/run-start.sh --run <run-id>` to record the human's starting branch (detached HEAD refuses; an origin-absent branch is announced and retained), then assert the deployed agents are current before any worker
-spawns: resolve THIS skill's real path (app skills are symlinks; an app root has no `engine/`) — `<scripts>` is its `scripts/` dir, absolute, symlinks resolved — and
-run `<ac-root>/engine/deploy.sh "$PWD" --agents all --dry-run` — a `generate` line is a stale agent
-whose frozen tool grants waste the wave: print the regenerate command and stop. Run
-`bash <scripts>/refly.sh --root "$PWD"`: it re-checks every `PREMISE-FAILED:` bead, strips the
-stamp from those that fly again, and TRIAGES the rest — one disposition-close attempt through
-`close-gate.sh`, lands when the work exists at HEAD or a Consumes blocker closed dispositionally,
-else leaves the stamp. Count the pool with `<scripts>/pick.sh --count` (the workers' own filter);
-print the board, `<scripts>/../../ac-board/scripts/board.sh` — it carries CI, docket and
-board-truth health. Register with Agent Mail; install the pre-commit guard once (workers never do).
+**Phase 0 — orient.** FIRST register with Agent Mail (`macro_start_session`, canonical project key) and install the pre-commit guard once (workers never do). Then run `bash <scripts>/run-start.sh --run <run-id>` to record the human's starting branch (detached HEAD refuses; an origin-absent branch is announced and retained).
+Before stale-claim inspection, save the exact full-roster and active-reservation payloads from `resource://agents/{project_key}` and `resource://file_reservations/{project_key}?active_only=true` as fresh run-scoped snapshot files, then run `br coordination status --json --agents <agents-snapshot> --reservations <reservations-snapshot>`.
+Surface every claim not assessed `fresh` and follow the tool's recommended action. A missing or mismatched snapshot, a claim with no assignee evidence, or a transient read failure is **UNKNOWN**: stop before any worker spawns. Never reclaim by age alone.
+Resolve THIS skill's real path (app skills are symlinks; an app root has no `engine/`) — `<scripts>` is its absolute, symlink-resolved `scripts/` dir — and run `<ac-root>/engine/deploy.sh "$PWD" --agents all --dry-run`; a `generate` line names a stale agent whose frozen tool grants waste the wave, so print the regenerate command and stop.
+Run `bash <scripts>/refly.sh --root "$PWD"`: it re-checks every `PREMISE-FAILED:` bead, strips the stamp from those that fly again, and TRIAGES the rest through `close-gate.sh`—landing when the work exists at HEAD or a Consumes blocker closed dispositionally, else leaving the stamp.
+Count the pool with `<scripts>/pick.sh --count`; print `<scripts>/../../ac-board/scripts/board.sh` for CI, docket and board-truth health.
 
 **Phase 1 — spawn, then wait.** Spawn `width` implementer subagents — never `general`, which has no tier and rides the orchestrator's model — whose prompt is `references/worker.md`
 VERBATIM — plus one always-appended `SCRIPTS=<the absolute `<scripts>` this file resolved in Phase 0>` line, and, ONLY if `--cap N` was given, one appended line naming the cap, plus one appended line naming this run's id for the worker's `task_description`. Verbatim means
