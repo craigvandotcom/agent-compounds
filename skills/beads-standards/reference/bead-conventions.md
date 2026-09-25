@@ -105,7 +105,7 @@ routing behaviours:
 
 | Creation source | Parent routing |
 | --------------- | -------------- |
-| `ac-beadify` (plan → beads) | The plan's epic, with cross-epic `blocks` edges wired per the plan's data flow |
+| `ac-beadify` (plan → beads) | The plan's epic, with cross-epic `blocks` edges wired from the plan's own `## Planned layer` `consumes` rows |
 | Ad-hoc capture / raw `br create` | Deferred — `ac-polish` adopts an obvious parent when it processes the bead. A `human-gate`/DECISION shape instead resolves parentage AT capture (Arm 0), never deferred |
 | In-loop exhaust (`ac-review` / QA / conductor findings) | The epic whose beads were in the batch that produced the finding; per-finding by file/scope when the batch spanned epics; fallback to a per-run review epic |
 | Per-run batch workflows (`ac-hygiene`, `ac-triage`, …) | Per-run epic for 2+ beads; **0–1 beads → no epic** (unchanged — see § Batch-producing workflows) |

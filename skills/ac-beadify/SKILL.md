@@ -43,9 +43,10 @@ has yet to create keeps the guarded form `test -x <path> && bash <path>`, honest
 ## Procedure
 
 1. **Read the plan and check it mechanically.** Load `references/bead-schema.md`. Run
-   `skills/_tools/plan-approve.sh check <plan>` — the writer's own read-back, never a hand
-   grep of its keys. Non-zero (`REFUSED …` or `NOT-GATED …`) is REFUSED and the plan is
-   returned, never compiled.
+   `skills/_tools/plan-approve.sh check <plan>`, then `skills/_tools/planned-layer.sh check
+   <plan>` — the writer's own read-back, never a hand grep of its keys. Non-zero from either
+   (`REFUSED …` or `NOT-GATED …`) is REFUSED and the plan is returned, never compiled: the
+   second catches an overlap the board grew since approval.
 2. **Cut the work into beads.** Sizing is from the bead-checklist, never from taste: one bead
    = one focused worker pass. Two signals govern the cut, both cheaper here than at implement:
    - **Split signal** — heavy in-bead cognition at implement time means it was too big; split it.
@@ -70,6 +71,7 @@ has yet to create keeps the guarded form `test -x <path> && bash <path>`, honest
    SILENT, so read every edge back (`br dep cycles`, then `br show` on both ends). Every
    child of the compiled epic gets ONE edge — parent-child (containment) — read back the
     same way. The no-probe refusal names epics explicitly (a probe-less epic is refused like any other bead); parity holds both ways.
+- **`## Planned layer` rows wire the same edges, cross-epic.** A `consumes` row becomes a `blocks` edge to the named bead from every new bead whose `## Delivers` shares the row's scanned path (`planned-layer.sh scan <plan>` names the match), read back the same way; a `supersedes` BEAD row closes that bead (reason: `superseded by <epic>`); a `supersedes` PLAN row stamps `superseded_by: <this plan>` on that plan and joins this compile's own retirement walk (§ below).
 - **One path per `## Delivers` bullet, and every delivered path that git ALREADY TRACKS owes a
       touchers line.** `skills/_tools/touchers.sh derive <path>` prints `<stem> <N> <command>`;
       write it beneath the bullet as ``touchers: `<command>` → <N> · owned by: <sibling bead>``
@@ -84,11 +86,8 @@ has yet to create keeps the guarded form `test -x <path> && bash <path>`, honest
 On a successful compile the plan file is **moved to `_plans/_done/`**, the epic bead gets a
 comment naming its new path; the plan is preserved, never deleted.
 
-**A seams plan is never a single file — retire the whole chain.** A plan compiled from
-`ac-polish` seams mode carries `seams_source:` naming its seams doc; each seams doc carries
-`parent:` / `supersedes:` / `splits[]:` / `seeded_from:` edges to its siblings. Walk those
-edges and move EVERY reachable `_plans/` file to `_plans/_done/` (not just `$PLAN_FILE`) —
-stamped `status: done` + `beadified: <epic-id>`, RETIREMENT HELD guard (§ below) per file.
+**A plan is never necessarily a single file — retire the whole reachable chain.** The walk follows ANY frontmatter value on this plan, and every plan it leads to, that names an existing `_plans/` file — not a fixed key list (`seams_source:` / `parent:` / `supersedes:` / `splits[]:` / `seeded_from:` all qualify, same as anything future) — moving each to `_plans/_done/` (not just `$PLAN_FILE`), stamped `status: done` + `beadified: <epic-id>`, RETIREMENT HELD guard (§ below) per file.
+Skip a target that is `status: approved` and not beadified — that plan is still promised work of its own, never retired here.
 
 **REFUSE to retire while an open bead needs the plan as its subject** — its `## Delivers` or `## Consumes`
 names the plan; Intent provenance and this compile's own epic and children never hold it. Held: leave the file, say so.
