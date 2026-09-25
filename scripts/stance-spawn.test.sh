@@ -70,20 +70,32 @@ bad() { echo "  FAIL  $1"; FAILS+=("  FAIL  $1"); fails=$((fails + 1)); }
 mkdir -p "$ROOT/_scratch"
 WORK="$(mktemp -d "$ROOT/_scratch/stance-probe.XXXXXX")"; trap 'rm -rf "$WORK"' EXIT
 
-child_prompt() { # <file>
-  printf "This is a spawn probe. As a scratch file, write the single word ok to %s, then reply with the single word done." "$1"
+child_prompt() { # <stance> <file>
+  if [ "$1" = coordinator ]; then
+    printf "This is a spawn probe. Judge whether the single word ok is an adequate marker, then write either the single word adequate or the single word inadequate to %s, then reply with the single word done." "$2"
+  else
+    printf "This is a spawn probe. As a scratch file, write the single word ok to %s, then reply with the single word done." "$2"
+  fi
+}
+
+scratch_valid() { # <stance> <file>
+  if [ "$1" = coordinator ]; then
+    grep -Eq '^(adequate|inadequate)$' "$2" 2>/dev/null
+  else
+    grep -qx 'ok' "$2" 2>/dev/null
+  fi
 }
 
 # The parent runs in the harness's default permission mode, so it cannot make the write
 # itself on claude; on opencode the parent can, so that leg also demands the spawn marker.
 spawn_claude() { # <stance> <file> <log>
   printf "Use the Agent tool with subagent_type '%s' and this exact prompt: '%s' Then report the subagent's reply verbatim and nothing else." \
-    "$1" "$(child_prompt "$2")" \
+    "$1" "$(child_prompt "$1" "$2")" \
     | (cd "$ROOT" && timeout "$SPAWN_TIMEOUT" claude -p --model haiku) >"$3" 2>&1
 }
 spawn_opencode() { # <stance> <file> <log>
   (cd "$ROOT" && timeout "$SPAWN_TIMEOUT" opencode run --agent build \
-    "Use the task tool to spawn the '$1' subagent with this exact prompt: '$(child_prompt "$2")' Then report its reply verbatim and nothing else.") >"$3" 2>&1
+    "Use the task tool to spawn the '$1' subagent with this exact prompt: '$(child_prompt "$1" "$2")' Then report its reply verbatim and nothing else.") >"$3" 2>&1
 }
 
 run_leg() { # <harness>
@@ -95,7 +107,7 @@ run_leg() { # <harness>
   done
   wait
   for s in "${STANCES[@]}"; do
-    if ! grep -qx 'ok' "$WORK/$h-$s.txt" 2>/dev/null; then
+    if ! scratch_valid "$s" "$WORK/$h-$s.txt"; then
       bad "$h/$s: no scratch file written — $(tail -n 1 "$WORK/$h-$s.log" 2>/dev/null | sed 's/\x1b\[[0-9;]*m//g')"
     elif [ "$h" = opencode ] && ! grep -qi "$s agent" "$WORK/$h-$s.log"; then
       bad "$h/$s: file written, but no '$s' subagent appears in the transcript"
