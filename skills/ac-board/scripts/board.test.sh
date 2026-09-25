@@ -103,10 +103,31 @@ printf -- '---\nstatus: approved\n---\n' >"$W/plans/repo/_plans/a.md"
 printf -- '---\nstatus: findings\n---\n' >"$W/plans/repo/_plans/b.md"
 : >"$W/plans/repo/_backlog/pool/001-idea.md"
 check plans "live counts plans and pool"       '^📋 PLANS · 3 live$'
-check plans "refined shows at zero"            '^   refined +0 ░{10}$'
+check plans "bead-ready shows at zero"         '^   bead-ready +0 ░{10}$'
 check plans "approved is a row"                '^   approved +1 ▓▓▓░{7}$'
 check plans "the pool is a row"                '^   pool +1 ▓'
 check plans "an unknown status is named"       '^   other +1 ▓+░* findings$'
+
+# The pull order: NEXT ranks by distance from implement (pull_order.LADDER).
+fixture ladder "[$READY,$HELD,$GATE,$BLOCKED]" "[$READY,$GATE]" "$READY
+$HELD
+$GATE
+$BLOCKED" ""
+check ladder "an unheld bead is reclaimed first" '^1\. reclaim 1 unclaimed bead$'
+check ladder "then the ready work"             '^2\. 1 ready bead$'
+check ladder "then the gate that frees beads"  '^3\. ac-g1$'
+fixture planorder '[]' '[]' '' ""
+mkdir -p "$W/planorder/repo/_plans"
+printf -- '---\nstatus: draft\n---\n' >"$W/planorder/repo/_plans/d.md"
+printf -- '---\nstatus: approved\n---\n' >"$W/planorder/repo/_plans/a.md"
+printf -- '---\nstatus: approved\npolish_rounds: 2\npolish_fixpoint_sha256: x\n---\n' >"$W/planorder/repo/_plans/p.md"
+printf -- '---\nstatus: refined\n---\n' >"$W/planorder/repo/_plans/r.md"
+check planorder "a refused plan needs a ruling"  '^1\. rule on 1 plan$'
+check planorder "a polished plan is marked ready" '^2\. mark ready 1 plan$'
+check planorder "an unpolished plan is polished" '^3\. polish 1 plan$'
+check planorder "the refusal is flagged in PLANS" '^   refined +1 ▓+░* needs you$'
+rm "$W/planorder/repo/_plans/r.md" "$W/planorder/repo/_plans/p.md"
+check planorder "a draft waits on approval"    '^2\. approve 1 plan$'
 
 # A failed read renders `?` and is named — never a guessed count.
 fixture failed "[$READY]" "[$READY]" "$READY" "$LIVE"
@@ -135,7 +156,7 @@ else echo "FAIL compact: expected one line"; FAILURES=$((FAILURES + 1)); fi
 
 # Every line fits a phone: 40 columns, never wrapped.
 CASES=$((CASES + 1))
-wide=$(for c in stalled flowing starved empty plans failed; do render "$c"; render "$c" 1; done |
+wide=$(for c in stalled flowing starved empty plans ladder planorder failed; do render "$c"; render "$c" 1; done |
        python3 -c 'import sys; print(max(len(l.rstrip("\n")) for l in sys.stdin))')
 if [ "$wide" -le 40 ]; then echo "ok   width: widest line $wide"
 else echo "FAIL width: widest line $wide > 40"; FAILURES=$((FAILURES + 1)); fi

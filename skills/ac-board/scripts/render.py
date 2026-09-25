@@ -14,6 +14,9 @@ renders `?` and is named in the flags block; nothing is guessed.
 """
 import datetime as dt, json, math, os, re, sys
 
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.realpath(__file__)), "../../ac-pipeline/scripts"))
+from pull_order import PLAN_ORDER, PLAN_RUNG, blocks_counts, front, plan_stage, rank  # noqa: E402
+
 T, ROOT, COMPACT = sys.argv[1], sys.argv[2], sys.argv[3] == "1"
 NOW = (dt.datetime.fromisoformat(os.environ["AC_BOARD_NOW"]) if os.environ.get("AC_BOARD_NOW")
        else dt.datetime.now(dt.timezone.utc))
@@ -162,10 +165,7 @@ def blockers(bid):
                   if d.get("type") == "blocks" and is_open(rec(d["depends_on_id"])))
 
 
-def blocks_count(gid):
-    """How many open beads wait directly on this one."""
-    if recs is None: return None
-    return sum(1 for r in recs.values() if is_open(r) and gid in (blockers(r["id"]) or []))
+BLOCKS = None if recs is None else blocks_counts(recs)  # open beads waiting on each id
 
 
 def epic_progress(eid):
@@ -193,11 +193,7 @@ if os.path.isdir(pdir):
         p = os.path.join(pdir, f)
         if not f.endswith(".md") or f == "README.md" or not os.path.isfile(p): continue
         text = slurp(p, errors="replace")
-        fm = re.match(r"---\n(.*?)\n---", text, re.S)
-        st = None
-        if fm:
-            m = re.search(r"^status:\s*['\"]?([^'\"\n]+?)['\"]?\s*$", fm.group(1), re.M)
-            st = m.group(1).strip() if m else None
+        st = plan_stage(front(text))
         if st is None:  # the Scan B fallback ladder
             st = ("refined" if "## Refinement Log" in text else
                   "approved" if "Status: Approved" in text else
@@ -408,18 +404,18 @@ else:
             for d in rec(b["id"]).get("dependencies") or []))
     block(f"🧿 BEADS · {total} open", *rows_)
 
-# PLANS — refined → approved → draft → pool; bars share all live plans
-PLAN_STAGES = (("refined", ("refined", "bead-ready")), ("approved", ("approved",)),
-               ("draft", ("draft",)), ("beadified", ("beadified",)))
-known = {s for _, ss in PLAN_STAGES for s in ss}
+# PLANS — most mature first (PLAN_ORDER), then beadified and the pool; bars share all live plans
+PLAN_STAGES = PLAN_ORDER + ("beadified",)
+known = set(PLAN_STAGES)
 ptotal = len(plans) + pool
 if not ptotal:
     block("📋 PLANS · none")
 else:
     rows_ = []
-    for label, sts in PLAN_STAGES:
-        n = sum(1 for _, st, _ in plans if st in sts)
-        if n or label != "beadified": rows_ += stage("plans", label, n, ptotal)
+    for label in PLAN_STAGES:
+        n = sum(1 for _, st, _ in plans if st == label)
+        if n or label in ("bead-ready", "approved", "draft"):
+            rows_ += stage("plans", label, n, ptotal, ("needs you",) if n and label == "refined" else ())
     rows_ += stage("plans", "pool", pool, ptotal)
     other = sorted({st for _, st, _ in plans if st not in known})
     if other: rows_ += stage("plans", "other", sum(1 for _, st, _ in plans if st not in known),
@@ -481,33 +477,44 @@ if not docket_line: failed.insert(0, "docket-health ?")
 if failed: block("⚠ FLAGS", *(clip(f"? {x}", W - len(IND)) for x in failed))
 
 
-# NEXT — the three most impactful moves, ranked; pointers, never prompts
+# NEXT — the three moves closest to implement (pull_order.LADDER); pointers, never prompts
 def moves():
-    """(score, subject, detail, route). A gate that holds up work outranks the jam; the jam
-    outranks idle gates, unclaimed WIP, a red PR and refined plans."""
-    if beads is None or ready_ids is None: return [(0, "fix the failed reads", "see FLAGS", "")]
+    """(rank, subject, detail, route), ranked by rung, then within a rung."""
+    if beads is None or ready_ids is None: return [((0,), "fix the failed reads", "see FLAGS", "")]
     m = []
-    if STATE_LINE.startswith("🥵"): m.append((100, plural(n_ready, "ready bead"), "no agent taking them", "/ac-implement"))
+    red = [p for p in prs or [] if pr_ci(p).startswith("CI ✗")]
+    if red: m.append(((rank("red-pr"),), f"PR #{red[0]['number']} is red", pr_ci(red[0])[5:],
+                      f"gh pr checks {red[0]['number']}"))
+    unclaimed_ids = [b["id"] for b in loop["in_progress"] if live_names is not None and holder(b) not in live_names]
+    if unclaimed_ids: m.append(((rank("reclaim"),), f"reclaim {plural(len(unclaimed_ids), 'unclaimed bead')}",
+                                ", ".join(unclaimed_ids[:3]), "/ac-tidy"))
+    if STATE_LINE.startswith("🥵"): m.append(((rank("implement"),), plural(n_ready, "ready bead"),
+                                              "no agent taking them", "/ac-implement"))
     idle_gates = []
     for g in gates:
-        k = blocks_count(g["id"]) or 0
-        if k: m.append((50 + 10 * k, g["id"], f"{gate_kind(g)} · unblocks {plural(k, 'bead')}", "/ac-human"))
+        k = (BLOCKS or {}).get(g["id"], 0)
+        if k: m.append(((rank("gate"), -k), g["id"], f"{gate_kind(g)} · unblocks {plural(k, 'bead')}", "/ac-human"))
         else: idle_gates.append(g["id"])
-    if n_unref and not n_ready: m.append((45, f"refine {plural(n_unref, 'bead')}", "nothing is ready without them", "/ac-polish"))
+    if n_unref: m.append(((rank("refine-bead"),), f"refine {plural(n_unref, 'bead')}",
+                          "" if n_ready else "nothing is ready without them", "/ac-polish bead"))
+    plan_move = {"bead-ready": ("beadify", "/ac-beadify"), "refined": ("rule on", "/ac-human"),
+                 "polished": ("mark ready", "plan-approve.sh ready"), "approved": ("polish", "/ac-polish plan"),
+                 "draft": ("approve", "/ac-human")}
+    for i, st in enumerate(PLAN_ORDER):
+        names = [n for n, s, _ in plans if s == st]
+        if names:
+            verb, route = plan_move[st]
+            m.append(((rank(PLAN_RUNG[st]), i), f"{verb} {plural(len(names), 'plan')}",
+                      ", ".join(names[:2]) + (" …" if len(names) > 2 else ""), route))
     if idle_gates:
         more = "more " if len(idle_gates) < n_gates else ""
-        m.append((35, f"{len(idle_gates)} {more}gate{'s' if len(idle_gates) > 1 else ''}",
+        m.append(((rank("idle-gate"),), f"{len(idle_gates)} {more}gate{'s' if len(idle_gates) > 1 else ''}",
                   ", ".join(idle_gates[:3]) + (" …" if len(idle_gates) > 3 else ""), "/ac-human"))
-    unclaimed_ids = [b["id"] for b in loop["in_progress"] if live_names is not None and holder(b) not in live_names]
-    if unclaimed_ids: m.append((30, f"reclaim {plural(len(unclaimed_ids), 'unclaimed bead')}", ", ".join(unclaimed_ids[:3]), "/ac-tidy"))
-    red = [p for p in prs or [] if pr_ci(p).startswith("CI ✗")]
-    if red: m.append((25, f"PR #{red[0]['number']} is red", pr_ci(red[0])[5:], f"gh pr checks {red[0]['number']}"))
-    ok_plans = [p for p in plans if p[1] in ("refined", "bead-ready")]
-    if ok_plans: m.append((20, f"beadify {plural(len(ok_plans), 'refined plan')}", "", "/ac-beadify"))
+    if pool: m.append(((rank("pool"),), f"promote {plural(pool, 'pool idea')}", "", "/ac-align"))
     if not m:
-        m.append((0, "nothing open", "plan the next wave", "/ac-align") if STATE_LINE.startswith("⏸")
-                 else (0, "nothing needs you", "the loop is running", ""))
-    return sorted(m, key=lambda x: -x[0])[:3]
+        m.append(((0,), "nothing open", "plan the next wave", "/ac-align") if STATE_LINE.startswith("⏸")
+                 else ((0,), "nothing needs you", "the loop is running", ""))
+    return sorted(m, key=lambda x: x[0])[:3]
 
 
 out.append("🎯 NEXT")
