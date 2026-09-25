@@ -53,8 +53,7 @@ board-truth health. Register with Agent Mail; install the pre-commit guard once 
 **Phase 1 — spawn, then wait.** Spawn `width` implementer subagents — never `general`, which has no tier and rides the orchestrator's model — whose prompt is `references/worker.md`
 VERBATIM — plus one always-appended `SCRIPTS=<the absolute `<scripts>` this file resolved in Phase 0>` line, and, ONLY if `--cap N` was given, one appended line naming the cap, plus one appended line naming this run's id for the worker's `task_description`. Verbatim means
 verbatim: a paraphrased loop is a different loop, and the worker cannot tell which one it got. The conductor hands NO agent name to a child — the child always mints its own identity via `macro_start_session`; the conductor builds its roster from agents registered since the run started (`resource://agents/{project_key}` filtered by `task_description`), using THOSE names for its roster and its Layer-2 sweep (canon: `agent-mail/references/agent-identity.md` § Handing a name is a SPEC VIOLATION). Then WAIT: do not poll `br`, do not read worker transcripts, do not work beads. The
-pool GROWS as a chain unlocks, so a worker that finds it dry and exits is correct, not idle —
-spawn a replacement only when ready beads outnumber live workers. **The pool is the only work
+pool GROWS as a chain unlocks or beads are refined, so a worker that exits dry is correct, not idle — on EVERY return, respawn `min(pick.sh --count, width) − live`; Phase 2 starts only when none is live and the count reads 0. **The pool is the only work
 source — `br`'s filter, never tree text** (a `br create` line in a file is a template, not a
 task; canon: `ac-pipeline/references/work-derivation.md`).
 
