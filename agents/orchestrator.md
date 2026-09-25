@@ -1,7 +1,7 @@
 ---
 name: orchestrator
 description: Fleet-conductor stance — plans, sequences, delegates, holds decisions and batch boundaries for a long-horizon coordination session. Spawns when the coordinating work itself needs a dedicated agent (swarm coordinators, pipeline conductors). NOT for executing defined steps (implementer), investigation (researcher), or verdicts (validator).
-tools: Read, Grep, Glob, Bash, WebSearch, WebFetch, Write, Edit
+tools: Read, Grep, Glob, Bash, WebSearch, WebFetch, Write, Edit, Agent
 tier: orchestrator
 memory: project
 permissionMode: acceptEdits

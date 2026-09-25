@@ -50,7 +50,7 @@ set -euo pipefail
 ENGINE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 AC_ROOT="$(cd "$ENGINE_DIR/.." && pwd)"
 
-DRY=0; CHECK=0; PRUNE=1; DO_ROOT=0; DO_ALL=0; VERIFY_AGY=0; REPORT=0; OPENCODE_HOME_OVERRIDE=""; PRINT_OPENCODE_EDIT_PERM=0; PRINT_OPENCODE_EDIT_TOOLS=""; RECLAIM_RETIRED_DIR=""; TARGETS=()
+DRY=0; CHECK=0; PRUNE=1; DO_ROOT=0; DO_ALL=0; VERIFY_AGY=0; REPORT=0; OPENCODE_HOME_OVERRIDE=""; PRINT_OPENCODE_EDIT_PERM=0; PRINT_OPENCODE_TASK_PERM=0; PRINT_OPENCODE_TOOLS=""; RECLAIM_RETIRED_DIR=""; TARGETS=()
 while [ $# -gt 0 ]; do
   case "$1" in
     --verify-antigravity) VERIFY_AGY=1; shift ;;
@@ -60,7 +60,12 @@ while [ $# -gt 0 ]; do
     --opencode-home) OPENCODE_HOME_OVERRIDE="${2:-}"; shift 2 ;;
     --print-opencode-edit-perm)
       PRINT_OPENCODE_EDIT_PERM=1
-      PRINT_OPENCODE_EDIT_TOOLS="${2-}"
+      PRINT_OPENCODE_TOOLS="${2-}"
+      shift 2
+      ;;
+    --print-opencode-task-perm)
+      PRINT_OPENCODE_TASK_PERM=1
+      PRINT_OPENCODE_TOOLS="${2-}"
       shift 2
       ;;
     --reclaim-retired-dangling)
@@ -80,7 +85,7 @@ done
 if [ "$DRY" = 1 ] && [ "$DO_ROOT" = 0 ] && [ ${#TARGETS[@]} -eq 0 ] && [ "$VERIFY_AGY" = 0 ] && [ "$REPORT" = 0 ]; then
   DO_ROOT=1
 fi
-[ "$DO_ROOT" = 1 ] || [ ${#TARGETS[@]} -gt 0 ] || [ "$VERIFY_AGY" = 1 ] || [ "$REPORT" = 1 ] || [ "$PRINT_OPENCODE_EDIT_PERM" = 1 ] || [ -n "$RECLAIM_RETIRED_DIR" ] || { echo "error: need --root, --all, --report, a target dir, or --verify-antigravity" >&2; exit 2; }
+[ "$DO_ROOT" = 1 ] || [ ${#TARGETS[@]} -gt 0 ] || [ "$VERIFY_AGY" = 1 ] || [ "$REPORT" = 1 ] || [ "$PRINT_OPENCODE_EDIT_PERM" = 1 ] || [ "$PRINT_OPENCODE_TASK_PERM" = 1 ] || [ -n "$RECLAIM_RETIRED_DIR" ] || { echo "error: need --root, --all, --report, a target dir, or --verify-antigravity" >&2; exit 2; }
 
 CHANGES=0
 note_change() { CHANGES=$((CHANGES + 1)); }
@@ -457,14 +462,32 @@ opencode_edit_perm() {
     printf '%s\n' deny
   fi
 }
-# Query path for scripts/opencode-edit-perm.test.sh: print the decision and
-# stop before any projection. The tools line is the argument, which may be empty.
+# The task key decides whether a stance may spawn subagents. OpenCode denies a
+# child the task tool only when the child's own permission names no task rule
+# (tool/task.ts), so this line is the whole gate. A stance may spawn when its
+# source tools line lists Agent (Task is the older name of the same tool) —
+# the same grant Claude Code reads from that line. Workers list neither.
+# opencode_task_perm <tools-line> — prints allow or deny.
+opencode_task_perm() {
+  if printf '%s' "$1" | grep -qE '(^|[^A-Za-z0-9_])(Agent|Task)([^A-Za-z0-9_]|$)'; then
+    printf '%s\n' allow
+  else
+    printf '%s\n' deny
+  fi
+}
+# Query paths for scripts/opencode-edit-perm.test.sh and opencode-task-perm.test.sh:
+# print the decision and stop before any projection. The tools line is the
+# argument, which may be empty.
 if [ "$PRINT_OPENCODE_EDIT_PERM" = 1 ]; then
-  opencode_edit_perm "$PRINT_OPENCODE_EDIT_TOOLS"
+  opencode_edit_perm "$PRINT_OPENCODE_TOOLS"
+  exit 0
+fi
+if [ "$PRINT_OPENCODE_TASK_PERM" = 1 ]; then
+  opencode_task_perm "$PRINT_OPENCODE_TOOLS"
   exit 0
 fi
 gen_opencode_agents() { # <src-agents-dir> <dest-dir>
-  local src="$1" dest="$2" f name relsrc tools edit_perm omodel
+  local src="$1" dest="$2" f name relsrc tools edit_perm task_perm omodel
   [ -d "$src" ] || { echo "  WARN: agent source missing: $src"; return 0; }
   for name in orchestrator coordinator researcher implementer validator; do
     f="$src/$name.md"
@@ -476,6 +499,7 @@ gen_opencode_agents() { # <src-agents-dir> <dest-dir>
     tools="$(awk '/^---[[:space:]]*$/{c++; next} c==1 && /^tools:/{print; exit}' "$f")"
     # ac-oqfe: Edit listed -> allow; Write without Edit -> deny (opencode_edit_perm).
     edit_perm="$(opencode_edit_perm "$tools")"
+    task_perm="$(opencode_task_perm "$tools")"
     write_generated "$dest/$name.md" "$(printf '%s' \
 "---
 description: $A_DESC
@@ -483,7 +507,7 @@ mode: subagent
 ${omodel}permission:
   edit: $edit_perm
   bash: allow
-  task: deny
+  task: $task_perm
 ---
 <!-- $STAMP — do not hand-edit (source: $relsrc, tier: $A_TIER) -->
 
