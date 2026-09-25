@@ -74,7 +74,7 @@ directly there is no local safety net, so the rules below are strict by default.
 
 - `supabase migration new <name>` — creates a local `.sql` file, no remote impact
 
-**ASK USER FIRST (production writes — present SQL and wait for approval):**
+**BLOCKED FOR AGENTS (production writes — dcg blocks these; hand the human `! <cmd>`):**
 
 - `supabase db push` — applies pending migrations to the linked project (irreversible)
 - `supabase db pull` — overwrites local migration files with remote schema
@@ -91,11 +91,10 @@ directly there is no local safety net, so the rules below are strict by default.
 **Migration workflow for agents:**
 
 1. Write the migration SQL and show it to the user
-2. Create the file with `supabase migration new`
-3. Write the SQL into the file
-4. Present the complete migration for review
-5. Only run the push after explicit user approval
-6. After push, regenerate types
+2. Create the file with `supabase migration new` and write the SQL into it
+3. Present the complete migration for review
+4. Hand the human the exact `! supabase db push` command — agents cannot run it themselves
+5. After the human confirms the push landed, regenerate types
 
 ### Migrations
 
@@ -172,8 +171,8 @@ supabase migration new add_food_tags
 
 # 3. (apps with a local stack) Local-validate first — see the gate below
 
-# 4. Push to remote (after user approval)
-supabase db push
+# 4. Hand the human the exact command — agents cannot push (dcg blocks prod DB writes)
+! supabase db push
 
 # 5. Generate updated types
 supabase gen types typescript --linked > lib/supabase/types.ts   # or --local for the local stack
@@ -198,7 +197,7 @@ per-app in `CORE/supabase.md`.
 **Apply-timing (WHEN to push — `rule-migrations-expand-contract`):** EXPAND (additive) is pushed
 **before/at the merge** of the code that depends on it (web deploys at merge against live prod
 schema); CONTRACT (destructive) is **held** and applied only after old native builds age out, via
-`ac-publish`'s migration gate. `db push` stays ASK-USER-FIRST either way — the rule times the ask.
+`ac-publish`'s migration gate. `db push` stays blocked-for-agents either way — the rule times when the human is handed the command.
 
 The gate (an app encodes this as one script — e.g. `pnpm db:verify`):
 

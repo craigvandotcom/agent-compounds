@@ -15,8 +15,10 @@ pending.
 Refuse the publish and name every pending migration. Do not promote, do not tag.
 
 This gate never pushes. A human applies each migration and verifies it live against a
-prediction written before the push. Use `supabase db push --include-all` when a pending
-migration sorts before an already-applied version.
+prediction written before the push. Agents cannot run the push themselves — dcg blocks
+prod DB writes — so the gate hands the human the exact command to paste as `! <cmd>`:
+`! supabase db push`, or `! supabase db push --include-all` when a pending migration sorts
+before an already-applied version. One command per migration where ordering matters.
 
 Override: `PENDING_MIGRATION_OVERRIDE=<reason>`. An unset variable is not an override.
 
