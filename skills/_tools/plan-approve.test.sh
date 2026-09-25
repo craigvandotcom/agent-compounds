@@ -8,12 +8,18 @@
 # parser groups a card as one top-level bullet block; a one-line bold card is a
 # shape the grammar never prescribes. Coverage: a
 # failing polarity for every gated section (Vision, Deliverables, Decisions, Out of
-# scope, Success criterion, Seams, Human gates) and every refusal token (needs-human,
-# no-decisions, no-seams, seams-incomplete, uncited-decision, no-approver,
-# not-polished, not-approved, regate, digest-mismatch, NOT-GATED); a `## Success
-# Criteria` (capital-C) fixture proving the SuccessCriterion digest leg hashes real
-# content instead of empty; a no-sha-tool case asserting exit 2; and the whole suite
-# runs from any cwd (it parks itself in TMPDIR before the first case).
+# scope, Success criterion, Seams, Human gates, Planned layer) and every refusal token
+# (needs-human, no-decisions, no-seams, seams-incomplete, uncited-decision, no-approver,
+# planned-layer-undeclared, not-polished, not-approved, regate, digest-mismatch,
+# NOT-GATED); a `## Success Criteria` (capital-C) fixture proving the SuccessCriterion
+# digest leg hashes real content instead of empty; a no-sha-tool case asserting exit 2;
+# an absent-vs-present-but-empty ## Planned layer hash-equality case proving that leg
+# hashes exactly as before it joined the digest; and the whole suite runs from any cwd
+# (it parks itself in a scratch git repo under TMPDIR before the first case —
+# planned-layer.sh, which approve now calls, needs one to resolve _plans). approve's
+# board/plan-layer reads go through the AC2_BR_CMD / AC2_PLANS_DIR seams
+# planned-layer.test.sh already uses, pointed at a fixture board and a directory that
+# never exists, so every case here runs against a scripted board, never this repo's own.
 set -u
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SCRIPT="$HERE/plan-approve.sh"
@@ -42,8 +48,48 @@ cap() {
 W=$(mktemp -d /tmp/plan-approve-test-XXXXXX)
 
 # The suite never depends on the invoking cwd: everything it touches travels by
-# absolute path, and it parks itself in TMPDIR before the first case.
-cd "${TMPDIR:-/tmp}" || exit 2
+# absolute path, and it parks itself in a scratch git repo under TMPDIR before the
+# first case — planned-layer.sh (approve's new write-path call) needs a git repo to
+# resolve _plans, and `git rev-parse --show-toplevel` would otherwise NOT-GATE every
+# case in this file.
+git init -q "$W" >/dev/null 2>&1
+cd "$W" || exit 2
+
+# planned-layer.sh seams (same shape planned-layer.test.sh uses): a stub `br` serving
+# a scripted board from $FIX, and a plans directory that never exists — so approve's
+# new planned-layer check runs against a controlled fixture, never this repo's own
+# board or _plans/. AC2_PLANS_DIR points outside $W on purpose: $W is where every plan
+# fixture in this file lives, and if it doubled as the plans-layer scan root, an
+# already-approved fixture plan would count as a second promised-work source undeclared
+# overlap cases never intend to exercise.
+FIX="$W/fix"; mkdir -p "$FIX"
+export FIX
+AC2_PLANS_DIR="$W/no-such-plans-dir"; export AC2_PLANS_DIR
+AC2_BR_CMD="$W/br"; export AC2_BR_CMD
+cat > "$AC2_BR_CMD" <<'STUB'
+#!/usr/bin/env bash
+case "$1" in
+  list) cat "$FIX/list.json" ;;
+  show) id="$2"; [ -f "$FIX/show-$id.json" ] && cat "$FIX/show-$id.json" || echo '[]' ;;
+  *) exit 9 ;;
+esac
+STUB
+chmod +x "$AC2_BR_CMD"
+
+# id status title [delivers-body] -> one board issue as JSON (planned-layer.test.sh's
+# own shape, issue_type fixed to task since no epic case is needed here).
+mk_bead() {
+  local id="$1" status="$2" title="$3" delivers="${4-}" desc
+  if [ -n "$delivers" ]; then desc=$(printf '## Delivers\n%s\n' "$delivers")
+  else desc="no delivers section in this bead"; fi
+  jq -n --arg id "$id" --arg s "$status" --arg ti "$title" --arg d "$desc" \
+    '{id:$id, title:$ti, description:$d, status:$s, issue_type:"task"}'
+}
+write_board() { printf '%s\n' "$@" | jq -s '{issues: .}' > "$FIX/list.json"; }
+
+# Empty by default: every existing verdict case below expects planned-layer.sh check to
+# see NO overlap at all, so it never refuses for a reason this suite is not testing.
+write_board
 
 # A Deliverable path with a ## Seams row carrying the same FULL path, so the
 # seams-complete fixtures exercise the full-path row requirement (ac-zug5.1: rows
@@ -532,6 +578,110 @@ OUT=$(PATH="$NOSHADIR" "$BASH_BIN" "$SCRIPT" check "$W/nosha.md" 2>&1); RC=$?
 expect "$RC" 2 "check with no sha tool -> exit 2"
 expect "$(grep -c 'NOT-GATED' <<<"$OUT")" 1 "check with no sha tool -> NOT-GATED"
 rm -rf "$NOSHADIR"
+
+# --- planned layer: approve refuses an undeclared overlap; PlannedLayer joins the digest -
+
+# 35 — approve refuses REFUSED planned-layer-undeclared (exit 1) when an open bead's
+# ## Delivers path overlaps a Deliverable path the plan never declares in its own
+# ## Planned layer section, and writes no approval key.
+write_board "$(mk_bead bd-overlap open 'Existing owner of the shared path' "- D1 \`$REAL_PATH\`")"
+mk_plan "$W/pl-undeclared.md" "- **D1 \`$REAL_PATH\`** — a thing." "$SETTLED_CARD" "$SEAMS_OK"
+cap "$SCRIPT" approve "$W/pl-undeclared.md" "Alex"
+expect "$RC" 1 "undeclared planned-layer overlap -> exit 1"
+expect "$(grep -c 'REFUSED planned-layer-undeclared' <<<"$OUT")" 1 "undeclared planned-layer overlap -> REFUSED planned-layer-undeclared"
+expect "$(grep -c 'bd-overlap' <<<"$OUT")" 1 "REFUSED names the undeclared id"
+expect "$(grep -c '^status: draft$' "$W/pl-undeclared.md")" 1 "undeclared overlap plan is not re-stamped"
+expect "$(grep -c '^approved_by:' "$W/pl-undeclared.md")" 0 "undeclared overlap plan writes no approved_by key"
+
+# 36 — the SAME overlap, declared in ## Planned layer, approves clean (exit 0): the
+# refusal is about an UNDECLARED overlap, never about overlapping at all.
+mk_plan "$W/pl-declared.md" "- **D1 \`$REAL_PATH\`** — a thing." "$SETTLED_CARD" "$SEAMS_OK"
+cat >> "$W/pl-declared.md" <<EOF
+
+## Planned layer
+
+- bd-overlap · consumes — shares \`$REAL_PATH\`
+EOF
+cap "$SCRIPT" approve "$W/pl-declared.md" "Alex"
+expect "$RC" 0 "declared planned-layer overlap -> exit 0"
+expect "$(grep -c '^APPROVED:' <<<"$OUT")" 1 "declared planned-layer overlap -> APPROVED"
+
+# Back to an empty board: the remaining cases below exercise the PlannedLayer digest leg
+# itself, never the overlap scan.
+write_board
+
+# 37 — PlannedLayer joins _SECTION_LABELS: editing the ## Planned layer body after
+# approval makes `ready` refuse naming PlannedLayer (exit 1), same shape as every other
+# gated-section regate case above.
+mk_plan "$W/pl1.md" "- D1 x" "$SETTLED_CARD" "a"
+cat >> "$W/pl1.md" <<EOF
+
+## Planned layer
+
+- some-id · independent — unrelated note
+EOF
+cap "$SCRIPT" approve "$W/pl1.md" "Alex"
+expect "$RC" 0 "setup: approve pl1"
+add_polish_keys "$W/pl1.md"
+sed -i.bak 's/unrelated note/a DIFFERENT unrelated note/' "$W/pl1.md"; rm -f "$W/pl1.md.bak"
+cap "$SCRIPT" ready "$W/pl1.md"
+expect "$RC" 1 "edit inside ## Planned layer -> exit 1"
+expect "$(grep -c '^REFUSED regate PlannedLayer$' <<<"$OUT")" 1 "edit inside ## Planned layer -> REFUSED regate PlannedLayer"
+
+# 38 — after a clean `ready`, editing ## Planned layer makes plain `check` refuse
+# digest-mismatch (exit 1): the same after-ready leg every other section already proves.
+mk_plan "$W/pl2.md" "- D1 x" "$SETTLED_CARD" "a"
+cat >> "$W/pl2.md" <<EOF
+
+## Planned layer
+
+- some-id · independent — unrelated note
+EOF
+cap "$SCRIPT" approve "$W/pl2.md" "Alex"
+expect "$RC" 0 "setup: approve pl2"
+add_polish_keys "$W/pl2.md"
+cap "$SCRIPT" ready "$W/pl2.md"
+expect "$RC" 0 "setup: ready pl2"
+sed -i.bak 's/unrelated note/a THIRD unrelated note/' "$W/pl2.md"; rm -f "$W/pl2.md.bak"
+cap "$SCRIPT" check "$W/pl2.md"
+expect "$RC" 1 "edit inside ## Planned layer after ready -> exit 1"
+expect "$(grep -c 'REFUSED digest-mismatch' <<<"$OUT")" 1 "edit inside ## Planned layer after ready -> REFUSED digest-mismatch"
+
+# 39 — a plan with NO ## Planned layer section hashes IDENTICALLY to one whose
+# ## Planned layer section is present but carries no body (Decision 1 (a): the leg
+# contributes zero bytes when absent, so the overall digest hashes exactly as it did
+# before PlannedLayer joined).
+mk_plan "$W/nopl.md" "- D1 x" "$SETTLED_CARD" "a"
+cap "$SCRIPT" approve "$W/nopl.md" "Alex"
+expect "$RC" 0 "setup: approve nopl"
+mk_plan "$W/emptypl.md" "- D1 x" "$SETTLED_CARD" "a"
+# No leading blank line: mk_plan's own file ends right after "Some criterion.\n" with
+# nothing after it, so the header must land immediately behind that same byte for the
+# two files to diverge in NOTHING but the trailing header line itself — a leading blank
+# line here would instead extend the ## Success criterion BODY (every section boundary
+# in this format is a blank line BEFORE the next header, which the current section's
+# own digest swallows), which is a real property of the format, not of this leg, and
+# would make the comparison fail for a reason unrelated to PlannedLayer.
+printf '## Planned layer\n' >> "$W/emptypl.md"
+cap "$SCRIPT" approve "$W/emptypl.md" "Alex"
+expect "$RC" 0 "setup: approve emptypl"
+NOPL_SHA=$(grep '^approved_sha256:' "$W/nopl.md" | awk '{print $2}')
+EMPTYPL_SHA=$(grep '^approved_sha256:' "$W/emptypl.md" | awk '{print $2}')
+expect "$NOPL_SHA" "$EMPTYPL_SHA" "absent ## Planned layer hashes exactly like a present-but-empty one"
+
+# 40 — a plan approved BEFORE PlannedLayer joined the digest (no PlannedLayer entry in
+# its approved_section_digest ledger) still reaches READY on `ready` when the section
+# stays absent today: the absent-ledger-entry gap must read as unchanged, never a
+# spurious regate PlannedLayer.
+mk_plan "$W/pre.md" "- D1 x" "$SETTLED_CARD" "a"
+cap "$SCRIPT" approve "$W/pre.md" "Alex"
+expect "$RC" 0 "setup: approve pre"
+sed -i.bak '/^approved_section_digest:/ s/,PlannedLayer=[^,]*//' "$W/pre.md"; rm -f "$W/pre.md.bak"
+expect "$(grep -c 'PlannedLayer' "$W/pre.md")" 0 "setup: pre-existing ledger has no PlannedLayer entry"
+add_polish_keys "$W/pre.md"
+cap "$SCRIPT" ready "$W/pre.md"
+expect "$RC" 0 "absent PlannedLayer ledger entry, section still absent -> ready exit 0"
+expect "$(grep -c '^READY:' <<<"$OUT")" 1 "absent PlannedLayer ledger entry, section still absent -> READY"
 
 # --- gotcha: approved keys survive polish-fixpoint.sh --mode plan -----------------------
 

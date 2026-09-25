@@ -8,7 +8,10 @@
 #                         no-decisions (no ## Decisions section) · no-seams (no ## Seams
 #                         section) · seams-incomplete <path> (an existing Deliverable path
 #                         with no ## Seams row) · uncited-decision N (a settled card with no
-#                         `vision:` quote) · no-approver (empty identity). Writes
+#                         `vision:` quote) · no-approver (empty identity) ·
+#                         planned-layer-undeclared (an overlap with promised work —
+#                         `planned-layer.sh check <plan>` exit 1 — is not named in the
+#                         plan's own ## Planned layer section). Writes
 #                         status: approved, approved_by, approved_at, approved_sha256 —
 #                         plus approved_section_digest, an internal per-section ledger this
 #                         script alone reads to name WHICH section moved on a later `ready`.
@@ -37,19 +40,26 @@
 #
 # THE DIGEST: sha256 over the concatenated bodies of `## Vision`, `## Deliverables`,
 # `## Decisions`, `## Out of scope`, `## Success Criteria` (matcher `## Success [Cc]`,
-# so both the capital-C and lowercase-c spellings hash instead of empty) and `## Seams`,
-# plus the `Human gates:` line — extracted with the same awk shape touchers.sh uses for
-# `## Delivers`, the header parameterized rather than a second parser. `approved_sha256`
+# so both the capital-C and lowercase-c spellings hash instead of empty), `## Seams`,
+# the `Human gates:` line, and `## Planned layer` (matcher `## Planned layer$`, exact —
+# never a prefix match, the same look-alike-header lesson `## Seams` already paid for) —
+# extracted with the same awk shape touchers.sh uses for `## Delivers`, the header
+# parameterized rather than a second parser. `## Planned layer` sits LAST in the
+# concatenation, so a plan carrying no such section contributes zero bytes and hashes
+# exactly as it did before this leg joined (Decision 1, settled (a)). `approved_sha256`
 # is that single digest, exactly as named in the plan;
-# `approved_section_digest` is a per-section breakdown of the SAME seven pieces so `ready` can
+# `approved_section_digest` is a per-section breakdown of the SAME eight pieces so `ready` can
 # name the section that moved instead of only reporting "something changed" — state that
 # must live in the plan (git-durable) rather than a scratch dir, because `ready` can run in
-# a session that never saw `approve`'s tmpdir.
+# a session that never saw `approve`'s tmpdir. A plan approved before `## Planned layer`
+# joined the digest carries no PlannedLayer entry in its ledger; `ready` reads that absence
+# as unchanged (never a spurious regate) as long as the section is still absent today —
+# see mode_ready.
 #
 # Verdict tokens (one greppable line each):
 #   approve: APPROVED · REFUSED needs-human N · REFUSED no-decisions · REFUSED no-seams ·
 #            REFUSED seams-incomplete <path...> · REFUSED uncited-decision N ·
-#            REFUSED no-approver · NOT-GATED
+#            REFUSED no-approver · REFUSED planned-layer-undeclared <listing> · NOT-GATED
 #   ready:   READY · REFUSED not-polished · REFUSED not-approved · REFUSED regate <sections> ·
 #            NOT-GATED
 #   check:   OK: ... · REFUSED missing-keys · REFUSED digest-mismatch · REFUSED status <status> ·
@@ -67,6 +77,12 @@ die_notgated() { printf 'NOT-GATED: %s\n' "$*"; exit 2; }
 _DP_HOME="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/delivers-paths.sh"
 [ -f "$_DP_HOME" ] || die_notgated "delivers-paths.sh missing at $_DP_HOME — the extraction pattern cannot be resolved"
 . "$_DP_HOME"
+
+# planned-layer.sh check <plan> — the promised-work overlap check approve calls on its
+# write path (mode_approve). Resolved by path, never sourced: it is its own process with
+# its own board read.
+_PL_HOME="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/planned-layer.sh"
+[ -f "$_PL_HOME" ] || die_notgated "planned-layer.sh missing at $_PL_HOME — the promised-work check cannot be resolved"
 
 # Fail-closed digest guard: `set -u` is on but there is no pipefail, so an exit
 # inside `$( ... | _sha )` never reaches the caller — the error text would become
@@ -110,10 +126,11 @@ _section_digest_one() {
     SuccessCriterion) _section_body "$file" "## Success [Cc]" | _sha ;;
     Seams)            _section_body "$file" "## Seams$" | _sha ;;
     HumanGates)       _human_gates_line "$file" | _sha ;;
+    PlannedLayer)     _section_body "$file" "## Planned layer$" | _sha ;;
   esac
 }
 
-_SECTION_LABELS="Vision Deliverables Decisions OutOfScope SuccessCriterion Seams HumanGates"
+_SECTION_LABELS="Vision Deliverables Decisions OutOfScope SuccessCriterion Seams HumanGates PlannedLayer"
 
 _compute_section_digests() {
   local file="$1" label out=""
@@ -133,6 +150,9 @@ _compute_overall_digest() {
     _section_body "$file" "## Success [Cc]"
     _section_body "$file" "## Seams$"
     _human_gates_line "$file"
+    # LAST: a plan with no ## Planned layer section contributes zero bytes here, so the
+    # overall digest hashes exactly as it did before this leg joined (Decision 1 (a)).
+    _section_body "$file" "## Planned layer$"
   } | _sha
 }
 
@@ -342,6 +362,21 @@ EOF
     exit 1
   fi
 
+  # planned-layer-undeclared — approval is where a human commits to a plan, so an
+  # undeclared overlap with promised work (another open bead's ## Delivers path, or
+  # another approved-but-not-beadified plan's ## Deliverables path) must stop here.
+  # `planned-layer.sh check <plan>` exit 1 is an undeclared overlap — its own listing of
+  # undeclared ids is shown verbatim. Exit 2 (board or plan unreadable) is an outage, never
+  # an undeclared overlap, so it refuses NOT-GATED under its own name instead.
+  local pl_out pl_rc
+  pl_out=$(bash "$_PL_HOME" check "$plan" 2>&1); pl_rc=$?
+  if [ "$pl_rc" -eq 1 ]; then
+    printf 'REFUSED planned-layer-undeclared: %s\n' "$pl_out"
+    exit 1
+  elif [ "$pl_rc" -ne 0 ]; then
+    die_notgated "planned-layer.sh check failed for $plan: $pl_out"
+  fi
+
   local ts; ts=$(date -u +%Y-%m-%d)
   local overall; overall=$(_compute_overall_digest "$plan")
   local sections; sections=$(_compute_section_digests "$plan")
@@ -382,11 +417,21 @@ mode_ready() {
   fi
 
   local current; current=$(_compute_section_digests "$plan")
+  # The empty-body digest: what any gated section hashes to when it is wholly absent
+  # from the plan. A label with NO entry in a pre-existing ledger (approved before that
+  # label joined _SECTION_LABELS — PlannedLayer's own case) can only ever compare against
+  # this constant, never against the real digest of a section approve never saw: that
+  # would be a spurious regate on every plan approved before the label's day one.
+  local empty_digest; empty_digest=$(printf '' | _sha)
   local label changed="" old new
   for label in $_SECTION_LABELS; do
     old=$(printf '%s' "$approved_sections" | tr ',' '\n' | awk -F= -v l="$label" '$1==l{print $2}')
     new=$(printf '%s' "$current" | tr ',' '\n' | awk -F= -v l="$label" '$1==l{print $2}')
-    [ "$old" = "$new" ] || changed="${changed}${changed:+ }${label}"
+    if [ -z "$old" ]; then
+      [ "$new" = "$empty_digest" ] || changed="${changed}${changed:+ }${label}"
+    elif [ "$old" != "$new" ]; then
+      changed="${changed}${changed:+ }${label}"
+    fi
   done
   if [ -n "$changed" ]; then
     printf 'REFUSED regate %s\n' "$changed"
