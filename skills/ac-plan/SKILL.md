@@ -1,6 +1,6 @@
 ---
 name: ac-plan
-description: 'Turn an idea into ONE ac2 plan file — problem, approach, deliverables, assumptions, risk + sequence, out-of-scope, and a success criterion that can come out FALSE. Explorers optional, chosen by size. Triggers: "ac2 plan", "write an ac2 plan", "plan this for ac2". Hands off to ac-polish.'
+description: 'Turn an idea into ONE ac2 plan file — problem, approach, deliverables, assumptions, risk + sequence, out-of-scope, and a success criterion that can come out FALSE. Explorers optional, chosen by size. Triggers: "ac2 plan", "write an ac2 plan", "plan this for ac2". Hands off to ac-prep (or ac-polish, one stage at a time).'
 ---
 
 # ac-plan — idea in, one plan file out
@@ -54,7 +54,7 @@ a line to cut — the plan is graded on whether its claims are checkable, never 
    question is answered by lookup; a trade it still backs rides the opt-in line (`references/decisions.md` § Improvements). Stop when a round applies nothing, three rounds at most.
 8. **Approve.** Render `references/approval-brief.md`'s brief and run ONE question round — open cards plus **Approve / Change / Park**. Approve runs
    `skills/_tools/plan-approve.sh approve <plan> "$(git config user.name)"`, the ONE writer, never a hand edit. Unattended: the plan stays `draft` and the docket shows it waiting.
-9. **Stop.** End with the line `Next: /ac-polish plan <path>` — never invoke the next stage.
+9. **Stop.** End with the line `Next: /ac-prep <path>` (or `/ac-polish plan <path>` for one stage at a time) — never invoke the next stage.
 
 ## The success criterion — a refusal, not a suggestion
 

@@ -10,12 +10,14 @@ contradictory orders and none contained polish, prove or distribute.)
 a question first when a human act comes next, then the skill. Chaining happens only when
 the human types "X then Y" in this session. A session goal ("finish the epic"), a board
 ranking, the pull order or a `Next:` line is never that permission — and a stage's stamp
-makes work eligible, it does not authorize the next stage.
+makes work eligible, it does not authorize the next stage. The one named chain is `/ac-prep
+<plan>`: typing it grants plan polish, beadify and bead polish for that plan, and nothing past
+bead polish.
 
 | Stage | Owner skill | Trigger | Human gate | Artifact | Next | Non-ac skills loaded |
 |---|---|---|---|---|---|---|
 | Align | `ac-align` | weekly (scheduled) + on demand | proposal only — human approves direction | alignment report | "Approve the direction?" then `/ac-plan` | — |
-| Plan | `ac-plan` | human intent | human approval via `plan-approve.sh approve` | ONE plan file (`_plans/`) | "Approve the plan?" then `/ac-polish plan <path>` | — |
+| Plan | `ac-plan` | human intent | human approval via `plan-approve.sh approve` | ONE plan file (`_plans/`) | "Approve the plan?" then `/ac-prep <path>` (or `/ac-polish plan <path>`) | — |
 | Polish (plan) | `ac-polish` | plan authored | conditional regate via `plan-approve.sh ready` — only when an approved section moved | refined plan (seams maps where traced) | `/ac-beadify <path>` (regate: re-approve, then retry) | `context-engineering` |
 | Beadify | `ac-beadify` | `plan-approve.sh check` passes | none — ACs gate themselves (`no probe, no bead`) | beads, Consumes-wired | `/ac-polish bead <epic>` | `beads-standards` |
 | Implement | `ac-implement` (conductor) + workers (`references/worker.md`) | eligible beads on the board (`ac-triage` must have fed it ≥30 min prior) | human-gate beads only | commits on the run's branch, closed beads | `/ac-publish` | `beads-standards` · `agent-mail` (+ domain skill per bead) |
