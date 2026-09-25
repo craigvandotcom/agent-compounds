@@ -20,7 +20,7 @@ approval digest covers (`plan-approve.sh ready` then reports `regate <sections>`
 changed sections come back for a one-tap re-approve). Saying so, in these words, on the brief
 itself, is what makes the tap informed rather than a formality.
 
-## The eight lines, and where each is read from
+## The nine lines, and where each is read from
 
 | line | source | rule |
 | --- | --- | --- |
@@ -28,6 +28,7 @@ itself, is what makes the tap informed rather than a formality.
 | deliverables | `## Deliverables` | as paths, one per line, each with its Done when: line — concrete values, what goes in and what comes out; an artifact, never an intention. A path with no Done when renders "no Done when" |
 | silver bullet | `## Success criterion` | the Silver Bullet: the one command and its expected result. The pasted failing output stays in the plan. A missing command renders "no silver bullet" |
 | seams + tests | `## Seams` | rows whose disposition is not `no seam`, ordered by toucher count (highest first); a `must update` test row renders beside its object, not in a separate list |
+| planned layer | `## Planned layer` | every row whose relationship is not `independent` — a `consumes`, `supersedes` or `conflicts` line, id + relationship + why, verbatim; all-`independent` (or `none`) renders "no planned-layer overlap" |
 | biggest risk | `## Risk + sequence` | the risk plus the assumption it rests on — one pair, not the whole risk list |
 | open cards | `## Decisions` | every card still `needs-human`, question + recommended option + its default tag (`[default: <option>]` or `[no default]`, read from the card — a design question with a default is not a vision question with none); a plan with none renders "none open" |
 | improvements | agent-proposed, opt-in | up to two items beyond or short of the ask (`decisions.md` § Improvements), each one line, each declined by default until the human opts in |
@@ -47,6 +48,15 @@ the first thing read. A test row (`unchanged` · `must update` · `none exists`)
 the object it tests, never pulled into a separate section: "what breaks" and "what proves it
 still works" belong on one line.
 
+## Planned layer rows on the brief
+
+`## Planned layer` rows carry an id, a relationship and a why. The brief drops every row whose
+relationship is `independent` — those exist so `planned-layer.sh check` can see the scan was
+complete, not because the human needs to weigh an overlap that touches nothing promised. A
+`supersedes` row (closes a bead or retires a plan) or a `conflicts` row (opened its own
+`needs-human` card in `## Decisions`) is never approved unseen, so every surviving row renders
+in full: no summarizing a `supersedes` into "some beads close".
+
 ## Skeleton
 
 ```markdown
@@ -64,6 +74,10 @@ still works" belong on one line.
 
 **Seams + tests** (ordered by toucher count, `no seam` rows dropped):
 - <object> — <finding> → <disposition> · tests: <unchanged | must update | none exists>
+
+**Planned layer** (`independent` rows dropped):
+- <id> · <consumes | supersedes | conflicts> — <why, naming the shared paths>
+| "no planned-layer overlap"
 
 **Biggest risk:** <risk> — rests on: <assumption>
 
