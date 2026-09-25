@@ -57,7 +57,7 @@ Print it verbatim — it is the header and the three tiers. Freshen (`/ac-tidy`,
 
 ## Phase 2–4: What the script computes, what you judge
 
-`docket.sh` applies the loop boundary and computes every mechanical fact: the 🔴 Decision Docket (`human-gate` ∪ `pipeline-proposal` ∪ `dream-proposal`, board-scan's on-docket rules), kind (`issue_type`, prefix fallback), P0→P4-then-oldest order, memo completeness, the anti-rot freshness tag from `events` + `verified:` stamps, queue lanes (`references/docket-lanes.md`), 🟡 plans awaiting sign-off, 🟢 the hopper, and the 🧰 frictions + 🧠 memory cards. Never recompute a fact it printed; a `?` is a failed read — name it, never guess.
+`docket.sh` applies the loop boundary and computes every mechanical fact: the 🔴 Decision Docket (`human-gate` ∪ `pipeline-proposal` ∪ `dream-proposal`, board-scan's on-docket rules), kind (`issue_type`, prefix fallback), pull-order sort (most beads freed, then P0→P4, then oldest), memo completeness, the anti-rot freshness tag from `events` + `verified:` stamps, queue lanes (`references/docket-lanes.md`), 🟡 plans awaiting sign-off, 🟢 the hopper, and the 🧰 frictions + 🧠 memory cards. Never recompute a fact it printed; a `?` is a failed read — name it, never guess.
 
 You own the judgment:
 
@@ -68,7 +68,7 @@ You own the judgment:
 
 ## Phase 5: Drive the action loop (interactive · exit-first · auto-advance)
 
-After rendering, *drive* the session one item at a time, top of 🔴 downward — each action a **tap, not a typing task** — and surface the next item automatically; never dump the dashboard and wait. **Present the next item — do not pick a subset** (most-urgent first: P0→P4, oldest; independent gates before a collapsed lane). **Done** is always on the prompt as the escape. Per-item taps, recording, ripple, and capture: `references/action-loop.md`. Freshen / apply-proposals stay optional buttons only when those signals are live — they do not replace the next docket item.
+After rendering, *drive* the session one item at a time, top of 🔴 downward — each action a **tap, not a typing task** — and surface the next item automatically; never dump the dashboard and wait. **Present the next item — do not pick a subset** (in the docket's printed order; independent gates before a collapsed lane). **Done** is always on the prompt as the escape. Per-item taps, recording, ripple, and capture: `references/action-loop.md`. Freshen / apply-proposals stay optional buttons only when those signals are live — they do not replace the next docket item.
 
 ---
 
@@ -80,8 +80,8 @@ After rendering, *drive* the session one item at a time, top of 🔴 downward �
 
 ## Principles
 
-1. **Exit-first ordering** — clear what's stalled (🔴), then feed the builders (🟡), then stock the hopper (🟢). Distance from a stall, not category neatness.
-2. **Docket in, docket out** — present the docket in urgency order (P0→P4, oldest first). Never drop, demote, or close a sitting because the list is long. Lead with "needs you" + remaining count.
+1. **Pull order** — the rung closest to implement first: gates that free beads (🔴), then plans (🟡), then gates that free nothing (⚪), then the hopper (🟢). Canon: `ac-pipeline/references/stage-table.md` § Pull order.
+2. **Docket in, docket out** — present the docket in its printed order. Never drop, demote, or close a sitting because the list is long. Lead with "needs you" + remaining count.
 3. **Tap, not type** — every action is a button (`AskUserQuestion`), never "tell me your choice." Batch the trivial (dependabot PRs, chores) into one tap.
 4. **Drive, don't dump** — render the board, then *conduct* it: act on one item, confirm the ripple, auto-advance to the next.
 5. **Writes are gated** — tidy/align/approve/promote are offered and confirmed, never silent (except headless runs). Freshen is an in-loop action, not an upfront gate.

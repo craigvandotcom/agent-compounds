@@ -2,7 +2,7 @@
 # docket.sh — the ac-human docket in one call (read-only).
 #
 # Computes everything mechanical about the human's docket: the gate beads (the board-scan
-# on-docket rules), kind, priority→age order, memo completeness, the anti-rot freshness tag
+# on-docket rules), kind, pull order (beads freed → priority → age), memo completeness, the anti-rot freshness tag
 # (events + `verified:` stamps), queue lanes (collapse / elevate / unreadable titles),
 # declared batch lanes with unanimous marking, plans awaiting sign-off, the hopper, and the
 # frictions + memory cards. The model judges and drives; it never recomputes these.
@@ -70,10 +70,12 @@ if [ "$MODE" = full ]; then
 fi
 wait
 
-python3 - "$T" "$PROJECT_ROOT" "$MODE" <<'PY'
+python3 - "$T" "$PROJECT_ROOT" "$MODE" "$SKILLS/ac-pipeline/scripts" <<'PY'
 import datetime as dt, json, os, re, sqlite3, sys
 
 T, ROOT, MODE = sys.argv[1], sys.argv[2], sys.argv[3]
+sys.path.insert(0, sys.argv[4])
+from pull_order import PLAN_ORDER, blocks_counts, front, plan_stage  # noqa: E402
 NOW = dt.datetime.now(dt.timezone.utc)
 TODAY = dt.date.today().isoformat()          # local calendar date — the freshness day boundary
 failed = []
@@ -164,6 +166,15 @@ def on_docket(b):
 labels = lambda b: set(b.get("labels") or [])
 gates = [b for b in beads or [] if labels(b) & DOCKET and on_docket(b)]
 
+# ── what each gate frees: the jsonl is the only source of edges ───────────
+BLOCKS = None
+try:
+    with open(os.path.join(ROOT, ".beads", "issues.jsonl")) as fh:
+        BLOCKS = blocks_counts({r["id"]: r for r in (json.loads(l) for l in fh if l.strip())})
+except (OSError, ValueError, KeyError) as e:
+    failed.append(f".beads/issues.jsonl: {e}")
+frees = lambda b: (BLOCKS or {}).get(b["id"], 0)
+
 # ── anti-rot: events are the record, comments carry the `verified:` stamp ─
 fresh, released = {}, {}
 db = os.path.join(ROOT, ".beads", "beads.db")
@@ -217,7 +228,7 @@ def tag_list(b):
 
 def prio(b):
     p = b.get("priority"); return p if isinstance(p, int) else 9
-order = lambda b: (prio(b), -days(b["created_at"]))
+order = lambda b: (-frees(b), prio(b), -days(b["created_at"]))  # the pull order: most freed first
 
 # ── lanes: declared batch lanes first, then any label with >5 gates ───────
 decl, lanes_file = [], os.path.join(ROOT, ".claude", "docket-lanes.json")
@@ -246,6 +257,9 @@ for b in gates:
     if big and prio(b) > 1: lanes.setdefault(big[0], (None, []))[1].append(b)
     else: itemized.append(b)
 itemized.sort(key=order)
+# A gate that blocks nothing waits below the plans; with edges unreadable, every gate stays 🔴.
+idle = [b for b in itemized if BLOCKS is not None and not frees(b)]
+itemized = [b for b in itemized if b not in idle]
 queued = sum(len(m) for _, m in lanes.values())
 
 def prio_tag(b):
@@ -253,7 +267,7 @@ def prio_tag(b):
 
 def gate_block(b):
     """A gate as a stacked mini-block: id·age·P (col 0), title wrapped ≤2 lines, tags — indented."""
-    rows = [cut(f"{b['id']} · {age(b['created_at'])} · {prio_tag(b)}", W)]
+    rows = [cut(f"{b['id']} · {age(b['created_at'])} · {prio_tag(b)}" + (f" · frees {frees(b)}" if frees(b) else ""), W)]
     rows += [IND + l for l in wrap2(b.get("title"))]
     rows += [IND + l for l in pack(tag_list(b))]
     return rows
@@ -292,6 +306,7 @@ def lane_block(label, d, members):
 def red_section():
     if beads is None: return ["🔴 GATES · ?", IND + "br_call list failed", ""]
     if not gates: return ["🔴 GATES · 0", IND + "—", ""]
+    if not itemized and not lanes: return ["🔴 GATES · 0 blocking", IND + "—", ""]
     out = []
     for k, title in (("decision", "DECISIONS"), ("action", "ACTIONS")):
         rows = [b for b in itemized if kind(b) == k]
@@ -305,6 +320,14 @@ def red_section():
         out += lane_block(label, d, members)
     return out
 
+def idle_section():
+    if not idle: return []
+    out = [f"⚪ IDLE GATES · {len(idle)}"]
+    for i, b in enumerate(idle):
+        if i: out.append("")
+        out += gate_block(b)
+    return out + [""]
+
 up, _ = read("unpushed", "git log @{u}..HEAD")
 up = up.strip() or "?"
 unpushed = "no upstream" if up == "no-upstream" else f"{up} unpushed"
@@ -312,34 +335,27 @@ unpushed = "no upstream" if up == "no-upstream" else f"{up} unpushed"
 if MODE == "gates":
     gc = len(gates) if beads is not None else "?"
     print(cut(f"{os.path.basename(ROOT)} · {gc} gates · {unpushed}", W))
-    print("\n".join(red_section()).rstrip())
+    print("\n".join(red_section() + idle_section()).rstrip())
     if failed: print("\n".join(cut(f"? {x}", W) for x in failed))
     sys.exit(0)
 
-# ── 🟡 plans awaiting sign-off ────────────────────────────────────────────
-def front(path):
-    try: text = open(path, errors="replace").read()
+# ── 🟡 plans awaiting sign-off, most mature first ─────────────────────────
+def fm_of(path):
+    try: return front(open(path, errors="replace").read())
     except OSError: return {}
-    m = re.match(r"---\n(.*?)\n---", text, re.S)
-    fm = {}
-    for line in (m.group(1).splitlines() if m else []):
-        k = re.match(r"^([A-Za-z_][\w-]*):\s*(.*?)\s*$", line)
-        if k: fm[k.group(1)] = k.group(2).strip("'\"")
-    return fm
 
+ACT = {"refined": "→ rule on its needs-human card", "polished": "→ ready (plan-approve.sh ready)",
+       "approved": "waiting on polish (/ac-polish)", "draft": "→ approve / refine"}
 plans = []
 pdir = os.path.join(ROOT, "_plans")
 for f in sorted(os.listdir(pdir)) if os.path.isdir(pdir) else []:
     p = os.path.join(pdir, f)
     if not f.endswith(".md") or f == "README.md" or not os.path.isfile(p): continue
-    fm = front(p); st = fm.get("status", "draft")
-    polished = "polish_rounds" in fm and any(k.startswith("polish_fixpoint_") for k in fm)
-    if st in ("draft", "refined"): act = "→ approve / refine"
-    elif st == "approved": act = "→ ready (plan-approve.sh ready)" if polished else "→ not polished: /ac-polish"
-    else: continue
+    fm = fm_of(p); st = plan_stage(fm) or "draft"
+    if st not in ACT: continue
     invest = int(re.sub(r"\D", "", fm.get("polish_rounds") or fm.get("refinement_rounds") or "") or 0)
-    plans.append((invest, os.path.getmtime(p), f"_plans/{f}", st, act))
-plans.sort(key=lambda x: (-x[0], -x[1]))
+    plans.append((invest, os.path.getmtime(p), f"_plans/{f}", st, ACT[st]))
+plans.sort(key=lambda x: (PLAN_ORDER.index(x[3]), -x[0], -x[1]))
 
 # ── 🟢 hopper (board-scan Scan C) ─────────────────────────────────────────
 hopper, pool, legacy = [], 0, 0
@@ -350,7 +366,7 @@ for dp, dns, fns in os.walk(bdir) if os.path.isdir(bdir) else []:
     top = os.path.relpath(dp, bdir).split(os.sep)[0]
     for f in fns:
         if not f.endswith(".md") or f.startswith("_") or f in ("ROADMAP.md", "BUSINESS-STRATEGY.md"): continue
-        fm = front(os.path.join(dp, f)); st = fm.get("status", "?")
+        fm = fm_of(os.path.join(dp, f)); st = fm.get("status", "?")
         if st == "complete": continue
         path = os.path.relpath(os.path.join(dp, f), ROOT)
         if st == "candidate": hopper.append((path, f"candidate · {fm.get('source', '?')}", "→ approve into pool / discard"))
@@ -408,7 +424,7 @@ stray = [b for b in beads or [] if on_docket(b) and not labels(b) & DOCKET
 
 # ── render: one stacked block per section, every line inside W ────────────
 props = sum(1 for b in gates if "pipeline-proposal" in labels(b))
-est = 2 * (len(itemized) + len([p for p in plans if "approve" in p[4]]))
+est = 2 * (len(itemized) + len(idle) + len([p for p in plans if "approve" in p[4]]))
 
 out = [cut(f"{os.path.basename(ROOT)} · {TODAY}", W), ""]
 
@@ -416,9 +432,9 @@ need = [f"{len(plans)} plan(s) to sign off", f"{len(hopper)} in hopper — ~{est
 if props: need.append(f"⚠ {props} proposal(s) pending")
 for label, (d, members) in lanes.items():
     need.append(cut(f"🔁 {(d or {}).get('name', label)} {len(members)} queued"))
-if itemized: need.append(f"→ next {itemized[0]['id']}")
+if itemized or idle: need.append(f"→ next {(itemized or idle)[0]['id']}")
 need.append(unpushed)
-out.append(f"🧑 NEEDS YOU · {'?' if beads is None else len(itemized)} gates")
+out.append(f"🧑 NEEDS YOU · {'?' if beads is None else len(itemized) + len(idle)} gates")
 out += [IND + cut(n) for n in need] + [""]
 
 out += red_section()
@@ -430,6 +446,8 @@ for p in plans[:10]:
     out.append(IND + cut(f"{p[3]} · {dt.datetime.fromtimestamp(p[1]):%m-%d}"))
     out.append(IND + cut(p[4]))
 out.append("")
+
+out += idle_section()
 
 out.append(f"🟢 HOPPER · {len(hopper)}")
 if not hopper: out.append(IND + "—")

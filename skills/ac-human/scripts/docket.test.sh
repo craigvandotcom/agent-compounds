@@ -25,7 +25,7 @@ TODAY=$(date +%F)
 
 # ── fixture board ─────────────────────────────────────────────────────────
 python3 - "$R" "$TODAY" <<'PY'
-import datetime as dt, json, sqlite3, sys
+import datetime as dt, json, os, sqlite3, sys
 R, TODAY = sys.argv[1], sys.argv[2]
 now = dt.datetime.now(dt.timezone.utc)
 iso = lambda d: (now - dt.timedelta(days=d)).strftime("%Y-%m-%dT%H:%M:%SZ")
@@ -52,6 +52,14 @@ bead("dl-un", 2, 4, ["human-gate", "declared"], desc="votes: green, green, green
 bead("dl-split", 2, 4, ["human-gate", "declared"], desc="votes: green, red, green")
 bead("stray-1", 2, 4, ["refined"], t="task", desc="blocked, waiting on Apple account")
 json.dump({"issues": B, "total": len(B), "has_more": False, "limit": 0}, open(f"{R}/board.json", "w"))
+# edges: g-p1-new frees two beads, g-act one; every other gate blocks nothing
+dep = lambda i, *on: dict(id=i, status="open", dependencies=[{"issue_id": i, "depends_on_id": o, "type": "blocks"} for o in on])
+with open(f"{R}/.beads/issues.jsonl", "w") as fh:
+    for r in B + [dep("w1", "g-p1-new", "g-act"), dep("w2", "g-p1-new")]: fh.write(json.dumps(r) + "\n")
+os.makedirs(f"{R}/_plans")
+for name, fm in (("d", "status: draft"), ("a", "status: approved"), ("b", "status: bead-ready"),
+                 ("p", "status: approved\npolish_rounds: 2\npolish_fixpoint_sha256: x")):
+    open(f"{R}/_plans/plan-{name}.md", "w").write(f"---\n{fm}\n---\n")
 con = sqlite3.connect(f"{R}/.beads/beads.db")
 con.execute("CREATE TABLE comments (id INTEGER PRIMARY KEY, issue_id TEXT, author TEXT, text TEXT, created_at TEXT)")
 con.execute("CREATE TABLE events (id INTEGER PRIMARY KEY, issue_id TEXT, event_type TEXT, actor TEXT, "
@@ -89,10 +97,17 @@ OUT=$(cd "$R" && "$DOCKET"); ALL="$ALL
 $OUT"
 
 # order + tiering
+before "a gate that frees beads outranks P0" "g-p1-new · " "g-p0 · "
+has    "it names what it frees"       "g-p1-new · 2d · P1 · frees 2"
 before "P0 before P1"                 "g-p0 · "    "g-p1-old"
-before "P1 oldest first"              "g-p1-old"   "g-p1-new"
+before "P1 oldest first"              "g-p1-old"   "flood-urgent"
 before "decisions before actions"     "🔴 DECISIONS"  "🔴 ACTIONS"
-has    "next is P0"                   "→ next g-p0"
+has    "next is the most freeing"     "→ next g-p1-new"
+before "blocking gates before plans"  "🔴 ACTIONS"  "🟡 PLANS"
+before "plans before idle gates"      "🟡 PLANS"   "⚪ IDLE GATES"
+before "polished before approved"     "plan-p.md" "plan-a.md"
+before "approved before draft"        "plan-a.md" "plan-d.md"
+hasnt  "bead-ready is the loop's"     "plan-b.md"
 has    "action grouped"               "🔴 ACTIONS · 1"
 hasnt  "deferred excluded"            "g-deferred"
 hasnt  "future defer excluded"        "g-future"
@@ -128,6 +143,15 @@ before "friction weight order"        "f-both"     "f-crit"
 has    "memory row rendered"          "1. [duplicate] 9 → merge"
 block_has "memory row files"          "1. [duplicate] 9 → merge" "↔ b.md"
 has    "stray human-pending"          "stray-1 ·"
+
+# edges unreadable → every gate stays 🔴, the failure named
+swap() { python3 -c 'import os, sys; os.rename(sys.argv[1], sys.argv[2])' "$R/.beads/$1" "$R/.beads/$2"; }
+swap issues.jsonl issues.off
+OUT=$(cd "$R" && "$DOCKET"); ALL="$ALL
+$OUT"
+hasnt  "no idle tier without edges"   "⚪ IDLE GATES"
+has    "the edge read is named"       ".beads/issues.jsonl"
+swap issues.off issues.jsonl
 
 # memory source absent → `?`, not a crash
 OUT=$(cd "$R" && AC_HUMAN_MEMORY_CMD='echo "memory-rollup.py not found" >&2; exit 127' "$DOCKET"); ALL="$ALL
