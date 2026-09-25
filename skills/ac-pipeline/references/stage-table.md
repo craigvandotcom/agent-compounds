@@ -8,7 +8,9 @@ contradictory orders and none contained polish, prove or distribute.)
 
 **No stage invokes the next.** Every stage ends by stopping on its own `Next` cell below —
 a question first when a human act comes next, then the skill. Chaining happens only when
-the human says "X then Y".
+the human types "X then Y" in this session. A session goal ("finish the epic"), a board
+ranking, the pull order or a `Next:` line is never that permission — and a stage's stamp
+makes work eligible, it does not authorize the next stage.
 
 | Stage | Owner skill | Trigger | Human gate | Artifact | Next | Non-ac skills loaded |
 |---|---|---|---|---|---|---|

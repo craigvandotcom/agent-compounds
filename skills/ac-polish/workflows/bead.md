@@ -87,5 +87,6 @@ Retype every `MISFILED: human fork` a reader declined to `decision` + `human-gat
 memo (`beads-standards/reference/human-gate-template.md`), before handing off.
 
 Report `rounds-to-fixpoint` with the verdict token, then stop: `Next: /ac-implement <epic>` —
-or name what still blocks it. No stage invokes the next; the next call is the human's, or an
-explicit "X then Y" already in play.
+or name what still blocks it. **Never invoke `ac-implement` from this hand-off** — the stamp
+makes the beads eligible, not the swarm authorized. The next call is the human's, or an
+"X then Y" the human typed in this session (`ac-pipeline/references/stage-table.md`).

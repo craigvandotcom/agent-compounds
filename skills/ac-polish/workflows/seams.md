@@ -118,5 +118,6 @@ failure not handled · assumption nothing asserts · untrusted input nothing val
 half-mapped boundary) · reader diagnoses by
 reader count · the **journey** (the flow map's steps and sensors, for `ac-qa`) · an empty
 Approach. The orchestrator writes the Problem paragraph FROM THE MAPS, copies the file to
-`_plans/` with frontmatter naming rounds and verdict, then stops: `Next: /ac-plan <path>`. No
-stage invokes the next; the next call is the human's, or an explicit "X then Y" already in play.
+`_plans/` with frontmatter naming rounds and verdict, then stops: `Next: /ac-plan <path>`.
+**Never invoke `ac-plan` from this hand-off.** The next call is the human's, or an "X then Y"
+the human typed in this session (`ac-pipeline/references/stage-table.md`).
