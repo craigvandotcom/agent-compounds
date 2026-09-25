@@ -2,7 +2,7 @@
 """agent-roster — active Agent Mail agents for this repo (read-only).
 
 Prints one TAB-separated line per non-retired agent for the project whose
-human_key is this repo:
+human_key is pinned in session-start.md:
 
     name<TAB>program<TAB>model<TAB>last_active_ts
 
@@ -15,9 +15,9 @@ absence, which cannot tell a retired agent from a never-registered one — plus 
 recency window: agents idle longer than AC_BOARD_AGENT_WINDOW_H hours (default
 24) are dropped, so a stale registration is not read as a running agent.
 
-Exit: 0 roster read (may be empty), 2 NOT-GATED (DB, sqlite3, or project
-unreadable) with the reason on stderr — the board renders `?`, never a
-guessed count.
+Exit: 0 roster read (may be empty), 2 NOT-GATED (DB, sqlite3, project
+root, or key pin unreadable/malformed) with the reason on stderr — the board
+renders `?`, never a guessed count.
 """
 
 import datetime
@@ -46,7 +46,7 @@ def project_root():
 
 def db_path():
     override = os.environ.get("MCP_AGENT_MAIL_DB")
-    if override and os.path.isfile(override):
+    if override:
         return override
     url = os.environ.get("DATABASE_URL", "")
     if url.startswith("sqlite"):
@@ -56,8 +56,38 @@ def db_path():
     return os.path.expanduser("~/mcp_agent_mail/storage.sqlite3")
 
 
-def slugify(path):
-    return re.sub(r"-+", "-", re.sub(r"[^a-z0-9]+", "-", path.lower())).strip("-")
+def pinned_human_key(root):
+    current = root
+    while True:
+        pin = os.path.join(current, ".claude/hooks/session-start.md")
+        try:
+            os.lstat(pin)
+        except FileNotFoundError:
+            parent = os.path.dirname(current)
+            if parent == current:
+                return None, f"no human_key pin at or above project root {root}"
+            current = parent
+            continue
+        except OSError as exc:
+            return None, f"cannot inspect project key pin at {pin}: {exc}"
+        try:
+            with open(pin, encoding="utf-8") as handle:
+                text = handle.read()
+        except (OSError, UnicodeError) as exc:
+            return None, f"cannot read project key pin at {pin}: {exc}"
+        matches = re.findall(
+            r'^\s*human_key:\s*"([^"\r\n]*)"\s*,?\s*$', text, re.MULTILINE
+        )
+        if not matches:
+            if re.search(r"^\s*human_key:", text, re.MULTILINE):
+                return None, f"malformed human_key pin at {pin}"
+            return None, f"no human_key pin in {pin}"
+        if len(matches) != 1:
+            return None, f"expected one human_key pin at {pin}, found {len(matches)}"
+        key = matches[0]
+        if not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._-]*/[A-Za-z0-9][A-Za-z0-9._-]*", key):
+            return None, f'malformed human_key pin at {pin}: expected "<org>/<app-dir>"'
+        return key, None
 
 
 def mail_status():
@@ -76,21 +106,26 @@ def main():
     if not root:
         print("agent-roster: NOT-GATED — no project root", file=sys.stderr)
         return 2
+    if not os.path.isdir(root):
+        print(f"agent-roster: NOT-GATED — project root unreadable at {root}", file=sys.stderr)
+        return 2
+    key, reason = pinned_human_key(root)
+    if not key:
+        print(f"agent-roster: NOT-GATED — {reason}", file=sys.stderr)
+        return 2
     db = db_path()
     if not os.path.isfile(db):
         print(f"agent-roster: NOT-GATED — no Agent Mail DB at {db}", file=sys.stderr)
         return 2
-    keys = {root, os.path.basename(root), slugify(root)}
     con = None
     try:
         con = sqlite3.connect(f"file:{db}?mode=ro", uri=True, timeout=10)
         rows = con.execute(
             "SELECT a.name, a.program, a.model, a.last_active_ts "
             "FROM agents a JOIN projects p ON p.id = a.project_id "
-            "WHERE a.retired_at IS NULL "
-            "AND (p.human_key IN (?, ?, ?) OR p.slug IN (?, ?, ?)) "
+            "WHERE a.retired_at IS NULL AND p.human_key = ? "
             "ORDER BY a.last_active_ts DESC",
-            (*sorted(keys), *sorted(keys)),
+            (key,),
         ).fetchall()
     except sqlite3.Error as exc:
         print(f"agent-roster: NOT-GATED — {exc}", file=sys.stderr)
