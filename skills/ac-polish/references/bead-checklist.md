@@ -57,6 +57,14 @@ is the reader doing its job; reaching for a finding to justify the round is not.
   `stamp-refined.sh` re-runs that command and refuses a missing or stale one
   (beads-standards `bead-create-contract.md` § Touchers). Command shapes per question:
   `ac-polish/references/seams-checklist.md`.
+- Evaluate every bead against the prod-write predicate in
+  `skills/beads-standards/reference/bead-conventions.md` § The prod-write gate predicate; cite
+  that section, do not restate it. When the predicate does not apply, write the exact line
+  `prod-write: none — <reason>` with a non-empty reason. A signal-bearing bead with neither
+  that line nor the `sensitive-prod` + DECISION `blocks` gate pair is class (c):
+  `stamp-refined.sh` refuses it. The reader cannot write a label or an edge, so when the
+  predicate does apply, list it in DECLINED as `PROD-WRITE: <id> — <clause>` for the run to
+  wire (or hold) before hand-off.
 - For the object this bead reshapes: which bead in the epic owns each lifecycle stage —
   create · store · read · update · delete · cleanup? A stage no bead owns and the plan does
   not name out-of-scope is a HOLE, and grep cannot find it; only this question does.

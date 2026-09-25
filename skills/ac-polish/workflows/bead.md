@@ -74,12 +74,12 @@ reversible, never an error exit.
 
 ## Prod-write gate wiring — the predicate, evaluated at refine
 
-Evaluate every bead against beads-standards' prod-write predicate — (i) INSERTs, UPDATEs or
-DELETEs user-data rows, (ii) DDL on `auth.*` or an RLS policy, (iii) irreversible-by-default.
-A bead meeting a clause gets its `blocks` edge to a human-gate decision bead wired (create the
-decision bead when none exists) and the `sensitive-prod` label as the machine-readable marker
-of that evaluation — the label is the predicate's trace, never the trigger. A bead meeting the
-predicate whose gate edge cannot be wired is HELD for the human and is never stamped `refined`.
+The per-round reader evaluates every bead against beads-standards' prod-write predicate and
+hands a positive verdict to this run as `PROD-WRITE: <id> — <clause>` in DECLINED. This workflow
+never asks the reader to infer that verdict from a signal alone. Before hand-off, wire each tag's
+`blocks` edge to a human-gate decision bead (create the decision bead when none exists) and its
+`sensitive-prod` label — the board state is the predicate's trace, never the trigger. A tagged
+bead whose gate edge cannot be wired is HELD for the human and is never stamped `refined`.
 
 ## Hand-off
 

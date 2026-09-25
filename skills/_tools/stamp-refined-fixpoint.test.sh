@@ -138,6 +138,9 @@ Test `x` must FAIL before the fix; assert exit 1.
 ## Acceptance Criteria
 - The fix lands.
   Probe: `grep -q "the fix" src/x.ts && true` — tier: none
+
+## Delivers
+- lib/lonely.ts
 '
 
 write_board() {

@@ -13,8 +13,8 @@
 #
 # Both forms work under bash and zsh, sourced or executed, from any cwd.
 #
-# Per-bead exit: 0 stamped · 1 refused (element 4 unmet, or description carries no executable
-# `Probe:` line — nothing written) · 2 check unusable.
+# Per-bead exit: 0 stamped · 1 refused (a content gate is unmet — nothing written) ·
+# 2 check unusable.
 # A refusal is not an error to route around: author the `## Declared RED` and the probes,
 # then re-stamp.
 
@@ -32,6 +32,8 @@ fi
 _STAMP_REFINED_DIR="$(cd "$(dirname "$_STAMP_REFINED_SELF")" && pwd)"
 ELEMENT4_CHECK="${ELEMENT4_CHECK:-$_STAMP_REFINED_DIR/element4-check.sh}"
 TOUCHERS_TOOL="${TOUCHERS_TOOL:-$_STAMP_REFINED_DIR/touchers.sh}"
+PROD_WRITE_TRIPWIRE_TOOL="${PROD_WRITE_TRIPWIRE_TOOL:-$_STAMP_REFINED_DIR/prod-write-tripwire.sh}"
+DELIVERS_PATHS_TOOL="${DELIVERS_PATHS_TOOL:-$_STAMP_REFINED_DIR/delivers-paths.sh}"
 
 # 0 when a probe still runs something after text and existence clauses are removed.
 # grep, rg, and `test -e|-f|-x` are not a run. `test -x p && bash p` leaves `bash p`.
@@ -219,6 +221,66 @@ EOF
     fi
   fi
 
+  # PROD-WRITE TRIPWIRE (ac-bhxx). The predicate is judgment; this leg is the mechanical
+  # backstop for descriptions that match its signal vocabulary. A signal passes only with
+  # the reader's recorded `prod-write: none — <reason>` verdict or the board's existing
+  # sensitive-prod + DECISION blocks gate pair. Neither is ever written by this script:
+  # a label or edge the gate invents would be its own evidence.
+  local desc issue_type labels_csv decision_edges pdesc pout prc
+  desc=$(printf '%s' "$meta" | jq -r '.[0].description // ""')
+  issue_type=$(printf '%s' "$meta" | jq -r '.[0].issue_type // ""')
+  labels_csv=$(printf '%s' "$meta" | jq -r '.[0].labels // [] | join(",")')
+  decision_edges=$(printf '%s' "$meta" | jq -r '[.[0].dependencies[]?
+    | select(.dependency_type == "blocks" and ((.title // "") | startswith("DECISION")))]
+    | length')
+  if [ ! -f "$PROD_WRITE_TRIPWIRE_TOOL" ]; then
+    echo "stamp_refined: FATAL — prod-write-tripwire.sh not found at '$PROD_WRITE_TRIPWIRE_TOOL'; refusing to stamp $id" >&2
+    return 2
+  fi
+  command -v prod_write_tripwire_check >/dev/null 2>&1 || . "$PROD_WRITE_TRIPWIRE_TOOL"
+  pdesc=$(mktemp "${TMPDIR:-/tmp}/stamp-refined-prod-write.XXXXXX") || {
+    echo "stamp_refined: REFUSED $id — could not write a temp description for the prod-write leg; refusing rather than guessing. No label written." >&2
+    return 2
+  }
+  printf '%s\n' "$desc" >"$pdesc"
+  pout=$(prod_write_tripwire_check "$pdesc" "$labels_csv" "$decision_edges" "$id" 2>&1); prc=$?
+  rm -f "$pdesc"
+  if [ "$prc" -eq 1 ]; then
+    printf '%s\n' "$pout" >&2
+    echo "stamp_refined: REFUSED $id — the prod-write tripwire found an unrecorded signal; no label written." >&2
+    _downgrade "$id" "prod-write signal has no recorded verdict" || return $?
+    return 1
+  elif [ "$prc" -ne 0 ]; then
+    printf '%s\n' "$pout" >&2
+    echo "stamp_refined: REFUSED $id — the prod-write tripwire could not check the description; no label written." >&2
+    return 2
+  fi
+
+  # TASK/FEATURE DELIVERS LEG (ac-bhxx). close-evidence-check.sh already refuses these
+  # closes as NO-DELIVERS / UNVERIFIABLE-DELIVERS, so letting them acquire `refined`
+  # only sends a structurally unclosable bead through a worker claim. Path extraction
+  # routes through the one shared pattern; touchers: dispositions are not deliveries.
+  if [ "$issue_type" = task ] || [ "$issue_type" = feature ]; then
+    local del_body del_paths
+    if [ ! -f "$DELIVERS_PATHS_TOOL" ]; then
+      echo "stamp_refined: FATAL — delivers-paths.sh not found at '$DELIVERS_PATHS_TOOL'; refusing to stamp $id" >&2
+      return 2
+    fi
+    command -v extract_paths >/dev/null 2>&1 || . "$DELIVERS_PATHS_TOOL"
+    del_body=$(printf '%s\n' "$desc" | awk '/^## Delivers/{on=1; next} /^## /{on=0} on')
+    if [ -z "$(printf '%s' "$del_body" | tr -d '[:space:]')" ]; then
+      echo "stamp_refined: REFUSED $id — NO-DELIVERS — task/feature bead has no populated '## Delivers' section, so no close can carry evidence. No label written." >&2
+      _downgrade "$id" "task/feature has no Delivers section" || return $?
+      return 1
+    fi
+    del_paths=$(printf '%s\n' "$del_body" | grep -v '^[[:space:]]*touchers:' | extract_paths)
+    if [ -z "$del_paths" ]; then
+      echo "stamp_refined: REFUSED $id — UNVERIFIABLE-DELIVERS — task/feature bead's '## Delivers' is prose-only; add a path-shaped artifact. No label written." >&2
+      _downgrade "$id" "task/feature Delivers is prose-only" || return $?
+      return 1
+    fi
+  fi
+
   if [ "${family_hits:-0}" -gt 0 ]; then
     # A header alone declares nothing (the rule element4-check applies to `## Declared RED`):
     # a receipt without a round count and a digest is treated as ABSENT.
@@ -251,8 +313,7 @@ EOF
   # second copy of the derivation would drift silently — the writer emitting exactly what
   # the gate rejects. One home, two callers. The verdict still lands here, in the sole
   # sanctioned writer of `refined`, where no caller can route around it.
-  local desc tdesc tout trc
-  desc=$(printf '%s' "$meta" | jq -r '.[0].description // ""')
+  local tdesc tout trc
   if [ ! -f "$TOUCHERS_TOOL" ]; then
     echo "stamp_refined: FATAL — touchers.sh not found at '$TOUCHERS_TOOL'; refusing to stamp $id" >&2
     return 2
