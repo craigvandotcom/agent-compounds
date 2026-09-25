@@ -367,11 +367,21 @@ def build(T, ROOT, COMPACT):
             m.append(((rank("implement"),), {"rung": "implement", "n_ready": n_ready,
                       "subject": plural(n_ready, "ready bead"), "detail": "no agent taking them",
                       "route": "/ac-implement"}))
+        def parent_epic(bid):
+            return next((rec(d["depends_on_id"]).get("title") for d in rec(bid).get("dependencies") or []
+                         if d.get("type") == "parent-child" and rec(d["depends_on_id"]).get("issue_type") == "epic"), None)
+
+        def gate_epic(gid):
+            """The epic a gate serves: its own parent, else the parent of a bead it blocks."""
+            return parent_epic(gid) or next((t for r in (recs or {}).values() if is_open(r) and any(
+                d.get("type") == "blocks" and d.get("depends_on_id") == gid for d in r.get("dependencies") or [])
+                for t in [parent_epic(r["id"])] if t), None)
+
         idle_entries = []
         for g in sorted(gates, key=lambda x: x["created_at"]):
             k = (BLOCKS or {}).get(g["id"], 0)
             entry = {"rung": "gate" if k else "idle-gate", "gate_id": g["id"], "title": g.get("title", ""),
-                      "created_at": g["created_at"], "gate_kind": gate_kind(g), "blocks": k,
+                      "created_at": g["created_at"], "gate_kind": gate_kind(g), "blocks": k, "epic": gate_epic(g["id"]),
                       "subject": g["id"],
                       "detail": f"{gate_kind(g)} · unblocks {plural(k, 'bead')}" if k else gate_kind(g),
                       "route": "/ac-human"}

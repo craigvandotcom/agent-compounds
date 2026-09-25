@@ -94,25 +94,28 @@ if python3 -c 'import sys; s=sys.stdin.read(); sys.exit(1 if any(ord(c) >= 0x1F0
 then echo "ok   full: no emoji codepoints"
 else echo "FAIL full: an emoji codepoint leaked"; FAILURES=$((FAILURES + 1)); fi
 
-# ── ON YOU: order, route on every item, gate slug strips ACTION: ────────────────────────
-order onyou "a blocking gate precedes refine"          "retire deploy-targets.list" "refine 9 beads"
-order onyou "refine precedes the draft-approve"        "refine 9 beads" "approve memory-stewardship-research"
-order onyou "the draft-approve precedes the idle gate" "approve memory-stewardship-research" "run /dream on the dockets"
+# ── ON YOU: one line per move — glyph, the command to type, what it acts on, the badge ──
+order onyou "a blocking gate precedes refine"          "retire deploy" "/ac-polish bead 9 beads"
+order onyou "refine precedes the draft-approve"        "/ac-polish bead 9 beads" "memory-stewardship"
+order onyou "the draft-approve precedes the idle gate" "memory-stewardship" "run /dream"
 check onyou "the gate slug strips ACTION:"            'ACTION:' absent
 check onyou "the gate slug strips DECISION:"          'DECISION:' absent
 check onyou "the plan date prefix is stripped"        '2026-09-25-0012-ship-stage' absent
-check onyou "the blocking gate's route line is present" '  → /ac-human'
-check onyou "the refine row's route is present"       '→ /ac-polish bead'
-check onyou "the beadify row's route is present"      '→ /ac-beadify'
-check onyou "the pool row is relabelled a proposal"   'draft 1 proposal'
-check onyou "pool routes to align"                    '→ /ac-align'
+check onyou "command first on a gate, no route line"  '^▲ /ac-human retire deploy.* +⊘1 +[0-9]+d$'
+check onyou "no separate route lines remain"          '→' absent
+check onyou "command first on refine"                 '^~ /ac-polish bead 9 beads$'
+check onyou "command first on beadify"                '^» /ac-beadify ship-stage +[0-9]+[mhd]$'
+check onyou "the pool row counts proposals"           '^\+ /ac-align 1 proposal$'
+check onyou "each plan in a grouped move gets its own row" '^» /ac-polish plan lint-system'
+check onyou "the second plan too"                     '^» /ac-polish plan one-verdict'
 
-# ── fix 4: a grouped plan move becomes one row per plan, each with its own age + route ──
-check onyou "the first plan in the group gets its own row" '» polish lint-system-upgrade'
-check onyou "the second plan in the group gets its own row" '» polish one-verdict-contract'
-order onyou "the group's two rows stay adjacent, in name order" \
-  "polish lint-system-upgrade" "polish one-verdict-contract"
-check onyou "each split row still carries its own route"   '→ /ac-polish plan'
+# ── a gate names the epic it serves; gates serving one epic merge into one row ─────────
+sed 's|"subject": "ac-g1"|"epic": "Ship stage: one gate per release", "subject": "ac-g1"|; s|"subject": "ac-g2"|"epic": "Ship stage: one gate per release", "subject": "ac-g2"|' \
+  "$W/full.json" >"$W/epic.json"
+got=$(once "$W/epic.json" --no-color)
+check epicgate "the gate shows its epic slug, merged ×2, blocks summed" '^▲ /ac-human Ship stage ×2 +⊘1 +[0-9]+d$'
+check epicgate "the merged gate's own title is gone"  'retire deploy-targets|run /dream' absent
+got=$(once "$W/full.json" --no-color)
 
 # ── EPICS: next (no progress, no agent) → open (ascending progress) → most recently closed ─
 order epics "the untouched epic (next) precedes the started one" "compounds-dir" "Run branch"

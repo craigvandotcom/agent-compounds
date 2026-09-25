@@ -51,7 +51,7 @@ def clip(s, w):
     s = " ".join((s or "").split())
     if len(s) <= w: return s
     cut = s[:max(0, w - 1)]
-    sp = cut.rfind(" ")
+    sp = max(cut.rfind(" "), cut.rfind("-"))
     if sp > w * 0.6: cut = cut[:sp]
     return cut.rstrip(" ,:;—-(") + "…"
 
@@ -154,11 +154,20 @@ def delta(state, key, n, now):
 
 # ── ON YOU: one row per ranked move — one row per PLAN within a grouped plan move ────────
 def expand_moves(moves):
-    """A grouped plan move (`polish 2 plans`) becomes one entry per plan name; everything
-    else passes through unchanged. Order is preserved (still the pull-order ranking)."""
-    out = []
+    """A grouped plan move (`polish 2 plans`) becomes one entry per plan name; gates serving
+    the same epic merge into one entry (`×n`, blocks summed, oldest age). Order is preserved."""
+    out, by_epic = [], {}
     for mv in moves:
-        if mv.get("rung") in ("beadify", "polish-plan", "approve-plan"):
+        if mv.get("rung") in ("gate", "idle-gate") and mv.get("epic"):  # one row per epic served
+            first = by_epic.get(mv["epic"])
+            if first:
+                first["n"] = first.get("n", 1) + 1
+                first["blocks"] = (first.get("blocks") or 0) + (mv.get("blocks") or 0)
+                first["created_at"] = min(first["created_at"], mv["created_at"])
+                continue
+            mv = by_epic[mv["epic"]] = dict(mv)
+            out.append(mv)
+        elif mv.get("rung") in ("beadify", "polish-plan", "approve-plan"):
             for nm in (mv.get("names") or [""]):
                 out.append({**mv, "names": [nm]})
         else:
@@ -167,36 +176,25 @@ def expand_moves(moves):
 
 
 def on_you_row(mv, w, now, c, plan_mtime):
-    amber = "33"
+    """One line per move: glyph, the command to type, what it acts on, then the badge."""
     rung = mv.get("rung")
     if rung in ("gate", "idle-gate"):
         glyph = "◆" if mv.get("gate_kind") == "decision" else "▲"
-        text = slug(mv.get("title", ""), w - 4)
-        badge_parts = ([f"⊘{mv['blocks']}"] if mv.get("blocks") else []) + [age(mv.get("created_at"), now)]
-        line1 = pack_badge(f"{glyph} {text}", "  ".join(badge_parts), w)
-        lines = [c(amber, line1)]
-        if mv.get("route"): lines.append(c(DIM, f"  → {mv['route']}"))
-        return lines
-    glyph = GLYPH.get(rung, "»")
-    if rung in ("beadify", "polish-plan", "approve-plan"):
-        nm = (mv.get("names") or [""])[0]
-        text = f"{mv.get('verb', '')} {plan_slug(nm)}"
-        badge = age_from_epoch(plan_mtime.get(nm), now)
-        line1 = pack_badge(f"{glyph} {text}", badge, w)
-        lines = [c(amber, line1)]
-        if mv.get("route"): lines.append(c(DIM, f"  → {mv['route']}"))
-        return lines
-    if rung == "pool":
-        text = f"draft {plural(mv.get('pool', 0), 'proposal')}"
+        text = epic_slug(mv.get("epic")) or slug(mv.get("title", ""), w)
+        if mv.get("n", 1) > 1: text += f" ×{mv['n']}"
+        badge = "  ".join(([f"⊘{mv['blocks']}"] if mv.get("blocks") else []) + [age(mv.get("created_at"), now)])
+    elif rung in ("beadify", "polish-plan", "approve-plan"):
+        glyph, nm = GLYPH.get(rung, "»"), (mv.get("names") or [""])[0]
+        text, badge = plan_slug(nm), age_from_epoch(plan_mtime.get(nm), now)
     else:
-        text = mv["subject"]
-    line1 = clip(f"{glyph} {text}", w)
-    route = f"→ {mv['route']}" if mv.get("route") else ""
-    if route and len(line1) + 2 + len(route) <= w:
-        return [c(amber, line1 + "  " + route)]
-    lines = [c(amber, line1)]
-    if route: lines.append(c(DIM, "  " + route))
-    return lines
+        glyph, badge = GLYPH.get(rung, "»"), ""
+        text = {"pool": lambda: plural(mv.get("pool", 0), "proposal"),
+                "refine-bead": lambda: plural(mv.get("n_unrefined", 0), "bead"),
+                "implement": lambda: plural(mv.get("n_ready", 0), "ready bead"),
+                "reclaim": lambda: plural(len(mv.get("bead_ids") or []), "bead"),
+                "red-pr": lambda: "red PR"}.get(rung, lambda: mv.get("subject", ""))()
+    head = " ".join(x for x in (glyph, mv.get("route"), text) if x)
+    return [c("33", pack_badge(clip(head, w - len(badge) - 2 if badge else w), badge, w))]
 
 
 def render_onyou(moves, w, now, c, plan_mtime, cap):
