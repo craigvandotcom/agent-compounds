@@ -411,9 +411,17 @@ RED_AT=$(rfield 'at')
 # A red-probe disposition close routes through the DISPOSITION carve-out instead
 # (condition e, the cascade — see the header).
 FRESH_VERIFY=0
+# A receipt is usable only when it is posted on the bead: the landing record cites its `at:`
+# stamp, and lint 35 rule 6 resolves that citation against the row. An unposted receipt (a
+# prior claim's leftover included) would land a record the lint refuses.
+ROW_TEXT=$(br_call comments list "$BEAD" --json </dev/null 2>/dev/null \
+  | jq -r '[.[]? | .text // empty] | join("\n")' 2>/dev/null)
 if [ ! -s "$RECEIPT_FILE" ] || [ -z "$RED_PROBE" ] || [ "$RED_BEAD" != "$BEAD" ]; then
   FRESH_VERIFY=1
   echo "close-gate[$BEAD] RED-RECEIPT fresh-verify — no usable claim-time receipt (missing, empty, or for another bead); every AC probe is verified green at HEAD below and the per-probe results are recorded on the bead at landing"
+elif ! printf '%s\n' "$ROW_TEXT" | grep -qxF "at: $RED_AT"; then
+  FRESH_VERIFY=1
+  echo "close-gate[$BEAD] RED-RECEIPT fresh-verify — the receipt at $RED_AT is not posted on the bead, so no landing record can cite it; every AC probe is verified green at HEAD below"
 fi
 [ "$FRESH_VERIFY" = 1 ] || echo "close-gate[$BEAD] RED-RECEIPT ok — RED was: $RED_PROBE"
 

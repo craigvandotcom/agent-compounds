@@ -238,9 +238,12 @@ add_ruling() { # <root> <text> — records a ruling comment directly via the moc
   ( cd "$1" && AC2_TEST_BR_STATE="$1/.br" br comments add "$BEAD" "$2" >/dev/null 2>&1 )
 }
 
-fly() { # <root> — run the REAL flight-check to bank a receipt
+fly() { # <root> — run the REAL flight-check to bank a receipt, then post it as a real run does
   ( cd "$1" && AC2_FLIGHT_DIR="$1/.flight" AC2_TEST_BR_STATE="$1/.br" AC2_DRY_RUN=1 \
       bash "$FLIGHT" "$BEAD" --body-file "$1/body.md" --root "$1" ) >/dev/null 2>&1
+  local last
+  last=$(awk '/^FLIGHT-RECEIPT v1/{buf=""} {buf = buf $0 "\n"} END{printf "%s", buf}' "$1/.flight/$BEAD.flight-receipt" 2>/dev/null)
+  [ -n "$last" ] && add_ruling "$1" "$last"
 }
 
 fix_subject() { printf 'subject v1\nFIXED\n' >"$1/subject.txt"; }
@@ -979,6 +982,22 @@ else fail "AC5 happy: rc=$GATE_RC status=$(jq -r .status "$R/.br/$BEAD.json") ou
 if [ -f "$R/.br/comments.log" ] && grep -q '^GATE: receipt' "$R/.br/comments.log"; then
   pass "AC-receipt: an ordinary receipt close records GATE: receipt on landing, written atomically via --transition-comment"
 else fail "AC-receipt: no GATE: receipt landing record"; fi
+
+# A receipt banked on disk but never posted on the bead cannot be cited — lint 35 rule 6
+# resolves `receipt-at:` against the row. The gate fresh-verifies instead of landing a
+# record the lint refuses.
+R="$(mkcase receipt-unposted)"; write_harness "$R"; board "$R" in_progress worker
+( cd "$R" && AC2_FLIGHT_DIR="$R/.flight" AC2_TEST_BR_STATE="$R/.br" AC2_DRY_RUN=1 \
+    bash "$FLIGHT" "$BEAD" --body-file "$R/body.md" --root "$R" ) >/dev/null 2>&1
+fix_subject "$R"
+out="$(gate "$R" --reason "$REASON")"
+GATE_RC=$(cat "$RCFILE")
+if [ "$GATE_RC" -eq 0 ] && printf '%s' "$out" | grep -q 'not posted on the bead'; then
+  pass "AC-receipt: an unposted receipt is not cited — the gate fresh-verifies"
+else fail "AC-receipt unposted: rc=$GATE_RC out=$out"; fi
+if grep -q '^FRESH-VERIFY' "$R/.br/comments.log" 2>/dev/null && ! grep -q '^GATE: receipt' "$R/.br/comments.log"; then
+  pass "AC-receipt: the unposted-receipt close lands FRESH-VERIFY, never GATE: receipt"
+else fail "AC-receipt unposted: wrong landing record"; fi
 
 R="$(mk_green own-dry-run)"
 out="$(gate "$R" --reason "$REASON" --dry-run)"

@@ -491,7 +491,11 @@ printf '%s\n\n' "$RECEIPT" >>"$RECEIPT_FILE" 2>/dev/null \
 
 printf '%s\n' "$RECEIPT"
 echo "flight-check: RED observed — receipt appended to ${RECEIPT_FILE}"
-echo "flight-check: post it to the bead so it outlives this checkout:"
-echo "flight-check:   br comments add $BEAD -f $RECEIPT_FILE"
+# Post it to the bead: close-gate cites a receipt only when the row carries it.
+if [ "${AC2_DRY_RUN:-0}" = "1" ]; then
+  echo "POST (dry-run): br comments add $BEAD <this receipt>"
+elif ! br comments add "$BEAD" "$RECEIPT" </dev/null >/dev/null 2>&1; then
+  echo "warn: could not post the receipt to $BEAD — close-gate will fresh-verify instead" >&2
+fi
 [ "$PRINT_RECEIPT" -eq 1 ] && cat "$RECEIPT_FILE"
 exit 0
