@@ -20,8 +20,15 @@ ingest → scan → alignment audit → sequencing), then follow REVIEW-mode beh
 
 ### 0. Preflight
 
+- **Resolve the repo trunk first, through the shared resolver:**
+  ```bash
+  TRUNK_TOOL="$PWD/.claude/skills/_tools/trunk.sh"
+  [ -x "$TRUNK_TOOL" ] || TRUNK_TOOL="skills/_tools/trunk.sh"
+  TRUNK="$(bash "$TRUNK_TOOL")" || exit 2
+  ```
+
 - **Branch guard (first, before anything else):** `git branch --show-current` must equal
-  `main`. If it doesn't — **ABORT the entire run**: Slack `degraded` with reason
+  `$TRUNK`. If it doesn't — **ABORT the entire run**: Slack `degraded` with reason
   `branch-guard: <branch> checked out`, zero writes, retry next cycle. A wave branch left
   checked out on the scheduler's cwd must never receive a weekly-align commit.
 - Verify the Slack channel `$ALIGN_SLACK_CHANNEL` (fallback `$DEFAULT_SLACK_CHANNEL`)
@@ -59,8 +66,8 @@ Skip Phase 6 entirely. Apply nothing — active/ and pool/ counts are unchanged 
 ### 5. Commit + push (pathspec-scoped, this app's repo only)
 
 Re-verify the branch guard immediately before committing: `git branch --show-current` must
-still equal `main`. A concurrent session can switch the checked-out branch between preflight
-(step 0) and this step (TOCTOU) — if it's no longer `main`, **ABORT**: Slack `degraded` with
+still equal `$TRUNK`. A concurrent session can switch the checked-out branch between preflight
+(step 0) and this step (TOCTOU) — if it's no longer `$TRUNK`, **ABORT**: Slack `degraded` with
 reason `branch-guard: <branch> checked out`, zero writes, retry next cycle.
 
 Git discipline: `ac-pipeline/references/commit-discipline.md` — pathspec-only commits, no wildcard adds / stash, commit=push, deletion check.
@@ -77,7 +84,7 @@ git push --no-verify
 
 ### 6. Verify the push landed
 
-`git rev-parse origin/main` must equal local `HEAD`; on non-ff/rejection → Slack `degraded`
+`git rev-parse "origin/$TRUNK"` must equal local `HEAD`; on non-ff/rejection → Slack `degraded`
 with the stranded SHA. (No auto-apply to strand, but still confirm the proposal committed.)
 
 ### 7. Notify — MANDATORY, do this last

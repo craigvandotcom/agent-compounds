@@ -15,7 +15,7 @@ runs tonight."
 
 When a future bead wires this up, your scheduler invokes the `ac-prove` skill in **`ensure`**
 mode, at **`ci` depth** (the base full-suite proof itself — no `+qa` layer; `+qa` is a ship-path
-concern, not an idle-cron one), against the app's current `main` HEAD. Execute without user
+concern, not an idle-cron one), against the app's current `$TRUNK` HEAD. Execute without user
 interaction.
 
 **⚠️ AUTONOMOUS MODE — no human is watching.** There is no `AskUserQuestion` here. Anything
@@ -31,7 +31,14 @@ skeleton*; the skill is the *behavior*.
 
 ### 0. Preflight
 
-- **Branch guard:** `git branch --show-current` must equal `main`. Any other branch checked
+- **Resolve the repo trunk through the shared resolver:**
+  ```bash
+  TRUNK_TOOL="$PWD/.claude/skills/_tools/trunk.sh"
+  [ -x "$TRUNK_TOOL" ] || TRUNK_TOOL="skills/_tools/trunk.sh"
+  TRUNK="$(bash "$TRUNK_TOOL")" || exit 2
+  ```
+
+- **Branch guard:** `git branch --show-current` must equal `$TRUNK`. Any other branch checked
   out → abort silently (this is a read/prove job, not a writer — no Slack noise needed for a
   branch-guard miss, just skip this cycle and let the next one retry).
 - **Defer-if-busy:** if a `reason=prove` (or any `workflow_dispatch`) run is already
@@ -44,7 +51,7 @@ skeleton*; the skill is the *behavior*.
 ### 1. Invoke `ac-prove`
 
 ```
-ac-prove: ensure, ci depth, --ref <current main HEAD>
+ac-prove: ensure, ci depth, --ref <current trunk HEAD>
 ```
 
 - **Mode is always `ensure` — NEVER `ensure --fix-forward`.** An idle-cron heartbeat is not a
@@ -97,7 +104,7 @@ Bead creation per `beads-standards/reference/bead-conventions.md` — types, unr
    ```bash
    if command -v slack-send >/dev/null 2>&1; then
      slack-send --channel "$PROVE_SLACK_CHANNEL" --card \
-       --title "ac-prove nightly: main is red" \
+       --title "ac-prove nightly: $TRUNK is red" \
        --body "Nightly ensure-depth proof failed for <app> at <SHA>. <bead id or 'already tracked in <existing bead id>'>. Run: <URL>."
    else
      echo "slack-send not found on PATH — skipping notification" >&2
@@ -108,7 +115,7 @@ Bead creation per `beads-standards/reference/bead-conventions.md` — types, unr
 
 This heartbeat is read/dispatch-only. It must never invoke `ensure --fix-forward` — fixing
 forward commits code, and an unattended cron job is not the place for autonomous fixes to a
-red main. A red result here is a signal for a human or the loop to pick up, not something this
+red trunk. A red result here is a signal for a human or the loop to pick up, not something this
 job resolves itself.
 
 ---

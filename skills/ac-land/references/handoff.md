@@ -45,8 +45,8 @@ AskUserQuestion(
 Note: `ac-land` runs **LAST** — after the merge. Merging is the work; landing brings it to rest
 (clean + wiser). When driven by the ac-implement swarm, land is the **guaranteed exit step for
 every stop path**, so the loop is never "done" until it has landed. By the time landing runs,
-THIS wave has already merged to main — there is nothing left to merge for it. The only next
-steps are starting the next wave or stopping.
+THIS wave has already merged to the resolved trunk branch — there is nothing left to merge for it.
+The only next steps are starting the next wave or stopping.
 
 ## Preserve the raw friction carrier (before teardown discards /tmp)
 
@@ -55,11 +55,14 @@ FIRST, mirroring the `.claude/reviews/batch/` convention already in use:
 
 ```bash
 if [ -f "/tmp/loop-retro-${RUN_ID}.md" ]; then
+  TRUNK_TOOL="$PWD/.claude/skills/_tools/trunk.sh"
+  [ -x "$TRUNK_TOOL" ] || TRUNK_TOOL="skills/_tools/trunk.sh"
+  TRUNK="$(bash "$TRUNK_TOOL")" || exit 2
   DEST=".claude/reviews/loop-retro"
   mkdir -p "$DEST"
   cp "/tmp/loop-retro-${RUN_ID}.md" "$DEST/loop-retro-${RUN_ID}.md"
   git add "$DEST/loop-retro-${RUN_ID}.md"
   git commit -m "ac-land: preserve raw friction carrier — RUN ${RUN_ID}" -- "$DEST/loop-retro-${RUN_ID}.md"
-  git push origin main || { git pull --rebase origin main && git push origin main; }
+  git push origin "HEAD:$TRUNK" || { git pull --rebase && git push origin "HEAD:$TRUNK"; }
 fi
 ```

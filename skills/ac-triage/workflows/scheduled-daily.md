@@ -20,9 +20,9 @@ channel). This heartbeat is the *run skeleton*; the skill is the *behavior*.
 ### 0. Preflight
 
 - **Isolated worktree (first, before any reads or writes) — the single-writer isolation gate.**
-  There is **no branch guard any more, by design.** A branch guard (`git branch --show-current`
-  must equal `main`, else abort the whole run) cannot work here: the live checkout may
-  legitimately sit on any branch or in detached HEAD, and aborting forbids all writes —
+  There is **no branch guard any more, by design.** A branch guard against a fixed branch name
+  cannot work here: the live checkout may legitimately sit on any branch or in detached HEAD,
+  and aborting forbids all writes —
   including the write needed to file the bead that would escalate the failure. Do NOT run
   triage in the live checkout. **Explicitly create a dedicated worktree** off fresh
   `origin/<default-branch>` and
@@ -40,11 +40,12 @@ channel). This heartbeat is the *run skeleton*; the skill is the *behavior*.
 
   ```bash
   APP_ROOT="$(git -C "$(pwd)" rev-parse --show-toplevel)"   # the live checkout: board + .beads DB live here
-  DEFAULT_BRANCH="$(git -C "$APP_ROOT" symbolic-ref --quiet --short refs/remotes/origin/HEAD 2>/dev/null | sed 's:^origin/::')"
-  DEFAULT_BRANCH="${DEFAULT_BRANCH:-main}"
+  TRUNK_TOOL="$APP_ROOT/.claude/skills/_tools/trunk.sh"
+  [ -x "$TRUNK_TOOL" ] || TRUNK_TOOL="$APP_ROOT/skills/_tools/trunk.sh"
+  DEFAULT_BRANCH="$(cd "$APP_ROOT" && bash "$TRUNK_TOOL")" || exit 2
   git -C "$APP_ROOT" fetch origin "$DEFAULT_BRANCH"
   TRIAGE_WT="${TMPDIR:-/tmp}/ac_triage_run-$(date +%Y%m%d-%H%M%S)-$$"
-  # Detached at fresh origin/<default> — so whatever the live tree has checked out (main, a
+  # Detached at fresh origin/<default> — so whatever the live tree has checked out (any
   # feature branch, or a detached HEAD) is irrelevant: this run never reads or writes it.
   git -C "$APP_ROOT" worktree add --detach "$TRIAGE_WT" "origin/$DEFAULT_BRANCH" || {
     if command -v slack-send >/dev/null 2>&1; then
@@ -173,7 +174,7 @@ Identity + reservations per `agent-mail/references/session-procedure.md` (mint �
   ```bash
   # cwd is still $TRIAGE_WT
   AGENT_NAME=<name> git commit -m "chore(triage): daily findings + report" -- <exact files touched>
-  git push --no-verify origin "HEAD:$DEFAULT_BRANCH"   # HEAD:main in every current app
+  git push --no-verify origin "HEAD:$DEFAULT_BRANCH"   # HEAD:<resolved trunk> in every app
   ```
 
   `AGENT_NAME` inline — a fresh scheduler shell doesn't inherit the export and the pre-commit

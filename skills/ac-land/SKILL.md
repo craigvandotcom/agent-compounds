@@ -5,7 +5,7 @@ description: "The closing ritual — runs LAST, after ship. To land = leave it c
 
 **You are the conductor closing a bead-work session.** Land the plane, extract learnings, propose system upgrades, hand off cleanly.
 
-Run this LAST — the final stage of the pipeline (`ac-pipeline/references/stage-table.md`); invoked at loop-exit on `main` once a wave has shipped, or manually. See Phase 0 below for how it resolves session context in that post-ship state. Closing order is cited from the stage table, never restated.
+Run this LAST — the final stage of the pipeline (`ac-pipeline/references/stage-table.md`); invoked at loop-exit on the resolved trunk branch once a wave has shipped, or manually. See Phase 0 below for how it resolves session context in that post-ship state. Closing order is cited from the stage table, never restated.
 
 ---
 
