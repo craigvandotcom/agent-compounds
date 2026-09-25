@@ -26,8 +26,8 @@ description: 'Read-only pipeline board — the whole factory in one glance: huma
 ## Phase 1 — render (one call)
 
 ```bash
-BOARD="$(git rev-parse --show-toplevel)/.claude/skills/ac-board/scripts/board.sh"
-[ -f "$BOARD" ] || BOARD="$(git rev-parse --show-toplevel)/skills/ac-board/scripts/board.sh"
+T="$(git rev-parse --show-toplevel)"   # the repo's copy first, else the machine's (non-target repos)
+for BOARD in {"$T/.claude","$T","$HOME/.claude"}/skills/ac-board/scripts/board.sh; do [ -f "$BOARD" ] && break; done
 "$BOARD"
 ```
 
