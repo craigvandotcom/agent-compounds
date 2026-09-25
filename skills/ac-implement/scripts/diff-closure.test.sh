@@ -169,6 +169,49 @@ out=$("$SCRIPT" --base HEAD -C "$R13" 2>&1); rc=$?
 [ "$rc" = 0 ] && printf '%s' "$out" | grep -q 'PASS symbols=0' \
   && ok "unscoped symbol diff excludes _docs/_plans/memory prose" || fail "prose exclusions" "rc=$rc $out"
 
+# --- 12a. default base: branch upstream first -------------------------------------------------
+# origin/main is one commit behind the feature's upstream. The old origin/main default would
+# see both exports; the upstream default sees only the feature commit.
+R14="$W/r14"; mkdir -p "$R14/lib"; git -C "$R14" init -q -b main
+git -C "$R14" remote add origin "$R14"
+printf 'root\n' >"$R14/README.md"; git -C "$R14" add README.md
+git -C "$R14" -c user.name=t -c user.email=t@t -c commit.gpgsign=false commit -qm root
+ROOT_SHA=$(git -C "$R14" rev-parse HEAD)
+git -C "$R14" checkout -q -b feature
+printf 'export const upstreamOnly = 1\n' >"$R14/lib/upstream.ts"; git -C "$R14" add lib/upstream.ts
+git -C "$R14" -c user.name=t -c user.email=t@t -c commit.gpgsign=false commit -qm upstream
+UPSTREAM_SHA=$(git -C "$R14" rev-parse HEAD)
+printf 'export const featureOnly = 1\n' >"$R14/lib/feature.ts"; git -C "$R14" add lib/feature.ts
+git -C "$R14" -c user.name=t -c user.email=t@t -c commit.gpgsign=false commit -qm feature
+git -C "$R14" update-ref refs/remotes/origin/main "$ROOT_SHA"
+git -C "$R14" update-ref refs/remotes/origin/feature "$UPSTREAM_SHA"
+git -C "$R14" symbolic-ref refs/remotes/origin/HEAD refs/remotes/origin/main
+git -C "$R14" branch --set-upstream-to=origin/feature feature >/dev/null
+out=$("$SCRIPT" -C "$R14" 2>&1); rc=$?
+if [ "$rc" = 0 ] && printf '%s' "$out" | grep -q 'PASS symbols=1 callers=0'; then
+  ok "default base uses the feature upstream, not the older origin/main"
+else
+  fail "upstream default base" "rc=$rc $out"
+fi
+
+# --- 12b. default base: no upstream falls back to the shared trunk resolver --------------------
+# The remote trunk is named `trunk`, not main, so a hard-coded origin/main cannot pass this case.
+R15="$W/r15"; mkdir -p "$R15/lib"; git -C "$R15" init -q -b main
+printf 'base\n' >"$R15/README.md"; git -C "$R15" add README.md
+git -C "$R15" -c user.name=t -c user.email=t@t -c commit.gpgsign=false commit -qm base
+BASE_SHA=$(git -C "$R15" rev-parse HEAD)
+git -C "$R15" update-ref refs/remotes/origin/trunk "$BASE_SHA"
+git -C "$R15" symbolic-ref refs/remotes/origin/HEAD refs/remotes/origin/trunk
+git -C "$R15" checkout -q -b solo
+printf 'export const soloOnly = 1\n' >"$R15/lib/solo.ts"; git -C "$R15" add lib/solo.ts
+git -C "$R15" -c user.name=t -c user.email=t@t -c commit.gpgsign=false commit -qm solo
+out=$("$SCRIPT" -C "$R15" 2>&1); rc=$?
+if [ "$rc" = 0 ] && printf '%s' "$out" | grep -q 'PASS symbols=1 callers=0'; then
+  ok "no-upstream default falls back to the shared trunk resolver"
+else
+  fail "trunk fallback base" "rc=$rc $out"
+fi
+
 # --- 13. spawns nothing; assurance declared ---------------------------------------------------
 if grep -nE '(^|[^[:alnum:]_-])(claude|codex|droid)[[:space:]]|subagent' "$SCRIPT" >/dev/null; then fail "script invokes an agent"; else ok "diff-closure spawns nothing"; fi
 miss=""; for f in PROBE: SCHEDULE: MODE: ON-FAILURE:; do grep -q "$f" "$SCRIPT" || miss="$miss $f"; done

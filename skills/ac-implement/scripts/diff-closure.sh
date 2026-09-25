@@ -28,7 +28,8 @@
 #
 # Usage: diff-closure.sh [--base <ref>] [--bead <id> | --declared <file>]
 #                        [--territory <path> ...] [-C <repo>]
-#   --base       what to diff the WORKING TREE against (default: merge-base of origin/main and HEAD)
+#   --base       what to diff the WORKING TREE against (default: branch upstream merge-base,
+#                then the shared trunk resolver when the branch has no upstream)
 #   --bead       read the bead's `touchers:` command(s) via the br show read and run them
 #   --declared   a file of touchers commands, one per line (what --bead would have found)
 #   --territory  limit the diff and caller snapshot to these repo-relative paths; repeat for
@@ -46,6 +47,8 @@ die2() { printf 'diff-closure: NOT-GATED %s\n' "$*" >&2; exit 2; }
 # shellcheck source=br-call.sh
 BR_CALL="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../_tools" 2>/dev/null && pwd)/br-call.sh"
 . "$BR_CALL" 2>/dev/null || die2 "br-call.sh helper missing at '$BR_CALL' — no br read can be verified"
+SELF_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
+TRUNK="$SELF_DIR/../../_tools/trunk.sh"
 
 BASE="" BEAD="" DECL="" REPO="." SCOPE=0
 TERRITORY=()
@@ -67,8 +70,14 @@ git -C "$REPO" rev-parse --is-inside-work-tree >/dev/null 2>&1 || die2 "not a gi
 ROOT=$(git -C "$REPO" rev-parse --show-toplevel)
 cd "$ROOT"
 if [ -z "$BASE" ]; then
-  BASE=$(git merge-base origin/main HEAD 2>/dev/null || true)
-  [ -n "$BASE" ] || die2 "no --base and no origin/main to derive one from"
+  BASE=$(git merge-base '@{upstream}' HEAD 2>/dev/null || true)
+  if [ -z "$BASE" ]; then
+    [ -f "$TRUNK" ] || die2 "no branch upstream and trunk.sh is missing at '$TRUNK'"
+    trunk=$(bash "$TRUNK") || die2 "no branch upstream and the shared trunk resolver failed"
+    [ -n "$trunk" ] || die2 "no branch upstream and the shared trunk resolver returned no trunk"
+    BASE=$(git merge-base "origin/$trunk" HEAD 2>/dev/null || true)
+  fi
+  [ -n "$BASE" ] || die2 "no --base; neither the branch upstream nor the shared trunk produced a merge-base"
 fi
 git rev-parse --verify -q "$BASE^{commit}" >/dev/null || die2 "base is not a commit: $BASE"
 
