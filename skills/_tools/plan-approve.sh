@@ -26,6 +26,15 @@
 #                         bead-ready or later (beadified, done) — so it proves a retired
 #                         plan too. Never writes.
 #
+#   check --approved <plan>
+#                         Read-only, same key-presence and digest verification as plain
+#                         check, with the status floor lowered to approved: approved,
+#                         bead-ready, beadified and done all pass. Answers "is this
+#                         approval still valid?" for a plan sitting at status: approved
+#                         that has not yet been polished to bead-ready. Plain `check` is
+#                         unchanged — ac-beadify and ac-prep gate on it and must keep
+#                         refusing an approved-but-unpolished plan.
+#
 # THE DIGEST: sha256 over the concatenated bodies of `## Vision`, `## Deliverables`,
 # `## Decisions`, `## Out of scope`, `## Success Criteria` (matcher `## Success [Cc]`,
 # so both the capital-C and lowercase-c spellings hash instead of empty) and `## Seams`,
@@ -44,11 +53,12 @@
 #   ready:   READY · REFUSED not-polished · REFUSED not-approved · REFUSED regate <sections> ·
 #            NOT-GATED
 #   check:   OK: ... · REFUSED missing-keys · REFUSED digest-mismatch · REFUSED status <status> ·
-#            NOT-GATED
+#            NOT-GATED (same tokens for `check --approved`, floor lowered to approved)
 #
 # Usage: plan-approve.sh approve <plan-path> [approved-by]
 #        plan-approve.sh ready   <plan-path>
 #        plan-approve.sh check   <plan-path>
+#        plan-approve.sh check --approved <plan-path>
 set -u
 
 die_notgated() { printf 'NOT-GATED: %s\n' "$*"; exit 2; }
@@ -393,6 +403,14 @@ mode_ready() {
 # check (read-only)
 # ---------------------------------------------------------------------------------------
 mode_check() {
+  # `--approved` is parsed as a flag, never taken as the plan path: `check --approved x`
+  # must not treat `--approved` itself as the plan and NOT-GATE on a missing/unreadable
+  # "plan".
+  local approved_floor=0
+  if [ "${1-}" = "--approved" ]; then
+    approved_floor=1
+    shift
+  fi
   local plan="$1"
   [ -n "$plan" ] && [ -r "$plan" ] || die_notgated "plan missing or unreadable: ${plan:-<none>}"
   _require_sha
@@ -407,12 +425,21 @@ mode_check() {
     exit 1
   fi
 
-  case "$status" in
-    bead-ready|beadified|done) : ;;
-    *)
-      printf 'REFUSED status %s: %s is not bead-ready or later\n' "${status:-<none>}" "$plan"
-      exit 1 ;;
-  esac
+  if [ "$approved_floor" -eq 1 ]; then
+    case "$status" in
+      approved|bead-ready|beadified|done) : ;;
+      *)
+        printf 'REFUSED status %s: %s is not approved or later\n' "${status:-<none>}" "$plan"
+        exit 1 ;;
+    esac
+  else
+    case "$status" in
+      bead-ready|beadified|done) : ;;
+      *)
+        printf 'REFUSED status %s: %s is not bead-ready or later\n' "${status:-<none>}" "$plan"
+        exit 1 ;;
+    esac
+  fi
 
   local overall; overall=$(_compute_overall_digest "$plan")
   if [ "$overall" != "$approved_sha" ]; then

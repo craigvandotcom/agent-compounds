@@ -453,6 +453,47 @@ cap "$SCRIPT" check "$W/c5.md"
 expect "$RC" 1 "gated section moved after ready -> exit 1"
 expect "$(grep -c 'REFUSED digest-mismatch' <<<"$OUT")" 1 "gated section moved after ready -> REFUSED digest-mismatch"
 
+# --- check --approved mode ---------------------------------------------------------------
+
+# 31b — check --approved passes OK on an approved-but-unpolished plan (exit 0): the whole
+# point of the lowered floor.
+mk_plan "$W/ca1.md" "- D1 x" "$SETTLED_CARD" "a"
+cap "$SCRIPT" approve "$W/ca1.md" "Alex"
+expect "$RC" 0 "setup: approve ca1"
+cap "$SCRIPT" check --approved "$W/ca1.md"
+expect "$RC" 0 "approved-but-unpolished plan, untouched -> check --approved exit 0"
+expect "$(grep -c '^OK:' <<<"$OUT")" 1 "approved-but-unpolished plan, untouched -> check --approved OK"
+
+# 31c — plain check still refuses the SAME approved-but-unpolished plan (exit 1): the new
+# flag leaves the plain mode's floor where it is.
+cap "$SCRIPT" check "$W/ca1.md"
+expect "$RC" 1 "approved-but-unpolished plan -> plain check exit 1 (floor unchanged)"
+expect "$(grep -c 'REFUSED status approved' <<<"$OUT")" 1 "approved-but-unpolished plan -> plain check REFUSED status approved"
+
+# 31d — check --approved refuses digest-mismatch when the Vision section moved since
+# approval (exit 1): the digest verification is the same as plain check, only the floor
+# moved.
+mk_plan "$W/ca2.md" "- D1 x" "$SETTLED_CARD" "a"
+cap "$SCRIPT" approve "$W/ca2.md" "Alex"
+expect "$RC" 0 "setup: approve ca2"
+sed -i.bak '/^## Vision$/,/^## / s/plain prose/plain PROSE/' "$W/ca2.md"; rm -f "$W/ca2.md.bak"
+cap "$SCRIPT" check --approved "$W/ca2.md"
+expect "$RC" 1 "approved plan whose Vision moved -> check --approved exit 1"
+expect "$(grep -c 'REFUSED digest-mismatch' <<<"$OUT")" 1 "approved plan whose Vision moved -> check --approved REFUSED digest-mismatch"
+
+# 31e — `check --approved` also passes at bead-ready (the floor is a minimum, not an
+# exact match) — reuses c3 from case 29 above.
+cap "$SCRIPT" check --approved "$W/c3.md"
+expect "$RC" 0 "bead-ready plan -> check --approved exit 0 too"
+
+# 31f — the `--approved` flag is parsed as a flag, never taken as the plan path: passing
+# a real plan after it resolves to THAT plan, not to a file literally named `--approved`
+# (which does not exist — if the flag were mis-parsed as the path, this would NOT-GATE
+# missing/unreadable instead of returning OK).
+cap "$SCRIPT" check --approved "$W/ca1.md"
+expect "$RC" 0 "--approved flag consumed, plan path resolved correctly -> exit 0"
+expect "$(grep -c '^OK:' <<<"$OUT")" 1 "--approved flag consumed, plan path resolved correctly -> OK"
+
 # 32 — the documented `## Deliverables (artifacts)` prefix-match fixture: approve, then
 # ready with no edits -> both succeed against the variant header (exit 0).
 {
