@@ -2,7 +2,8 @@
 # ---
 # prevents: a duplicate board record (rule 2); a line that is not JSON (rule 1); an OPEN
 #   post-cutover implementable bead sitting origin-less or probe-less (rule 3); a closed bead
-#   whose landing record cites no evidence (rule 6) — the create-time guards fail open on
+#   whose landing record cites no evidence (rule 6); a post-cutover epic titled with no
+#   `<Name> — <what it implements>` (rule 7) — the board shows only the Name — the create-time guards fail open on
 #   unparseable shell (a body passed as `-d "$(cat file)"` or a heredoc blinds the born-probe
 #   check) and close-gate.sh's bypass leaves no other sensor, so the committed board itself is
 #   the backstop every one of these rules reads.
@@ -10,7 +11,7 @@
 # ---
 """35-board-integrity — the board stays well-formed, origin-tagged and receipt-honest.
 
-Four FAIL rules (1, 2, 3, 6 — rules 4 "status outside the canon set" and 5 "malformed
+Five FAIL rules (1, 2, 3, 6, 7 — rules 4 "status outside the canon set" and 5 "malformed
 WORKER: receipt" were cut, 2026-09-24: `br` validates status on write, so only a
 hand-edited JSONL broke rule 4, and nothing reads a `WORKER:` field, so rule 5 guarded a
 shape nobody consumes), all scanning the WHOLE board on every run (no staged-vs-HEAD
@@ -30,6 +31,9 @@ diff — the board is adopter-local and gitignored, so there is nothing to diff 
      landing comment with no citation resolving against the row is RED, not a pass — the
      record cites its evidence, or it is refused. Forward-only by the bead's own
      `closed_at`: a close that happened before the cutover is never re-judged.
+  7. an OPEN epic created on or after `RULE7_CUTOVER` whose title is not
+     `<Name> — <what it implements>`: a Name of at most 32 characters, then ` — `, then a
+     clause of at least six words (ac-beadify/references/bead-schema.md § Epic title).
 
 Rules 1 and 2 scan every row unconditionally — they catch corruption at any lifecycle
 stage. Rules 3 and 6 are each forward-only by their own cutover and their own timestamp
@@ -67,6 +71,8 @@ PROBE = guard.PROBE  # the same shape the runtime capture guard scans for
 
 CUTOVER = "2026-08-23"  # rule 3: origin axis became a hard gate (hooks/hooks.json _doc)
 RULE56_CUTOVER = "2026-09-23"  # rule 6: forward-only from this date — earlier closes are never re-judged
+RULE7_CUTOVER = "2026-09-26"  # rule 7: epic title shape — earlier epics are never re-judged
+EPIC_TITLE_RE = re.compile(r"^(\S.{0,31}?) — (.+)$")
 IMPLEMENTABLE = ("task", "bug", "feature")  # element4's non-exempt types
 # rule 6's evidence citations — the exact tokens close-gate.sh's landing text carries
 RECEIPT_CITE_RE = re.compile(r"receipt-at:\s*([^\s;]+)")
@@ -79,6 +85,7 @@ RULE_LABELS = {
     2: "rule 2 — duplicate id",
     3: f"rule 3 — open bead missing origin:/Probe: (created on/after {CUTOVER})",
     6: f"rule 6 — closed bead with no cited landing record (closed on/after {RULE56_CUTOVER})",
+    7: f"rule 7 — open epic title is not `<Name> — <what it implements>` (created on/after {RULE7_CUTOVER})",
 }
 RULE_HINTS = {
     1: "repair: fix the line to valid JSON, or remove the row",
@@ -88,6 +95,7 @@ RULE_HINTS = {
     6: "repair: close through skills/ac-implement/scripts/close-gate.sh — a GATE:/"
        "FRESH-VERIFY:/TRIAGE-CLOSE: comment must cite its evidence (receipt-at / "
        "ruling-comment / tree)",
+    7: "repair: br update <id> --title '<Name ≤32> — <what the system does after it, ≥6 words>'",
 }
 
 
@@ -195,6 +203,12 @@ def main():
         if status != "open":
             continue
         created = str(rec.get("created_at") or "")[:10]
+        if rec.get("issue_type") == "epic" and created >= RULE7_CUTOVER:
+            m = EPIC_TITLE_RE.match(str(rec.get("title") or ""))
+            if not m or len(m.group(2).split()) < 6:
+                violations[7].append(
+                    f"{rel}:{lineno} — open epic '{rid}' created {created} is titled "
+                    f"'{rec.get('title')}'")
         if created >= CUTOVER:
             labels = [str(label) for label in (rec.get("labels") or [])]
             if not any(label.startswith("origin:") for label in labels):
@@ -209,7 +223,7 @@ def main():
     if not any(violations.values()):
         print(f"35-board-integrity: {scanned} record(s) scanned — well-formed, ids unique, open "
               "post-cutover beads origin-tagged, implementable beads probe-bearing, close "
-              "landing records clean since their cutover")
+              "landing records clean since their cutover, post-cutover epics titled Name — clause")
         return 0
 
     print("FAIL 35-board-integrity: committed board violates a board-integrity rule:")

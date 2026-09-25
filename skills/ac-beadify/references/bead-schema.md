@@ -16,6 +16,13 @@ commit discipline in `ac-pipeline/references/` (`commit-discipline.md`, `run-led
 - Epic beads (`type: epic`) carry `## Success Criteria` plus probe-bearing
   `## Acceptance Criteria` — the epic's AC is the plan's silver bullet verbatim;
   the probes are what a worker pick closes against (D3).
+- **Epic title: `<Name> — <what it implements>`**, written for a reader five years out who
+  never saw the plan. Name: 2–4 plain words, ≤32 characters — the plan slug in words when it
+  reads plainly, never an unexplained codename; the board shows only the Name. The clause
+  (≥6 words): what the system does after this epic that it did not before — the mechanism,
+  not the motive. `Machine settings file — tools read each machine's paths and org root from
+  one gitignored machine.json`, not `One local settings file per machine`. Lint check 35
+  rule 7 holds it.
 
 - An epic reaches its children by **parent-child** (containment) only — containment alone
   already keeps the epic from being picked before its children close. Any `blocks` edge

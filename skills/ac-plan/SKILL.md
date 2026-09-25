@@ -10,7 +10,7 @@ description: 'Turn an idea into ONE ac2 plan file — problem, approach, deliver
 |                  |                                                                              |
 | ---------------- | ---------------------------------------------------------------------------- |
 | **Input**        | An idea, a backlog item, or a problem statement                               |
-| **Output**       | ONE plan file, `_plans/YYYY-MM-DD-HHMM-<slug>.md`, unstamped                  |
+| **Output**       | ONE plan file, `_plans/YYYY-MM-DD-HHMM-<slug>.md`, unstamped — `<slug>` is 2–4 plain words naming the capability; it becomes the epic's Name |
 | **Artifacts**    | Explorer notes in `_plans/research/` — only if explorers were run             |
 | **Verification** | `ac-polish plan <path>` to fixpoint; `ac-polish/references/plan-checklist.md` is the bar |
 

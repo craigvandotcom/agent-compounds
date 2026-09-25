@@ -176,6 +176,21 @@ rc=$(run_check "$WORK/landing-cascade")
 [ "$rc" -eq 0 ] && ok "a cascade close passes rule 6" \
   || bad "landing-cascade: rc=$rc out=$(cat "$OUT")"
 
+# --- rule 7: a post-cutover epic is titled `<Name> — <what it implements>` ------
+E='"status":"open","created_at":"2026-09-26T10:00:00Z","labels":["origin:ac-beadify"],"issue_type":"epic"'
+EPIC_BARE='{"id":"ac-e1",'$E',"title":"One local settings file per machine"}'
+EPIC_VAGUE='{"id":"ac-e2",'$E',"title":"Ship stage — one transferable phase"}'
+EPIC_GOOD='{"id":"ac-e3",'$E',"title":"Machine settings file — tools read paths from one gitignored machine.json"}'
+EPIC_OLD='{"id":"ac-e4","status":"open","created_at":"2026-09-25T10:00:00Z","labels":["origin:ac-beadify"],"issue_type":"epic","title":"a bare sentence"}'
+board "$WORK/epic-red" "$EPIC_BARE" "$EPIC_VAGUE"
+rc=$(run_check "$WORK/epic-red")
+[ "$rc" -eq 1 ] && grep -q "ac-e1" "$OUT" && grep -q "ac-e2" "$OUT" && ok "a bare-sentence epic and a short vague clause are RED" \
+  || bad "epic-red: rc=$rc out=$(cat "$OUT")"
+board "$WORK/epic-green" "$EPIC_GOOD" "$EPIC_OLD"
+rc=$(run_check "$WORK/epic-green")
+[ "$rc" -eq 0 ] && ok "a Name — clause epic is GREEN; a pre-cutover epic is never re-judged" \
+  || bad "epic-green: rc=$rc out=$(cat "$OUT")"
+
 # --- An EMPTY board stays NOT-GATED; a MISSING board skips ----------------------
 mkdir -p "$WORK/f/.beads"; : > "$WORK/f/.beads/issues.jsonl"
 rc=$(run_check "$WORK/f")
