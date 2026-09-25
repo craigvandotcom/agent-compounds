@@ -275,7 +275,7 @@ def pipeline_rows(rows, w, section, state, now, c, color_of):
 
 # ── the frame: one column, header → status → ON YOU → EPICS → PIPELINE → HEALTH ─────────
 def build_frame(M, width, color_on, state, secs_left=None, footer=None, height=None):
-    w = max(36, min(56, width))
+    w = max(36, min(67, width))
     now = resolve_now(M)
     c = colorer(color_on)
 

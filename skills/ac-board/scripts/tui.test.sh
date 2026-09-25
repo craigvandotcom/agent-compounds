@@ -8,8 +8,8 @@ W=$(mktemp -d); trap 'rm -rf "$W"' EXIT
 FAILURES=0
 CASES=0
 
-# once <fixture-file> [extra tui.py args...] — one rendered frame at width 40
-once() { local f="$1"; shift; python3 "$TUI" --once --width 40 "$@" <"$f"; }
+# once <fixture-file> [extra tui.py args...] — one rendered frame at width 48
+once() { local f="$1"; shift; python3 "$TUI" --once --width 48 "$@" <"$f"; }
 # once_w <fixture-file> <width> [extra tui.py args...] — one rendered frame at a given width
 once_w() { local f="$1" w="$2"; shift 2; python3 "$TUI" --once --width "$w" "$@" <"$f"; }
 
@@ -87,8 +87,8 @@ EOF
 got=$(once "$W/full.json" --no-color)
 CASES=$((CASES + 1))
 wide=$(python3 -c 'import sys; print(max(len(l.rstrip(chr(10))) for l in sys.stdin))' <<<"$got")
-if [ "$wide" -le 40 ]; then echo "ok   full: widest line $wide"
-else echo "FAIL full: widest line $wide > 40"; FAILURES=$((FAILURES + 1)); fi
+if [ "$wide" -le 48 ]; then echo "ok   full: widest line $wide"
+else echo "FAIL full: widest line $wide > 48"; FAILURES=$((FAILURES + 1)); fi
 CASES=$((CASES + 1))
 if python3 -c 'import sys; s=sys.stdin.read(); sys.exit(1 if any(ord(c) >= 0x1F000 for c in s) else 0)' <<<"$got"
 then echo "ok   full: no emoji codepoints"
@@ -133,20 +133,20 @@ else echo "FAIL colour: expected escapes with colour, none without"; FAILURES=$(
 # still sum exactly to it. Every count here is 1 or 2 digits, so count_w floors at 2, and the
 # same formula (w - 1 label(11) - count(2) - 1 - 4 delta-room = w - 19) holds at both widths.
 check pipeline "no ░ track glyph anywhere in the bars"  '░' absent
-for W40 in 40 56; do
-  barw=$((W40 - 19))
-  g=$(once_w "$W/full.json" "$W40" --no-color)
+for WW in 48 67; do
+  barw=$((WW - 19))
+  g=$(once_w "$W/full.json" "$WW" --no-color)
   plan_cells=$(sed -n '/^plans/,/^beads/p' <<<"$g" | grep -oE '█' | wc -l)
   CASES=$((CASES + 1))
-  if [ "$plan_cells" -eq "$barw" ]; then echo "ok   pipeline@$W40: plans bar cells sum to $barw"
-  else echo "FAIL pipeline@$W40: plans bar cells summed to $plan_cells, not $barw"; FAILURES=$((FAILURES + 1)); fi
+  if [ "$plan_cells" -eq "$barw" ]; then echo "ok   pipeline@$WW: plans bar cells sum to $barw"
+  else echo "FAIL pipeline@$WW: plans bar cells summed to $plan_cells, not $barw"; FAILURES=$((FAILURES + 1)); fi
   bead_cells=$(sed -n '/^beads/,/^$/p' <<<"$g" | grep -oE '[█▒]' | wc -l)
   CASES=$((CASES + 1))
-  if [ "$bead_cells" -eq "$barw" ]; then echo "ok   pipeline@$W40: beads bar cells sum to $barw"
-  else echo "FAIL pipeline@$W40: beads bar cells summed to $bead_cells, not $barw"; FAILURES=$((FAILURES + 1)); fi
+  if [ "$bead_cells" -eq "$barw" ]; then echo "ok   pipeline@$WW: beads bar cells sum to $barw"
+  else echo "FAIL pipeline@$WW: beads bar cells summed to $bead_cells, not $barw"; FAILURES=$((FAILURES + 1)); fi
   CASES=$((CASES + 1))
-  if grep -qE '^ proposals *[0-9]+ █' <<<"$g"; then echo "ok   pipeline@$W40: label, right-aligned count, then bar"
-  else echo "FAIL pipeline@$W40: expected 'label  count bar' shape"; FAILURES=$((FAILURES + 1)); fi
+  if grep -qE '^ proposals *[0-9]+ █' <<<"$g"; then echo "ok   pipeline@$WW: label, right-aligned count, then bar"
+  else echo "FAIL pipeline@$WW: expected 'label  count bar' shape"; FAILURES=$((FAILURES + 1)); fi
 done
 
 # ── the blocked part of a beads row renders ▒ (no colour needed to see it) ──────────────
