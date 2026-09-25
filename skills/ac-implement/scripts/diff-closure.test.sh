@@ -114,7 +114,62 @@ run "$R9"
   && ok ".beads/issues.jsonl change carrying SQL-shaped probe prose -> PASS symbols=0 (excluded, not a phantom caller refusal)" \
   || fail "beads jsonl excluded" "rc=$rc $out"
 
-# --- 10. spawns nothing; assurance declared ---------------------------------------------------
+# --- 10. a sibling's dirty files and documentation prose stay outside a HEAD/Territory closure
+# The own symbol is a real uncommitted change. The sibling modifies tracked files and calls
+# the own symbol, while _docs/_plans/memory carry SQL-shaped prose. A scoped closure must
+# measure the bead's Territory, not the shared working tree or the documentation map.
+R11="$W/r11"; mkdir -p "$R11/lib" "$R11/_docs/seams/foods.status" "$R11/_plans" "$R11/memory"
+git -C "$R11" init -q
+printf 'export function ownSymbol() { return 1 }\n' > "$R11/lib/territory.ts"
+printf 'export function siblingWip() { return 1 }\n' > "$R11/lib/sibling.ts"
+printf 'import { siblingWip } from "./sibling"\nexport const siblingCall = siblingWip()\n' > "$R11/lib/sibling-caller.ts"
+printf 'title="ALTER TABLE foods ALTER COLUMN %s"\n' sibling_status > "$R11/_docs/seams/foods.status/map.html"
+printf 'alter table foods add column %s text\n' plan_status > "$R11/_plans/schema.md"
+printf 'alter table foods add column %s text\n' memory_status > "$R11/memory/schema.md"
+git -C "$R11" add -A >/dev/null
+git -C "$R11" -c user.name=t -c user.email=t@t -c commit.gpgsign=false commit -q -m sibling-base >/dev/null
+printf 'export function ownSymbol() { return 2 }\n' > "$R11/lib/territory.ts"
+printf 'export function siblingWip() { return 2 }\nexport function siblingOnly() { return 3 }\n' > "$R11/lib/sibling.ts"
+printf 'import { siblingWip } from "./sibling"\nimport { ownSymbol } from "./territory"\nexport const siblingCall = siblingWip() + ownSymbol()\n' > "$R11/lib/sibling-caller.ts"
+printf 'title="ALTER TABLE foods ALTER COLUMN %s"\n' sibling_status_v2 > "$R11/_docs/seams/foods.status/map.html"
+printf 'alter table foods add column %s text\n' plan_status_v2 > "$R11/_plans/schema.md"
+printf 'alter table foods add column %s text\n' memory_status_v2 > "$R11/memory/schema.md"
+out=$("$SCRIPT" --base HEAD --territory lib/territory.ts -C "$R11" 2>&1); rc=$?
+if [ "$rc" = 0 ] && printf '%s' "$out" | grep -q 'PASS symbols=1 callers=0' \
+   && ! printf '%s' "$out" | grep -q 'sibling'; then
+  ok "HEAD/Territory scope ignores sibling WIP and _docs/_plans/memory prose"
+else
+  fail "sibling-WIP scope" "rc=$rc $out"
+fi
+
+# --- 11. a scoped caller committed at HEAD still closes against its declaration ---------------
+R12="$W/r12"; mkdir -p "$R12/lib"; git -C "$R12" init -q
+printf 'export function scopedCallerSymbol() { return 1 }\n' > "$R12/lib/source.ts"
+printf 'import { scopedCallerSymbol } from "./source"\nexport const call = scopedCallerSymbol()\n' > "$R12/lib/caller.ts"
+git -C "$R12" add -A >/dev/null; git -C "$R12" -c user.name=t -c user.email=t@t -c commit.gpgsign=false commit -q -m scoped-base >/dev/null
+printf 'export function scopedCallerSymbol() { return 2 }\n' > "$R12/lib/source.ts"
+out=$("$SCRIPT" --base HEAD --territory lib/source.ts -C "$R12" 2>&1); rc=$?
+[ "$rc" = 1 ] && printf '%s' "$out" | grep -q 'scopedCallerSymbol  <- lib/caller.ts' \
+  && ok "HEAD-scoped caller remains visible" || fail "scoped caller" "rc=$rc $out"
+printf 'rg -l -w scopedCallerSymbol lib\n' > "$W/decl-scoped"
+out=$("$SCRIPT" --base HEAD --territory lib/source.ts --declared "$W/decl-scoped" -C "$R12" 2>&1); rc=$?
+[ "$rc" = 0 ] && printf '%s' "$out" | grep -q 'PASS symbols=1 callers=1 declared=2' \
+  && ok "declared HEAD-scoped caller passes" || fail "scoped declaration" "rc=$rc $out"
+
+# --- 12. prose exclusions apply to the unscoped symbol leg too ----------------------------------
+R13="$W/r13"; mkrepo "$R13"; mkdir -p "$R13/_docs/seams/foods.status" "$R13/_plans" "$R13/memory"
+printf 'title="ALTER TABLE foods ALTER COLUMN %s"\n' status > "$R13/_docs/seams/foods.status/map.html"
+printf 'alter table foods add column %s text\n' plan_status > "$R13/_plans/schema.md"
+printf 'alter table foods add column %s text\n' memory_status > "$R13/memory/schema.md"
+git -C "$R13" add -A >/dev/null; git -C "$R13" -c user.name=t -c user.email=t@t -c commit.gpgsign=false commit -q -m prose-base >/dev/null
+printf 'title="ALTER TABLE foods ALTER COLUMN %s"\n' status_v2 > "$R13/_docs/seams/foods.status/map.html"
+printf 'alter table foods add column %s text\n' plan_status_v2 > "$R13/_plans/schema.md"
+printf 'alter table foods add column %s text\n' memory_status_v2 > "$R13/memory/schema.md"
+out=$("$SCRIPT" --base HEAD -C "$R13" 2>&1); rc=$?
+[ "$rc" = 0 ] && printf '%s' "$out" | grep -q 'PASS symbols=0' \
+  && ok "unscoped symbol diff excludes _docs/_plans/memory prose" || fail "prose exclusions" "rc=$rc $out"
+
+# --- 13. spawns nothing; assurance declared ---------------------------------------------------
 if grep -nE '(^|[^[:alnum:]_-])(claude|codex|droid)[[:space:]]|subagent' "$SCRIPT" >/dev/null; then fail "script invokes an agent"; else ok "diff-closure spawns nothing"; fi
 miss=""; for f in PROBE: SCHEDULE: MODE: ON-FAILURE:; do grep -q "$f" "$SCRIPT" || miss="$miss $f"; done
 [ -z "$miss" ] && ok "4-field assurance declaration present" || fail "assurance declaration missing:$miss"
