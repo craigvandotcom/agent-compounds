@@ -29,8 +29,8 @@ state use `/ac-tidy`.
 ## Phase 0: Scope
 
 Confirm the registry root (default: this repo). `cd` there. Confirm it has
-`skills/` and a `lint.sh` (the mechanical gate). Branch before editing:
-`git switch -c chore/registry-hygiene-pass`.
+`skills/` and a `lint.sh` (the mechanical gate). Work on the current branch; do not
+create or switch branches.
 
 ---
 
@@ -98,8 +98,8 @@ Split every Pass-2/3 finding by `needsHumanDecision`:
   options via `AskUserQuestion`, then apply per the answer.
 
 After each batch: `./lint.sh` must be 0 failures; `bash -n` / `node --check` any
-touched scripts. Commit per logical pass with a clear message. Leave the branch
-for the human to review as a diff (offer to push + open a PR).
+touched scripts. Commit per logical pass with a clear message. Leave the current
+branch's diff for the human to review (offer to push + open a PR).
 
 ---
 

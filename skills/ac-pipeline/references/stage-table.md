@@ -16,7 +16,7 @@ the human says "X then Y".
 | Plan | `ac-plan` | human intent | human approval via `plan-approve.sh approve` | ONE plan file (`_plans/`) | "Approve the plan?" then `/ac-polish plan <path>` | — |
 | Polish (plan) | `ac-polish` | plan authored | conditional regate via `plan-approve.sh ready` — only when an approved section moved | refined plan (seams maps where traced) | `/ac-beadify <path>` (regate: re-approve, then retry) | `context-engineering` |
 | Beadify | `ac-beadify` | `plan-approve.sh check` passes | none — ACs gate themselves (`no probe, no bead`) | beads, Consumes-wired | `/ac-polish bead <epic>` | `beads-standards` |
-| Implement | `ac-implement` (conductor) + workers (`references/worker.md`) | eligible beads on the board (`ac-triage` must have fed it ≥30 min prior) | human-gate beads only | commits on `main`, closed beads | `/ac-publish` | `beads-standards` · `agent-mail` (+ domain skill per bead) |
+| Implement | `ac-implement` (conductor) + workers (`references/worker.md`) | eligible beads on the board (`ac-triage` must have fed it ≥30 min prior) | human-gate beads only | commits on the run's branch, closed beads | `/ac-publish` | `beads-standards` · `agent-mail` (+ domain skill per bead) |
 | Publish | `ac-publish` (prover: `ac-prove`) | batch ready to ship | release gate — version + tag are human-priced | version tag on the proven SHA | "Authorize the release?" then `/ac-distribute` | `beads-standards` |
 | Distribute | `ac-distribute` | proven build in hand | store submission is human-authorized | TestFlight / App Store submission | "Authorize store submission?" then `/ac-land` | app `CORE/distribution.md` |
 | Land | `ac-land` | loop exit — LAST, after everything above | none | run ledger + retro + memory | — (loop exit) | `reflect` |
@@ -25,7 +25,7 @@ the human says "X then Y".
 
 Retired names own no row (anything under `_archive/skills/` with no live successor): their
 live duties are folded into the rows above (`ac-implement` conducts; the swarm commits to
-`main` directly — there is no merge stage; `ac-beadify` + the refine stamp own bead quality).
+the run's branch directly — there is no merge stage; `ac-beadify` + the refine stamp own bead quality).
 
 ## Pull order
 

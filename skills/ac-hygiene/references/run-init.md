@@ -45,20 +45,24 @@ mkdir -p "$ARTIFACTS_DIR"
 ### Work Directly on Main (trunk-direct — no worktree, no hygiene branch)
 
 Hygiene **conforms to trunk-direct**: there is no hygiene branch and no worktree. Auto-applied
-fixes commit straight to `main` as pathspec commits under the **full H7 discipline** the
+fixes commit straight to the run's branch as pathspec commits under the **full H7 discipline** the
 `ac-implement` Phase 0 spells out — the implementing-conductor concurrency rules apply to
 hygiene whenever it is actively *fixing code* (hygiene is exempt from H7 **only** while purely
 reading/filing beads, never while editing). The 5-lens panel below IS this run's pre-push
 review, so there is **no separate review step** (branch policy: `ac-pipeline` § Branch policy).
 
+Work where the checkout already stands; do not create or switch branches. If the current branch
+has an upstream, integrate it before editing; otherwise leave it unpublished until the first
+finished round.
+
 ```bash
-git checkout main 2>/dev/null || true
-git pull --rebase
-git branch --show-current   # confirm `main` before doing anything else
+if git rev-parse --verify --quiet '@{upstream}' >/dev/null; then
+  git pull --rebase
+fi
 ```
 
 **Dirty-tree rule (trunk-direct — H7d):** a non-empty `git status --short` is EXPECTED and is
-**NOT a blocker** — every session shares one checkout on `main`, so another session's in-flight,
+**NOT a blocker** — every session shares one checkout, so another session's in-flight,
 not-yet-committed work may be sitting there. **Inventory it; do not touch it.** Only files YOU
 changed enter YOUR commits (pathspec-mandatory, Phase 3): never `git add -A`, never
 `git add .`, never `git commit -a`, and **never `git stash`** (a stray `stash pop` writes
@@ -202,7 +206,7 @@ Ledger contract: `ac-pipeline/references/run-ledger.md` — one task per section
 
 ```
 # Fixed tasks — create upfront at Phase 0:
-TaskCreate("Initialize — scope, confirm on main (trunk-direct), consensus registry, baseline gate")
+TaskCreate("Initialize — scope, confirm current branch (trunk-direct), consensus registry, baseline gate")
 
 If TaskCreate is unavailable (subagent / fan-out path), track the ledger inline in progress.md; this is a sanctioned equivalent, not a deviation.
 TaskCreate("Coverage audit — surface inventory vs journey registry; file journey-gap beads")

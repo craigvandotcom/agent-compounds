@@ -54,9 +54,8 @@ Syncing beads state and committing `.beads/` is `ac-land`'s territory, not a raw
 
 ### 6. Clean State
 
-```bash
-git branch --merged | xargs git branch -d  # Prune merged branches
-```
+Branch management is out of scope: leave branch creation, switching, deletion, and pruning to
+the human.
 
 ### 7. Verify
 

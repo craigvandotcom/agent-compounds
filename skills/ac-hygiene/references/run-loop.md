@@ -65,15 +65,22 @@ fails the entire gate ~10 min in; auto-fixing locally makes that impossible.
 
 If checks fail, revert the breaking fix and note it as non-auto-fixable.
 
-Then commit the round's fixes **directly to `main`** (trunk-direct — no hygiene branch;
+Then commit the round's fixes **directly to the run's branch** (trunk-direct — no hygiene branch;
 small, revert-friendly, pathspec-limited commits) and **push immediately** (commit = push;
 there is no branch holding the work safe in the interim):
 
 ```bash
-git pull --rebase
+if git rev-parse --verify --quiet '@{upstream}' >/dev/null; then
+  git pull --rebase
+fi
 git commit -m "chore(hygiene): round {CURRENT_ROUND} — {short summary}" -- <specific files>
-git push --no-verify origin main
-git rev-parse HEAD && git ls-remote origin main   # confirm the SHAs match after every push
+if git rev-parse --verify --quiet '@{upstream}' >/dev/null; then
+  git push --no-verify origin HEAD
+else
+  git push -u origin HEAD
+fi
+git rev-parse HEAD
+git ls-remote origin "refs/heads/$(git branch --show-current)"   # confirm the SHAs match after every push
 ```
 
 > **Pathspec commits, never `git add -A`.** Use the `git commit -- <files>` form limited to the

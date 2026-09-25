@@ -15,6 +15,11 @@ unrelated files (incident: stash-corruption); a single-path SCOPED
 incident. Foreign uncommitted work: inventory it, never touch it, never
 commit it "on their behalf".
 
+**Branch rule:** Agents never create, switch, delete, merge into, or rebase onto another
+branch. Finishing or integrating the current branch's own upstream is allowed
+(`pull --rebase`, `rebase --continue|--skip|--abort`). If the branch has no upstream yet,
+skip the pull and publish it with `git push -u origin HEAD`.
+
 ---
 
 ## ToC
@@ -71,20 +76,26 @@ if [ -d "$GIT_DIR/rebase-merge" ] || [ -d "$GIT_DIR/rebase-apply" ]; then
 fi
 
 # 1. Fetch + 0-behind check (preferred over pull --rebase when foreign WIP exists)
-git fetch origin main
-BEHIND=$(git rev-list --count HEAD..origin/main)
-if [ "$BEHIND" = "0" ]; then
-  : # nothing to integrate
-else
-  # See no-stash escalation ladder below before pull --rebase.
-  # --empty=drop + rebase.empty=drop: an empty replay must never pause for
-  # --skip/--continue (no operator). Do NOT swallow failure with `|| true` —
-  # a paused rebase used to look like a successful integrate and every later
-  # commit landed detached (2026-07-27, 8h, ~26 sessions).
-  if ! git -c rebase.empty=drop pull --rebase origin main; then
-    echo "REFUSE: pull --rebase failed (conflict or mid-rebase). Do not commit. See § Abandoned-rebase recovery protocol." >&2
-    exit 2
+BRANCH=$(git symbolic-ref --short HEAD)
+UPSTREAM=$(git rev-parse --symbolic-full-name '@{upstream}' 2>/dev/null || true)
+if [ -n "$UPSTREAM" ]; then
+  git fetch origin
+  BEHIND=$(git rev-list --count "HEAD..$UPSTREAM")
+  if [ "$BEHIND" = "0" ]; then
+    : # nothing to integrate
+  else
+    # See no-stash escalation ladder below before pull --rebase.
+    # --empty=drop + rebase.empty=drop: an empty replay must never pause for
+    # --skip/--continue (no operator). Do NOT swallow failure with `|| true` —
+    # a paused rebase used to look like a successful integrate and every later
+    # commit landed detached (2026-07-27, 8h, ~26 sessions).
+    if ! git -c rebase.empty=drop pull --rebase; then
+      echo "REFUSE: pull --rebase failed (conflict or mid-rebase). Do not commit. See § Abandoned-rebase recovery protocol." >&2
+      exit 2
+    fi
   fi
+else
+  echo "No upstream for $BRANCH; skipping pull until the first push."
 fi
 
 # 2. Pathspec commit (tracked files)
@@ -105,9 +116,13 @@ git commit -m "..." --pathspec-from-file=/tmp/pathspec-$$.txt
 rm -f /tmp/pathspec-$$.txt
 
 # 3. Push (commit = push under trunk-direct)
-git push --no-verify origin main
+if [ -n "$UPSTREAM" ]; then
+  git push --no-verify origin HEAD
+else
+  git push -u origin HEAD
+fi
 git rev-parse HEAD
-git ls-remote origin main   # must match
+git ls-remote origin "refs/heads/$BRANCH"   # must match
 ```
 
 ---
@@ -148,18 +163,28 @@ to the target's `main`.
 
 Cheapest first — stop at the first that applies. **Never an unscoped `git stash`.**
 
-1. **`origin == HEAD` already → skip rebase entirely.**
+1. **The current branch's upstream is already at `HEAD` → skip rebase entirely.**
    ```bash
-   git fetch origin main
-   [ "$(git rev-parse HEAD)" = "$(git rev-parse origin/main)" ] && git push --no-verify origin main
+   if git rev-parse --verify --quiet '@{upstream}' >/dev/null; then
+     git fetch origin
+     if [ "$(git rev-parse HEAD)" = "$(git rev-parse '@{upstream}')" ]; then
+       git push --no-verify origin HEAD
+     fi
+   else
+     git push -u origin HEAD
+   fi
    ```
 
 2. **0-behind (or only unstaged foreign WIP) → fast-forward push is safe.**
    ```bash
-   git fetch origin main
-   BEHIND=$(git rev-list --count HEAD..origin/main)
-   if [ "$BEHIND" = "0" ]; then
-     git push --no-verify origin main
+   if git rev-parse --verify --quiet '@{upstream}' >/dev/null; then
+     git fetch origin
+     BEHIND=$(git rev-list --count "HEAD..@{upstream}")
+     if [ "$BEHIND" = "0" ]; then
+       git push --no-verify origin HEAD
+     fi
+   else
+     git push -u origin HEAD
    fi
    # Unstaged foreign files do NOT block a fast-forward push of YOUR commit.
    ```
@@ -169,8 +194,12 @@ Cheapest first — stop at the first that applies. **Never an unscoped `git stas
    # Mixed reset leaves working tree untouched; only unstages.
    # ONLY unstage paths you did NOT author this session.
    git reset HEAD -- path/that/is/foreign
-   git merge origin/main
-   git push --no-verify origin main
+   if git rev-parse --verify --quiet '@{upstream}' >/dev/null; then
+     git merge '@{upstream}'
+     git push --no-verify origin HEAD
+   else
+     git push -u origin HEAD
+   fi
    ```
 
 4. **Foreign ledger churn blocking rebase → a pathspec-scoped stash-push over that one
@@ -183,11 +212,14 @@ Cheapest first — stop at the first that applies. **Never an unscoped `git stas
 5. **Worst case — foreign WIP truly can't be reset → object-DB rebase via scratch index
    (never touch the working tree):**
    ```bash
-   # Apply YOUR change onto origin/main in a throwaway index, commit-tree, push SHA.
-   GIT_INDEX_FILE=/tmp/scratch-idx-$$ git read-tree origin/main
+   # Apply YOUR change onto the current branch's upstream in a throwaway index,
+   # commit-tree, and push the current branch name.
+   BRANCH=$(git symbolic-ref --short HEAD)
+   UPSTREAM=$(git rev-parse --symbolic-full-name '@{upstream}')
+   GIT_INDEX_FILE=/tmp/scratch-idx-$$ git read-tree "$UPSTREAM"
    # … stage your blob(s) into that index …
-   # NEW=$(git commit-tree $(git write-tree) -p origin/main -m "…")
-   # git push origin "$NEW":refs/heads/main
+   # NEW=$(git commit-tree $(git write-tree) -p "$UPSTREAM" -m "…")
+   # git push origin "$NEW":"refs/heads/$BRANCH"
    # Leaves the dirty working tree completely alone.
    ```
 
