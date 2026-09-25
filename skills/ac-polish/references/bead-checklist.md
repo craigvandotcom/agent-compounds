@@ -110,7 +110,10 @@ is the reader doing its job; reaching for a finding to justify the round is not.
   ends between the two?
 - For each pair of beads that touch the same surface: which one lands first, and is the tree
   green in that order? A bead that turns lint or CI red before its enabling bead lands is a
-  sequencing defect, not a risk to accept.
+  sequencing defect, not a risk to accept. Run this same question over
+  `skills/_tools/planned-layer.sh scan <epic>` as well as the epic's own pairs — a bead here
+  can share a surface with an open bead or live plan ACROSS EPICS, not only with a sibling
+  inside the epic under polish; an undeclared cross-epic pair is the same finding.
 - Are there orphans — beads no phase asked for, or plan work no bead claims?
 
 ## 9. durable-content-only

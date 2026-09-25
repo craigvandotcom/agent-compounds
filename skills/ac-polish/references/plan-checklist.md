@@ -39,6 +39,12 @@ newly found.
   it.
 - Does anything in the plan depend on a fact nobody verified? Name the command that
   verified it.
+- Run `skills/_tools/planned-layer.sh list` (plan Assumption A2, the polish backstop for
+  same-concept-different-path collisions a matched path cannot catch): does any layer item
+  — an open bead's `## Delivers`, or another live plan's `## Deliverables` — promise what
+  this plan builds, or change what this plan assumes, beyond a shared path? An undeclared
+  overlap is class (c); the plan's `## Planned layer` section names it (`planned-layer.sh
+  check`'s own contract) rather than the reader hand-waving it away.
 
 ## 2. falsifiable success criterion
 
