@@ -39,7 +39,7 @@ always the coordinator and never a worker, at every width; a cap bounds a run yo
 claims and the beads' own `## Consumes` / `## Delivers`. A coordinator that starts working
 is a worker that has stopped coordinating.
 
-**Phase 0 — orient.** Assert trunk, then assert the deployed agents are current before any worker
+**Phase 0 — orient.** First run `bash <scripts>/run-start.sh --run <run-id>` to record the human's starting branch (detached HEAD refuses; an origin-absent branch is announced and retained), then assert the deployed agents are current before any worker
 spawns: resolve THIS skill's real path (app skills are symlinks; an app root has no `engine/`) — `<scripts>` is its `scripts/` dir, absolute, symlinks resolved — and
 run `<ac-root>/engine/deploy.sh "$PWD" --agents all --dry-run` — a `generate` line is a stale agent
 whose frozen tool grants waste the wave: print the regenerate command and stop. Run
