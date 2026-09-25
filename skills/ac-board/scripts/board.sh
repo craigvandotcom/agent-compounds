@@ -12,19 +12,22 @@
 #                                   line only, the org-wide one-line-per-repo view; --json
 #                                   prints model.build()'s dict instead of rendering — the
 #                                   combinable machine-readable form)
-#         board.sh --watch [secs]  the terminal dashboard: redraws every secs (default 60) in
-#                                  colour, marks counts that moved, footers every other beads
-#                                  repo on this machine; network reads refresh every CACHE_S
+#         board.sh --watch [secs]  the terminal dashboard (tui.py): redraws every secs
+#                                  (default 15); network reads refresh every CACHE_S
+#         board.sh --others       one other beads repo this machine deploys to per line
+#                                  (tui.py's footer source; not a board render)
 # Env:    AC_BOARD_FETCH_TIMEOUT (default 5s) bounds `git fetch`; past it, waves count the
 #         refs of the last fetch and the flags line says so.
 # Exit:   0 rendered (a failed read renders `?` and is named in the flags line);
 #         2 not inside a git repo.
 
-COMPACT=0; JSON=0
+COMPACT=0; JSON=0; WATCH=0; SECS=15
 for a in "$@"; do
   case "$a" in
     --compact) COMPACT=1 ;;
     --json) JSON=1 ;;
+    --watch) WATCH=1 ;;
+    [0-9]*) SECS=$a ;;
   esac
 done
 
@@ -33,23 +36,17 @@ export PROJECT_ROOT
 SELF=$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd)
 SKILLS=$(cd "$SELF/../.." && pwd)
 
-if [ "${1:-}" = --watch ]; then
-  SECS=${2:-60}
+others() {  # every other beads repo this machine deploys to, plus the registry itself
+  { "$SKILLS/../engine/machine.sh" --targets 2>/dev/null | cut -f1; (cd "$SKILLS/.." && pwd); } |
+    sort -u | while read -r p; do [ "$p" != "$PROJECT_ROOT" ] && [ -d "$p/.beads" ] && echo "$p"; done
+}
+[ "${1:-}" = --others ] && { others; exit 0; }
+
+if [ "$WATCH" = 1 ]; then
   STATE_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/ac-board/$(basename "$PROJECT_ROOT")"
   mkdir -p "$STATE_DIR/cache"
-  export AC_BOARD_STATE="$STATE_DIR/counts.json" AC_BOARD_CACHE="$STATE_DIR/cache" AC_BOARD_COLOR=1
-  others() {  # every other beads repo this machine deploys to, plus the registry itself
-    { "$SKILLS/../engine/machine.sh" --targets 2>/dev/null | cut -f1; (cd "$SKILLS/.." && pwd); } |
-      sort -u | while read -r p; do [ "$p" != "$PROJECT_ROOT" ] && [ -d "$p/.beads" ] && echo "$p"; done
-  }
-  tput civis 2>/dev/null; trap 'tput cnorm 2>/dev/null; exit 0' INT TERM
-  while :; do
-    frame=$("$SELF/board.sh")
-    foot=$(others | while read -r p; do (cd "$p" && AC_BOARD_COLOR= "$SELF/board.sh" --compact | head -1); done)
-    [ -n "$foot" ] && frame+=$'\n\n── other repos ──\n'"$foot"
-    printf '\033[H%s\033[J' "${frame//$'\n'/$'\033[K\n'}"
-    sleep "$SECS"
-  done
+  export AC_BOARD_CACHE="$STATE_DIR/cache"
+  exec python3 "$SELF/tui.py" "$SECS"
 fi
 
 DOC="$SKILLS/ac-pipeline/references/board-scan.md"

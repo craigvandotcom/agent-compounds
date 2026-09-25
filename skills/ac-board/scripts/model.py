@@ -287,13 +287,14 @@ def build(T, ROOT, COMPACT):
                                                 and set(blockers(r["id"]) or []) & gate_ids)
         no_memo = sum(1 for b in gates if not re.search(
             r"(evidence|consequence|recommendation):", b.get("description") or "", re.I))
-        blocked_by = None
+        blocked_by = blocked_refined = None
         if recs is not None:
             unref_ids = {b["id"] for b in loop["unrefined"]}
-            blocked_by = {"gate": 0, "unrefined": 0, "work": 0}
+            blocked_by, blocked_refined = {"gate": 0, "unrefined": 0, "work": 0}, 0
             for b in loop["blocked"]:
                 bl = set(blockers(b["id"]) or [])
                 blocked_by["gate" if bl & gate_ids else "unrefined" if bl & unref_ids else "work"] += 1
+                if "refined" in labels(b): blocked_refined += 1
         orphans = None
         if recs is not None:
             epic_ids = {i for i, r in recs.items() if r.get("issue_type") == "epic"}
@@ -307,7 +308,8 @@ def build(T, ROOT, COMPACT):
             "total": total, "n_in_progress": n_ip, "n_ready": n_ready, "n_gates": n_gates,
             "n_unrefined": n_unref, "n_blocked": n_blocked, "n_deferred": len(loop["deferred"]),
             "n_other": len(loop["other"]), "stale": stale, "unclaimed": unclaimed,
-            "held_up": held_up, "no_memo": no_memo, "blocked_by": blocked_by, "orphans": orphans,
+            "held_up": held_up, "no_memo": no_memo, "blocked_by": blocked_by,
+            "blocked_refined": blocked_refined, "orphans": orphans,
             "in_progress": [{"id": b["id"], "holder": holder(b),
                               "live": (live_names is not None and holder(b) in live_names)}
                              for b in loop["in_progress"]],
@@ -337,11 +339,14 @@ def build(T, ROOT, COMPACT):
                            "created_at": e.get("created_at"), "closed_at": e.get("closed_at"),
                            "done": done, "total": etotal, "holding": holding,
                            "unclaimed_stale": unclaimed_stale})
+    # `beads` (br_call list) is open-issues-only, so a closed epic only ever shows up in the
+    # jsonl — recs, not the `epics` list above.
     most_recent_closed = None
-    closed_epics = [e for e in epics if e.get("closed_at")]
-    if closed_epics:
-        mc = max(closed_epics, key=lambda e: e["closed_at"])
-        most_recent_closed = {"id": mc["id"], "title": mc.get("title", ""), "closed_at": mc["closed_at"]}
+    if recs is not None:
+        closed_epics = [r for r in recs.values() if r.get("issue_type") == "epic" and r.get("closed_at")]
+        if closed_epics:
+            mc = max(closed_epics, key=lambda e: e["closed_at"])
+            most_recent_closed = {"id": mc["id"], "title": mc.get("title", ""), "closed_at": mc["closed_at"]}
 
     # ── ranked moves: the pull order, full list (render.py truncates to 3) ──
     def moves():

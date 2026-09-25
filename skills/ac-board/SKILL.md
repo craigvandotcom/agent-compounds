@@ -39,7 +39,7 @@ for any read that cannot answer. Never re-derive a count it printed; never run t
 Its `🎯 NEXT` block (top three moves in the pull order — `ac-pipeline/references/stage-table.md` § Pull order) is the routing — add nothing after it.
 
 Asked "org-wide" → run `board.sh --compact` inside each `.beads/` repo (in parallel) and print
-its one verdict line per repo. Asked for a live dashboard → point to `board.sh --watch [secs]`.
+its one verdict line per repo. Asked for a live dashboard → point to `board.sh --watch [secs]` (default 15s).
 
 ## Principles
 
