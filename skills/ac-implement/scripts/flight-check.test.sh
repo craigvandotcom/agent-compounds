@@ -9,7 +9,7 @@
 #   MODE:       blocking
 #   ON-FAILURE: closed
 #
-# It proves the four named refusals FIRE and NAME THEMSELVES, that the flight receipt
+# It proves the named refusals FIRE and NAME THEMSELVES, that the flight receipt
 # carries the RED assertion fingerprint close-gate hash-locks against, that the fingerprint
 # has the two declared scopes from ONE writer, and — the load-bearing one — that a post-fix
 # re-fingerprint is STRUCTURALLY unreachable rather than merely discouraged.
@@ -17,7 +17,7 @@
 # Every case drives the real script against a synthetic bead body in a scratch root, with
 # AC2_DRY_RUN=1 so the premise-failure routing is asserted without touching a board.
 #
-# Exit 0  every case passed · 77 self-skip (precondition this harness cannot provision)
+# Exit 0  every case passed
 # Exit 1  at least one case failed
 #
 set -uo pipefail
@@ -56,7 +56,13 @@ case "${1:-}" in
     case "${2:-}" in
       upstream|bd-epic-kb-seams-573x7.1|bd-epic-ing-ownership-k2mpd.1)
         echo '[{"id":"resolved","status":"closed"}]' ;;
-      ac-test-0001) echo '[{"id":"ac-test-0001","labels":[]}]' ;;  # the SUT holds no refined — the stamp leg correctly skips
+      ac-test-0001)
+        if [ -n "${AC_TEST_PARENT:-}" ]; then
+          printf '[{"id":"ac-test-0001","parent":"%s","labels":[]}]\n' "$AC_TEST_PARENT"
+        else
+          echo '[{"id":"ac-test-0001","labels":[]}]'  # the SUT holds no refined — the stamp leg correctly skips
+        fi ;;
+      ac-parent-epic) echo '[{"id":"ac-parent-epic","status":"open"}]' ;;
       *) exit 3 ;;  # exact-id miss: not on the board under that spelling
     esac ;;
   list) echo '{"issues":[{"id":"upstream","status":"closed"},{"id":"bd-epic-kb-seams-573x7.1","status":"closed"},{"id":"bd-epic-ing-ownership-k2mpd.1","status":"closed"}],"total":3,"has_more":false,"limit":5000,"offset":0}' ;;
@@ -108,7 +114,7 @@ else
 fi
 
 # ---------------------------------------------------------------------------------------
-echo "flight-check.test: case 2 — the four refusals fire and each NAMES itself"
+echo "flight-check.test: case 2 — the named refusals fire and each NAMES itself"
 # ---------------------------------------------------------------------------------------
 
 # 2a CONSUMES — the artifact is not on the tree.
@@ -140,6 +146,29 @@ BODY
 run "$WORK/bodies/consumes-ok.md"
 [ "$RUN_RC" -eq 0 ] && ok "CONSUMES clears when the artifact is present" \
   || bad "CONSUMES(ok): expected exit 0, got $RUN_RC: $RUN_OUT"
+
+# A parent-child citation is containment, not a closure premise. The schema forbids the
+# citation, but flight-check must not deadlock a legacy/malformed child if one survives.
+cat >"$WORK/bodies/consumes-parent.md" <<'BODY'
+## Acceptance Criteria
+- Something.
+  Probe: `test -e ./nope.md` — tier: none
+
+## Consumes
+- ac-parent-epic -> ./present-artifact.md (the containing epic)
+BODY
+run "$WORK/bodies/consumes-parent.md" AC_TEST_PARENT=ac-parent-epic
+[ "$RUN_RC" -eq 0 ] && ok "CONSUMES exempts a direct parent-child containment edge" \
+  || bad "CONSUMES(parent): expected exit 0, got $RUN_RC: $RUN_OUT"
+printf '%s' "$RUN_OUT" | grep -q "CONSUMES parent 'ac-parent-epic' exempted" \
+  && ok "parent-child exemption names the relation it honored" \
+  || bad "parent-child exemption was not named: $RUN_OUT"
+run "$WORK/bodies/consumes-parent.md" AC_TEST_PARENT=some-other-epic
+[ "$RUN_RC" -eq 1 ] && ok "CONSUMES still refuses an ordinary open blocker" \
+  || bad "CONSUMES(non-parent): expected exit 1, got $RUN_RC: $RUN_OUT"
+printf '%s' "$RUN_OUT" | grep -q "blocker 'ac-parent-epic' is 'open'" \
+  && ok "the non-parent open blocker is named" \
+  || bad "non-parent blocker was not named: $RUN_OUT"
 
 # 2a'' multi-hyphen blocker ids parse whole, and unique id prefixes resolve —
 # the extractor once truncated bd-epic-kb-seams-573x7.3 to 'bd-epic' and refused
@@ -499,8 +528,9 @@ write_receipt() { mkdir -p "$(dirname "$1")"; cat >"$1" <<EOF
 FLIGHT-RECEIPT v1
 bead: ac-l7xt-fix
 at: $2
-tree: deadbeef
+tree: $(git -C "$R2" rev-parse HEAD)
 premise: PASS consumes=0 environment=0 perishable=0
+freshness-key: tree=$(git -C "$R2" rev-parse HEAD);tracked=clean
 red-probe: test -f fixture-absent.md
 red-exit: 1
 red-green-siblings: 2 of 3 probe(s) already green
@@ -560,6 +590,107 @@ printf '%s' "$RUN_OUT" | grep -q 'STALE-STAMP' && ok "8b(c): the refusal names i
 grep -q 'remove ac-l7xt-fix refined' "$WORK/labels8b-c.log" \
   && ok "8b(c): the stamp gate ran and downgraded refined" \
   || bad "8b(c): no downgrade in the label log: $(cat "$WORK/labels8b-c.log")"
+
+# ---------------------------------------------------------------------------------------
+echo "flight-check.test: case 8c — a stale touchers count is re-derived after a tree change"
+# ---------------------------------------------------------------------------------------
+# This is the measured failure shape: a predecessor commits a new referrer after a receipt
+# was written.  The old receipt is not a cache of the new tree.  The first check-only pass
+# re-derives the count and refuses; after the count is re-derived at the new tree, the same
+# claim can fly and the receipt carries the new freshness key.
+R3="$WORK/root3"; mkdir -p "$R3/fix"
+printf 'the count fixture deliverable\n' >"$R3/fix/fixture-deliverable.md"
+printf 'references fix/fixture-deliverable\n' >"$R3/fix/referrer.txt"
+git -C "$R3" init -q
+git -C "$R3" -c user.email=f@f -c user.name=f add -A
+git -C "$R3" -c user.email=f@f -c user.name=f commit -qm initial
+
+cat >"$WORK/count-desc-old.md" <<'BODY'
+## Intent
+A touchers count that changes when a predecessor lands.
+
+## Acceptance Criteria
+- The delivered artifact is present.
+  Probe: `test -f fix/fixture-deliverable.md` — tier: none
+- The absent artifact is still absent.
+  Probe: `test -f fix/fixture-absent.md` — tier: none
+
+## Delivers
+- `fix/fixture-deliverable.md` — count fixture
+  touchers: `rg -l -F "fix/fixture-deliverable" . -g '!fix/fixture-deliverable.md'` → 1 · owned by: ac-l7xt-fix
+
+## Consumes
+- none
+BODY
+cat >"$WORK/count-desc-new.md" <<'BODY'
+## Intent
+A touchers count that changes when a predecessor lands.
+
+## Acceptance Criteria
+- The delivered artifact is present.
+  Probe: `test -f fix/fixture-deliverable.md` — tier: none
+- The absent artifact is still absent.
+  Probe: `test -f fix/fixture-absent.md` — tier: none
+
+## Delivers
+- `fix/fixture-deliverable.md` — count fixture
+  touchers: `rg -l -F "fix/fixture-deliverable" . -g '!fix/fixture-deliverable.md'` → 2 · owned by: ac-l7xt-fix
+
+## Consumes
+- none
+BODY
+
+OLD_TREE3=$(git -C "$R3" rev-parse HEAD)
+printf 'references fix/fixture-deliverable from the predecessor\n' >"$R3/fix/predecessor.txt"
+git -C "$R3" -c user.email=f@f -c user.name=f add -A
+git -C "$R3" -c user.email=f@f -c user.name=f commit -qm predecessor
+NEW_TREE3=$(git -C "$R3" rev-parse HEAD)
+COUNT_RECEIPTS="$WORK/receipts8c"; mkdir -p "$COUNT_RECEIPTS"
+cat >"$COUNT_RECEIPTS/ac-l7xt-fix.flight-receipt" <<EOF
+FLIGHT-RECEIPT v1
+bead: ac-l7xt-fix
+at: 2024-01-02T00:00:00Z
+tree: $OLD_TREE3
+premise: PASS consumes=0 environment=0 perishable=0
+freshness-key: tree=$OLD_TREE3;tracked=clean
+red-probe: test -f fix/fixture-absent.md
+red-exit: 1
+red-green-siblings: 1 of 2 probe(s) already green
+
+EOF
+: >"$WORK/labels8c-check.log"
+mk_json_c "$WORK/count-desc-old.md" '[{"text":"CLAIM: someone","created_at":"2024-01-01T00:00:00Z"}]' >"$WORK/count8c.json"
+RUN_OUT=$(env AC2_DRY_RUN=1 AC2_FLIGHT_DIR="$COUNT_RECEIPTS" PATH="$B2:$PATH" \
+  AC_FIXTURE_JSON="$WORK/count8c.json" AC_LABEL_LOG="$WORK/labels8c-check.log" \
+  bash "$GATE" ac-l7xt-fix --body-file "$WORK/count-desc-old.md" --root "$R3" --check-only 2>&1)
+RUN_RC=$?
+[ "$RUN_RC" -eq 1 ] && printf '%s' "$RUN_OUT" | grep -q 'touchers count was re-derived at use' \
+  && ok "8c: check-only re-derives the stale touchers count at the new tree" \
+  || bad "8c: expected a re-derived count refusal, got rc=$RUN_RC: $RUN_OUT"
+printf '%s' "$RUN_OUT" | grep -q "freshness key: tree=$NEW_TREE3;tracked=clean" \
+  && ok "8c: the refusal carries the current tree freshness key" \
+  || bad "8c: current freshness key missing: $RUN_OUT"
+
+: >"$WORK/labels8c-gate.log"
+mk_json_c "$WORK/count-desc-old.md" '[{"text":"CLAIM: someone","created_at":"2024-01-01T00:00:00Z"}]' >"$WORK/count8c-gate.json"
+RUN_OUT=$(env AC2_DRY_RUN=1 AC2_FLIGHT_DIR="$COUNT_RECEIPTS" PATH="$B2:$PATH" \
+  AC_FIXTURE_JSON="$WORK/count8c-gate.json" AC_LABEL_LOG="$WORK/labels8c-gate.log" \
+  bash "$GATE" ac-l7xt-fix --body-file "$WORK/count-desc-old.md" --root "$R3" 2>&1)
+RUN_RC=$?
+[ "$RUN_RC" -eq 1 ] && printf '%s' "$RUN_OUT" | grep -q 'STAMP re-derived' \
+  && printf '%s' "$RUN_OUT" | grep -q 'STALE-STAMP' \
+  && ok "8c: claim-time gate re-derives instead of replaying the old receipt" \
+  || bad "8c: expected a freshness-key re-derivation refusal, got rc=$RUN_RC: $RUN_OUT"
+
+: >"$WORK/labels8c-pass.log"
+mk_json_c "$WORK/count-desc-new.md" '[{"text":"CLAIM: someone","created_at":"2024-01-03T00:00:00Z"}]' >"$WORK/count8c-pass.json"
+RUN_OUT=$(env AC2_DRY_RUN=1 AC2_FLIGHT_DIR="$COUNT_RECEIPTS" PATH="$B2:$PATH" \
+  AC_FIXTURE_JSON="$WORK/count8c-pass.json" AC_LABEL_LOG="$WORK/labels8c-pass.log" \
+  bash "$GATE" ac-l7xt-fix --body-file "$WORK/count-desc-new.md" --root "$R3" 2>&1)
+RUN_RC=$?
+[ "$RUN_RC" -eq 0 ] && grep -q "freshness-key: tree=$NEW_TREE3;tracked=clean" "$COUNT_RECEIPTS/ac-l7xt-fix.flight-receipt" \
+  && ok "8c: the re-derived count lets the next claim fly and records the new key" \
+  || bad "8c: expected a fresh green claim, got rc=$RUN_RC: $RUN_OUT"
 
 # ---------------------------------------------------------------------------------------
 echo "flight-check.test: case 9 — a refused resolved-blocker show is NOT-GATED, never a fabricated status"

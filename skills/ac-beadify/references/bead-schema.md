@@ -20,6 +20,8 @@ commit discipline in `ac-pipeline/references/` (`commit-discipline.md`, `run-led
 - An epic reaches its children by **parent-child** (containment) only — containment alone
   already keeps the epic from being picked before its children close. Any `blocks` edge
   with an epic endpoint still fabricates a critical path and stays refused.
+- A child never cites its parent epic in `## Consumes`; parent-child containment is the only
+  epic relation and is not a closure premise.
 - Edge direction is `<blocked> depends-on <blocker>`. A write that CLOSES a cycle is
   refused, rc 5 (measured on `br` 0.5.12) — only a lone reversed edge that closes no cycle
   lands silently, so read every edge back (`br dep cycles`, then `br show` on both ends).
@@ -67,8 +69,9 @@ Every plan-derived epic gets one closeout bead, even with no one-shots — keyed
 `beadified:` absent, so a re-compile of a retired plan emits none.
 Header: type `task`, title `closeout: <epic title>`, the epic's priority.
 `## Intent` names the epic it closes. `## Consumes` one line per sibling
-`<id> -> <its first Delivers path>` so parity holds; wire sibling→closeout and
-closeout→epic `blocks` edges and read them back like any other edge.
+`<id> -> <its first Delivers path>` so parity holds; wire sibling→closeout `blocks` edges
+and read them back like any other edge. The epic relation is parent-child containment only;
+no epic-endpoint `blocks` edge is emitted.
 `## Acceptance Criteria`: `test ! -e <path>` per one-shot the epic leaves behind, plus
 `grep -q '^delivered:' <plan>` — tier: none. `## Delivers`: each deleted path plus the
 plan path (the worker appends the `delivered:` line to the retired plan as it deletes).

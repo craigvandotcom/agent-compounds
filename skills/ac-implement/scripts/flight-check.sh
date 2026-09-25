@@ -19,8 +19,9 @@
 # "the gate broke". Exit 2 means the gate could not verify, and a gate that cannot verify
 # must say so and FAIL — silence is never success.
 #
-# THE FOUR REFUSALS, each named in the output so the caller can branch on the class:
+# THE REFUSALS, each named in the output so the caller can branch on the class:
 #   PREMISE-FAILED: CONSUMES     a `## Consumes` artifact is absent, or its blocker is not closed
+#                                (a direct parent-child containment edge is exempt)
 #   PREMISE-FAILED: ENVIRONMENT  a declared environment/infra precondition does not hold
 #                                (a prod-only env once blocked a live-DB acceptance criterion
 #                                undetected — artifact existence alone would not have seen it)
@@ -50,7 +51,7 @@
 #   flight-check.sh <bead-id> [--body-file <path>] [--root <repo root>] [--print-receipt]
 #                             [--check-only]
 #
-# --check-only runs all four refusals and WRITES NOTHING: no routing comment, no title
+# --check-only runs all premise refusals and WRITES NOTHING: no routing comment, no title
 # stamp, no unclaim, no receipt. Exit 0 = flyable, 1 = not, 2 = could not verify. It is
 # what refly.sh asks of every PREMISE-FAILED bead at swarm start: the stamp is a cached
 # verdict, and a cached verdict with no re-check outlives the bug that wrote it.
@@ -61,7 +62,7 @@
 #   AC2_DRY_RUN=1       print the premise-failure routing commands instead of running them
 #
 # Exit 0  cleared for flight — premises hold, RED observed, receipt written
-# Exit 1  PREMISE-FAILED (one of the four, named) — route, do not debug
+# Exit 1  PREMISE-FAILED (one named class) — route, do not debug
 # Exit 2  NOT-GATED — this gate could not verify; treat as a stop, never as a pass
 #
 set -uo pipefail
@@ -130,6 +131,7 @@ route_premise_failure() {
   local msg_file note
   note="Premise failure: ${FAIL_CLASS} — ${FAIL_DETAIL}
 Detected by flight-check.sh at claim, against the tree at $(git rev-parse --short HEAD 2>/dev/null || echo unknown).
+Freshness key: ${STAMP_FRESHNESS_KEY:-unavailable}.
 The bead is not flyable as written: re-refine it against the tree that exists."
   msg_file=$(mktemp "${TMPDIR:-/tmp}/ac-flight-premise.XXXXXX") || { echo "NOT-GATED: cannot write the premise comment" >&2; return 2; }
   printf '%s\n' "$note" >"$msg_file"
@@ -198,6 +200,8 @@ echo "flight-check: $BEAD @ $(git rev-parse --short HEAD 2>/dev/null || echo no-
 
 CONSUMES=$(section "Consumes" | sed 's/^[[:space:]]*-[[:space:]]*//' | grep -v '^[[:space:]]*$')
 CONSUME_LINES=0
+BEAD_PARENT=""
+BEAD_PARENT_READ=0
 if [ -n "$CONSUMES" ] && ! printf '%s' "$CONSUMES" | grep -qiE '^none\.?$'; then
   while IFS= read -r line; do
     [ -n "$line" ] || continue
@@ -242,6 +246,19 @@ if [ -n "$CONSUMES" ] && ! printf '%s' "$CONSUMES" | grep -qiE '^none\.?$'; then
             || { echo "NOT-GATED: 'br show' refused for resolved blocker '$full' — closure unverifiable" >&2; exit 2; }
           blocker="$full"
         fi
+      fi
+      # A child may not cite its parent in ## Consumes, but legacy/malformed bodies can.
+      # Parent-child containment is not sequencing-by-closure: once the cited id has been
+      # resolved and found, exempt only the direct parent from the closed-status premise.
+      if [ "$BEAD_PARENT_READ" -eq 0 ]; then
+        BEAD_PARENT=$(br_call show "$BEAD" --json </dev/null \
+          | jq -r 'if type == "array" then .[0] else . end | .parent // .parent_id // ""' 2>/dev/null) \
+          || { echo "NOT-GATED: br_call show refused for '$BEAD' — parent-child closure exemption is unverifiable" >&2; exit 2; }
+        BEAD_PARENT_READ=1
+      fi
+      if [ -n "$BEAD_PARENT" ] && [ "$blocker" = "$BEAD_PARENT" ]; then
+        echo "flight-check: CONSUMES parent '$blocker' exempted (containment, not closure)"
+        continue
       fi
       if [ -z "$bstatus" ]; then
         premise_failed CONSUMES "blocker '$blocker' is not on the board — the premise cites a bead that does not exist"
@@ -367,23 +384,57 @@ fi
 # discovery costs a claim cycle plus a lost fixpoint. This is where it costs nothing — re-run
 # the stamp gate on the bead; its own downgrade leg strips a stale `refined`, and the worker
 # skips the bead with one routing decision. The bare label is never trusted past this point.
-# Not run in --check-only mode (this leg MUTATES the board) and not on a bead that does not
-# currently hold `refined` (nothing to re-gate); a gate that cannot run is NOT-GATED, never
-# a pass.
+# The mutating stamp leg is not run in --check-only mode; its touchers derivation is run
+# read-only there, so refly can re-ask a mutable count without changing the board. A bead
+# that does not currently hold `refined` is not re-gated unless it carries a stale-stamp
+# premise title; a gate that cannot run is NOT-GATED, never a pass.
 #
 # CLAIM-TIME, NOT EVERY-CALL: worker.md §3 tells a bead that delivers its own harness to
 # write that harness, then re-run this script so the receipt anchors the stronger RED. That
 # second run would otherwise re-gate `refined` against a tree that now has one more untracked
 # file (the harness), and a toucher check keyed on "did the referrer set change" bounces
 # STALE-STAMP for obeying the loop. The premise this gate holds is CLAIM-TIME, not call-time:
-# the stamp is re-gated once per claim. "a receipt exists" is the WRONG key on its own — a
-# PRIOR claim's leftover receipt (receipts APPEND and are never cleared) would let a brand
-# new claim skip a gate it has never actually run. The right key pairs the receipt against
-# THIS claim: skip only when the last receipt is no older than the latest `CLAIM:` comment.
+# the stamp is re-gated once per claim AND only while the receipt's freshness key still names
+# the current tracked tree. "a receipt exists" is the WRONG key on its own — a prior claim's
+# leftover receipt (receipts APPEND and are never cleared) would let a brand new claim skip a
+# gate it has never actually run.
 FLIGHT_DIR="${AC2_FLIGHT_DIR:-$(git rev-parse --git-common-dir 2>/dev/null || echo .)/ac-flight}"
 RECEIPT_FILE="$FLIGHT_DIR/${BEAD}.flight-receipt"
 STAMP_GATE="${STAMP_GATE:-$(cd "$(dirname "${BASH_SOURCE[0]}")/../../_tools" 2>/dev/null && pwd)/stamp-refined.sh}"
+TOUCHERS_TOOL="${TOUCHERS_TOOL:-$(cd "$(dirname "${BASH_SOURCE[0]}")/../../_tools" 2>/dev/null && pwd)/touchers.sh}"
 STAMP_SKIPPED=0
+CURRENT_TREE=$(git rev-parse HEAD 2>/dev/null || echo no-git)
+TRACKED_TREE_STATE=clean
+if [ "$CURRENT_TREE" != "no-git" ] && ! git diff --quiet --ignore-submodules HEAD -- 2>/dev/null; then
+  TRACKED_TREE_STATE=dirty
+fi
+# The freshness key is derived from the tree, not read from an environment.  A receipt may
+# skip a second flight-check only while it describes this same tracked tree; a predecessor
+# commit or a tracked sibling edit must force the touchers count to be re-derived.
+STAMP_FRESHNESS_KEY="tree=$CURRENT_TREE;tracked=$TRACKED_TREE_STATE"
+
+# touchers_check calls touchers.sh derive for every git-tracked Delivers path.  Run that
+# read-only derivation in --check-only as well: refly must be able to re-ask a mutable
+# touchers count without invoking the mutating refined-stamp gate.
+touchers_check_readonly() (
+  [ -f "$TOUCHERS_TOOL" ] || { echo "NOT-GATED: touchers tool not found at '$TOUCHERS_TOOL'"; return 2; }
+  . "$TOUCHERS_TOOL" 2>/dev/null || return 2
+  touchers_check "$BODY" "$BEAD"
+)
+
+if [ "$CHECK_ONLY" -eq 1 ] && [ -z "$FAIL_CLASS" ] \
+   && git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+  TOUCHERS_OUT=$(touchers_check_readonly 2>&1); TOUCHERS_RC=$?
+  if [ "$TOUCHERS_RC" -eq 2 ]; then
+    printf '%s\n' "$TOUCHERS_OUT" >&2
+    echo "NOT-GATED: the touchers count could not be re-derived; refusing rather than replaying a cached verdict" >&2
+    exit 2
+  elif [ "$TOUCHERS_RC" -ne 0 ]; then
+    TOUCHERS_WHY=$(printf '%s\n' "$TOUCHERS_OUT" | grep -m1 'touchers: REFUSED' | sed 's/^touchers: REFUSED[^—]*— //')
+    premise_failed STALE-STAMP "the touchers count was re-derived at use and no longer reproduces (freshness key: $STAMP_FRESHNESS_KEY) — ${TOUCHERS_WHY:-the declared count is stale}."
+  fi
+fi
+
 if [ -z "$FAIL_CLASS" ] && [ "$CHECK_ONLY" -eq 0 ]; then
   if [ ! -f "$STAMP_GATE" ]; then
     echo "NOT-GATED: stamp gate not found at '$STAMP_GATE' — the refined stamp cannot be re-gated; refusing rather than trusting it" >&2
@@ -407,16 +458,21 @@ if [ -z "$FAIL_CLASS" ] && [ "$CHECK_ONLY" -eq 0 ]; then
       | jq -r 'if type == "array" then .[0] else . end
                | [ .comments[]? | select(.text | startswith("CLAIM:")) | .created_at ] | max // ""' 2>/dev/null)
     LAST_AT=""
+    LAST_FRESHNESS=""
     if [ -f "$RECEIPT_FILE" ]; then
-      LAST_AT=$(awk '/^FLIGHT-RECEIPT v1/{buf=""} {buf = buf $0 "\n"} END{printf "%s", buf}' "$RECEIPT_FILE" \
-        | grep -m1 '^at:' | sed 's/^at:[[:space:]]*//')
+      LAST_RECEIPT=$(awk '/^FLIGHT-RECEIPT v1/{buf=""} {buf = buf $0 "\n"} END{printf "%s", buf}' "$RECEIPT_FILE")
+      LAST_AT=$(printf '%s\n' "$LAST_RECEIPT" | grep -m1 '^at:' | sed 's/^at:[[:space:]]*//')
+      LAST_FRESHNESS=$(printf '%s\n' "$LAST_RECEIPT" | grep -m1 '^freshness-key:' | sed 's/^freshness-key:[[:space:]]*//')
     fi
     norm_ts() { printf '%s' "$1" | sed -E 's/\.[0-9]+//; s/Z$//'; }
     if [ -n "$CLAIM_TS" ] && [ -n "$LAST_AT" ] \
+       && [ "$LAST_FRESHNESS" = "$STAMP_FRESHNESS_KEY" ] \
        && ! [ "$(norm_ts "$LAST_AT")" \< "$(norm_ts "$CLAIM_TS")" ]; then
       STAMP_SKIPPED=1
-      echo "flight-check[$BEAD] STAMP skipped — re-run within this claim (receipt $LAST_AT ≥ claim $CLAIM_TS); gated at claim, never implies fresh"
+      echo "flight-check[$BEAD] STAMP skipped — re-run within this claim (receipt $LAST_AT ≥ claim $CLAIM_TS; freshness $STAMP_FRESHNESS_KEY); gated at claim, never implies fresh"
     else
+      [ -n "$LAST_FRESHNESS" ] && [ "$LAST_FRESHNESS" != "$STAMP_FRESHNESS_KEY" ] \
+        && echo "flight-check[$BEAD] STAMP re-derived — freshness key changed ($LAST_FRESHNESS → $STAMP_FRESHNESS_KEY); the touchers count is never replayed from the old receipt"
       STAMP_OUT=$(bash "$STAMP_GATE" "$BEAD" </dev/null 2>&1); STAMP_RC=$?
       if [ "$STAMP_RC" -eq 2 ]; then
         printf '%s\n' "$STAMP_OUT" >&2
@@ -425,10 +481,11 @@ if [ -z "$FAIL_CLASS" ] && [ "$CHECK_ONLY" -eq 0 ]; then
       elif [ "$STAMP_RC" -ne 0 ]; then
         printf '%s\n' "$STAMP_OUT" >&2
         STAMP_WHY=$(printf '%s\n' "$STAMP_OUT" | grep -m1 'stamp_refined: REFUSED' | sed 's/^stamp_refined: REFUSED[^—]*— //')
-        premise_failed STALE-STAMP "the \`refined\` stamp is stale under the current gate — ${STAMP_WHY:-refused}. The gate's downgrade leg has stripped it; the bead returns to the refine lane."
+        premise_failed STALE-STAMP "the \`refined\` stamp is stale under the current gate — ${STAMP_WHY:-refused}. The gate's downgrade leg has stripped it; the bead returns to the refine lane (freshness key: $STAMP_FRESHNESS_KEY)."
       fi
     fi
   fi
+
 fi
 [ -z "$FAIL_CLASS" ] && [ "$STAMP_SKIPPED" -eq 0 ] && echo "flight-check: STAMP ok (refined re-gated or absent)"
 
@@ -481,6 +538,7 @@ bead: $BEAD
 at: $(date -u +%Y-%m-%dT%H:%M:%SZ)
 tree: $(git rev-parse HEAD 2>/dev/null || echo no-git)
 premise: PASS consumes=$CONSUME_LINES environment=$ENV_CHECKED perishable=$PERISH_CHECKED
+freshness-key: $STAMP_FRESHNESS_KEY
 red-probe: $RED_PROBE
 red-exit: $RED_EXIT
 red-green-siblings: $GREEN_COUNT of $PROBE_COUNT probe(s) already green
