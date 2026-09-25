@@ -264,7 +264,7 @@ If no:
 
 ## Expected Output
 
-Single markdown file: `.claude/plans/research/*-brainstorm-challenged-*.md`
+Single markdown file: `_plans/research/*-brainstorm-challenged-*.md`
 
 Contains:
 

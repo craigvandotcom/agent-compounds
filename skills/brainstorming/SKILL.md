@@ -97,7 +97,7 @@ Four phases with fresh agent context per phase:
 - Key decisions needing user input
 - Ready for `/ac-plan`
 
-**Output:** `.claude/plans/research/YYYY-MM-DD-HHMM-brainstorm-[topic].md`
+**Output:** `_plans/research/YYYY-MM-DD-HHMM-brainstorm-[topic].md`
 
 ---
 

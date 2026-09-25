@@ -181,7 +181,7 @@ Select the 3 ideas that best balance value and feasibility for this specific con
 
 ## Expected Output
 
-Single markdown file: `.claude/plans/research/*-brainstorm-filtered-*.md`
+Single markdown file: `_plans/research/*-brainstorm-filtered-*.md`
 
 Contains:
 

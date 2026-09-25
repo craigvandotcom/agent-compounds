@@ -91,8 +91,6 @@ Before writing output, systematically evaluate code against these dimensions:
 
 **2. Implementation plan** -- `.claude/plans/YYYY-MM-DD-HHMM-feature-name.md`
 
-**3. Code exploration report** -- `.claude/plans/research/YYYY-MM-DD-HHMM-exploration-*.md`
-
 ---
 
 ## Review Process

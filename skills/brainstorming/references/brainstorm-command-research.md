@@ -287,7 +287,7 @@ Phase 2: DEFINE (Converge)
 - Identify top 3 approaches
 
 Phase 3: OUTPUT
-- Write brainstorm brief to .claude/plans/research/
+- Write brainstorm brief to _plans/research/
 - List recommended approach + 2 alternatives
 - Note key decisions/tradeoffs for user
 
@@ -298,7 +298,7 @@ Phase 3: OUTPUT
 
 ### Output Format
 
-`.claude/plans/research/YYYY-MM-DD-HHMM-brainstorm-[topic].md`
+`_plans/research/YYYY-MM-DD-HHMM-brainstorm-[topic].md`
 
 ```markdown
 # Brainstorm: [Topic]

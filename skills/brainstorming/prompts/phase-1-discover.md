@@ -187,7 +187,7 @@ Output format:
 
 ## Expected Output
 
-Each explorer produces a markdown file in `.claude/plans/research/`:
+Each explorer produces a markdown file in `_plans/research/`:
 
 - `*-brainstorm-patterns-*.md`
 - `*-brainstorm-problem-*.md`
