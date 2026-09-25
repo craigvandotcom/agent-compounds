@@ -5,11 +5,16 @@ count. No emoji anywhere here (they are double-width); glyphs are single-width o
 
 Usage:  tui.py [secs]                     the live loop (default 15s); execed by
                                           `board.sh --watch [secs]`.
-        tui.py --once --width N [--no-color] [--prev FILE] [--save-counts FILE]
+        tui.py --once --width N [--height N] [--footer TEXT] [--no-color]
+               [--prev FILE] [--save-counts FILE]
                                           reads a model dict (model.build()'s JSON, i.e.
                                           `board.sh --json`'s output) on stdin, prints one
-                                          frame, exits — the test seam. --prev/--save-counts
-                                          chain the in-process delta memory across two calls.
+                                          frame, exits — the test seam. --height forces the
+                                          same trim a short pane gets (footer → HEALTH detail
+                                          → ON YOU capped further); --footer feeds it a footer
+                                          line, since --once never fetches one itself.
+                                          --prev/--save-counts chain the in-process delta
+                                          memory across two calls.
 Env:    NO_COLOR disables colour (same as --no-color).
 """
 import datetime as dt, json, math, os, re, shutil, signal, subprocess, sys, time
@@ -60,6 +65,21 @@ def slug(title, w):
 def plan_slug(name):
     """A plan's display name: its `YYYY-MM-DD-` and optional `HHMM-` prefix stripped."""
     return re.sub(r"^\d{4}-\d{2}-\d{2}-(?:\d{4}-)?", "", name or "")
+
+
+def epic_slug(title):
+    """An epic's display name: the text before its first `:` or ` — `, whichever comes first."""
+    return re.split(r":\s+|\s—\s", title or "", maxsplit=1)[0].strip()
+
+
+def age_from_epoch(mtime, now):
+    if mtime is None: return ""
+    return age(dt.datetime.fromtimestamp(mtime, dt.timezone.utc).isoformat(), now)
+
+
+def resolve_now(M):
+    return ts((M or {}).get("now")) or (dt.datetime.fromisoformat(os.environ["AC_BOARD_NOW"])
+                                         if os.environ.get("AC_BOARD_NOW") else dt.datetime.now(dt.timezone.utc))
 
 
 def plural(n, word):
@@ -133,8 +153,21 @@ def delta(state, key, n, now):
     return f"{d:+d}" if m < DELTA_MIN else ""
 
 
-# ── ON YOU: one row per ranked move ──────────────────────────────────────────────────────
-def on_you_row(mv, w, now, c):
+# ── ON YOU: one row per ranked move — one row per PLAN within a grouped plan move ────────
+def expand_moves(moves):
+    """A grouped plan move (`polish 2 plans`) becomes one entry per plan name; everything
+    else passes through unchanged. Order is preserved (still the pull-order ranking)."""
+    out = []
+    for mv in moves:
+        if mv.get("rung") in ("beadify", "polish-plan", "approve-plan"):
+            for nm in (mv.get("names") or [""]):
+                out.append({**mv, "names": [nm]})
+        else:
+            out.append(mv)
+    return out
+
+
+def on_you_row(mv, w, now, c, plan_mtime):
     amber = "33"
     rung = mv.get("rung")
     if rung in ("gate", "idle-gate"):
@@ -147,9 +180,14 @@ def on_you_row(mv, w, now, c):
         return lines
     glyph = GLYPH.get(rung, "»")
     if rung in ("beadify", "polish-plan", "approve-plan"):
-        names = mv.get("names") or []
-        text = f"{mv.get('verb', '')} {plan_slug(names[0])}" if len(names) == 1 else mv["subject"]
-    elif rung == "pool":
+        nm = (mv.get("names") or [""])[0]
+        text = f"{mv.get('verb', '')} {plan_slug(nm)}"
+        badge = age_from_epoch(plan_mtime.get(nm), now)
+        line1 = pack_badge(f"{glyph} {text}", badge, w)
+        lines = [c(amber, line1)]
+        if mv.get("route"): lines.append(c(DIM, f"  → {mv['route']}"))
+        return lines
+    if rung == "pool":
         text = f"draft {plural(mv.get('pool', 0), 'proposal')}"
     else:
         text = mv["subject"]
@@ -162,67 +200,112 @@ def on_you_row(mv, w, now, c):
     return lines
 
 
-# ── EPICS: one row per epic (next → open → most recently closed) ────────────────────────
-def epic_row(glyph, e, w, now):
-    holding = e.get("holding") or []
-    agents_s = "⚠" if e.get("unclaimed_stale") else "●" * len(holding)
-    if e.get("total"):
-        tail = f"{bar6(e['done'], e['total'])} {e['done']}/{e['total']}"
-    elif glyph == "✓":
-        tail = age(e.get("closed_at"), now)
-    else:
-        tail = ""
-    prefix, mid = f"{glyph} ", (f" {agents_s}" if agents_s else "")
-    avail = w - len(prefix) - len(mid) - (len(tail) + 1 if tail else 0)
-    etitle = clip(e.get("title", ""), max(4, avail))
-    line = prefix + etitle + mid
-    if tail: line += " " * max(1, w - len(line) - len(tail)) + tail
-    return clip(line, w)
+def render_onyou(moves, w, now, c, plan_mtime, cap):
+    """ON YOU: heading with the true count, up to `cap` items, `+ n more` past it."""
+    if len(moves) == 1 and moves[0].get("rung") == "none":
+        return [c(BOLD, "ON YOU") + "  " + c("32", "✓ clear")]
+    lines = [c(BOLD, pack_badge("ON YOU", str(len(moves)), w))]
+    shown = moves[:max(0, cap)]
+    for mv in shown:
+        lines.extend(on_you_row(mv, w, now, c, plan_mtime))
+    hidden = len(moves) - len(shown)
+    if hidden > 0: lines.append(c(DIM, f"+ {hidden} more"))
+    return lines
+
+
+# ── EPICS: one row per epic (next → open → most recently closed), columns aligned ───────
+def epic_agents(e):
+    return "⚠" if e.get("unclaimed_stale") else "●" * len(e.get("holding") or [])
+
+
+def progress_rows(rows, w):
+    """`next`/`open` rows: a title column fixed across all of them so the agent dots, the
+    6-cell bar and done/total line up row to row — not each row's own leftover width.
+    `rows` is a list of `(glyph, epic)`."""
+    agent_w = max([1] + [len(epic_agents(e)) for _, e in rows])
+    count_w = max([1] + [len(f"{e['done']}/{e['total']}") for _, e in rows if e.get("total")])
+    title_w = max(4, w - 2 - 1 - agent_w - 1 - 6 - 1 - count_w)
+    out = []
+    for glyph, e in rows:
+        etitle = clip(epic_slug(e.get("title", "")), title_w)
+        a = epic_agents(e)
+        bar = bar6(e["done"], e["total"]) if e.get("total") else "─" * 6
+        dt_ = f"{e['done']}/{e['total']}" if e.get("total") else ""
+        out.append(f"{glyph} {etitle:<{title_w}} {a:<{agent_w}} {bar} {dt_:>{count_w}}")
+    return out
+
+
+def closed_row(e, w, now):
+    """The ✓ row: no bar, just its age — right-aligned to w, like a gate's."""
+    etitle = clip(epic_slug(e.get("title", "")), w - 2)
+    return pack_badge(f"✓ {etitle}", age(e.get("closed_at"), now), w)
+
+
+def build_header(name, now, w, secs_left, color_on):
+    """Line 1 alone — the live loop rewrites just this line, in place, every second; it is
+    the "alive" signal between full refreshes."""
+    c = colorer(color_on)
+    hhmm = now.astimezone().strftime("%H:%M")
+    left = f"{name} · {hhmm}"
+    right = f"↻ {secs_left}s" if secs_left is not None else ""
+    header = left + " " * max(1, w - len(left) - len(right)) + right if right else left
+    return c(DIM, clip(header, w))
+
+
+def pipeline_rows(rows, w, section, state, now, c, color_of):
+    """`label  count bar` — bar cells are that row's share of the section, summing exactly
+    to the width left after the label/count/a `+n` delta's room; no track glyph — unused
+    cells are simply not drawn (a solid, touching silhouette, not a gauge). `rows` is
+    `(label, n)` or `(label, n, dim_n)` — the blocked share of n, dimmed to `▒` at the
+    right end. `color_of` is a bright-cell colour code, or `label -> code`."""
+    if not rows: return []
+    counts = [n for _, n, *_ in rows]
+    count_w = max(2, max(len(str(n)) for n in counts))
+    label_w = 11
+    barw = max(1, w - 1 - label_w - count_w - 1 - 4)  # 4 = room for a " +12"-shaped delta
+    cells = alloc(counts, barw)
+    out = []
+    for (label, n, *rest), cellc in zip(rows, cells):
+        dim_n = rest[0] if rest else 0
+        dim_cells = alloc([n - dim_n, dim_n], cellc)[1] if n and dim_n else 0
+        bright = cellc - dim_cells
+        col = color_of(label) if callable(color_of) else color_of
+        bar = c(col, "█" * bright) + (c(DIM, "▒" * dim_cells) if dim_cells else "")
+        d = delta(state, f"{section}.{label}", n, now)
+        out.append(f" {label:<{label_w}}{n:>{count_w}} {bar}" + (" " + c("35", d) if d else ""))
+    return out
 
 
 # ── the frame: one column, header → status → ON YOU → EPICS → PIPELINE → HEALTH ─────────
-def build_frame(M, width, color_on, state, secs_left=None, footer=None):
+def build_frame(M, width, color_on, state, secs_left=None, footer=None, height=None):
     w = max(36, min(56, width))
-    now = ts(M.get("now")) or (dt.datetime.fromisoformat(os.environ["AC_BOARD_NOW"])
-                                if os.environ.get("AC_BOARD_NOW") else dt.datetime.now(dt.timezone.utc))
+    now = resolve_now(M)
     c = colorer(color_on)
-    lines = []
 
-    # header — redraw-only-the-clock is the live loop's concern, not this pure builder
-    hhmm = now.astimezone().strftime("%H:%M")
-    left = f"{M.get('name', '?')} · {hhmm}"
-    right = f"↻ {secs_left}s" if secs_left is not None else ""
-    header = left + " " * max(1, w - len(left) - len(right)) + right if right else left
-    lines.append(c(DIM, clip(header, w)))
-
+    header_lines = [build_header(M.get("name", "?"), now, w, secs_left, color_on)]
     st = (M.get("verdict") or {}).get("state", "UNKNOWN")
-    vline = (M.get("verdict") or {}).get("line", "")
-    meaning = vline.split(" — ", 1)[1] if " — " in vline else vline.lstrip("? ").strip()
-    bar_text = clip(f" {st} — {meaning} ", w)
+    reasons = (M.get("verdict") or {}).get("reasons") or []
+    text = st
+    for r in reasons:
+        cand = text + " · " + r
+        if len(cand) + 2 > w: break
+        text = cand
+    bar_text = clip(f" {text} ", w)
     bar_text += " " * (w - len(bar_text))
-    lines.append(c(f"7;{STATE_COLOR.get(st, '31')}", bar_text))
+    header_lines.append(c(f"7;{STATE_COLOR.get(st, '31')}", bar_text))
 
-    # ON YOU
-    moves = M.get("moves") or []
-    lines.append("")
-    if len(moves) == 1 and moves[0].get("rung") == "none":
-        lines.append(c(BOLD, "ON YOU") + "  " + c("32", "✓ clear"))
-    else:
-        lines.append(c(BOLD, pack_badge("ON YOU", str(len(moves)), w)))
-        for mv in moves[:8]:
-            lines.extend(on_you_row(mv, w, now, c))
-        if len(moves) > 8: lines.append(c(DIM, f"+ {len(moves) - 8} more"))
+    # ON YOU — one row per plan within a grouped plan move; `cap` shrinks under a height limit
+    moves = expand_moves(M.get("moves") or [])
+    plan_mtime = {p["name"]: p["mtime"] for p in (M.get("plans") or [])}
 
     # EPICS
     items = (M.get("epics") or {}).get("items") or []
-    lines.append("")
     open_eps = [e for e in items if not e.get("closed_at")]
     done_sum = sum(e["done"] for e in open_eps if e.get("done") is not None)
     total_sum = sum(e["total"] for e in open_eps if e.get("total") is not None)
     closed7 = M.get("closed7")
-    right = f"{done_sum}/{total_sum}  {spark(closed7) if closed7 else '?'} " \
-            f"{sum(closed7) if closed7 else '?'}/7d"
-    lines.append(c(BOLD, pack_badge("EPICS", right, w)))
+    epics_right = f"{done_sum}/{total_sum}  {spark(closed7) if closed7 else '?'} " \
+                  f"{sum(closed7) if closed7 else '?'}/7d"
     has_agent = lambda e: bool(e.get("holding")) or e.get("unclaimed_stale")
     next_eps = sorted([e for e in open_eps if not (e.get("done") or 0) and not has_agent(e)],
                        key=lambda e: (e["priority"] if e.get("priority") is not None else 999,
@@ -230,58 +313,51 @@ def build_frame(M, width, color_on, state, secs_left=None, footer=None):
     next_ids = {e["id"] for e in next_eps}
     open_rows = sorted([e for e in open_eps if e["id"] not in next_ids],
                         key=lambda e: (e["done"] / e["total"]) if e.get("total") else 0)
-    for e in next_eps: lines.append(epic_row("○", e, w, now))
-    for e in open_rows: lines.append(epic_row("▶", e, w, now))
+    prog_rows = [("○", e) for e in next_eps] + [("▶", e) for e in open_rows]
+    epics_lines = [c(BOLD, pack_badge("EPICS", epics_right, w))] + progress_rows(prog_rows, w)
     mrc = M.get("most_recent_closed_epic")
-    if mrc: lines.append(epic_row("✓", mrc, w, now))
+    if mrc: epics_lines.append(closed_row(mrc, w, now))
 
     # PIPELINE — plans then beads, bars flush (no blank line between rows in a section)
-    lines.append("")
-    lines.append(c(BOLD, "PIPELINE"))
     plans, pool = M.get("plans") or [], M.get("pool") or 0
     FLOW = ("draft", "approved", "polished", "refined", "bead-ready")
     known = set(FLOW) | {"beadified"}
     counts = {"proposals": pool}
     for st_ in FLOW: counts[st_] = sum(1 for p in plans if p["stage"] == st_)
     other_n = sum(1 for p in plans if p["stage"] not in known)
-    rows = [("proposals", counts["proposals"])]
+    plan_rows = [("proposals", counts["proposals"])]
     for st_ in FLOW:
-        if counts[st_] or st_ in ("draft", "approved", "bead-ready"): rows.append((st_, counts[st_]))
-    if other_n: rows.append(("other", other_n))
-    total_plans = sum(n for _, n in rows)
-    lines.append(pack_badge(" plans", str(total_plans), w))
-    for (label, n), cellc in zip(rows, alloc([n for _, n in rows], BARW)):
-        d = delta(state, f"plans.{label}", n, now)
-        bar = c("34", "█" * cellc) + "░" * (BARW - cellc)
-        lines.append(f" {label:<11}{bar}" + (" " + c("35", d) if d else ""))
+        if counts[st_] or st_ in ("draft", "approved", "bead-ready"): plan_rows.append((st_, counts[st_]))
+    if other_n: plan_rows.append(("other", other_n))
+    total_plans = sum(n for _, n in plan_rows)
+    pipeline_lines = [pack_badge(" plans", str(total_plans), w)]
+    pipeline_lines += pipeline_rows(plan_rows, w, "plans", state, now, c, "34")
 
     B = M.get("beads")
     if B:
         b_ref = B.get("blocked_refined") or 0
         b_unref = max(0, B["n_blocked"] - b_ref) if B.get("blocked_by") is not None else 0
-        rows2 = [("unrefined", B["n_unrefined"] + b_unref, b_unref),
-                 ("refined", B["n_ready"] + b_ref, b_ref),
-                 ("building", B["n_in_progress"], 0)]
-        heading_r = str(sum(n for _, n, _ in rows2)) + (f" · {B['n_deferred']} deferred" if B["n_deferred"] else "")
-        lines.append(pack_badge(" beads", heading_r, w))
-        for (label, n, dim_n), cellc in zip(rows2, alloc([n for _, n, _ in rows2], BARW)):
-            dim_cells = alloc([n - dim_n, dim_n], cellc)[1] if n else 0
-            bright = cellc - dim_cells
-            col = "92" if label == "building" else "32"
-            bar = c(col, "█" * bright) + c(DIM, "▒" * dim_cells) + "░" * (BARW - cellc)
-            d = delta(state, f"beads.{label}", n, now)
-            lines.append(f" {label:<11}{bar}" + (" " + c("35", d) if d else ""))
+        beads_rows = [("unrefined", B["n_unrefined"] + b_unref, b_unref),
+                      ("refined", B["n_ready"] + b_ref, b_ref),
+                      ("building", B["n_in_progress"], 0)]
+        heading_r = str(sum(n for _, n, _ in beads_rows)) + \
+            (f" · {B['n_deferred']} deferred" if B["n_deferred"] else "")
+        pipeline_lines.append(pack_badge(" beads", heading_r, w))
+        beads_color = lambda label: "92" if label == "building" else "32"  # building = bright green
+        pipeline_lines += pipeline_rows(beads_rows, w, "beads", state, now, c, beads_color)
     else:
-        lines.append(" beads       ?")
+        pipeline_lines.append(" beads       ?")
 
-    # HEALTH
-    lines.append("")
+    # HEALTH — CI's own glyph reflects CI alone; "none scheduled" is not a problem
     prs = M.get("prs")
     red = [p for p in prs if p["ci"].startswith("CI ✗")] if prs is not None else []
     problems = []
     if red: problems.append(f"PR #{red[0]['number']} red")
     ci = M.get("ci")
-    if ci and "✗" in ci: problems.append(f"CI {ci}")
+    ci_bad = ci is None or "✗" in (ci or "")
+    ci_none = ci == "none scheduled"
+    if ci_bad: problems.append(f"CI {ci or '?'}")
+    ci_piece = (f"⚠ CI {ci or '?'}") if ci_bad else ("CI —" if ci_none else "✓ CI")
     if M.get("mail") != "up": problems.append(f"mail {M.get('mail') or '?'}")
     if M.get("split"): problems.append(f"{M['split']} agents on another mailbox key")
     if B and B.get("stale"): problems.append(f"{B['stale']} stale in-progress")
@@ -294,14 +370,30 @@ def build_frame(M, width, color_on, state, secs_left=None, footer=None):
         if vs != "0": checks_bad.append(f"{k} {vs}")
     prs_n = len(prs) if prs is not None else "?"
     ok = not problems and not checks_bad
-    head = f"{'✓' if ok else '⚠'} CI · {prs_n} PRs · checks {'✓' if not checks_bad else '⚠'}"
-    lines.append(c("32" if ok else "33", clip(head, w)))
-    for x in problems + checks_bad:
-        lines.append(c("33", clip(f"⚠ {x}", w)))
+    head = f"{ci_piece} · {prs_n} PRs · checks {'✓' if not checks_bad else '⚠'}"
+    health_head = [c("32" if ok else "33", clip(head, w))]
+    health_detail = [c("33", clip(f"⚠ {x}", w)) for x in problems + checks_bad]
 
-    if footer:
-        lines.append("")
-        lines.append(clip(footer, w))
+    footer_lines = ["", clip(footer, w)] if footer else []
+
+    def assemble(cap, show_detail, show_footer):
+        out = list(header_lines) + [""]
+        out += render_onyou(moves, w, now, c, plan_mtime, cap)
+        out += [""] + epics_lines
+        out += [""] + pipeline_lines
+        out += [""] + health_head
+        if show_detail: out += health_detail
+        if show_footer: out += footer_lines
+        return out
+
+    lines = assemble(8, True, True)
+    if height is not None:
+        if len(lines) > height: lines = assemble(8, True, False)
+        if len(lines) > height: lines = assemble(8, False, False)
+        cap = 8
+        while len(lines) > height and cap > 0:
+            cap -= 1
+            lines = assemble(cap, False, False)
     return lines
 
 
@@ -362,6 +454,12 @@ def live_loop(secs):
     signal.signal(signal.SIGINT, restore); signal.signal(signal.SIGTERM, restore)
 
     last_M = None
+
+    def full_redraw(draw, cols, left, footer):
+        frame = ("\n".join(build_frame(draw, cols, color_on, state, secs_left=left, footer=footer))
+                  if draw else "board: waiting for a read…")
+        sys.stdout.write("\033[H\033[J" + frame + "\n"); sys.stdout.flush()
+
     try:
         while True:
             M = fetch_model()
@@ -369,14 +467,20 @@ def live_loop(secs):
             draw = last_M
             cols = shutil.get_terminal_size((80, 24)).columns
             footer = fetch_footer(foot_cache, color_on) if draw else ""
-            for left in range(secs, -1, -1):
+            header_now = resolve_now(draw) if draw else dt.datetime.now(dt.timezone.utc)
+            name = draw.get("name", "?") if draw else "board"
+            full_redraw(draw, cols, secs, footer)
+            # between fetches, rewrite only line 1 — the ticking countdown is the alive signal
+            for left in range(secs - 1, -1, -1):
+                time.sleep(1)
                 if resize["go"]:
                     resize["go"] = False
                     cols = shutil.get_terminal_size((80, 24)).columns
-                frame = ("\n".join(build_frame(draw, cols, color_on, state, secs_left=left, footer=footer))
-                         if draw else "board: waiting for a read…")
-                sys.stdout.write("\033[H\033[J" + frame + "\n"); sys.stdout.flush()
-                if left: time.sleep(1)
+                    full_redraw(draw, cols, left, footer)
+                    continue
+                if draw:
+                    hdr = build_header(name, header_now, cols, left, color_on)
+                    sys.stdout.write(f"\033[1;1H{hdr}\033[K\n"); sys.stdout.flush()
     finally:
         sys.stdout.write("\033[?25h\033[?1049l"); sys.stdout.flush()
 
@@ -384,15 +488,17 @@ def live_loop(secs):
 def main():
     argv = sys.argv[1:]
     if "--once" in argv:
-        width, color_on = 40, os.environ.get("NO_COLOR") is None
-        prev_file = save_file = None
+        width, height, color_on = 40, None, os.environ.get("NO_COLOR") is None
+        prev_file = save_file = footer = None
         i = 0
         while i < len(argv):
             a = argv[i]
             if a == "--width": width = int(argv[i + 1]); i += 2; continue
+            if a == "--height": height = int(argv[i + 1]); i += 2; continue
             if a == "--no-color": color_on = False; i += 1; continue
             if a == "--prev": prev_file = argv[i + 1]; i += 2; continue
             if a == "--save-counts": save_file = argv[i + 1]; i += 2; continue
+            if a == "--footer": footer = argv[i + 1]; i += 2; continue  # the height-trim test seam
             i += 1
         try:
             M = json.load(sys.stdin)
@@ -403,7 +509,7 @@ def main():
             try:
                 with open(prev_file, encoding="utf-8") as f: state = json.load(f)
             except ValueError: state = {}  # a corrupt --prev file just starts fresh
-        print("\n".join(build_frame(M, width, color_on, state)))
+        print("\n".join(build_frame(M, width, color_on, state, height=height, footer=footer)))
         if save_file:
             with open(save_file, "w", encoding="utf-8") as f: json.dump(state, f)
         return
