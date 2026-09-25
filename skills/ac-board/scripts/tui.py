@@ -22,7 +22,6 @@ from concurrent.futures import ThreadPoolExecutor
 
 HERE = os.path.dirname(os.path.realpath(__file__))
 BOARD = os.path.join(HERE, "board.sh")
-BARW = 10                 # PIPELINE bar cells per section
 DELTA_MIN = 15            # a moved count shows its change this long
 EIGHTHS = " ▏▎▍▌▋▊▉█"
 STATE_COLOR = {"RUNNING": "32", "IDLE": "33", "STUCK": "31", "EMPTY": "2", "UNKNOWN": "31"}
@@ -330,7 +329,7 @@ def build_frame(M, width, color_on, state, secs_left=None, footer=None, height=N
         if counts[st_] or st_ in ("draft", "approved", "bead-ready"): plan_rows.append((st_, counts[st_]))
     if other_n: plan_rows.append(("other", other_n))
     total_plans = sum(n for _, n in plan_rows)
-    pipeline_lines = [pack_badge(" plans", str(total_plans), w)]
+    pipeline_lines = [c(BOLD, "PIPELINE"), pack_badge("plans", str(total_plans), w)]
     pipeline_lines += pipeline_rows(plan_rows, w, "plans", state, now, c, "34")
 
     B = M.get("beads")
@@ -342,7 +341,7 @@ def build_frame(M, width, color_on, state, secs_left=None, footer=None, height=N
                       ("building", B["n_in_progress"], 0)]
         heading_r = str(sum(n for _, n, _ in beads_rows)) + \
             (f" · {B['n_deferred']} deferred" if B["n_deferred"] else "")
-        pipeline_lines.append(pack_badge(" beads", heading_r, w))
+        pipeline_lines.append(pack_badge("beads", heading_r, w))
         beads_color = lambda label: "92" if label == "building" else "32"  # building = bright green
         pipeline_lines += pipeline_rows(beads_rows, w, "beads", state, now, c, beads_color)
     else:

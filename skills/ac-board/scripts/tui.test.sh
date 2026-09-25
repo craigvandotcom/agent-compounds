@@ -226,10 +226,10 @@ check height "a shorter pane also drops the HEALTH detail"    '\? some read: boo
 check height "…footer stays dropped too"                      'ac bca usa' absent
 check height "…the ON YOU cap is still untouched"              '\+ 2 more'
 
-# 16 is this fixture's true floor once footer + HEALTH detail are gone and ON YOU is capped to
+# 17 is this fixture's true floor once footer + HEALTH detail are gone and ON YOU is capped to
 # 0 (EPICS/PIPELINE/the HEALTH head line are never trimmed) — proven separately below with
 # --height 1; ask for exactly that floor to prove the cap gets pushed all the way down.
-got=$(once "$W/tall.json" --no-color --footer "ac bca usa" --height 16)
+got=$(once "$W/tall.json" --no-color --footer "ac bca usa" --height 17)
 CASES=$((CASES + 1))
 n_more=$(grep -oE '\+ [0-9]+ more' <<<"$got" | grep -oE '[0-9]+')
 if [ -n "$n_more" ] && [ "$n_more" -gt 2 ]; then echo "ok   height: a very short pane caps ON YOU further (+$n_more)"
@@ -238,8 +238,8 @@ check height "footer stays dropped at the smallest height"    'ac bca usa' absen
 check height "HEALTH detail stays dropped at the smallest height" '\? some read: boom' absent
 CASES=$((CASES + 1))
 got_n=$(wc -l <<<"$got")
-if [ "$got_n" -le 16 ]; then echo "ok   height: the frame fits inside --height 16 ($got_n lines)"
-else echo "FAIL height: frame is $got_n lines, wider than --height 16"; FAILURES=$((FAILURES + 1)); fi
+if [ "$got_n" -le 17 ]; then echo "ok   height: the frame fits inside --height 17 ($got_n lines)"
+else echo "FAIL height: frame is $got_n lines, wider than --height 17"; FAILURES=$((FAILURES + 1)); fi
 
 # --height 1 (impossible) proves the floor: ON YOU caps all the way to 0, "+ 10 more".
 CASES=$((CASES + 1))
