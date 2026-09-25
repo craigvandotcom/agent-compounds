@@ -332,6 +332,20 @@ if r.returncode == 0 and f"· base: {base('ac-t1', 'first')}" in exported:
 else:
     fail("export base", f"rc={r.returncode}\n{r.stdout}{r.stderr}\n{exported[:300]}")
 
+# An unresolved Consumes placeholder must fail closed at export, before writeback can parse it
+# as an issue id and leave the board partially wired.
+PLACEHOLDER = bead("ac-t7", "placeholder fixture", [])
+PLACEHOLDER["description"] = "## Consumes\n- <epic-id>.8 -> gate: upstream child\n"
+write(os.path.join(FIX, "ac-t7.json"), json.dumps(PLACEHOLDER))
+OUTDIR3 = os.path.join(W, "export-placeholder")
+r = subprocess.run([sys.executable, SCRIPT, "export", "--out", OUTDIR3, "--ids", "ac-t7"],
+                   capture_output=True, text=True, cwd=W, env=ENV)
+if r.returncode == 1 and "unresolved Consumes placeholder" in r.stderr \
+        and not os.path.exists(os.path.join(OUTDIR3, "artifact.md")):
+    ok("export: an unresolved Consumes placeholder is refused and no artifact is written")
+else:
+    fail("export placeholder", f"rc={r.returncode}\n{r.stdout}{r.stderr}")
+
 # a dep add that fails is a WRITEBACK failure: a Consumes line whose edge does not exist is a lie
 FAILSTUB = STUB.replace('if [ "$1 $2" = "list --json" ]',
                         'if [ "$1 $2" = "dep add" ]; then echo "br: no such issue" >&2; exit 1; fi\n'

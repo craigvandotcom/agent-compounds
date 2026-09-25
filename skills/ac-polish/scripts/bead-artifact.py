@@ -59,6 +59,24 @@ DELIM = re.compile(r"<!-- BEAD:([^ ]+) -->\n(.*?)\n<!-- /BEAD:\1 -->", re.S)
 # accepted too because live beads carry both spellings.
 CONSUMES_SECTION = re.compile(r"^##[ \t]+Consumes[ \t]*$(.*?)(?=^##[ \t]|\Z)", re.M | re.S)
 CONSUMES_LINE = re.compile(r"^-[ \t]+(\S+)[ \t]+(?:->|→)[ \t]", re.M)
+CONSUMES_PLACEHOLDER = re.compile(r"<[^>\n]+>")
+
+
+def unresolved_consumes_placeholders(description):
+    """Unresolved `<...>` tokens in blocker ids declared by `## Consumes`.
+
+    Only the id before the arrow matters: that is the token writeback passes to
+    `br dep add`. A literal placeholder there would otherwise reach a partial writeback,
+    so export refuses the whole set before it writes an artifact.
+    """
+    section = CONSUMES_SECTION.search(description or "")
+    if not section:
+        return []
+    out = []
+    for blocker in CONSUMES_LINE.findall(section.group(1)):
+        if CONSUMES_PLACEHOLDER.search(blocker) and blocker not in out:
+            out.append(blocker)
+    return out
 
 
 def die(code, msg):
@@ -128,6 +146,12 @@ def cmd_export(args):
         if d.get("status") == "closed":
             failed.append((bead_id, "closed — a closed description is a record of what shipped, "
                                     "never a polish artifact; export the epic's OPEN children"))
+            continue
+        placeholders = unresolved_consumes_placeholders(d.get("description") or "")
+        if placeholders:
+            failed.append((bead_id, "unresolved Consumes placeholder "
+                                    f"{', '.join(repr(p) for p in placeholders)} — resolve it "
+                                    "to a real bead id before export"))
             continue
         labels = ",".join(d.get("labels") or []) or "none"
         blocks += [
