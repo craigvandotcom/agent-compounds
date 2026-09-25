@@ -90,13 +90,12 @@ comment naming its new path; the plan is preserved, never deleted.
 edges and move EVERY reachable `_plans/` file to `_plans/_done/` (not just `$PLAN_FILE`) —
 stamped `status: done` + `beadified: <epic-id>`, RETIREMENT HELD guard (§ below) per file.
 
-**REFUSE to retire while an open bead still needs the plan as its subject** — a dogfood
-receipt, a bead whose Delivers or Intent names the plan path. If one exists, leave the file
-where it is and say so:
-
+**REFUSE to retire while an open bead needs the plan as its subject** — its `## Delivers` or `## Consumes`
+names the plan; Intent provenance and this compile's own epic and children never hold it. Held: leave the file, say so.
 ```sh
-RUST_LOG=error br list --status open --json \
-  | grep -Fq "$(basename "$PLAN_FILE")" && echo "RETIREMENT HELD: an open bead still names $PLAN_FILE"
+RUST_LOG=error br list --status open --json | EPIC="$EPIC" NAME="$(basename "$PLAN_FILE")" python3 -c 'import json,os,re,sys
+d=json.load(sys.stdin); d=d if isinstance(d,list) else d.get("issues",d); e=os.environ["EPIC"]
+print(*[i["id"] for i in d if not (i["id"]+".").startswith(e+".") and os.environ["NAME"] in "".join(re.findall(r"^## (?:Delivers|Consumes)\n(.*?)(?=^## |\Z)",i.get("description") or "",re.M|re.S))])' | grep . && echo "RETIREMENT HELD"
 ```
 
 The guard lives HERE — the only place its condition still holds.
