@@ -5,6 +5,8 @@
 #   backlog-archive   every task checked, or status: complete   → archive to _backlog/_done/
 #   plan-deliver      plan-deliver.sh --check says WOULD-DELIVER → stamp + move to _plans/_done/
 #   plan-move         live plan already stamped delivered:        → move to _plans/_done/
+#   draft-stale       top-level _plans/*.md, status: draft or findings, 14+ days untouched
+#                     → review (flag only — the human decides keep or retire)
 #   strip-unrefined   closed bead still labelled unrefined        → label-remove unrefined
 #   add-unrefined     open non-epic bead with no lifecycle label  → label-add unrefined
 #   label-review      label beads-standards never names           → review (flag only — the
@@ -36,7 +38,7 @@ br_call list --all --limit 0 --json | tee "$T/beads.json" >/dev/null
 [ "${PIPESTATUS[0]}" -eq 0 ] || { echo "tidy-scan: ? — br list refused"; exit 2; }
 
 python3 - "$T/beads.json" "$ROOT" "$SKILLS" <<'PY'
-import json, os, re, subprocess, sys
+import json, os, re, subprocess, sys, time
 
 beads_path, ROOT, SKILLS = sys.argv[1:4]
 def gated(why): print(f"tidy-scan: ? — {why}"); sys.exit(2)
@@ -89,8 +91,14 @@ for f in sorted(os.listdir(pdir)) if os.path.isdir(pdir) else []:
     p = os.path.join(pdir, f)
     if not f.endswith(".md") or f == "README.md" or not os.path.isfile(p): continue
     fm = frontmatter(open(p, errors="replace").read())
-    if fm_key(fm, "beadified") is None: continue
     rel = os.path.relpath(p, ROOT)
+    status = fm_key(fm, "status")
+    if status in ("draft", "findings"):
+        age_days = (time.time() - os.path.getmtime(p)) / 86400
+        if age_days >= 14:
+            row("draft-stale", rel, "review", f"status: {status}, {int(age_days)}d untouched")
+        continue
+    if fm_key(fm, "beadified") is None: continue
     if fm_key(fm, "delivered") is not None:
         row("plan-move", rel, "move → _plans/_done/", f"delivered: {fm_key(fm, 'delivered')}")
         continue
