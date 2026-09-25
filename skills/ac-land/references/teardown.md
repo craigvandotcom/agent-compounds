@@ -94,16 +94,15 @@ Mark ledger task 7 `completed`; `TaskUpdate` task 8 `in_progress`.
    name plus every child identity this run registered.
 
    **Project-key resolution (bd-8kdjl).** Any Agent Mail call that still takes `project_key` /
-   `human_key` MUST use the pinned literal from `.claude/hooks/session-start.md`
-   (the `human_key:` field). READ that file — do not derive a key from cwd,
+   `human_key` MUST use the `Agent Mail project key:` line in the repo's AGENTS.md.
+   READ that line — do not derive a key from cwd,
    `$PROJECT_ROOT`, `git rev-parse --show-toplevel`, or any absolute path. An absolute
    path slugifies into a **forked mailbox** and the sweep reports "roster clean" by
    absence. Observed resolver (run this, do not invent the string):
 
    ```bash
-   PINNED_KEY=$(sed -n 's/.*human_key: *"\([^"]*\)".*/\1/p' \
-     .claude/hooks/session-start.md | head -1)
-   [ -n "$PINNED_KEY" ] || { echo "FATAL: no pinned human_key in session-start.md" >&2; exit 2; }
+   PINNED_KEY=$(sed -n 's/^Agent Mail project key: `\([^`]*\)`.*/\1/p' AGENTS.md | head -1)
+   [ -n "$PINNED_KEY" ] || { echo "FATAL: no Agent Mail project key line in AGENTS.md" >&2; exit 2; }
    # Layer-2 existence check uses ONLY $PINNED_KEY (never $PROJECT_ROOT / pwd).
    ```
 

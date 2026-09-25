@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
-# project-key-guard.test.sh — Layer-2 must use the pinned session-start key, never cwd.
+# project-key-guard.test.sh — Layer-2 must use the AGENTS.md project key, never cwd.
 #
 # A grep-for-/Users/ assertion already passes and proves nothing (bd-8kdjl). This
-# guard extracts the key ac-land instructs the agent to use and compares it to the
-# pinned human_key in session-start.md.
+# guard extracts the key resolver ac-land publishes and runs it against a fixture
+# AGENTS.md and the live repo.
 set -uo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -25,8 +25,8 @@ echo "--- ac-land Layer-2 project-key resolution ---"
 
 # The spine may delegate the pin detail to references/teardown.md (the diet's home
 # for it); either location naming the pin source counts.
-expect "$( { grep -q 'session-start.md' "$AC_LAND" || grep -q 'session-start.md' "$SCRIPT_DIR/../references/teardown.md"; } && echo 1 || echo 0 )" \
-  "ac-land names .claude/hooks/session-start.md as the pin source"
+expect "$( { grep -q 'Agent Mail project key' "$AC_LAND" || grep -q 'Agent Mail project key' "$SCRIPT_DIR/../references/teardown.md"; } && echo 1 || echo 0 )" \
+  "ac-land names the AGENTS.md project-key line as the key source"
 
 # Must not assign cwd / git root / PROJECT_ROOT as the key (prose forbidding that is fine).
 if grep -nE 'project_key: *(\$PROJECT_ROOT|\$\(git rev-parse|\$\(pwd)|human_key: *(\$PROJECT_ROOT|\$\(git rev-parse|\$\(pwd)' "$AC_LAND" >/dev/null; then
@@ -37,8 +37,7 @@ fi
 
 # Extract the resolver ac-land publishes and run it against a fixture pin.
 FIXTURE=$(mktemp -d /tmp/project-key-guard-XXXXXX)
-mkdir -p "$FIXTURE/.claude/hooks"
-printf '%s\n' '  human_key: "acme/example-app",' > "$FIXTURE/.claude/hooks/session-start.md"
+printf '# x\n\nAgent Mail project key: `example-app`\n' > "$FIXTURE/AGENTS.md"
 # The resolver is the sed one-liner published in ac-land — extract it, don't rewrite it.
 # The diet moved the teardown block (and the resolver with it) to references/teardown.md;
 # read the spine first, fall back to the indirection it names.
@@ -51,38 +50,25 @@ if [ -z "$RESOLVER" ]; then
 else
   expect 1 "ac-land publishes a PINNED_KEY=sed resolver"
   GOT=$(cd "$FIXTURE" && eval "$RESOLVER" && printf '%s' "$PINNED_KEY")
-  if [ "$GOT" = "acme/example-app" ]; then
-    expect 1 "resolver against fixture pin returns acme/example-app"
+  if [ "$GOT" = "example-app" ]; then
+    expect 1 "resolver against fixture AGENTS.md returns example-app"
   else
-    expect 0 "resolver against fixture pin returns acme/example-app (got: $GOT)"
+    expect 0 "resolver against fixture AGENTS.md returns example-app (got: $GOT)"
   fi
 fi
 rm -rf "$FIXTURE"
 
-# Live compare when this checkout (or a sibling app) has a session-start pin.
-# Walk up from cwd looking for .claude/hooks/session-start.md — works when the
-# test is invoked from any consuming app.
-PIN_FILE=""
-d=$(pwd)
-while [ "$d" != / ]; do
-  if [ -f "$d/.claude/hooks/session-start.md" ]; then
-    PIN_FILE="$d/.claude/hooks/session-start.md"
-    break
-  fi
-  d=$(dirname "$d")
-done
-
-if [ -n "$PIN_FILE" ]; then
-  PINNED=$(sed -n 's/.*human_key: *"\([^/"]*\/[^"]*\)".*/\1/p' "$PIN_FILE" | head -1)
-  REPO_ROOT=$(cd "$(dirname "$PIN_FILE")/../.." && pwd)
+# Live check: the repo this test runs in resolves a slash-free key that is its own name.
+REPO_ROOT=$(git rev-parse --show-toplevel 2>/dev/null)
+if [ -n "$REPO_ROOT" ] && [ -f "$REPO_ROOT/AGENTS.md" ] && [ -n "$RESOLVER" ]; then
   GOT=$(cd "$REPO_ROOT" && eval "$RESOLVER" && printf '%s' "$PINNED_KEY")
-  if [ -n "$PINNED" ] && [ "$GOT" = "$PINNED" ]; then
-    expect 1 "live resolver key equals pinned human_key ($PINNED)"
+  if [ "$GOT" = "$(basename "$REPO_ROOT")" ]; then
+    expect 1 "live key equals the repo name ($GOT)"
   else
-    expect 0 "live resolver key equals pinned human_key (pinned=$PINNED got=$GOT)"
+    expect 0 "live key equals the repo name (got: $GOT)"
   fi
 else
-  echo "  SKIP  live pin compare (no session-start.md in cwd ancestry)"
+  echo "  SKIP  live key check (no AGENTS.md at the git root)"
 fi
 
 echo ""

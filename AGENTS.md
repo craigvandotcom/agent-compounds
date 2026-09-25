@@ -7,6 +7,8 @@
 > ledger instead of forking one. Scheduler/infra-ops skills are out of scope here —
 > this registry only ships engineering skills and agents.
 
+Agent Mail project key: `agent-compounds`
+
 ## Project Overview
 
 | Field | Value |
@@ -114,8 +116,8 @@ lives in `skills/ac-pipeline/references/stage-table.md`; nothing here restates i
   Agents are the exception: they are GENERATED (tier → model stamped per harness from
   `harnesses.json agent_models`), because a symlinked file cannot carry a per-harness
   model — tier is the canon, models are projections.
-- **Shared-checkout Agent Mail:** use the deployment-local canonical project key pinned in
-  `.claude/hooks/session-start.md`; never derive it from cwd.
+- **Agent Mail project key:** the repo name, read from the line below; never derive it from
+  cwd, never an absolute path or an `<org>/` prefix (rule: `agent-mail` agent-identity.md).
 - **Skills carry domain knowledge; agents carry stance + tool permissions only**
   (constitution: `skills/context-engineering/SKILL.md`).
 - **Deploy-together dependency:** `reflect` loads `context-engineering` — always ship both.

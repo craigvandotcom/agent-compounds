@@ -208,7 +208,8 @@ agents = mail = None
 out, ok = read("roster", "agent-roster.py")
 ros = out.strip().splitlines()
 if ros and ros[0].startswith("#mail"): mail = ros[0].split("\t")[1]
-if ok: agents = [l.split("\t") for l in ros[1:] if l.strip()]
+split = next((l.split("\t")[1] for l in ros if l.startswith("#split")), None)
+if ok: agents = [l.split("\t") for l in ros if l.strip() and not l.startswith("#")]
 live_names = None if agents is None else {
     a[0] for a in agents if len(a) > 3 and (mins(a[3]) or LIVE_MIN) < LIVE_MIN}
 holder = lambda b: b.get("assignee") or rec(b["id"]).get("assignee")
@@ -454,6 +455,7 @@ else:
     working = sum(1 for a in lv if any(holder(b) == a[0] for b in loop["in_progress"]))
     mach += kv("agents", f"{len(lv)} live" + (f" · {working} working" if lv else ""))
 if mail != "up": mach += kv("mail", mail or "?")
+if split: mach += kv("split", f"⚠ {split} agents on another mailbox key")
 mach += kv("CI gates", ci_s)
 tg, ok = lines_of("triage", "triage-gate.sh --status")  # empty = the repo declares no gate
 if tg: mach += kv("triage", tg[0].split(":", 1)[-1].strip())

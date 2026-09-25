@@ -241,12 +241,15 @@ mcp_agent_mail`); it needs an upstream issue, and this sweep method is the whole
 
 ## Project key format (canonical — the one home for the key-format rule)
 
-**Rule: always pass the app's canonical two-segment key `<org>/<app-dir>` (e.g.
-`<org>/example-app`, `<org>/agent-compounds`) — READ the pinned `human_key`
-from the app's `.claude/hooks/session-start.md`. NEVER derive it from cwd, the repo
-root, or `git rev-parse --show-toplevel`, and never an absolute path or ad-hoc slug.**
-One canonical key = one shared mailbox; a divergent key forks a *separate* project
-(a separate mailbox) and the coordinating sessions can no longer see each other — split-brain.
+**Rule: the key is the repo's directory name, with no prefix and no slash (e.g.
+`example-app`, `agent-compounds`) — READ it from the one `Agent Mail project key: `<repo>``
+line in the repo's own AGENTS.md, which every harness loads. NEVER derive it from cwd, the repo
+root, or `git rev-parse --show-toplevel`, and never an absolute path or an `<org>/` prefix.**
+One key = one shared mailbox; a divergent key forks a *separate* project (a separate mailbox)
+and the coordinating sessions can no longer see each other — split-brain. The server's
+normalizer treats any key containing `/` as a path, so a slash-free key is the only form it
+passes through untouched. The ac-board roster reads the same line and prints a `#split` health
+line whenever live agents of this repo sit under any other key — a fork is shown, never silent.
 Every `ac-*` call site that names `CANONICAL_PROJECT_KEY` resolves it that way.
 
 **Which arg takes it:** `macro_start_session` takes it as **`human_key`**; every other
@@ -254,26 +257,11 @@ Agent Mail tool (`file_reservation_paths`, `release_file_reservations`, `install
 `send_message`, …) takes it as **`project_key`**. Same value, different parameter name — the
 one call-signature fact worth keeping inline at each call site.
 
-**Live accept-matrix (probed via `macro_start_session` against the dev server).** The
-server does **not** reject any of these — it slugifies `human_key` (lowercase; every non-alnum
-run → `-`) and maps each *distinct* key to a *distinct* project/mailbox. The coordination rule
-therefore holds because a divergent key silently forks a divergent mailbox, **not** because the
-validator enforces a format:
-
-| `human_key` passed | Server result | Resolved project slug | Effect |
-|---|---|---|---|
-| `<org>/agent-compounds` (canonical two-segment) | accepted | `<org>-agent-compounds` (the shared project) | joins the ONE canonical mailbox ✅ |
-| `sandbox/w2-shakedown` (two-segment, non-org) | accepted | `sandbox-w2-shakedown` (a different project) | forks a separate mailbox ⚠️ |
-| `/Users/…/agent-compounds` (absolute path) | accepted | `users-<operator>-…-agent-compounds` (a different project) | forks a **per-machine** mailbox — split-brain ⚠️ |
-
-**Reconciliation verdict.** An earlier shakedown saw
-`macro_start_session` *reject* a non-org key with `human_key must be an absolute path-like
-project key` — an error that flatly contradicted this doctrine. That error **no longer
-reproduces**: the current server accepts every form above. So the doctrine is
-accurate as stated — an absolute path *does* fork a distinct mailbox (row 3, confirmed live) —
-and the contradicting server message is retired; no upstream server bead is warranted (the
-probe found nothing to fix server-side). The `project` field the commit-guard filters on (below) is this
-same resolved-project identity — which is exactly why a divergent key defeats the guard.
+**Server acceptance (probed 2026-09-25).** `macro_start_session` and `install_precommit_guard`
+accept the plain repo name; the guard then reads `projects/<repo>/file_reservations`, the same
+mailbox the agents reserve in. Every distinct key maps to a distinct project, so the rule holds
+because a divergent key silently forks a mailbox, not because the server enforces a format.
+(`ensure_project` alone insists on an absolute path; no `ac-*` call site uses it.)
 
 ## Conformance status
 
