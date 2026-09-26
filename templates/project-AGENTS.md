@@ -37,12 +37,11 @@
 
 ## App manifest
 
-`factory.json` (schema: agent-compounds `templates/factory.json`, validated by
-`lint/lib/manifest.py validate()`) is the ONE place this app declares the
-bindings registry skills read — design spec, journeys, routes, QA serve, CI
-gate, store ids, triage sensors, human, memory roots. Copy the template to the
-repo root as `factory.json` and fill every `<SET: ...>` value; registry skills
-read keys, never literals.
+`factory.json` (schema: agent-compounds `templates/factory.json`) is the ONE place this app
+declares the bindings registry skills read — design spec, journeys, routes, QA serve, ship
+(preflight, prove, version, targets), store ids, triage sensors, human, memory roots. Copy
+the template to `.claude/factory.json` (the shipping spine reads that path) and fill every
+`<SET: ...>` value; registry skills read keys, never literals.
 
 ## Rules
 

@@ -55,7 +55,7 @@
     },
     "hooks": [],
     "requires": [
-      "ci_gate_script"
+      "ship"
     ],
     "skills": [
       "ac-pipeline",
