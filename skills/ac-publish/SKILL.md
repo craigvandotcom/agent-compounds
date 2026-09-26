@@ -5,7 +5,7 @@ description: 'The ac2 ship gate — obtain a proof via ac-prove, assert its REQU
 
 # ac-publish — a proven batch in, a shipped release out
 
-Ship-command rules (prove, version/build numbers, web + native targets): `references/ship-contract.md`.
+Ship-command rules (prove, version/build numbers, web + native targets): `references/ship-contract.md`; the per-app facts template an app copies to CORE/distribution.md: `references/distribution.template.md`.
 
 ## I/O Contract
 

@@ -97,7 +97,7 @@ writes only. Store-submit footguns (stuck review slot, empty locale, first-relea
 
 ## Per-app facts → CORE/distribution.md
 
-**Onboarding a new app:** copy `references/distribution.template.md` (this skill dir) → the
+**Onboarding a new app:** copy `../ac-publish/references/distribution.template.md` → the
 app's `.claude/skills/CORE/distribution.md` and fill every `{{…}}` (incl. the
 `template_version` stamp); set the app's `factory.json` `store.app_store_id` /
 `store.team_id`. ~30 min if the app already has a build lane.
