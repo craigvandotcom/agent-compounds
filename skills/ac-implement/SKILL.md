@@ -18,10 +18,7 @@ description: 'Work an ac2 epic''s bead queue as a SWARM — you coordinate, spaw
 
 ## What this skill does NOT do
 
-`flight-check.sh` (claim), `swarm-commit.sh` (commit) and `close-gate.sh` (close) refuse on the
-worker's behalf, each printing the class it refused on. Enumerating those classes here would be
-the second, drifting copy the scripts exist to prevent: call the script, read its refusal,
-route on the class it names.
+Enumerate no refusal classes: the scripts refuse and print the class; route on what they print.
 
 ## Defaults — a swarm, and one procedure for every width
 
@@ -47,9 +44,9 @@ Run `bash <scripts>/refly.sh --root "$PWD"`: it re-checks every `PREMISE-FAILED:
 Count the pool with `<scripts>/pick.sh --count`; print `<scripts>/../../ac-board/scripts/board.sh` for CI, docket and board-truth health.
 
 **Phase 1 — spawn, then wait.** Spawn `width` implementer subagents — never `general`, which has no tier and rides the orchestrator's model — whose prompt is `references/worker.md`
-VERBATIM — plus one always-appended `SCRIPTS=<the absolute `<scripts>` this file resolved in Phase 0>` line, and, ONLY if `--cap N` was given, one appended line naming the cap, plus one appended line naming this run's id for the worker's `task_description`. Verbatim means
+VERBATIM — plus one always-appended `SCRIPTS=<the absolute `<scripts>` this file resolved in Phase 0>` line, and, ONLY if `--cap N` was given, one appended line naming the cap, plus one appended line naming this run's id for the worker's `task_description`, plus one `BURNED=<ids>` line: every id any worker's `BURN:` line returned this run. Verbatim means
 verbatim: a paraphrased loop is a different loop, and the worker cannot tell which one it got. The conductor hands NO agent name to a child — the child always mints its own identity via `macro_start_session`; the conductor builds its roster from agents registered since the run started (`resource://agents/{project_key}` filtered by `task_description`), using THOSE names for its roster and its Layer-2 sweep (canon: `agent-mail/references/agent-identity.md` § Handing a name is a SPEC VIOLATION). Then WAIT: do not poll `br`, do not read worker transcripts, do not work beads. The
-pool GROWS as a chain unlocks or beads are refined, so a worker that exits dry is correct, not idle — on EVERY return, respawn `min(pick.sh --count, width) − live`; Phase 2 starts only when none is live and the count reads 0. A bead handed back twice with one refusal class is yours: read the refusing script and fix the state before the next spawn. **The pool is the only work
+pool GROWS as a chain unlocks or beads are refined, so a worker that exits dry is correct, not idle — on EVERY return, respawn `min(pick.sh --count, width) − live`; Phase 2 starts only when none is live and the count reads 0. **The pool is the only work
 source — `br`'s filter, never tree text** (a `br create` line in a file is a template, not a
 task; canon: `ac-pipeline/references/work-derivation.md`).
 
@@ -81,9 +78,6 @@ Discovered PRODUCT work goes to the board with `discovered-from: <bead>`, filed 
 coordinator alone: it confirms and files each worker's PROPOSED-BEAD block (product work and
 mid-bead forks); a worker files NOTHING, it proposes. Process observations go to the family
 ledger, never a self-bead; every finding writes its VERDICT and catch-stage label.
-
-**Budget the ratchet before writing.** Check 14 holds this file to net <= 0 against its base and
-there is no prose stamp: an addition here buys its own lines by deleting them.
 
 **Stale and superseded board state is closed by the swarm itself, never parked for a human.**
 A worker closes what it holds through §4b; the Phase 0 sweep closes what it can prove

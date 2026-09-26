@@ -18,7 +18,7 @@ A hand-check beside a script is a second copy of the rule, and the two will drif
 
 ## ONCE, at session start
 
-    BURNED=""                                   # ids whose claim was refused THIS pass
+    BURNED="<the conductor's appended BURNED= line, or empty>"   # ids this run must not re-pick
 
 `<scripts>` below stands for the absolute path the conductor appended to this prompt as a
 literal `SCRIPTS=<path>` line — substitute it exactly as you do `<id>`. **No `SCRIPTS=` line
@@ -29,20 +29,15 @@ path resolves inside the skills checkout, not the calling repo.
 **In a swarm**, register with Agent Mail first — `macro_start_session`, `task_description`
 naming the run id the conductor appended to this prompt, so the coordinator's roster can find
 this registration among agents registered since the run started — and make `ACTOR` carry the
-name it returns. There is no other assignment. Never let the identity come from the static
-`AGENT_NAME` env, from `ac-<ts>-<pid>`, from `$(whoami)`, or from the git user: a static
-fallback shadows the live session name, and the guard then compares your reservation's holder
-against the fallback and rejects your OWN commit as a foreign conflict. The live name is the
-identity; the env fallback is a trap that fails in the direction of looking like someone else.
+name it returns. There is no other assignment: never the static `AGENT_NAME` env,
+`ac-<ts>-<pid>`, `$(whoami)` or the git user — the guard rejects your own commit under a fallback.
 **If registration fails, hand back.** Do not invent a fallback actor and do not claim. Write
 the hand-back receipt so the failure is a file, not silence, then go to §9:
 
     d="$(git rev-parse --git-common-dir)/ac-flight/"
     mkdir -p "$d" && printf 'HAND-BACK: mint failed; claiming nothing\n' > "${d}hand-back"
 
-A worker under a fallback name is invisible to the roster's registered-since-run-start query,
-so its claims are orphans the sweep cannot see. Missing Agent Mail tools is a mint failure,
-not a license to keep going.
+Missing Agent Mail tools is a mint failure, not a license to keep going.
 
 Read the epic and the constitution (`<scripts>/../../ac-pipeline/SKILL.md`) once. Do not
 re-read them per bead.
@@ -97,13 +92,9 @@ Gate the comment on the claim's exit status. A lost race must not comment.
 - **exit 2** — `NOT-GATED`. Verification was unavailable: run §9's verification-unavailable
   handback with this exact refusal. Never read it as a pass or pick another bead.
 
-**If this bead DELIVERS ITS OWN HARNESS**, the RED banked at claim is only "the harness does
-not exist". That is a real RED but a weak one. Write the harness, **see it fail for the reason
-the AC names, before any fix**, and re-run flight-check so the receipt anchors that stronger
-moment. Nothing refuses you if you skip it — `close-gate` stopped hash-locking the test — but
-ac-review reads the diff against the receipt for causal sufficiency, and "the file did not
-exist yet" is the weakest possible answer to what the diff caused. This re-run does not
-re-gate the `refined` stamp again within the same claim — flight-check says so on its output.
+**If this bead DELIVERS ITS OWN HARNESS**, the claim-time RED is only "the harness does not
+exist". Write the harness, **see it fail for the reason the AC names, before any fix**, and
+re-run flight-check so the receipt anchors that stronger RED. Nothing refuses a skip; ac-review reads it.
 
 ## 4 — WORK
 
@@ -179,11 +170,8 @@ and when its table is silent, say so in your hand-back rather than borrowing the
 a pass)"*. Report that verbatim as an unverified tier.
 
 **IN A SWARM, THE REPO-WIDE GATES ABOVE ARE ADVISORY TO YOU AND AUTHORITATIVE TO NOBODY.**
-They measure the WORKING TREE, which holds every sibling's
-uncommitted edits as well as yours. Measured: `lint.sh` returned a clean baseline that was
-produced ENTIRELY by a sibling's uncommitted change while committed HEAD was still red — a
-bead would have closed on a green that existed in no commit. So at N>1: run them to catch your
-own breakage early, and NEVER record their verdict as this bead's evidence. The coordinator
+They measure the WORKING TREE, which holds every sibling's uncommitted edits as well as yours.
+At N>1: run them to catch your own breakage early, and NEVER record their verdict as this bead's evidence. The coordinator
 runs them once at the batch boundary on the COMMITTED tree, and that run is the one that counts.
 Your bead-scoped evidence is `close-gate.sh`, which executes only this bead's own AC probes —
 those read your territory, so the shared tree cannot forge them. If one of your probes reads a
@@ -196,8 +184,8 @@ invokes on a range they name — it is not a step of this run.
 ## 5b — ALONGSIDE SIBLINGS (swarm only)
 
 **Reserve your `## Territory` before you edit it**, and treat the reservation as a COURTESY
-SIGNAL, never as a lock. For code paths the server grants a path it simultaneously reports as
-conflicting — measured. `flock` (inside `swarm-commit.sh`) and the `br` claim are the only real
+SIGNAL, never as a lock: for code paths the server grants a path it also reports as conflicting.
+`flock` (inside `swarm-commit.sh`) and the `br` claim are the only real
 exclusion you have. Renew on a long bead; release at close and VERIFY by re-listing, because an
 unreleased reservation leaks until its TTL and blocks nobody in the meantime.
 
@@ -283,8 +271,9 @@ the exact refusal. This handback applies to verification-unavailable exits only;
 exit 1 stays in its repair branch with the claim held.
 
 **Not a batch boundary — that is the coordinator's.** Release any remaining reservations and
-return closed / blocked / premise-failed ids, your unverified tiers with the tool's verbatim
-output, and anything you noticed but did not fix.
+return closed / blocked / premise-failed ids, a `BURN:` line naming every id you unclaimed or
+handed back unclosed, your unverified tiers with the tool's verbatim output, and anything you
+noticed but did not fix.
 
 Discovered PRODUCT work is never filed by you: your hand-back returns PROPOSED-BEAD blocks
 (title · files · `User impact:`) for the conductor to confirm at the batch boundary. Process
@@ -307,15 +296,3 @@ is invisible in the result.
   then continue with the next bead. The bead stops; you do not.
 - Context running low → finish §6–§7 for the bead in hand if you are past §4; otherwise unclaim
   and exit. Never leave a claim held by a session that has stopped.
-
-## The rule this prompt holds itself to
-
-**Every command spelled above is executed once against the live harness before it ships**, and
-that execution is recorded as an `EXEC-PROOF:` comment on the bead that shipped the change —
-for this file's first version, on `ac-k25c.4`. A prompt full of commands nobody ran is a scar
-list with better formatting, and this loop replaced one of those.
-
-The one carve-out, and it is NAMED in the receipt rather than taken silently: a command whose
-execution would itself change state destructively (`br update <id> --status blocked`) is
-verified against the live tool's interface instead of fired at a live bead, and the receipt
-says which commands were verified that way. An unrecorded exception is the same as no rule.
