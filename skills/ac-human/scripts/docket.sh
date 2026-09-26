@@ -3,7 +3,8 @@
 #
 # Computes everything mechanical about the human's docket: the gate beads (the board-scan
 # on-docket rules), kind, pull order (beads freed → priority → age), memo completeness, the anti-rot freshness tag
-# (events + `verified:` stamps), queue lanes (collapse / elevate / unreadable titles),
+# (events + `verified:` stamps), the loop boundary's mirror (gates waiting on the loop, ⏳),
+# queue lanes (collapse / elevate / unreadable titles),
 # declared batch lanes with unanimous marking, plans awaiting sign-off, the hopper, and the
 # frictions + memory cards. The model judges and drives; it never recomputes these.
 #
@@ -166,14 +167,27 @@ def on_docket(b):
 labels = lambda b: set(b.get("labels") or [])
 gates = [b for b in beads or [] if labels(b) & DOCKET and on_docket(b)]
 
-# ── what each gate frees: the jsonl is the only source of edges ───────────
-BLOCKS = None
+def is_open(r):
+    """Same open definition blocks_counts uses for the frees direction."""
+    return r.get("status") not in ("closed", "tombstone") and not r.get("closed_at")
+
+# ── every `blocks` edge: the jsonl is the only source, read the other way ──
+# BLOCKS counts what a gate frees; EDGES additionally answers what each bead waits on.
+BLOCKS, EDGES = None, None
 try:
     with open(os.path.join(ROOT, ".beads", "issues.jsonl")) as fh:
-        BLOCKS = blocks_counts({r["id"]: r for r in (json.loads(l) for l in fh if l.strip())})
+        recs = {r["id"]: r for r in (json.loads(l) for l in fh if l.strip())}
+    BLOCKS = blocks_counts(recs)
+    EDGES = recs
 except (OSError, ValueError, KeyError) as e:
     failed.append(f".beads/issues.jsonl: {e}")
 frees = lambda b: (BLOCKS or {}).get(b["id"], 0)
+def waits_on(b):
+    """The open ids a gate is blocked-by through `blocks` edges. Unreadable edges → None."""
+    if EDGES is None: return None
+    deps = EDGES.get(b["id"], {}).get("dependencies") or []
+    return sorted(d["depends_on_id"] for d in deps
+                  if d.get("type") == "blocks" and is_open(EDGES.get(d["depends_on_id"], {})))
 
 # ── anti-rot: events are the record, comments carry the `verified:` stamp ─
 fresh, released = {}, {}
@@ -258,6 +272,22 @@ for b in gates:
     else: itemized.append(b)
 itemized.sort(key=order)
 # A gate that blocks nothing waits below the plans; with edges unreadable, every gate stays 🔴.
+# The loop boundary's other direction comes first: a gate whose open blockers are ALL non-gate
+# beads is waiting on the ac-implement loop, not on the human — present it waiting, never as an
+# action. ANY open human-gate blocker keeps it 🔴 (a human unblocks a human); with edges
+# unreadable every gate stays 🔴 — a demotion nobody can verify is worse than noise.
+# Presentation only: the bead itself is never labelled, deferred or stripped; it re-renders 🔴
+# the moment its last blocker closes.
+GATE_LABEL = "human-gate"
+beads_by_id = {b["id"]: b for b in beads or []}
+def awaiting_loop(b):
+    w = waits_on(b)
+    if BLOCKS is None or EDGES is None or not w: return None
+    if any(GATE_LABEL in labels(EDGES.get(i, {})) or GATE_LABEL in labels(beads_by_id.get(i, {}))
+           for i in w): return None
+    return w
+awaiting = [b for b in itemized if awaiting_loop(b)]
+itemized = [b for b in itemized if b not in awaiting]
 idle = [b for b in itemized if BLOCKS is not None and not frees(b)]
 itemized = [b for b in itemized if b not in idle]
 queued = sum(len(m) for _, m in lanes.values())
@@ -320,6 +350,23 @@ def red_section():
         out += lane_block(label, d, members)
     return out
 
+def waiting_section():
+    if not awaiting: return []
+    out = [f"⏳ WAITING ON THE LOOP · {len(awaiting)}"]
+    for i, b in enumerate(awaiting):
+        if i: out.append("")
+        rows = [cut(f"{b['id']} · {age(b['created_at'])} · {prio_tag(b)}", W)]
+        rows += [IND + l for l in wrap2(b.get("title"))]
+        lead, cur = "waits on ", None    # blocker ids are never cut: wrap at the ", " seams
+        for x in waits_on(b) or []:
+            if cur is None: cur = x
+            elif len(lead) + len(cur) + 2 + len(x) <= W - len(IND): cur += ", " + x
+            else:
+                rows.append(IND + lead + cur); lead, cur = " " * len("waits on "), x
+        if cur is not None: rows.append(IND + lead + cur)
+        out += rows
+    return out + [""]
+
 def idle_section():
     if not idle: return []
     out = [f"⚪ IDLE GATES · {len(idle)}"]
@@ -335,7 +382,7 @@ unpushed = "no upstream" if up == "no-upstream" else f"{up} unpushed"
 if MODE == "gates":
     gc = len(gates) if beads is not None else "?"
     print(cut(f"{os.path.basename(ROOT)} · {gc} gates · {unpushed}", W))
-    print("\n".join(red_section() + idle_section()).rstrip())
+    print("\n".join(red_section() + idle_section() + waiting_section()).rstrip())
     if failed: print("\n".join(cut(f"? {x}", W) for x in failed))
     sys.exit(0)
 
@@ -433,6 +480,7 @@ if props: need.append(f"⚠ {props} proposal(s) pending")
 for label, (d, members) in lanes.items():
     need.append(cut(f"🔁 {(d or {}).get('name', label)} {len(members)} queued"))
 if itemized or idle: need.append(f"→ next {(itemized or idle)[0]['id']}")
+if awaiting: need.append(f"⏳ {len(awaiting)} wait on the loop, not actionable")
 need.append(unpushed)
 out.append(f"🧑 NEEDS YOU · {'?' if beads is None else len(itemized) + len(idle)} gates")
 out += [IND + cut(n) for n in need] + [""]
@@ -448,6 +496,8 @@ for p in plans[:10]:
 out.append("")
 
 out += idle_section()
+
+out += waiting_section()
 
 out.append(f"🟢 HOPPER · {len(hopper)}")
 if not hopper: out.append(IND + "—")

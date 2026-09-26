@@ -51,11 +51,23 @@ for n in range(6): bead(f"old-{n}", 2, 30, ["human-gate", "oldlane"], title=f"ho
 bead("dl-un", 2, 4, ["human-gate", "declared"], desc="votes: green, green, green\nrecommendation: accept green")
 bead("dl-split", 2, 4, ["human-gate", "declared"], desc="votes: green, red, green")
 bead("stray-1", 2, 4, ["refined"], t="task", desc="blocked, waiting on Apple account")
+# blocked-gate fixtures (ac-9c1k): g-wloop waits ONLY on open loop beads w3/w4 — the loop's
+# work, demoted to the waiting tier; g-gw waits on the OPEN GATE g-holdb — stays itemized 🔴.
+bead("g-wloop", 2, 3, ["human-gate"], t="task", desc="do it")
+bead("g-holdb", 4, 3, ["human-gate"])
+bead("g-gw", 3, 3, ["human-gate"])
+bead("w3", 3, 2, [], desc="loop work")
+bead("w4", 3, 2, [], desc="loop work")
+bead("w5", 3, 2, [], desc="loop work")
+bead("w6", 3, 2, [], desc="loop work")
 json.dump({"issues": B, "total": len(B), "has_more": False, "limit": 0}, open(f"{R}/board.json", "w"))
-# edges: g-p1-new frees two beads, g-act one; every other gate blocks nothing
+# edges: g-p1-new frees two beads, g-act one; every other pre-existing gate blocks nothing.
+# dep(i, *on) = row i waits on each `on` id: the gate's own row carries its blockers.
 dep = lambda i, *on: dict(id=i, status="open", dependencies=[{"issue_id": i, "depends_on_id": o, "type": "blocks"} for o in on])
 with open(f"{R}/.beads/issues.jsonl", "w") as fh:
-    for r in B + [dep("w1", "g-p1-new", "g-act"), dep("w2", "g-p1-new")]: fh.write(json.dumps(r) + "\n")
+    for r in B + [dep("w1", "g-p1-new", "g-act"), dep("w2", "g-p1-new"),
+                  dep("g-wloop", "w3", "w4"), dep("w5", "g-wloop"),
+                  dep("g-gw", "g-holdb"), dep("w6", "g-gw")]: fh.write(json.dumps(r) + "\n")
 os.makedirs(f"{R}/_plans")
 for name, fm in (("d", "status: draft"), ("a", "status: approved"), ("b", "status: bead-ready"),
                  ("p", "status: approved\npolish_rounds: 2\npolish_fixpoint_sha256: x")):
@@ -143,6 +155,14 @@ before "friction weight order"        "f-both"     "f-crit"
 has    "memory row rendered"          "1. [duplicate] 9 → merge"
 block_has "memory row files"          "1. [duplicate] 9 → merge" "↔ b.md"
 has    "stray human-pending"          "stray-1 ·"
+# the loop boundary's mirror (ac-9c1k): a gate waiting only on loop work is parked, not itemized
+has      "loop-wait bucket renders"       "⏳ WAITING ON THE LOOP · 1"
+block_has "waiting block names waits"     "g-wloop · "            "waits on w3, w4"
+n=$(printf '%s' "$OUT" | grep -cF 'g-wloop ·'); [ "$n" = 1 ] && ok || bad "waiting gate renders once, not also itemized"
+before   "waiting tier below idle"        "⚪ IDLE GATES"         "⏳ WAITING ON THE LOOP"
+has      "waits-on-gate stays itemized"   "g-gw · 3d · P3"
+hasnt    "waits-on-gate never demoted"    "waits on g-holdb"
+has      "waiting excluded from remaining" "🧑 NEEDS YOU · 10 gates"
 
 # edges unreadable → every gate stays 🔴, the failure named
 swap() { python3 -c 'import os, sys; os.rename(sys.argv[1], sys.argv[2])' "$R/.beads/$1" "$R/.beads/$2"; }
@@ -151,6 +171,8 @@ OUT=$(cd "$R" && "$DOCKET"); ALL="$ALL
 $OUT"
 hasnt  "no idle tier without edges"   "⚪ IDLE GATES"
 has    "the edge read is named"       ".beads/issues.jsonl"
+hasnt  "no demotion without edges"    "⏳ WAITING ON THE LOOP"
+has    "edges off: waiting gate itemized" "🔴 ACTIONS · 2"
 swap issues.off issues.jsonl
 
 # memory source absent → `?`, not a crash

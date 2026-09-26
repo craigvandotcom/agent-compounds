@@ -13,7 +13,7 @@ You drive only work at a human gate. The instant work becomes autonomous-handlea
 - ❌ **in-progress beads / waves** — the loop is running them
 - ❌ **`bead-ready` / `beadified` plans** — the loop beadifies + implements them
 
-Ready + a docket label **is the docket**, not the loop — do not drop it.
+Ready + a docket label **is the docket** — unless its open blockers are all non-gate beads: then it waits on the loop (⏳), not on the human. Any open `human-gate` blocker keeps it 🔴 — a human unblocks a human. Never drop the rest.
 
 ---
 
@@ -80,7 +80,7 @@ After rendering, *drive* the session one item at a time, top of 🔴 downward �
 
 ## Principles
 
-1. **Pull order** — the rung closest to implement first: gates that free beads (🔴), then plans (🟡), then gates that free nothing (⚪), then the hopper (🟢). Canon: `ac-pipeline/references/stage-table.md` § Pull order.
+1. **Pull order** — the rung closest to implement first: gates that free beads (🔴), then plans (🟡), then gates that free nothing (⚪), then gates waiting on the loop (⏳), then the hopper (🟢). Canon: `ac-pipeline/references/stage-table.md` § Pull order.
 2. **Docket in, docket out** — present the docket in its printed order. Never drop, demote, or close a sitting because the list is long. Lead with "needs you" + remaining count.
 3. **Tap, not type** — every action is a button (`AskUserQuestion`), never "tell me your choice." Batch the trivial (dependabot PRs, chores) into one tap.
 4. **Drive, don't dump** — render the board, then *conduct* it: act on one item, confirm the ripple, auto-advance to the next.
