@@ -227,7 +227,7 @@ EOF
   local _allp
   _allp=$(printf '%s\n' "$meta" | jq -r '.[0].description // ""' | grep -o 'Probe: `[^`]*`' || true)
   if printf '%s\n' "$_allp" | grep -qE 'pnpm test(:all)?[[:space:]]*(`|&&|;|\|)'; then
-    echo "stamp_refined: REFUSED $id — WHOLE-SUITE probe: a bare 'pnpm test'/'pnpm test:all' runs every test; name this bead's file ('pnpm test:one <file>'). No label written." >&2
+    echo "stamp_refined: REFUSED $id — WHOLE-SUITE probe: a bare 'pnpm test'/'pnpm test:all' runs every test; name this bead's own test file ('pnpm test <file>'). No label written." >&2
     _downgrade "$id" "whole-suite probe" || return $?
     return 1
   fi
