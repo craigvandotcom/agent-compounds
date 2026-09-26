@@ -1397,17 +1397,31 @@ resolve_hooks_dir() { # <repo-root>
   esac
 }
 
-# ensure_scratch_ignored <repo-root> — `_scratch/` is the stances' in-tree scratch home
-# (a spawned subagent cannot write outside the project on claude). One idempotent
-# .gitignore line per target, so no repo ever tracks a worker's scratch.
+# ensure_scratch_ignored <repo-root> — the in-tree ignores the factory owns, one
+# idempotent .gitignore line each: `_scratch/` is the stances' scratch home (a
+# spawned subagent cannot write outside the project on claude); `.compounds/` is
+# the factory's own state folder (config, run logs, reviews).
+#
+# `.compounds/` is PUBLIC-ONLY. A public tree is published, so its state must never
+# be committable; a private app may track its own, so the line is never written
+# there. The `public` flag is read the way guard_public's caller reads it —
+# is_public_target against the target basename in TARGETS_LIST — because this
+# function gets only the repo path.
 ensure_scratch_ignored() {
   local repo="$1" gi="$1/.gitignore"
   git -C "$repo" rev-parse --is-inside-work-tree >/dev/null 2>&1 || return 0
-  grep -qxE '_scratch/?' "$gi" 2>/dev/null && return 0
-  if [ "$DRY" = 1 ]; then echo "  ignore  _scratch/ -> ${gi/#$HOME/~}"; else
-    printf '_scratch/\n' >> "$gi"; echo "  ignored _scratch/ in ${gi/#$HOME/~}"
+  if ! grep -qxE '_scratch/?' "$gi" 2>/dev/null; then
+    if [ "$DRY" = 1 ]; then echo "  ignore  _scratch/ -> ${gi/#$HOME/~}"; else
+      printf '_scratch/\n' >> "$gi"; echo "  ignored _scratch/ in ${gi/#$HOME/~}"
+    fi
+    note_change
   fi
-  note_change
+  if is_public_target "$(basename "$repo")" && ! grep -qxF '.compounds/' "$gi" 2>/dev/null; then
+    if [ "$DRY" = 1 ]; then echo "  ignore  .compounds/ -> ${gi/#$HOME/~}"; else
+      printf '.compounds/\n' >> "$gi"; echo "  ignored .compounds/ in ${gi/#$HOME/~}"
+    fi
+    note_change
+  fi
 }
 
 install_lint_hook() { # <repo-root>

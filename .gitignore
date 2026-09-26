@@ -45,6 +45,10 @@ tools/dcg/fixtures/
 # beads / plan frontmatter, so this is disposable and must never be committed
 .polish/
 
+# The factory state folder (ac-14s1) — config, run logs and reviews live in .compounds/
+# instead of Claude Code's .claude/reviews. Local-only, same as _plans/ and .polish/.
+.compounds/
+
 # ---------------------------------------------------------------------------
 # Adopter-local content (2026-09-20, agnosticism pass)
 #
