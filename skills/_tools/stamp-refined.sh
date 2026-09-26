@@ -221,6 +221,23 @@ EOF
     fi
   fi
 
+  # PROBE-SHAPE LEG (bead-schema.md § The probe rule). A probe runs this bead's own test,
+  # never the whole suite — that is batch CI's. A probe waiting on a device verdict needs
+  # the `device` label, which keeps it out of the worker pool.
+  local _allp
+  _allp=$(printf '%s\n' "$meta" | jq -r '.[0].description // ""' | grep -o 'Probe: `[^`]*`' || true)
+  if printf '%s\n' "$_allp" | grep -qE 'pnpm test(:all)?[[:space:]]*(`|&&|;|\|)'; then
+    echo "stamp_refined: REFUSED $id — WHOLE-SUITE probe: a bare 'pnpm test'/'pnpm test:all' runs every test; name this bead's file ('pnpm test:one <file>'). No label written." >&2
+    _downgrade "$id" "whole-suite probe" || return $?
+    return 1
+  fi
+  if printf '%s\n' "$_allp" | grep -q 'DEVICE VERDICT' \
+     && ! printf '%s' "$meta" | jq -e '.[0].labels // [] | index("device")' >/dev/null 2>&1; then
+    echo "stamp_refined: REFUSED $id — DEVICE-UNLABELLED: a probe waits on a DEVICE VERDICT but the bead lacks the 'device' label. Add it: br update $id --add-label device. No label written." >&2
+    _downgrade "$id" "device verdict without device label" || return $?
+    return 1
+  fi
+
   # PROD-WRITE TRIPWIRE (ac-bhxx). The predicate is judgment; this leg is the mechanical
   # backstop for descriptions that match its signal vocabulary. A signal passes only with
   # the reader's recorded `prod-write: none — <reason>` verdict or the board's existing

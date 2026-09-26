@@ -18,7 +18,7 @@ A hand-check beside a script is a second copy of the rule, and the two will drif
 
 ## ONCE, at session start
 
-    BURNED="<the conductor's appended BURNED= line, or empty>"   # ids this run must not re-pick
+    BURNED=""                                   # ids whose claim was refused THIS pass
 
 `<scripts>` below stands for the absolute path the conductor appended to this prompt as a
 literal `SCRIPTS=<path>` line — substitute it exactly as you do `<id>`. **No `SCRIPTS=` line
@@ -271,9 +271,8 @@ the exact refusal. This handback applies to verification-unavailable exits only;
 exit 1 stays in its repair branch with the claim held.
 
 **Not a batch boundary — that is the coordinator's.** Release any remaining reservations and
-return closed / blocked / premise-failed ids, a `BURN:` line naming every id you unclaimed or
-handed back unclosed, your unverified tiers with the tool's verbatim output, and anything you
-noticed but did not fix.
+return closed / blocked / premise-failed ids, your unverified tiers with the tool's verbatim
+output, and anything you noticed but did not fix.
 
 Discovered PRODUCT work is never filed by you: your hand-back returns PROPOSED-BEAD blocks
 (title · files · `User impact:`) for the conductor to confirm at the batch boundary. Process

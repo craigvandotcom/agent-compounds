@@ -60,6 +60,8 @@ Guard a local parser.
 ## Consumes
 - none
 '
+WHOLE_SUITE="${BASE/bash skills\/_tools\/stamp-refined.test.sh/pnpm test}"
+DEVICE="${BASE}"$'\n'"- Device verified."$'\n'"  Probe: \`br comments x | grep -q 'DEVICE VERDICT:'\` — tier: none"
 SIGNAL="${BASE}"$'\n'"The repair is a one-off data fix for the affected production database rows."
 NEGATIVE="${SIGNAL}"$'\n'"prod-write: none — the repair is confined to the sanitized test fixture."
 NO_DELIVERS='## Intent
@@ -88,7 +90,14 @@ Document a local outcome.
 
 jq -n \
   --arg base "$BASE" --arg signal "$SIGNAL" --arg negative "$NEGATIVE" \
-  --arg none "$NO_DELIVERS" --arg prose "$PROSE_DELIVERS" '[
+  --arg none "$NO_DELIVERS" --arg prose "$PROSE_DELIVERS" \
+  --arg whole "$WHOLE_SUITE" --arg device "$DEVICE" '[
+  {id:"bd-whole-suite", issue_type:"task", title:"whole suite probe", labels:["origin:test"],
+   description:$whole, dependencies:[]},
+  {id:"bd-device-bare", issue_type:"task", title:"device verdict, no label", labels:["origin:test"],
+   description:$device, dependencies:[]},
+  {id:"bd-device-labelled", issue_type:"task", title:"device verdict, labelled", labels:["origin:test","device"],
+   description:$device, dependencies:[]},
   {id:"bd-prod-unmarked", issue_type:"task", title:"escaped fix", labels:["origin:test","refined"],
    description:$signal, dependencies:[]},
   {id:"bd-prod-negative", issue_type:"task", title:"recorded negative", labels:["origin:test"],
@@ -158,6 +167,24 @@ if [ "$STAMP_RC" -eq 0 ] && [ "$(label_count add bd-prod-plain refined)" -eq 1 ]
   pass "a plain code-only bead still stamps"
 else
   fail "plain code bead" "rc=$STAMP_RC: $STAMP_OUT / log: $(cat "$BR_LOG")"
+fi
+
+for pair in "bd-whole-suite WHOLE-SUITE" "bd-device-bare DEVICE-UNLABELLED"; do
+  set -- $pair
+  run_stamp "$1"
+  if [ "$STAMP_RC" -eq 1 ] && printf '%s\n' "$STAMP_OUT" | grep -q "$2" \
+      && [ "$(label_count add "$1" refined)" -eq 0 ]; then
+    pass "$2 probe is refused and never stamped"
+  else
+    fail "$2" "rc=$STAMP_RC: $STAMP_OUT / log: $(cat "$BR_LOG")"
+  fi
+done
+
+run_stamp bd-device-labelled
+if [ "$STAMP_RC" -eq 0 ] && [ "$(label_count add bd-device-labelled refined)" -eq 1 ]; then
+  pass "a device-verdict probe on a device-labelled bead stamps"
+else
+  fail "device-labelled bead" "rc=$STAMP_RC: $STAMP_OUT / log: $(cat "$BR_LOG")"
 fi
 
 for id in bd-task-no-delivers bd-feature-prose; do
