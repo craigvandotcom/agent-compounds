@@ -49,7 +49,7 @@ Count the pool with `<scripts>/pick.sh --count`; print `<scripts>/../../ac-board
 **Phase 1 — spawn, then wait.** Spawn `width` implementer subagents — never `general`, which has no tier and rides the orchestrator's model — whose prompt is `references/worker.md`
 VERBATIM — plus one always-appended `SCRIPTS=<the absolute `<scripts>` this file resolved in Phase 0>` line, and, ONLY if `--cap N` was given, one appended line naming the cap, plus one appended line naming this run's id for the worker's `task_description`. Verbatim means
 verbatim: a paraphrased loop is a different loop, and the worker cannot tell which one it got. The conductor hands NO agent name to a child — the child always mints its own identity via `macro_start_session`; the conductor builds its roster from agents registered since the run started (`resource://agents/{project_key}` filtered by `task_description`), using THOSE names for its roster and its Layer-2 sweep (canon: `agent-mail/references/agent-identity.md` § Handing a name is a SPEC VIOLATION). Then WAIT: do not poll `br`, do not read worker transcripts, do not work beads. The
-pool GROWS as a chain unlocks or beads are refined, so a worker that exits dry is correct, not idle — on EVERY return, respawn `min(pick.sh --count, width) − live`; Phase 2 starts only when none is live and the count reads 0. **The pool is the only work
+pool GROWS as a chain unlocks or beads are refined, so a worker that exits dry is correct, not idle — on EVERY return, respawn `min(pick.sh --count, width) − live`; Phase 2 starts only when none is live and the count reads 0. A bead handed back twice with one refusal class is yours: read the refusing script and fix the state before the next spawn. **The pool is the only work
 source — `br`'s filter, never tree text** (a `br create` line in a file is a template, not a
 task; canon: `ac-pipeline/references/work-derivation.md`).
 
@@ -67,15 +67,13 @@ hands the commit itself to `swarm-commit.sh`, so there is still exactly one comm
 Then, and only after it exits 0:
 
 1. **Batch CI on the committed tree.** The repo-wide gates are authoritative HERE — only here is
-   the tree free of half-finished sibling edits.
+   the tree free of half-finished sibling edits. A red is yours: fix a one-commit red through
+   claim→gate, file anything larger with a named owner. The run is not over while a red has neither.
 2. **Telemetry.** Report width, wall time, and gate-wait vs work time — the constitution drops
    the width to 1 if two tuning sessions show no throughput over width 1, and this number decides.
-3. **Release reservations and deregister** every worker identity, including any you swept.
-
-**Shell divergence.** A pasted bash snippet is bash-authored by default and silently diverges
-under the org's zsh instead of erroring when it hits an offender like `tr` shadowed by a tmux
-alias, unquoted glob expansion, or array/brace-expansion bash tolerates. Run it once and
-verify under zsh — the harness's actual shell — before it ships.
+3. **Read back the clean state:** 0 claims held by run actors, 0 active reservations for the
+   roster. Force-release strays and deregister only yourself (`ac-land/references/teardown.md`).
+   An open item in the report is unfinished work, not an exit.
 
 ## The exhaust rule
 

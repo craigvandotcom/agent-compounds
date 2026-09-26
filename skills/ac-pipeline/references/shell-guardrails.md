@@ -117,6 +117,9 @@ Expected output: nothing. A hit is a prescribed snippet an agent will copy verba
 
 **The alias itself is the human's own shell — propose a rename, never edit their profile.**
 
+**A `.md` snippet is bash-authored and runs under zsh.** Unquoted globs, arrays and brace
+expansion diverge silently between the two. Run a prescribed snippet once under zsh before it ships.
+
 ### Empty is not clean — check the exit status of every structured-input parse
 
 **The rule: a gate that reports clean because it read nothing is worse than no gate. Empty or

@@ -281,6 +281,20 @@ run "$WORK/bodies/nored.md"
 printf '%s' "$RUN_OUT" | grep -q 'PREMISE-FAILED: RED' \
   && ok "no-RED refusal names its class" || bad "RED class not named: $RUN_OUT"
 
+# 2e HANG — a probe that never exits refuses as ENVIRONMENT, so the bead is stamped, not re-picked.
+cat >"$WORK/bodies/hang.md" <<'BODY'
+## Acceptance Criteria
+- Watches instead of exiting.
+  Probe: `sleep 30` — tier: none
+
+## Consumes
+- none
+BODY
+run "$WORK/bodies/hang.md" AC2_PROBE_TIMEOUT=1
+[ "$RUN_RC" -eq 1 ] && printf '%s' "$RUN_OUT" | grep -q 'PREMISE-FAILED: ENVIRONMENT — probe .sleep 30. did not exit' \
+  && ok "a hanging probe refuses as ENVIRONMENT within the timeout" \
+  || bad "HANG: expected exit 1 + ENVIRONMENT timeout, got $RUN_RC: $RUN_OUT"
+
 # All four, distinctly named — the AC is "names WHICH of the four fired".
 CLASSES=$(for b in consumes env perish nored; do
   run "$WORK/bodies/$b.md"

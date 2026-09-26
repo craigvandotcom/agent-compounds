@@ -22,7 +22,8 @@
 # THE REFUSALS, each named in the output so the caller can branch on the class:
 #   PREMISE-FAILED: CONSUMES     a `## Consumes` artifact is absent, or its blocker is not closed
 #                                (a direct parent-child containment edge is exempt)
-#   PREMISE-FAILED: ENVIRONMENT  a declared environment/infra precondition does not hold
+#   PREMISE-FAILED: ENVIRONMENT  a declared environment/infra precondition does not hold, or a
+#                                probe outlives AC2_PROBE_TIMEOUT (default 120s)
 #                                (a prod-only env once blocked a live-DB acceptance criterion
 #                                undetected — artifact existence alone would not have seen it)
 #   PREMISE-FAILED: PERISHABLE   a perishable external-state claim the bead depends on no
@@ -494,11 +495,19 @@ fi
 RED_PROBE=""
 RED_EXIT=""
 GREEN_COUNT=0
+# A probe that never exits must refuse, not hang: a hang writes no stamp, so every next
+# worker re-picks the bead. No timeout(1) on PATH → the probe runs bare.
+PROBE_TIMEOUT="${AC2_PROBE_TIMEOUT:-120}"
+TIMEOUT_CMD=$(command -v timeout || command -v gtimeout || true)
 if [ -z "$FAIL_CLASS" ]; then
   while IFS= read -r pr; do
     [ -n "$pr" ] || continue
-    sh -c "$pr" >/dev/null 2>&1 </dev/null
+    ${TIMEOUT_CMD:+"$TIMEOUT_CMD" "$PROBE_TIMEOUT"} sh -c "$pr" >/dev/null 2>&1 </dev/null
     rc=$?
+    if [ -n "$TIMEOUT_CMD" ] && [ "$rc" -eq 124 ]; then
+      premise_failed ENVIRONMENT "probe '$pr' did not exit within ${PROBE_TIMEOUT}s — a probe runs once and exits, never watches"
+      break
+    fi
     if [ "$rc" -ne 0 ] && [ -z "$RED_PROBE" ]; then
       RED_PROBE="$pr"; RED_EXIT="$rc"
     elif [ "$rc" -eq 0 ]; then
@@ -508,7 +517,7 @@ if [ -z "$FAIL_CLASS" ]; then
 $PROBES
 EOF
 
-  if [ -z "$RED_PROBE" ]; then
+  if [ -z "$FAIL_CLASS" ] && [ -z "$RED_PROBE" ]; then
     premise_failed RED "all $PROBE_COUNT named probe(s) are ALREADY GREEN — there is no RED for a diff to flip, so no causal claim is available"
   fi
 fi
