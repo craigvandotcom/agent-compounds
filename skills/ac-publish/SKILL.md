@@ -5,6 +5,8 @@ description: 'The ac2 ship gate — obtain a proof via ac-prove, assert its REQU
 
 # ac-publish — a proven batch in, a shipped release out
 
+Ship-command rules (prove, version/build numbers, web + native targets): `references/ship-contract.md`.
+
 ## I/O Contract
 
 |                  |                                                                                  |
@@ -13,9 +15,6 @@ description: 'The ac2 ship gate — obtain a proof via ac-prove, assert its REQU
 | **Output**       | A tagged, promoted release at a PROVEN SHA — or an explicit refusal and no ship    |
 | **Artifacts**    | The tag · the release report · beads for escapes, each catch-stage-labelled        |
 | **Verification** | `ac-prove ensure --fix-forward`; executed-jobs; `needs-device-gate.sh --range`      |
-
-Deliberately thin. It owns the executed-jobs assertion, the needs-device and pending-migration
-refusals, the ship order, and the escape label — delegating everything else by pointer.
 
 ## Phase 0 — mint the version, then prove
 
