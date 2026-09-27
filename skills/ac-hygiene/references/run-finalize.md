@@ -29,7 +29,7 @@ Read the consensus registry. Collect all remaining items:
 
 **Exhaust rule (see `skills/beads-standards/reference/bead-conventions.md`):** nothing actionable
 leaves as prose. Out-of-scope confirmed issues → `br create -t bug --labels
-origin:ac-hygiene,hygiene-finding,unrefined,impact:<class>`. Worth-chasing uncertainties → `-t investigation`. Genuine
+origin:ac-hygiene,hygiene-finding,unrefined`. Worth-chasing uncertainties → `-t investigation`. Genuine
 taste/product forks in an autonomous run (user not present) → `-t decision
 --labels human-gate` with a pre-staged memo, then continue — never stall the
 sweep on a question. Dedupe per the canon's anchor-dedupe rule
@@ -52,7 +52,7 @@ paths — those are deleted at Cleanup). Writing the full body now costs a minut
 full refine round later — the in-session refine step then verifies instead of authoring.
 
 **Per-run epic:** if this run created 2+ beads, group them under one epic
-(`br create -t epic "Hygiene <date> — deferred findings" -l origin:ac-hygiene,impact:<class>`, children linked) so the
+(`br create -t epic "Hygiene <date> — deferred findings" -l origin:ac-hygiene`, children linked) so the
 batch is refined together in-session (see "Refine the Run's Beads" below) and
 shipped by the loop as orphan fixes. 0–1 beads → no epic (don't inflate).
 

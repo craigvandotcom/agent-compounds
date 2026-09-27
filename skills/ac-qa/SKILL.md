@@ -101,16 +101,15 @@ File each finding as a bead the moment it is confirmed — conventions, types, a
 labels (`qa-finding` / `qa-blocker`) are in **`references/qa-shared.md`**. Workers
 report findings in their verdict files with `"bead": "pending"`; **the conductor
 files the beads** (deduped), stamps the id back, and never leaves a `pending` entry.
-Tag bead descriptions with `browser QA` or `device QA`; each filed bead carries
-`discovered-from: <bead-id|unknown>`.
+Tag bead descriptions with `browser QA` or `device QA`.
 
 ### Verdict comment (VERDICT grammar)
 
 When the `QA_VALIDATION` pass completes, the conductor records the ceremony's
-outcome as a structured **VERDICT comment** on each bead it validated —
-`VERDICT: passed:` (journey PASS), `VERDICT: failed:` (a QA finding), or
-`VERDICT: blocked:` (infra-flaky / NO-STAMP) — per the grammar in
-**`beads-standards` § Verification verdicts**. QA is a _verifier_ ceremony: the
+outcome as a structured **VERDICT comment** on each bead it validated — the
+outcome verb `passed` (journey PASS), `failed` (a QA finding), or `blocked`
+(infra-flaky / NO-STAMP) — per the grammar in **`beads-standards` § Verification
+verdicts**. QA is a _verifier_ ceremony: the
 conductor writes the verdict from the verdict files (workers/implementers never do —
 Goodhart guard).
 

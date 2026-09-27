@@ -137,7 +137,7 @@ weekly panel run so findings feed the same triage/bead path as the other lenses.
 2. **Surface real findings** (dead exports, unused files, unused/unlisted deps) as hygiene
    findings — real dead code becomes cleanup findings/beads exactly like the other lenses'
    output: route through Phase 5 triage (`AUTO_IMPLEMENT` for unambiguous dead-code removal,
-   `br create -t task --labels origin:ac-hygiene,hygiene-finding,unrefined,impact:<class>` for anything needing a human look —
+   `br create -t task --labels origin:ac-hygiene,hygiene-finding,unrefined` for anything needing a human look —
    e.g. an export that *looks* dead but may be a public API surface).
 3. **Weekly cadence only** — this lens runs on `PANEL=full`; skip it on `PANEL=light` (the
    quick between-session sweep).
@@ -182,7 +182,7 @@ of — `dream` Phase 2's weekly weighting pass (`dream/SKILL.md` § Phase 2, W4.
    `weight(id) = impact_num × frequency_num × recurrence`, threshold `weight >= 12`
    (`dream/SKILL.md` § Phase 2 is the single definition; cite it, don't fork it).
 3. **An over-bar cluster files directly** as `br create -t task --labels
-   origin:ac-hygiene,hygiene-finding,skill-improvement,unrefined,impact:<class> -d "Friction cluster-walk: <id(s)> —
+   origin:ac-hygiene,hygiene-finding,skill-improvement,unrefined -d "Friction cluster-walk: <id(s)> —
    <cluster's proposed_fix(es)>. weight=<N>, skills=<list>."` — deduped via `br search`
    first, same as any other hygiene finding (Exhaust Rule). This is the direct,
    no-judge-round path; it does not replace dream's judged/gated proposal path, it

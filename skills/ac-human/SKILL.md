@@ -34,7 +34,7 @@ The board is the **session opener**: before any question, invoke **`ac-board`** 
 
 **Exempt from the org run-ledger standard** — interactive, human-driven tap-through session: the rendered board IS the live progress view.
 
-**`human-ratified` — this skill stamps human-ratified only.** After a recorded lightweight completeness check (≥1 AC an empty diff cannot satisfy + greppable `## Delivers` + implementable type `task`/`feature`/`bug`), stamp that label. Do NOT apply `refined` / `refine-full` / `refine-light` (exclusive stamper of those remains `ac-polish`). `ac-polish` never stamps `human-ratified`.
+**No fast-track stamp here.** A bead this skill judges implementation-ready still routes through `/ac-polish` (bead mode) for the `refined` stamp, the only sanctioned path.
 
 ## Prerequisites
 

@@ -61,7 +61,7 @@ on a failed or partial fetch.
 **Configured-but-failing ≠ not-configured.** A source that CORE/triage.md marks live but
 that errors at fetch (auth 401, network, schema change) is an **escalation**, not a skip:
 mark it `✗ FAILING (<error>)` in the Phase-4 report and file ONE ops bead
-(`br create -t task --labels origin:ac-triage,unrefined,triage,ops,impact:<class>`) so it surfaces in `ac-human`.
+(`br create -t task --labels origin:ac-triage,unrefined,triage,ops`) so it surfaces in `ac-human`.
 Add `human-gate` ONLY if the body states `Gate-reason: authorization —`.
 Dedupe first, update the existing open ops bead if one already tracks this failure.
 Silent-skip is reserved for sources that were never wired.
@@ -96,7 +96,7 @@ For each confirmed, deduped **defect**, create a typed bead directly via `br cre
 is the deliberate pattern here — `ac-backlog` is the human quick-capture skill).
 
 ```
-br create -t bug --labels origin:ac-triage,triage,<source>,prod-finding,unrefined,impact:<class>  \
+br create -t bug --labels origin:ac-triage,triage,<source>,prod-finding,unrefined  \
   --title "<crash culprit / error signature> (<freq>× / <users> users)" \
   --description "<source link · first-seen release · suspected wave · top stack frames
                  ## Steps to Reproduce (repro hints / crash path)
@@ -122,10 +122,6 @@ br create -t bug --labels origin:ac-triage,triage,<source>,prod-finding,unrefine
   name the real file(s)/describe block(s) a validator would run — grep each before citing it,
   never invent a describe you have not seen — plus the QA modality for user-facing surfaces
   (`browser:`/`device:` + journey). A finding with no test plan is a test the implementer authors cold.
-- **ac-lane findings carry a `catch-stage` label and a `discovered-from` edge.** File the
-  escape as `catch-stage:<stage>` — the stage that SHOULD have caught it (plan · beadify ·
-  flight · implement · close · review) — plus `discovered-from: <bead>` naming the work that
-  shipped it. Without both it is a bug report; with them it is evidence about which gate leaks.
 - **Product findings to the board; process observations to the ac2 family ledger.** The same
   signal yields both, and conflating them is how a board fills with beads about ourselves
   (measured 39%). A defect in the shipped thing → a bead, here. An observation about how the
@@ -190,7 +186,7 @@ One-line intent, synthesized from {N} reports.
 ## Phase 3c — group + file (before the report)
 
 **Per-run epic:** if this run created 2+ finding-beads (Phase 3a), group them under one
-epic (`br create -t epic "Triage <date> — findings" -l origin:ac-triage,impact:<class>`, children linked via parent-child
+epic (`br create -t epic "Triage <date> — findings" -l origin:ac-triage`, children linked via parent-child
 deps) so the batch ships to refinement and the loop as one cohesive
 unit — read the parent-child edge back (`br show` on both ends). 0–1 beads → no epic (don't inflate). Backlog candidates (Phase 3b) aren't beads —
 they don't count toward this threshold and aren't epic children.

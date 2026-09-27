@@ -51,3 +51,7 @@ review-by date; the default resolution applies if nobody acts.
 - [2026-09-22] docket.sh + docket.test.sh added; SKILL.md 114 → 92 lines; declared batch lanes
   (`<project>/.claude/docket-lanes.json`) replace the registry's app-specific lane text;
   🧰 frictions + 🧠 memory cards added to the action loop.
+- [2026-09-27] `human-ratified` fast-track stamp removed — this skill was its only writer,
+  `ac-polish` never stamped it, and the lane duplicated the refine gate it was meant to
+  shortcut. A bead judged ready here now routes through `/ac-polish` (bead mode) for `refined`
+  like any other.

@@ -265,8 +265,8 @@ non-run visible to the next stage's `unverified_tiers` consumption; a failed run
 "reports" only in words is indistinguishable from a run that never happened.
 
 **`proves: [<bead-id>, …]`** (optional). When the pass is supposed to certify
-named beads (a re-prove), list those ids on the manifest. After each
-`br comments add <id> "VERDICT: <verb>: …"` the conductor appends
+named beads (a re-prove), list those ids on the manifest. After each VERDICT
+comment is added (outcome verb, then detail) the conductor appends
 `{ "id": "<id>", "verdict": "<verb>" }` to `$ARTIFACTS_DIR/writeback.json`.
 `validate-qa-run.sh` assertion 7 diffs `proves[]` against that file — it does
 not call `br`. An empty or omitted `proves` skips the check.
@@ -313,8 +313,8 @@ br create "investigate: <symptom>" -t investigation \
   document-and-close".
 - **Label** = gating. `qa-blocker` gates the next release (`ac-publish` refuses while
   open). `qa-finding` alone = real but shippable.
-- **Lineage**: fix beads spawned by an investigation carry a typed dep —
-  `br dep add <fix-id> <investigation-id> -t discovered-from` — then close the
+- **Lineage**: fix beads spawned by an investigation are linked back to it per
+  `beads-standards/reference/bead-conventions.md` § Lineage — then close the
   investigation.
 - **Journey-doc drift is NOT a finding** — fix the doc inline during the run.
 - A finding that turns out to be intended behavior is resolved by updating the

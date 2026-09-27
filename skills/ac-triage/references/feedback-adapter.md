@@ -144,7 +144,7 @@ not invoked here):
 ```bash
 br create \
   -t bug \
-  --labels origin:ac-triage,triage,feedback,prod-finding,unrefined,impact:<class> \
+  --labels origin:ac-triage,triage,feedback,prod-finding,unrefined \
   --title "<category>: <first 80 chars of message>" \
   --description "$(cat <<'EOF'
 Source: public.feedback_reports / id=<id>
@@ -166,7 +166,7 @@ EOF
   unclassified. Never `bug`: that would assert a defect the data does not support on every
   report, poisoning the bug lane with feature requests; it also buys nothing in priority.
   Re-typing an investigation upward in `br` is a one-liner; un-polluting the bug count is not.
-- `category='feature'` → `-t task --labels origin:ac-triage,triage,feedback,unrefined,impact:<class>` —
+- `category='feature'` → `-t task --labels origin:ac-triage,triage,feedback,unrefined` —
   a feature request is ordinary product work, so it files as a task bead like any other
   finding (human ruling, 2026-09-06); it is not a human-gate decision. Fingerprint dedupe still applies.
 - The `triage,feedback,unrefined` labels are constant (`unrefined` routes every
@@ -227,7 +227,7 @@ consuming app that owns the feedback table. Reference this spec when authoring t
 `screenshot_path` populated (or non-bug), `created_at > watermark`.
 
 **Expected behavior:**
-- `br create` called exactly once with `-t bug --labels origin:ac-triage,triage,feedback,impact:<class>`.
+- `br create` called exactly once with `-t bug --labels origin:ac-triage,triage,feedback`.
 - `UPDATE public.feedback_reports SET linked_bead = '<bead-id>', status = 'triaged' WHERE id = '<row-id>'` executed.
 - Run report shows `claimed: 1`.
 

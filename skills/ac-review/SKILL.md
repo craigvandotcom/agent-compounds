@@ -51,8 +51,8 @@ a deliberate tool, run when the operator asks for one.
 
 ## Findings
 
-- **Three bins replace ACCEPT/FIX/DEFER.** **Defect** → a bead, and the `impact:` label
-  carries its demonstration. **Hardening** → one line in the report, never a bead.
+- **Three bins replace ACCEPT/FIX/DEFER.** **Defect** → a bead, and its `Probe:` line
+  carries the demonstration. **Hardening** → one line in the report, never a bead.
   **Nothing** → ACCEPT with one line saying what was checked.
 - A confirmed defect becomes a bead whose acceptance-criterion probe IS the finding's
   reproducing command; its fix is checked by re-running that command, never by a second
@@ -61,11 +61,11 @@ a deliberate tool, run when the operator asks for one.
   a deleting fix does not ask.
 - **Closed epics accept no child.** A late finding against a closed epic opens a follow-up
   epic — never a new child of the closed one, never a silent reopen. The follow-up carries
-  its own `discovered-from:` trail back to the finding; the closed epic stays closed.
-- **Severity orders the report; only a named `impact:` makes a bead**
-  (`bead-schema.md` § Required axes). A shipped defect → `-t bug`;
-  mutation-probe-convicted test → `-t task`; labels
-  `origin:ac-review,impact:<class>,review-finding,unrefined`, plus a `Probe:` line carrying
+  its own lineage trail back to the finding (`bead-conventions.md` § Lineage); the closed
+  epic stays closed.
+- **Severity orders the report; a confirmed defect becomes a bead.** A shipped defect →
+  `-t bug`; mutation-probe-convicted test → `-t task`; labels
+  `origin:ac-review,review-finding,unrefined`, plus a `Probe:` line carrying
   the reviewer's reproducing command. A confirmed defect is never re-reviewed.
 - **Friction route.** Machinery that actually misbehaved or cost time in the run goes to
   the skill's `FRICTIONS.md`, deduplicated and recurrence-counted, and is ruled in the

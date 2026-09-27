@@ -33,7 +33,7 @@ retained skill outside the family cap — its diet is the plain per-file ratchet
    is a deliberate, hand-run tool. Prevents: committees reviewing prose while code correctness rests on the author's own self-audit.
 5. **One engine per pattern; scripts, not scar prose.** (L3) Prevents: the consensus machine copied
    5x plus a mirror, and scars accumulating where a script belongs.
-6. **Exhaust to the board (`discovered-from`) — discovered PRODUCT work only.** (L3) Process observations go to
+6. **Exhaust to the board — discovered PRODUCT work only.** (L3) Process observations go to
    the family ledger; every finding writes its `VERDICT:` + catch-stage label even when fixed in-batch — the
    fix may be in-batch, the label never. Then land the plane. Prevents: self-beads (39% of the old board).
 7. **Plan hard, then retire the plan — beads and this file are its only survivors.** (L3) Prevents: a

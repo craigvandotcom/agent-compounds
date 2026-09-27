@@ -128,7 +128,7 @@ reproducing against a local prod build (§ Phase 0 — Orient + serve), then:
   meaninglessness, branch on build flavor): a red you cannot heal honestly is a
   finding, not a spec defect.
 - **Defect → file the bead:** `qa-finding`/`qa-blocker` per qa-shared.md, with
-  `discovered-from:` and the failing spec path; the app fix lands through the
+  the failing spec path; the app fix lands through the
   normal implement lane, and the spec goes green behind it.
 - Re-run the healed spec locally to green and commit through the app repo's
   lane. CI re-runs to green → stamp (see § Journey stamps). More than one
@@ -222,13 +222,11 @@ itself as a finding.
 ### Verdict comment (VERDICT grammar)
 
 When a CI run or an exploratory sweep completes, record the ceremony's outcome as
-a structured **VERDICT comment** on each bead it validated — `VERDICT: passed:` (CI
-green), `VERDICT: failed:` (a QA finding), or `VERDICT: blocked:` (infra-flaky /
+a structured **VERDICT comment** on each bead it validated — the outcome verb
+`passed` (CI green), `failed` (a QA finding), or `blocked` (infra-flaky /
 NO-STAMP) — per the grammar in **`beads-standards` § Verification verdicts**. QA is
 a _verifier_ ceremony: you write the verdict from CI results and verdict files
-(implementers never do — Goodhart guard). Each filed `qa-finding` bead also carries
-`discovered-from: <bead-id|unknown>` linking the escape to the work that introduced it
-(`unknown` when it can't be pinned).
+(implementers never do — Goodhart guard).
 
 ## Journey stamps (last_pass) — from CI, never from agent passes
 
@@ -243,8 +241,8 @@ Schema + staleness rule: `ac-pipeline/references/verification-gate.md` §Journey
 **Conflict rule:** `last_pass` is last-writer-wins. On a merge conflict, keep
 the NEWER stamp (compare `date`, then `build`) — never hand-merge a hybrid
 stamp. An infra-flaky result (daemon crash, stuck load, a selector that only
-fails once in CI) is the same **NO-STAMP**, never FAIL, never PASS — file a `qa-infra`
-bead instead (same rule as the device workflow).
+fails once in CI) is the same **NO-STAMP**, never FAIL, never PASS — record the
+bead's VERDICT as `blocked`, no separate bead (same rule as the device workflow).
 
 ## Related files
 

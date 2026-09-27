@@ -23,7 +23,7 @@ Every candidate finding routes to exactly one bin:
 
 | bin | what it is | where it goes |
 |---|---|---|
-| **Defect** | the bar is met — a demonstrated failure or a violated AC, with the reproducing command | a bead; the `impact:` label carries the demonstration |
+| **Defect** | the bar is met — a demonstrated failure or a violated AC, with the reproducing command | a bead; its `Probe:` line carries the demonstration |
 | **Hardening** | real but not demonstrated, or reachable only through a contrived precondition | one line in the report — **never** a bead |
 | **Nothing** | the lens checked and found nothing | ACCEPT, one line saying what was checked |
 

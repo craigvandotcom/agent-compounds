@@ -73,7 +73,7 @@ Then, and only after it exits 0:
 
 ## The exhaust rule
 
-Discovered PRODUCT work goes to the board with `discovered-from: <bead>`, filed by the
+Discovered PRODUCT work goes to the board, filed by the
 coordinator alone: it confirms and files each worker's PROPOSED-BEAD block (product work and
 mid-bead forks); a worker files NOTHING, it proposes. Process observations go to the family
 ledger, never a self-bead; every finding writes its VERDICT and catch-stage label.

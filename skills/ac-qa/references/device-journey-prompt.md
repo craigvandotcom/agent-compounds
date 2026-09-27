@@ -80,7 +80,7 @@ inspected, else "n/a"), findings[] (severity qa-blocker only for user-facing bre
 or trapped states, each with `"bead": "pending"` — never `"none"`). Do NOT file beads
 and do NOT write last_pass stamps — the conductor does both. An infra-flaky drive (daemon crash, stuck load) is NEITHER
 PASS nor FAIL — status FAIL with findings empty and notes explaining infra-flake,
-so the conductor can NO-STAMP it and file the qa-infra bead.
+so the conductor can NO-STAMP it and record a `blocked` verdict, no separate bead.
 
 ## Teardown (non-negotiable, success AND failure paths)
 

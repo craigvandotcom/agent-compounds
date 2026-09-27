@@ -116,8 +116,8 @@ evidence protocol.
 4. **Collect + aggregate:** manifest ⊖ verdicts check; file beads from verdict
    findings (you, not workers — deduped); write `last_pass` stamps for PASSes;
    emit `QA_VALIDATION` (`platform: ios-simulator`). **Blocking writeback:** if
-   the manifest lists `proves: [<bead-id>, …]`, `br comments add <id> "VERDICT:
-   <verb>: …"` on each id and append `{id, verdict}` to
+   the manifest lists `proves: [<bead-id>, …]`, add the VERDICT comment (outcome
+   verb, then detail) on each id and append `{id, verdict}` to
    `$ARTIFACTS_DIR/writeback.json` BEFORE
    `ac-pipeline/scripts/validate-qa-run.sh "$ARTIFACTS_DIR" \
    --baseline-findings "$BASELINE_FINDINGS" --skip-teardown-check` (teardown is
@@ -360,13 +360,11 @@ gaps and native-shell bugs. Tag bead descriptions with `device QA`.
 ### Verdict comment (VERDICT grammar)
 
 When the `QA_VALIDATION` pass completes, the conductor records the ceremony's outcome as
-a structured **VERDICT comment** on each bead it validated — `VERDICT: passed:` (journey
-PASS), `VERDICT: failed:` (a QA finding), or `VERDICT: blocked:` (infra-flaky / NO-STAMP)
-— per the grammar in **`beads-standards` § Verification verdicts**. QA is a *verifier*
-ceremony: the conductor writes the verdict from the verdict files (workers/implementers
-never do — Goodhart guard). Each filed `qa-finding` bead also carries
-`discovered-from: <bead-id|unknown>` linking the escape to the work that introduced it
-(`unknown` when it can't be pinned).
+a structured **VERDICT comment** on each bead it validated — the outcome verb
+`passed` (journey PASS), `failed` (a QA finding), or `blocked` (infra-flaky /
+NO-STAMP) — per the grammar in **`beads-standards` § Verification verdicts**. QA is a
+*verifier* ceremony: the conductor writes the verdict from the verdict files
+(workers/implementers never do — Goodhart guard).
 
 ## Reporting
 
@@ -399,7 +397,8 @@ stamp (e.g. one journey's build with another's SHA).
 `hittable:false` false-negatives, coordinate misses, and sim-daemon weirdness
 that survive a retry (discipline rule 5) are **executor** failures, not app
 failures. Classify the drive as infra-flaky: write **no `last_pass` stamp**
-(neither PASS nor FAIL) and file a `qa-infra` bead instead. A flaky gate that
+(neither PASS nor FAIL) and record the bead's VERDICT as `blocked`, no separate
+bead. A flaky gate that
 occasionally red-Xs a working app trains gate-skipping — worse than no gate.
 Prerequisite the pin depends on: the dedicated sim MUST be **iPhone-class**,
 never iPad (Stage Manager coordinate offsets — see "Parallel QA on a shared

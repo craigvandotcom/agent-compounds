@@ -27,6 +27,10 @@ say which home and why, hand off, STOP — not a bead capture.
    title prefix. A `decision` → label `human-gate` + pre-stage the memo (context, options,
    trade-offs, recommendation) and wire `--parent <spawning-epic-id>` AT capture; a
    standalone fork with no spawning epic records its origin in the memo `context:` instead.
+   **Device rule, project-agnostic:** an AC only a device runner can settle carries the
+   `device` label and the project's own declared route; where the project declares no such
+   route, or the work needs a physical device, file `human-gate` instead — the card comes
+   to the operator, never `device`.
 4. **Labels.** `origin:ac-backlog` FIRST, then `unrefined` — capture never stamps `refined`
    (exclusively ac-polish's output on convergence); a decision fork gets `human-gate`
    instead. Provenance labels only where true. An implementable bead
