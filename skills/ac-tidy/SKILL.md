@@ -45,6 +45,7 @@ checkout disagrees; a newer `updated_at` is not newer semantics). Stamp the othe
 | plan with no frontmatter | infer status from content, add it, report the inference |
 | closed bead still labelled `unrefined` | `br label remove` |
 | open non-epic bead with none of `unrefined` / `refined` / `human-gate` | `br label add unrefined` (never `refined`) |
+| open or `in_progress` bead whose assignee is retired (`retired_at` set in `agents.json` from `python3 "$APP_ROOT/.claude/skills/_tools/agent-roster.py" --snapshot "$(mktemp -d)"`) | `br update <id> --assignee "" --status open` + a comment naming the holder; an assignee absent from `agents.json` is a human — never touch it |
 | label `beads-standards` does not name | correct or remove, report it |
 | open `pipeline-proposal` bead whose target epic is closed | record `DECISION (ac-tidy): moot — target <epic> closed`, then `close-gate.sh <id> --reason "obsolete: moot — target closed"` |
 
@@ -65,7 +66,3 @@ Commit the exact paths touched, per `ac-pipeline/references/commit-discipline.md
 Slack card via `slack-send --card --status <healthy|degraded>` on the app's ops channel, one line of counts (`drift-skipped:` — § 2b gates skipped on ledger-copy disagreement — plus `post-merge-tail:` (§ 2) and the since-last-run app-board counts `foreign status:` / `off-canon receipts:` / `unrecorded closes:` against D4/D1's canon grammar).
 Before committing, append one line to `.claude/state/tidy-runs.jsonl` at the repo root you commit from (history — never rewrite a line): `{date, mode, machine, counts, scan, applied, match}` — `scan` the tidy-scan mechanical rows, `applied` the step-3 actions taken, `match` whether they are equal. It rides the commit unless the project ignores `.claude/state/`.
 Remove the worktree and prune. Teardown runs on every exit path, abort included.
-
----
-
-_Housekeeping only. Strategy fit and promotion: `/ac-align`. Capture: `/ac-backlog`. Docket: `/ac-human`._
