@@ -63,19 +63,19 @@ _BEAD_PY_HOME="$_TOUCHERS_TOOLS_DIR/bead.py"
 [ -f "$_BEAD_PY_HOME" ] || { printf 'touchers: NOT-GATED — bead.py missing at %s — the Delivers-path extraction pattern cannot be resolved\n' "$_BEAD_PY_HOME" >&2; return 2 2>/dev/null || exit 2; }
 command -v python3 >/dev/null 2>&1 || { printf 'touchers: NOT-GATED — python3 not on PATH — bead.py cannot be run\n' >&2; return 2 2>/dev/null || exit 2; }
 
-# extract_paths [body] (else stdin) -> sorted unique path tokens, via bead.py's plain-text
-# extractor. No temp file: this library is SOURCED into other scripts (stamp-refined.sh),
-# so an EXIT trap set here would stomp — or be stomped by — the caller's own trap; the
-# python code travels as a `-c` argument instead, leaving stdin free for the piped body
-# (a heredoc attached to `python3 -` would starve `sys.stdin.read()` of everything but
-# EOF — the lesson needs-device-gate.sh's own write_device_paths_py already paid for).
+# The program lives in its own file, never a heredoc attached to `python3 -`: a heredoc
+# IS the command's stdin, so a text argument piped in on the same command would starve
+# `sys.stdin.read()` of everything but EOF (the lesson needs-device-gate.sh's own
+# write_device_paths_py already paid for) — the text travels via a temp FILE argument
+# instead, written and removed BY HAND rather than an EXIT trap: this library is SOURCED
+# into other scripts (stamp-refined.sh), so a trap set here would stomp — or be stomped
+# by — the caller's own (same reasoning plan-approve.sh's `_write_bead_extract_py` /
+# `_extract_paths_via_bead` pair already carries; this is that shape, scoped to touchers.sh).
 # `BEAD_MODULE_PATH` is the same test-only override bead-capture-guard.py's own
 # `_load_bead_module()` uses: a nonexistent path drives the crash-path fixture without
 # ever touching the real file in a shared checkout.
-extract_paths() {
-  local input
-  if [ "$#" -gt 0 ]; then input="$1"; else input="$(cat)"; fi
-  printf '%s' "$input" | BEAD_PY_PATH="$_BEAD_PY_HOME" python3 -c '
+_touchers_write_extract_py() {
+  cat > "$1" <<'PY'
 import importlib.util, os, sys
 
 
@@ -90,15 +90,37 @@ def _load_bead():
     return module
 
 
-try:
+def main():
     bead = _load_bead()
-    text = sys.stdin.read()
+    with open(sys.argv[1], "r") as f:
+        text = f.read()
     for p in bead.extract_paths(text):
         print(p)
-except Exception as e:
-    print(f"NOT-GATED: bead.py unavailable or crashed: {e}", file=sys.stderr)
-    sys.exit(2)
-'
+    return 0
+
+
+if __name__ == "__main__":
+    try:
+        sys.exit(main())
+    except Exception as e:
+        print(f"NOT-GATED: bead.py unavailable or crashed: {e}", file=sys.stderr)
+        sys.exit(2)
+PY
+}
+
+# _touchers_extract_paths [body] (else stdin) -> sorted unique path tokens, via bead.py's
+# plain-text extractor. No trap: both temp files are removed by hand on every path through
+# this function, so sourcing into a caller with its own EXIT trap is safe either way.
+_touchers_extract_paths() {
+  local input tf py rc
+  if [ "$#" -gt 0 ]; then input="$1"; else input="$(cat)"; fi
+  tf=$(mktemp) || { printf 'touchers: NOT-GATED mktemp failed extracting Delivers paths\n' >&2; return 2; }
+  printf '%s' "$input" > "$tf" || { rm -f "$tf"; printf 'touchers: NOT-GATED writing the scratch text file failed extracting Delivers paths\n' >&2; return 2; }
+  py=$(mktemp) || { rm -f "$tf"; printf 'touchers: NOT-GATED mktemp failed extracting Delivers paths\n' >&2; return 2; }
+  _touchers_write_extract_py "$py"
+  BEAD_PY_PATH="$_BEAD_PY_HOME" python3 "$py" "$tf"; rc=$?
+  rm -f "$tf" "$py"
+  return $rc
 }
 
 # The exclusion set is part of the DERIVATION, not a caller's taste: change it here and the
@@ -254,7 +276,7 @@ touchers_check() {
     # those as deliveries invented obligations no bullet could ever satisfy (measured
     # 2026-09-06), so the disposition is excluded from the extraction, never from the check.
     paths=$(printf '%s\n' "$block" | grep -v '^[[:space:]]*touchers:' \
-      | extract_paths); ep_rc=$?
+      | _touchers_extract_paths); ep_rc=$?
     if [ "$ep_rc" -ne 0 ]; then
       printf 'touchers: NOT-GATED %s — bead.py failed extracting Delivers paths for this bullet (exit %s); nothing was checked.\n' "$label" "$ep_rc" >&2
       return 2

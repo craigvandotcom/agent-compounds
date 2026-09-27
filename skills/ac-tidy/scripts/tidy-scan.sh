@@ -133,12 +133,13 @@ for b in beads:
 # ── reopen-blocked: a `blocked` bead with no open `blocks` edge ──────────
 # "A card handed back, or blocked for no reason, gets reopened automatically" (Vision).
 # The edge is read through bead.py (ac-m9y4.1): the jsonl row's `type`/`depends_on_id`
-# shape, normalised to `dependency_type`/`id` — one edge reader, not a fifth inline one.
+# shape, normalised via `from_jsonl_row`, then the `blocks` axis via `bead.blocking_ids` —
+# the one public reader of that dependency axis (ac-m9y4.8), never a re-derived one.
 for b in beads:
     if b["status"] != "blocked":
         continue
     canon, _ = bead.from_jsonl_row(rec_by_id.get(b["id"]) or {"id": b["id"]})
-    blockers = [e["id"] for e in (canon or {}).get("dependencies", []) if e["dependency_type"] == "blocks"]
+    blockers = bead.blocking_ids(canon or {})
     if not any(bid in by_id and is_open(by_id[bid]) for bid in blockers):
         row("reopen-blocked", b["id"], "reopen → status: open", "blocked, no open blocks edge")
 

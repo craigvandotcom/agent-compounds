@@ -80,15 +80,16 @@ refuse() { rule="$1"; shift; echo "REFUSED [$rule]: $*" >&2; echo "NEXT: repair 
 usage()  { echo "usage: $0 --identity <name> --message-file <f> --path <p> [--path <p>...]" >&2; echo "NEXT: handback" >&2; exit 2; }
 not_gated() { echo "NOT-GATED [$1]: $2" >&2; echo "NEXT: handback" >&2; exit 6; }
 
-# extract_paths [body] (else stdin) -> sorted unique path tokens, via bead.py's plain-text
-# extractor (ac-m9y4.10) — the one bead reader every tool parses cards through, never a
-# second hand-rolled copy of the pattern. `BEAD_MODULE_PATH` is the same test-only override
-# bead-capture-guard.py's own `_load_bead_module()` uses: a nonexistent path drives the
-# crash-path fixture without ever touching the real file in a shared checkout.
-extract_paths() {
-  local input
-  if [ "$#" -gt 0 ]; then input="$1"; else input="$(cat)"; fi
-  printf '%s' "$input" | BEAD_PY_PATH="${BEAD_PY_HOME:-}" python3 -c '
+# The program lives in its own file, never a heredoc attached to `python3 -`: a heredoc IS
+# the command's stdin, so a text argument piped in on the same command would starve
+# `sys.stdin.read()` of everything but EOF (the lesson needs-device-gate.sh's own
+# write_device_paths_py already paid for) — the text travels via a temp FILE argument
+# instead (the same shape plan-approve.sh's `_write_bead_extract_py` uses). `BEAD_MODULE_PATH`
+# is the same test-only override bead-capture-guard.py's own `_load_bead_module()` uses: a
+# nonexistent path drives the crash-path fixture without ever touching the real file in a
+# shared checkout.
+_write_bead_extract_py() {
+  cat > "$1" <<'PY'
 import importlib.util, os, sys
 
 
@@ -103,15 +104,38 @@ def _load_bead():
     return module
 
 
-try:
+def main():
     bead = _load_bead()
-    text = sys.stdin.read()
+    with open(sys.argv[1], "r") as f:
+        text = f.read()
     for p in bead.extract_paths(text):
         print(p)
-except Exception as e:
-    print(f"NOT-GATED: bead.py unavailable or crashed: {e}", file=sys.stderr)
-    sys.exit(2)
-'
+    return 0
+
+
+if __name__ == "__main__":
+    try:
+        sys.exit(main())
+    except Exception as e:
+        print(f"NOT-GATED: bead.py unavailable or crashed: {e}", file=sys.stderr)
+        sys.exit(2)
+PY
+}
+
+# _delivers_paths_via_bead [body] (else stdin) -> sorted unique path tokens, via bead.py's
+# plain-text extractor (ac-m9y4.10) — the one bead reader every tool parses cards through,
+# never a second hand-rolled copy of the pattern. No trap: both temp files are removed by
+# hand on every path through this function.
+_delivers_paths_via_bead() {
+  local input tf py rc
+  if [ "$#" -gt 0 ]; then input="$1"; else input="$(cat)"; fi
+  tf=$(mktemp) || { printf 'NOT-GATED: mktemp failed extracting Delivers paths\n' >&2; return 2; }
+  printf '%s' "$input" > "$tf" || { rm -f "$tf"; printf 'NOT-GATED: writing the scratch text file failed extracting Delivers paths\n' >&2; return 2; }
+  py=$(mktemp) || { rm -f "$tf"; printf 'NOT-GATED: mktemp failed extracting Delivers paths\n' >&2; return 2; }
+  _write_bead_extract_py "$py"
+  BEAD_PY_PATH="${BEAD_PY_HOME:-}" python3 "$py" "$tf"; rc=$?
+  rm -f "$tf" "$py"
+  return $rc
 }
 
 # The ONE br_call invocation shape (ac-heyt.3). The witness read below is
@@ -326,7 +350,7 @@ fi
 # identity: a commit whose subject names bead X is refused unless THIS identity currently
 # holds X's claim, and every named path lies inside X's own `## Delivers` scope — the
 # SAME path-extraction pattern diff-closure.sh already uses (bead.py's plain-text
-# extract_paths; the touchers: line excluded), never a second, divergent definition.
+# extractor; the touchers: line excluded), never a second, divergent definition.
 # A bead whose Delivers names no path is unscoped and is not checked at all. Exemptions:
 # the coordinator's own `[no-bead]` ledger-flush marker and a subject naming no bead token
 # pass outright; a row that cannot be parsed is NOT-GATED, never a silent pass — the claim
@@ -352,16 +376,16 @@ if [ -n "$SUBJECT" ]; then
 
           desc=$(printf '%s' "$row" | jq -r '.description // ""' 2>/dev/null) \
             || not_gated outside-scope "subject names '$tok' but its board row's description could not be read — scope cannot be verified"
-          # extract_paths runs as its OWN final command over an already-computed string,
-          # never piped straight from awk/grep: under `pipefail`, a truly empty ## Delivers
-          # body makes `grep -v` itself exit 1 (nothing to select is not an error, but
-          # pipefail cannot tell the two apart) — chained into the pipe, that reads as
-          # "bead.py crashed" when it never ran. The filter's own `|| true` keeps its
-          # benign non-match off this leg's verdict.
+          # _delivers_paths_via_bead runs as its OWN final command over an already-computed
+          # string, never piped straight from awk/grep: under `pipefail`, a truly empty
+          # ## Delivers body makes `grep -v` itself exit 1 (nothing to select is not an
+          # error, but pipefail cannot tell the two apart) — chained into the pipe, that
+          # reads as "bead.py crashed" when it never ran. The filter's own `|| true` keeps
+          # its benign non-match off this leg's verdict.
           delivers_section=$(printf '%s\n' "$desc" \
             | awk '/^## Delivers/{on=1; next} /^## /{on=0} on' \
             | grep -v '^[[:space:]]*touchers:' || true)
-          scope_list=$(extract_paths "$delivers_section"); ep_rc=$?
+          scope_list=$(_delivers_paths_via_bead "$delivers_section"); ep_rc=$?
           [ "$ep_rc" -eq 0 ] \
             || not_gated outside-scope "bead.py failed extracting Delivers paths for '$tok' (exit $ep_rc)"
           [ -n "$scope_list" ] || continue   # unscoped bead — no path declared, not checked
