@@ -3,14 +3,16 @@
 #
 # The schema already makes each child AC quote its plan "Done when:" verbatim
 # (ac-beadify/references/bead-schema.md), so the quote IS the trace: each plan line must
-# reappear in the text of the epic or one of its children. A deliverable the cut dropped
+# reappear in one of the epic's children — never the epic itself, whose own text would
+# cover every line without any bead doing the work. A deliverable the cut dropped
 # whole — or reworded — passes every other gate and retires with the plan; this is the
 # one check that notices. Whitespace and line wraps are normalised; the words must match.
 #
 # ASSURANCE (ac-pipeline/references/assurance-declarations.md § The four fields):
 #   PROBE:      skills/_tools/plan-coverage.test.sh — both polarities
 #   SCHEDULE:   every ac-beadify compile, before plan retirement (SKILL.md step 7);
-#               and on every CI run via scripts/run-all-proofs.sh
+#               every plan-deliver.sh stamp (the backstop); and on every CI run via
+#               scripts/run-all-proofs.sh
 #   MODE:       blocking
 #   ON-FAILURE: closed   (an unreadable board or a plan with no Done when is a refusal)
 #
@@ -39,8 +41,8 @@ norm = lambda s: " ".join(s.split())
 rows = lambda v: v if isinstance(v, list) else v.get("issues", [])
 show = json.loads(os.environ["SHOW"]); show = show[0] if isinstance(show, list) else show
 epic = os.environ["EPIC"]
-ids = {epic} | {d["id"] for d in show.get("dependents") or [] if d.get("dependency_type") == "parent-child"}
-if len(ids) == 1:
+ids = {d["id"] for d in show.get("dependents") or [] if d.get("dependency_type") == "parent-child"}
+if not ids:
     print(f"NOT-GATED: {epic} has no parent-child children"); sys.exit(2)
 text = norm(" ".join(i.get("description") or "" for i in rows(json.load(sys.stdin)) if i["id"] in ids))
 plan = open(os.environ["PLAN"]).read()

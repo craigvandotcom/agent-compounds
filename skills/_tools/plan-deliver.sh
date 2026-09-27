@@ -23,7 +23,7 @@
 #
 # Verdict tokens (one greppable line each):
 #   DELIVERED · WOULD-DELIVER (--check) · REFUSED not-beadified · REFUSED children-open N
-#   · NOOP · NOT-GATED
+#   · REFUSED coverage-gap · NOOP · NOT-GATED
 #
 # Usage: plan-deliver.sh [--check] <plan-path>   (--check runs the same checks, never writes)
 # Env:   AC2_BR_CMD (the br binary br_call reads through; default: br)
@@ -94,6 +94,26 @@ done < <(printf '%s' "$RAW" | jq -r \
 if [ "$OPEN_COUNT" -gt 0 ]; then
   echo "REFUSED children-open $OPEN_COUNT: $OPEN_COUNT non-closeout child(ren) of $EPIC still open"
   exit 1
+fi
+
+# Coverage backstop: every plan "Done when:" reached a child (plan-coverage.sh), whether
+# or not beadify ran it. Forward-only — epics created before the check existed are never
+# re-judged; a plan with no Done when (a seams source) has nothing to trace.
+COVERAGE_CUTOVER="2026-09-27T13:40:23Z"
+if grep -q 'Done when:' "$PLAN"; then
+  EPIC_ROW=$(br_call show "$EPIC" --json) \
+    || { echo "NOT-GATED: br show refused for $EPIC — coverage cannot be judged"; exit 2; }
+  EPIC_AT=$(printf '%s' "$EPIC_ROW" | jq -r 'if type == "array" then .[0] else . end | .created_at // ""')
+  [ -n "$EPIC_AT" ] || { echo "NOT-GATED: $EPIC carries no created_at — coverage cannot be judged"; exit 2; }
+  if [[ ! "$EPIC_AT" < "$COVERAGE_CUTOVER" ]]; then
+    COV=$(bash "$(dirname "${BASH_SOURCE[0]}")/plan-coverage.sh" "$PLAN" "$EPIC"); RC=$?
+    case "$RC" in
+      0) ;;
+      1) echo "REFUSED coverage-gap: a plan Done when line reached no child of $EPIC"
+         printf '%s\n' "$COV"; exit 1 ;;
+      *) echo "NOT-GATED: plan-coverage.sh — $COV"; exit 2 ;;
+    esac
+  fi
 fi
 
 if [ "$CHECK" = 1 ]; then

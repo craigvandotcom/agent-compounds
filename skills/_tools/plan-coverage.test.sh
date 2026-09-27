@@ -63,6 +63,14 @@ run
   && pass "reworded quote -> COVERAGE GAP" \
   || fail "reworded quote: expected rc 1, got $RC: $OUT"
 
+beads 'Done when: `a.sh` prints OK for input 1 and exits 0.' 'something else'
+jq '.issues[0].description = "## Success Criteria\nDone when: the cache is warm"' "$WORK/list.json" \
+  >"$WORK/l.tmp" && mv "$WORK/l.tmp" "$WORK/list.json"
+run
+[ "$RC" -eq 1 ] && echo "$OUT" | grep -qx 'COVERAGE GAP: the cache is warm' \
+  && pass "line quoted only by the epic -> COVERAGE GAP (the epic never covers)" \
+  || fail "epic-only quote: expected rc 1 naming the line, got $RC: $OUT"
+
 printf '## Deliverables\n- `a.sh` — does A.\n' >"$WORK/plan.md"
 run
 [ "$RC" -eq 1 ] && echo "$OUT" | grep -q '^REFUSED no-done-when' \

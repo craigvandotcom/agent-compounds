@@ -157,6 +157,30 @@ OUT=$("$SCRIPT" --check "$S4C/plan.md" 2>&1); RC=$?
   && pass "--check on a deliverable plan -> WOULD-DELIVER (exit 0), file untouched" \
   || fail "--check deliverable -> rc=$RC out=$OUT"
 
+# --- 4g/4h/4i: coverage backstop — forward-only by the epic's created_at -------------------
+cov_case() { # <dir> <epic created_at> <child description>
+  mkdir -p "$1/.br"
+  { mkplan "beadified: FIXEPIC"; printf -- '- `x.sh`\n  Done when: x.sh prints OK\n'; } >"$1/plan.md"
+  jq -n --arg at "$2" '{id:"FIXEPIC",title:"fixture epic",issue_type:"epic",status:"open",created_at:$at,
+    dependents:[{id:"FIXEPIC.1",dependency_type:"parent-child"}],description:"epic"}' >"$1/.br/FIXEPIC.json"
+  board_add "$1/.br" "FIXEPIC.1" closed "shipping work" task null "$3"
+  export PLAN_DELIVER_BR_STATE="$1/.br"
+  OUT=$("$SCRIPT" "$1/plan.md" 2>&1); RC=$?
+}
+cov_case "$W/s4g" "2026-09-28T00:00:00Z" "unrelated body"
+[ "$RC" -eq 1 ] && printf '%s' "$OUT" | grep -q '^REFUSED coverage-gap' \
+  && printf '%s' "$OUT" | grep -qx 'COVERAGE GAP: x.sh prints OK' && ! grep -q '^delivered:' "$W/s4g/plan.md" \
+  && pass "post-cutover epic, Done when in no child -> REFUSED coverage-gap, plan unstamped" \
+  || fail "coverage gap -> rc=$RC out=$OUT"
+cov_case "$W/s4h" "2026-09-01T00:00:00Z" "unrelated body"
+[ "$RC" -eq 0 ] && printf '%s' "$OUT" | grep -q '^DELIVERED:' \
+  && pass "pre-cutover epic -> backstop skipped, DELIVERED (forward-only)" \
+  || fail "pre-cutover -> rc=$RC out=$OUT"
+cov_case "$W/s4i" "2026-09-28T00:00:00Z" "- Done when: x.sh prints OK Probe: \`true\`"
+[ "$RC" -eq 0 ] && printf '%s' "$OUT" | grep -q '^DELIVERED:' \
+  && pass "post-cutover epic, child quotes every Done when -> DELIVERED" \
+  || fail "covered -> rc=$RC out=$OUT"
+
 # --- 5: missing plan -> NOT-GATED ----------------------------------------------------------
 export PLAN_DELIVER_BR_STATE="$S4/.br"
 OUT=$("$SCRIPT" "$S4/absent.md" 2>&1); RC=$?
