@@ -48,6 +48,7 @@ import os
 import re
 import shlex
 import shutil
+import signal
 import subprocess
 import sys
 import tempfile
@@ -337,8 +338,16 @@ _PLACEHOLDER_RE = re.compile(r"<[^>]*>")
 _BLOCKER_ID_RE = re.compile(r"^([A-Za-z][A-Za-z0-9._-]*)")
 
 
+def _is_label_token(tok):
+    """A `word:` label prefixed onto an artifact (`- ac-x.1 -> api: lib/haptics/…`,
+    `-> example-app: ~/mission/…`) — a token ending in `:` with no `/` or `.`, so a
+    real path (`docs/plan.md`, `./x.md`) or a bare `Namespace::thing` token is never
+    mistaken for one."""
+    return tok.endswith(":") and "/" not in tok and "." not in tok
+
+
 def consumes(text):
-    """Every `## Consumes` line as `{"raw","blocker","artifact","placeholder"}`.
+    """Every `## Consumes` line as `{"raw","blocker","artifact","placeholder","malformed"}`.
     Accepts `->` and the unicode `→` (normalised to `->`); the literal word `none`
     (any case, optional trailing period), alone, declares zero entries. An artifact
     naming an unfilled `<placeholder>` is flagged `placeholder: True` so a caller can
@@ -356,25 +365,51 @@ def consumes(text):
         if "->" not in line:
             continue
         blocker_part, _, artifact_part = line.partition("->")
-        m = _BLOCKER_ID_RE.match(blocker_part.strip())
-        blocker = m.group(1).rstrip("-._") if m else None
+        blocker_stripped = blocker_part.strip()
+        m = _BLOCKER_ID_RE.match(blocker_stripped)
+        # A REAL Consumes line's left side is JUST the bead id — nothing else. A
+        # multi-line bullet's own continuation prose (a sentence quoting a `-> …`
+        # edge-verification aside in backticks, e.g. "…this session: `br dep list
+        # bd-x` shows `-> bd-y (blocks)`) — the head-to-head …") also contains a
+        # bare "->" and re-parses as a bogus new entry whose "blocker" is just the
+        # sentence's leading word (`this`, `time-to-zone`, `Edge`) — a bead id never
+        # carries trailing prose after it, so any leftover text past the matched
+        # prefix means this is not a real blocker id (ac-m9y4 recheck 2026-09-27:
+        # bd-18wpl.3/.4, bd-0qske — a garbage "blocker" reached `br show`, which
+        # exited non-zero on the unresolvable id and read as NOT-GATED instead of
+        # the malformed-line defect it actually is).
+        blocker = None
+        malformed = False
+        if m:
+            leftover = blocker_stripped[m.end():].strip()
+            if leftover:
+                malformed = True
+            else:
+                blocker = m.group(1).rstrip("-._")
         artifact_remainder = artifact_part.strip()
         # An unfilled placeholder is read over the WHOLE remainder — it may spell
         # itself as a multi-word sentence (`<the artifact ac-other promises>`), not
         # just one token. The artifact itself, once it is a real path rather than a
-        # placeholder, is the first whitespace-delimited token after the arrow — a
-        # trailing note (`(this bead stops the lane pushing; …)`, `(landed)`) is
-        # commentary, never part of the path (fbde324c: "a Consumes artifact is a
-        # whole word", settled earlier in flight-check.sh; this is that same rule's
-        # one home now that flight-check reads Consumes through this reader).
+        # placeholder, is the first whitespace-delimited token after the arrow that
+        # is not a `word:` label prefix (`api:`, `example-app:` naming which app's
+        # Territory the path belongs to) — a trailing note (`(this bead stops the
+        # lane pushing; …)`, `(landed)`) is commentary, never part of the path
+        # (fbde324c: "a Consumes artifact is a whole word", settled earlier in
+        # flight-check.sh; this is that same rule's one home now that flight-check
+        # reads Consumes through this reader).
         placeholder = bool(artifact_remainder and _PLACEHOLDER_RE.search(artifact_remainder))
-        artifact_tokens = artifact_remainder.split()
-        artifact = artifact_tokens[0] if artifact_tokens else None
+        artifact = None
+        for tok in artifact_remainder.split():
+            if _is_label_token(tok):
+                continue
+            artifact = tok
+            break
         out.append({
             "raw": raw_line,
             "blocker": blocker,
             "artifact": artifact,
             "placeholder": placeholder,
+            "malformed": malformed,
         })
     return out
 
@@ -552,18 +587,36 @@ def probe_is_executable(cmd):
 
 def run_probe(cmd, timeout=60):
     """Run a probe once and return its exit code (124 on a timeout — bounded, per the
-    bead's own Gotcha: probe execution must stay bounded, never watch a runaway)."""
+    bead's own Gotcha: probe execution must stay bounded, never watch a runaway).
+
+    Runs `sh -c cmd` in its OWN process group (`start_new_session=True`) and, on a
+    timeout, kills the WHOLE group — not just the `sh` pid. A plain `subprocess.run(...,
+    timeout=)` only ever kills the direct child: a probe that shells out to a longer-
+    running grandchild (`pnpm vitest`, a backgrounded `&` job — `sh` job control keeps a
+    non-interactive backgrounded job in the SAME process group as `sh`) outlives `sh`'s
+    own death as an orphan, still running with real side effects well past the point the
+    caller believes the probe is done (ac-m9y4 recheck 2026-09-27: observed 140s past
+    return)."""
     try:
-        r = subprocess.run(
+        proc = subprocess.Popen(
             ["sh", "-c", cmd],
             stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
-            timeout=timeout,
+            start_new_session=True,
         )
-        return r.returncode
-    except subprocess.TimeoutExpired:
-        return 124
     except OSError:
         return 127
+    try:
+        return proc.wait(timeout=timeout)
+    except subprocess.TimeoutExpired:
+        try:
+            os.killpg(os.getpgid(proc.pid), signal.SIGKILL)
+        except (ProcessLookupError, PermissionError, OSError):
+            pass
+        try:
+            proc.wait(timeout=5)
+        except subprocess.TimeoutExpired:
+            pass
+        return 124
 
 
 def _has_grep_dash_c(cmd):
@@ -608,6 +661,24 @@ def _split_clauses(cmd):
     return [c.strip() for c in re.split(r"&&|\|\||;", cmd or "") if c.strip()]
 
 
+_SUPABASE_CLI_RE = re.compile(
+    r"(?:^|[;&|(]|\$\()\s*"
+    r"(?:(?:npx|pnpx|bunx|yarn)\s+|pnpm\s+(?:exec\s+)?)?"
+    r"supabase\b"
+)
+
+
+def _invokes_supabase_cli(cmd):
+    """True only when `supabase` is INVOKED as a command word — leading the probe, or
+    right after a `;`/`&&`/`||`/`|`/`(`/`$(` separator, optionally through `npx`/`pnpx`/
+    `pnpm [exec]`/`bunx`/`yarn` — never a bare substring match. A probe merely NAMING
+    a path that contains "supabase" (`supabase/migrations/*.sql`,
+    `lib/supabase/types.ts`, a `__tests__/supabase-integration/*.test.ts` file) is never
+    banned by this leg (ac-m9y4 recheck 2026-09-27: 28 of the recheck's refused probes
+    were a path mention, not a CLI call)."""
+    return bool(_SUPABASE_CLI_RE.search(cmd or ""))
+
+
 def _is_echo_only(cmd):
     """Every top-level clause is a bare `echo` — an echo cannot fail, so a probe built
     entirely from them certifies nothing (a negated `! grep …` clause is NOT echo, and is
@@ -635,7 +706,7 @@ def probe_shape_violation(cmd):
         return "bare `pnpm exec vitest run` runs the WHOLE suite; scope it to this bead's own test file"
     if _PNPM_WHOLE_TEST_RE.search(cmd):
         return "bare `pnpm test`/`pnpm test:all` runs the WHOLE suite; name this bead's own test file"
-    if re.search(r"\bsupabase\b", cmd):
+    if _invokes_supabase_cli(cmd):
         return "invokes `supabase` directly; a probe never drives a live/whole-environment command"
     if re.search(r"\bdb:reset\b", cmd):
         return "invokes `db:reset`, which wipes data; a probe never runs a destructive command"
@@ -733,6 +804,18 @@ def consumes_violations(cons_entries, root, resolve_blocker=None):
             continue
         full = expand_cross_repo(artifact) if is_cross_repo(artifact) else os.path.join(root, artifact)
         if os.path.exists(full):
+            continue
+        if c.get("malformed"):
+            # The left side of this line is not a bead id at all (a continuation
+            # line's own prose re-parsed as a bogus new entry — a bead id never
+            # carries trailing text after it). Reported here, by name, rather than
+            # handed to `br show` — an unresolvable garbage id there exits non-zero
+            # and reads as a confusing NOT-GATED instead of the malformed-line
+            # defect it actually is.
+            refused.append(
+                f"Consumes: malformed line — the left side is not a bead id "
+                f"({c['raw'].strip()})"
+            )
             continue
         blocker = c.get("blocker")
         if not blocker:

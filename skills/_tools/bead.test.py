@@ -121,6 +121,63 @@ check(cons_noted[1]["blocker"] == "upstream"
       and cons_noted[1]["placeholder"] is False,
       "consumes: a short trailing note ('(landed)') is dropped too", cons_noted[1])
 
+# A Consumes line may carry a `word:` LABEL before the artifact path (which app/Territory
+# it belongs to) — the artifact is the first token after the arrow that is not a label
+# (ac-m9y4 recheck 2026-09-27: `- bd-sp6n0.1 -> api: lib/haptics/feedback.ts` read
+# artifact='api:', a false Consumes-artifact-absent refusal).
+cons_labeled = bead.consumes(
+    "- bd-sp6n0.1 -> api: lib/haptics/feedback.ts (exports selectionStart)\n"
+    "- ac-14s1.9 -> example-app: ~/mission/software/example-app/.compounds/reviews/\n"
+)
+check(len(cons_labeled) == 2, "consumes: labeled-artifact fixture parses two lines", cons_labeled)
+check(cons_labeled[0]["blocker"] == "bd-sp6n0.1"
+      and cons_labeled[0]["artifact"] == "lib/haptics/feedback.ts",
+      "consumes: a `word:` label before the path is skipped, the path is the artifact",
+      cons_labeled[0])
+check(cons_labeled[1]["blocker"] == "ac-14s1.9"
+      and cons_labeled[1]["artifact"] == "~/mission/software/example-app/.compounds/reviews/",
+      "consumes: a `word:` label before a cross-repo ~/ path is skipped too",
+      cons_labeled[1])
+
+# A multi-line Consumes bullet's own CONTINUATION prose (quoting an edge-verification
+# `-> id (blocks)` aside in backticks) re-parses, line by line, as a bogus new entry —
+# its "blocker" is just the sentence's leading word, never a real bead id. The left side
+# of a REAL Consumes line is nothing but the id; any leftover text past the matched
+# prefix means `malformed: True`, and the garbage word is never carried as `blocker`
+# (ac-m9y4 recheck 2026-09-27: bd-18wpl.3/.4, bd-0qske — a garbage blocker id reached
+# `br show`, which exited non-zero and read as a confusing NOT-GATED).
+cons_continuation = bead.consumes(
+    "- bd-18wpl.2 -> the early-emit mechanism in `runZonePipelineV5`, proven not to regress\n"
+    "  time-to-zone (edge verified this session: `-> bd-18wpl.2 (blocks)`) — cutting over\n"
+    "  before this lands would regress the headline benefit\n"
+)
+check(len(cons_continuation) == 2,
+      "consumes: a continuation line re-parses as a second (bogus) entry", cons_continuation)
+check(cons_continuation[0]["blocker"] == "bd-18wpl.2" and cons_continuation[0]["malformed"] is False,
+      "consumes: the real bullet line is clean", cons_continuation[0])
+check(cons_continuation[1]["blocker"] is None and cons_continuation[1]["malformed"] is True,
+      "consumes: the continuation line's bogus 'blocker' (time-to-zone) is never carried — "
+      "flagged malformed instead", cons_continuation[1])
+
+check(bead.consumes("- ac-x.1 -> real/path.md")[0]["malformed"] is False,
+      "consumes: an ordinary clean line is never flagged malformed")
+
+# consumes_violations must REFUSE a malformed entry by name and never call resolve_blocker
+# on its garbage "blocker" (the NOT-GATED-via-`br-show-exit-3` cascade this replaces).
+def _resolve_blocker_must_not_be_called(bid):
+    raise AssertionError(f"resolve_blocker must not be called for a malformed line (got {bid!r})")
+
+
+import tempfile as _tempfile_early  # noqa: E402 (used once, ahead of the later `import tempfile as _tf`)
+
+r_malformed = bead.consumes_violations(
+    [cons_continuation[1]], _tempfile_early.mkdtemp(),
+    resolve_blocker=_resolve_blocker_must_not_be_called,
+)
+check(len(r_malformed[0]) == 1 and "malformed" in r_malformed[0][0] and r_malformed[1] == [],
+      "consumes_violations: a malformed line is REFUSED by name, never NOT-GATED via br show",
+      r_malformed)
+
 # =====================================================================================
 # Delivers: repo-root file, dot-leading extensionless, cross-repo ~/, deleted-<kind>:,
 # the touchers-line exclusion, and the dotted-child-bead-id false-positive
@@ -371,6 +428,39 @@ check(bead.probe_shape_violation('bash scripts/run-all-proofs.sh') is not None,
       "probe_shape_violation: run-all-proofs.sh is banned (the whole-suite CI script)")
 check(bead.probe_shape_violation('supabase db push --linked') is not None,
       "probe_shape_violation: a direct supabase invocation is banned")
+
+# The `supabase` leg bans an INVOCATION of the CLI, never a bare substring — a probe
+# naming a path (a migration file, a generated types file, an integration test name)
+# that merely CONTAINS the word must pass clean (ac-m9y4 recheck 2026-09-27: 28 refused
+# probes across two repos were a path mention, none an actual CLI call).
+check(bead.probe_shape_violation(
+      'grep -q "no email column" .claude/skills/CORE/supabase.md') is None,
+      "probe_shape_violation: 'supabase' inside a file PATH is not an invocation")
+check(bead.probe_shape_violation(
+      "test -f supabase/migrations/20260101_x.sql") is None,
+      "probe_shape_violation: a supabase/migrations/*.sql path mention is not an invocation")
+check(bead.probe_shape_violation(
+      "grep -q export lib/supabase/types.generated.ts") is None,
+      "probe_shape_violation: a lib/supabase/*.ts path mention is not an invocation")
+check(bead.probe_shape_violation(
+      "grep -q 'globalSetup' vitest.integration.local.config.mts && "
+      "npx vitest run --config vitest.integration.local.config.mts "
+      "__tests__/supabase-integration/food-slug-allowlist.integration.test.ts") is None,
+      "probe_shape_violation: a __tests__/supabase-integration/*.test.ts path mention "
+      "(no CLI call) is not an invocation")
+check(bead.probe_shape_violation('supabase db reset') is not None,
+      "probe_shape_violation: a bare `supabase db reset` invocation is still banned")
+check(bead.probe_shape_violation('npx supabase db push') is not None,
+      "probe_shape_violation: `npx supabase db push` (npx wrapper) is still banned")
+check(bead.probe_shape_violation('pnpm supabase db reset') is not None,
+      "probe_shape_violation: `pnpm supabase db reset` (pnpm wrapper) is still banned")
+check(bead.probe_shape_violation('pnpm exec supabase db reset') is not None,
+      "probe_shape_violation: `pnpm exec supabase db reset` is still banned")
+check(bead.probe_shape_violation('true && supabase db reset') is not None,
+      "probe_shape_violation: `supabase` after a `&&` clause separator is still banned")
+check(bead.probe_shape_violation('cd app; supabase db reset') is not None,
+      "probe_shape_violation: `supabase` after a `;` clause separator is still banned")
+
 check(bead.probe_shape_violation('pnpm db:reset') is not None,
       "probe_shape_violation: db:reset is banned (destructive)")
 check(bead.probe_shape_violation('pnpm db:verify') is not None,
@@ -385,6 +475,45 @@ check(bead.probe_shape_violation('! grep -q "banned" x.py') is None,
       "probe_shape_violation: a negated grep (asserts absence) still runs something — not banned")
 check(bead.probe_shape_violation('bash skills/_tools/x.test.sh') is None,
       "probe_shape_violation: an ordinary scoped test file is clean")
+
+# --- run_probe: a timeout kills the WHOLE process group, not just the `sh` child --------
+#
+# A non-interactive `sh -c '... &'` keeps a backgrounded job in the SAME process group as
+# `sh` itself — killing only `sh`'s own pid on timeout leaves it running as an orphan
+# (ac-m9y4 recheck 2026-09-27: a `pnpm vitest` grandchild outlived its probe's own
+# timeout by 140s). Prove it directly: background a long sleep, capture its pid, run a
+# short-timeout probe that never returns on its own, then confirm the backgrounded pid is
+# dead once run_probe has returned.
+
+import time as _time_early  # noqa: E402 (used once, ahead of any later import)
+
+_pg_dir = _tempfile_early.mkdtemp()
+_pg_pidfile = os.path.join(_pg_dir, "leaked.pid")
+_pg_cmd = f"(sleep 20 & echo $! > {_pg_pidfile}); sleep 20"
+_pg_rc = bead.run_probe(_pg_cmd, timeout=1)
+check(_pg_rc == 124, "run_probe: a probe exceeding its timeout returns 124", _pg_rc)
+
+_time_early.sleep(0.5)  # let SIGKILL delivery + reaping settle
+_pg_leaked_pid = None
+if os.path.exists(_pg_pidfile):
+    with open(_pg_pidfile) as _pg_fh:
+        _pg_raw = _pg_fh.read().strip()
+        _pg_leaked_pid = int(_pg_raw) if _pg_raw.isdigit() else None
+_pg_still_alive = False
+if _pg_leaked_pid:
+    try:
+        os.kill(_pg_leaked_pid, 0)
+        _pg_still_alive = True
+    except ProcessLookupError:
+        _pg_still_alive = False
+    except PermissionError:
+        _pg_still_alive = True
+check(_pg_leaked_pid is not None,
+      "run_probe: the backgrounded grandchild's pid was captured (fixture sanity)",
+      _pg_pidfile)
+check(_pg_still_alive is False,
+      "run_probe: a timeout kills the WHOLE process group — a backgrounded grandchild "
+      "must not outlive it", (_pg_leaked_pid, _pg_still_alive))
 
 # --- probe_red_violations: RED-at-HEAD, the human-gate exemption, NOT-EXECUTED ------
 
