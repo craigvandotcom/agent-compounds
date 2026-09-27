@@ -82,6 +82,7 @@ def flag_continuation(rows, i):
 SANCTIONED = frozenset({
     "skills/_tools/br-call.sh",
     "skills/ac-polish/scripts/bead-artifact.py",
+    "skills/_tools/bead.py",
 })
 
 
