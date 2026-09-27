@@ -234,8 +234,7 @@ skips the flight check or the close gate.
 - No eligible bead after re-picking (§1) — the NORMAL end: the queue is dry, not permission
   spent.
 - You were given a `--cap N` and you have closed N beads.
-- The same bead fails §5 twice → comment why, then unclaim it (§9's `--status open` write —
-  `blocked` parks a bead no scan reopens) and continue with the next bead. The bead stops; you
-  do not.
+- The same bead fails §5 twice → comment why, unclaim it (§9's `--status open` write; `blocked`
+  parks a bead no scan reopens), continue with the next bead. The bead stops; you do not.
 - Context running low → finish §6–§7 for the bead in hand if past §4, otherwise unclaim and
   exit. Never leave a claim held by a session that has stopped.
