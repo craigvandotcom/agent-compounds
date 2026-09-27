@@ -311,7 +311,7 @@ if [ -z "$FAIL_CLASS" ]; then
   while IFS= read -r v; do
     [ -n "$v" ] || continue
     ENV_CHECKED=$(( ENV_CHECKED + 1 ))
-    if [ -z "$(eval "printf '%s' \"\${$v:-}\"" 2>/dev/null)" ]; then
+    if [ -z "${!v:-}" ]; then
       premise_failed ENVIRONMENT "required environment variable '$v' is unset or empty in this environment"
       break
     fi
