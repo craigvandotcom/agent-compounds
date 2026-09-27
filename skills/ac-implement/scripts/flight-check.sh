@@ -199,6 +199,23 @@ echo "flight-check: $BEAD @ $(git rev-parse --short HEAD 2>/dev/null || echo no-
 # An open blocker with its artifact already present is still a premise failure — the
 # artifact is not yet the committed thing this bead was refined against.
 
+# consumed_paths <text> — the artifacts a Consumes line names, one per line. A path is a whole
+# whitespace word (wrapping punctuation stripped, never truncated) that is `~/`- or `.`-rooted,
+# ends in `/`, or carries an extension; any other slash word is prose (N/A, D4a/D4b) and is not
+# checked. `~/` resolves against $HOME; a `<placeholder>` becomes a `*` glob.
+consumed_paths() {
+  local words w last
+  read -ra words <<<"$1"
+  [ "${#words[@]}" -gt 0 ] || return 0
+  printf '%s\n' "${words[@]}" | sed -E "s/^[(\"'\`[]+//; s/[])\"'\`,;:.]+\$//" | while IFS= read -r w; do
+    case $w in */*) ;; *) continue ;; esac
+    last=${w%/}; last=${last##*/}
+    case $w in '~/'*|.*|*/) ;; *) case $last in *.[A-Za-z0-9]*) ;; *) continue ;; esac ;; esac
+    case $w in '~/'*) w="$HOME/${w#\~/}" ;; esac
+    printf '%s\n' "$w" | sed -E 's/<[^>]*>/*/g'
+  done
+}
+
 CONSUMES=$(section "Consumes" | sed 's/^[[:space:]]*-[[:space:]]*//' | grep -v '^[[:space:]]*$')
 CONSUME_LINES=0
 BEAD_PARENT=""
@@ -212,14 +229,17 @@ if [ -n "$CONSUMES" ] && ! printf '%s' "$CONSUMES" | grep -qiE '^none\.?$'; then
     # include them, and a trailing separator run is trimmed (a "-/._" tail can only
     # come from the arrow or punctuation, never from a minted id).
     blocker=$(printf '%s' "$line" | sed -n 's/^\([A-Za-z][A-Za-z0-9._-]*\).*/\1/p' | sed 's/[-._]*$//')
-    artifacts=$(printf '%s' "${line#*->}" | grep -oE '[A-Za-z0-9_.][A-Za-z0-9_./-]*/[A-Za-z0-9_.][A-Za-z0-9_./-]*' || true)
-    for a in $artifacts; do
-      a="${a%.}"
-      if [ ! -e "$a" ]; then
-        premise_failed CONSUMES "consumed artifact '$a' (from ${blocker:-an unnamed blocker}) is not on the tree"
-        break 2
-      fi
-    done
+    absent=""
+    while IFS= read -r a; do
+      [ -n "$a" ] || continue
+      case $a in *'*'*) compgen -G "$a" >/dev/null ;; *) [ -e "$a" ] ;; esac || { absent=$a; break; }
+    done <<EOF
+$(consumed_paths "${line#*->}")
+EOF
+    if [ -n "$absent" ]; then
+      premise_failed CONSUMES "consumed artifact '$absent' (from ${blocker:-an unnamed blocker}) is not on the tree"
+      break
+    fi
     if [ -n "$blocker" ]; then
       if ! command -v br >/dev/null 2>&1 || ! command -v jq >/dev/null 2>&1; then
         echo "NOT-GATED: '$line' names blocker '$blocker' but br/jq are unavailable — closure unverifiable" >&2

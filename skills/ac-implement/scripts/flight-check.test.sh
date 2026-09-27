@@ -147,6 +147,27 @@ run "$WORK/bodies/consumes-ok.md"
 [ "$RUN_RC" -eq 0 ] && ok "CONSUMES clears when the artifact is present" \
   || bad "CONSUMES(ok): expected exit 0, got $RUN_RC: $RUN_OUT"
 
+# 2a'' A path is a whole word: `~/` resolves against $HOME, prose slashes (N/A) are not
+# paths, route groups and placeholders are not truncated, and an absent `~/` path still refuses.
+mkdir -p "$WORK/home/other-repo" "$WORK/root/app/(g)/[id]" "$WORK/root/mig"
+: >"$WORK/home/other-repo/.gitignore"; : >"$WORK/root/app/(g)/[id]/page.tsx"; : >"$WORK/root/mig/20260927_x.sql"
+cat >"$WORK/bodies/consumes-words.md" <<'BODY'
+## Acceptance Criteria
+- Something.
+  Probe: `test -e ./nope.md` — tier: none
+
+## Consumes
+- upstream -> other: ~/other-repo/.gitignore and app/(g)/[id]/page.tsx (N/A, D4a/D4b); mig/<ts>_x.sql
+BODY
+run "$WORK/bodies/consumes-words.md" HOME="$WORK/home"
+[ "$RUN_RC" -eq 0 ] && ok "CONSUMES reads ~/, route-group, placeholder paths whole and skips prose" \
+  || bad "CONSUMES(words): expected exit 0, got $RUN_RC: $RUN_OUT"
+sed 's|~/other-repo/.gitignore|~/other-repo/absent.md|' "$WORK/bodies/consumes-words.md" >"$WORK/bodies/consumes-home-absent.md"
+run "$WORK/bodies/consumes-home-absent.md" HOME="$WORK/home"
+[ "$RUN_RC" -eq 1 ] && printf '%s' "$RUN_OUT" | grep -q "$WORK/home/other-repo/absent.md" \
+  && ok "CONSUMES still refuses an absent ~/ path, named where it was looked for" \
+  || bad "CONSUMES(home-absent): expected refusal naming the expanded path, got rc=$RUN_RC: $RUN_OUT"
+
 # A parent-child citation is containment, not a closure premise. The schema forbids the
 # citation, but flight-check must not deadlock a legacy/malformed child if one survives.
 cat >"$WORK/bodies/consumes-parent.md" <<'BODY'
