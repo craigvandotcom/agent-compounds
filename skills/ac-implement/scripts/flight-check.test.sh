@@ -66,24 +66,25 @@ case "${1:-}" in
       *) exit 3 ;;  # exact-id miss: not on the board under that spelling
     esac ;;
   list)
-    # Real br 0.1.14: refuses an unknown flag (exit 2) or status (INVALID_STATUS, exit 4),
-    # answers a BARE array, and omits closed rows unless --all — a stub that serves an
-    # {issues:…} envelope to any argv proves nothing about the call the gate makes.
+    # Real br 0.5.12 (measured 2026-09-27): refuses an unknown flag (exit 2) or status
+    # (VALIDATION_FAILED, exit 4), accepts --status all, answers `list` with the
+    # {issues, total, limit, offset, has_more} envelope, and omits closed rows unless
+    # --all / --status all. A stub that accepts any argv proves nothing about the call made.
     shift; all=""
     while [ $# -gt 0 ]; do
       case "$1" in
         --json) ;;
         --all|-a) all=1 ;;
         --limit) [[ "${2-}" =~ ^[0-9]+$ ]] || { echo "error: invalid --limit" >&2; exit 2; }; shift ;;
-        --status) case "${2-}" in open|in_progress|blocked|deferred|closed) ;; *)
-                    printf '{"error":{"code":"INVALID_STATUS","message":"Invalid status: %s"}}\n' "${2-}"; exit 4 ;; esac
+        --status) case "${2-}" in all) all=1 ;; open|in_progress|blocked|deferred|closed) ;; *)
+                    printf '{"error":{"code":"VALIDATION_FAILED","message":"Invalid status: %s"}}\n' "${2-}"; exit 4 ;; esac
                   shift ;;
         *) printf "error: unexpected argument '%s' found\n" "$1" >&2; exit 2 ;;
       esac
       shift
     done
     echo '[{"id":"upstream","status":"closed"},{"id":"bd-epic-kb-seams-573x7.1","status":"closed"},{"id":"bd-epic-ing-ownership-k2mpd.1","status":"closed"}]' \
-      | jq -c --arg all "$all" 'if $all == "1" then . else map(select(.status != "closed")) end' ;;
+      | jq -c --arg all "$all" 'if $all == "1" then . else map(select(.status != "closed")) end | {issues: ., total: length, limit: 0, offset: 0, has_more: false}' ;;
   *) echo '{}' ;;
 esac
 STUB

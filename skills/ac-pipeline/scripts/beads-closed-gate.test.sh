@@ -95,9 +95,10 @@ if [ "$1" = "show" ]; then
   exit 0
 fi
 if [ "$1" = "list" ]; then
-  # Real br 0.1.14: refuses an unknown flag (exit 2) or status (INVALID_STATUS, exit 4),
-  # answers a BARE array, and omits closed rows unless --all. A stub that serves an
-  # {issues:…} envelope to any argv proves nothing about the call the gate makes.
+  # Real br 0.5.12 (measured 2026-09-27): refuses an unknown flag (exit 2) or status
+  # (VALIDATION_FAILED, exit 4), accepts --status all, answers `list` with the
+  # {issues, total, limit, offset, has_more} envelope, and omits closed rows unless
+  # --all / --status all. A stub that accepts any argv proves nothing about the call made.
   shift
   assignee=""; all=""
   while [ $# -gt 0 ]; do
@@ -106,8 +107,8 @@ if [ "$1" = "list" ]; then
       --all|-a) all=1 ;;
       --assignee) assignee="${2-}"; shift ;;
       --limit) [[ "${2-}" =~ ^[0-9]+$ ]] || { echo "error: invalid --limit" >&2; exit 2; }; shift ;;
-      --status) case "${2-}" in open|in_progress|blocked|deferred|closed) ;; *)
-                  printf '{"error":{"code":"INVALID_STATUS","message":"Invalid status: %s"}}\n' "${2-}"; exit 4 ;; esac
+      --status) case "${2-}" in all) all=1 ;; open|in_progress|blocked|deferred|closed) ;; *)
+                  printf '{"error":{"code":"VALIDATION_FAILED","message":"Invalid status: %s"}}\n' "${2-}"; exit 4 ;; esac
                 shift ;;
       *) printf "error: unexpected argument '%s' found\n" "$1" >&2; exit 2 ;;
     esac
@@ -115,9 +116,9 @@ if [ "$1" = "list" ]; then
   done
   fx="${FIXTURE_DIR:-}/${assignee}.json"
   if [ -n "$assignee" ] && [ -f "$fx" ]; then
-    jq -c --arg all "$all" 'if $all == "1" then . else map(select(.status != "closed")) end' "$fx"
+    jq -c --arg all "$all" 'if $all == "1" then . else map(select(.status != "closed")) end | {issues: ., total: length, limit: 0, offset: 0, has_more: false}' "$fx"
   else
-    echo '[]'
+    echo '{"issues":[],"total":0,"limit":0,"offset":0,"has_more":false}'
   fi
 fi
 EOF

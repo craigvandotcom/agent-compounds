@@ -92,9 +92,11 @@ MOCK="$WORK/bin"; mkdir -p "$MOCK"
 REPO="$WORK/repo"; mkdir -p "$REPO"
 ( cd "$REPO" && git init -q -b main . && git config user.email t@t && git config user.name t \
   && printf 'x\n' >f.txt && git add f.txt && git commit -qm init )
-# Real br 0.1.14 shapes: `list` refuses an unknown flag (exit 2) or status (INVALID_STATUS,
-# exit 4) and answers a BARE array. A stub that accepts any argv proves nothing about the
-# call the scan makes. BR_MODE bends one answer at a time.
+# Real br 0.5.12 (measured 2026-09-27): refuses an unknown flag (exit 2) or status
+# (VALIDATION_FAILED, exit 4), accepts --status all, answers `list` with the
+# {issues, total, limit, offset, has_more} envelope, and omits closed rows unless
+# --all / --status all. A stub that accepts any argv proves nothing about the call made.
+# BR_MODE bends one answer at a time: bare-array is br 0.1.14's shape, still read.
 cat >"$MOCK/br" <<'EOF'
 #!/usr/bin/env bash
 ROW='{"id":"bd-x","updated_at":"2026-09-01T00:00:00Z","created_at":"2026-08-01T00:00:00Z"}'
@@ -106,17 +108,17 @@ case "$1" in
       case "$1" in
         --json|--all|-a) ;;
         --limit) [[ "${2-}" =~ ^[0-9]+$ ]] || { echo "error: invalid --limit" >&2; exit 2; }; shift ;;
-        --status) case "${2-}" in open|in_progress|blocked|deferred|closed) ;; *)
-                    printf '{"error":{"code":"INVALID_STATUS","message":"Invalid status: %s"}}\n' "${2-}"; exit 4 ;; esac
+        --status) case "${2-}" in all) all=1 ;; open|in_progress|blocked|deferred|closed) ;; *)
+                    printf '{"error":{"code":"VALIDATION_FAILED","message":"Invalid status: %s"}}\n' "${2-}"; exit 4 ;; esac
                   shift ;;
         *) printf "error: unexpected argument '%s' found\n" "$1" >&2; exit 2 ;;
       esac
       shift
     done
     case "${BR_MODE:-ok}" in
-      envelope)   printf '{"issues":[%s]}\n' "$ROW" ;;
+      bare-array) printf '[%s]\n' "$ROW" ;;
       unreadable) echo '{"total":1}' ;;
-      *)          printf '[%s]\n' "$ROW" ;;
+      *)          printf '{"issues":[%s],"total":1,"limit":0,"offset":0,"has_more":false}\n' "$ROW" ;;
     esac
     exit 0 ;;
 esac
@@ -130,12 +132,13 @@ if [ "$RC" -eq 2 ] && printf '%s' "$OUT" | grep -q 'board-truth: NOT-GATED'; the
   printf '  PASS  a br that exits non-zero is a NOT-GATED (rc 2), never a clean 0\n'
 else printf '  FAIL  doctor-fail: rc=%s out=%s\n' "$RC" "$OUT"; FAILURES=$((FAILURES + 1)); fi
 
-# br 0.1.14 answers `list --json` with a BARE array — the real shape must scan, not refuse.
-for mode in ok envelope; do
+# br 0.5.12 answers `list --json` with the {issues, …} envelope; 0.1.14 answered a bare
+# array. Both must scan, not refuse.
+for mode in ok bare-array; do
   CASES=$((CASES + 1))
   OUT=$(PATH="$MOCK:$PATH" BR_MODE=$mode "$TARGET" --repo "$REPO" 2>&1); RC=$?
   if [ "$RC" -eq 0 ] && printf '%s' "$OUT" | grep -q 'board-truth: 0 open bead(s)'; then
-    printf '  PASS  a %s br list answer is read and scanned (rc 0)\n' "$([ $mode = ok ] && echo bare-array || echo "{issues:…}")"
+    printf '  PASS  a %s br list answer is read and scanned (rc 0)\n' "$([ $mode = ok ] && echo "{issues:…}" || echo bare-array)"
   else printf '  FAIL  %s: rc=%s out=%s\n' "$mode" "$RC" "$OUT"; FAILURES=$((FAILURES + 1)); fi
 done
 

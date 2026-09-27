@@ -131,16 +131,18 @@ case "$cmd" in
     append_comment "$cid" "$body"
     exit 0 ;;
   list)
-    # Real br 0.1.14: refuses an unknown flag (exit 2) or status (INVALID_STATUS, exit 4),
-    # answers a BARE array of the board, and omits closed rows unless --all.
+    # Real br 0.5.12 (measured 2026-09-27): refuses an unknown flag (exit 2) or status
+    # (VALIDATION_FAILED, exit 4), accepts --status all, answers `list` with the
+    # {issues, total, limit, offset, has_more} envelope, and omits closed rows unless
+    # --all / --status all. A stub that accepts any argv proves nothing about the call made.
     all=""
     while [ $# -gt 0 ]; do
       case "$1" in
         --json) ;;
         --all|-a) all=1 ;;
         --limit) [[ "${2-}" =~ ^[0-9]+$ ]] || { echo "error: invalid --limit" >&2; exit 2; }; shift ;;
-        --status) case "${2-}" in open|in_progress|blocked|deferred|closed) ;; *)
-                    printf '{"error":{"code":"INVALID_STATUS","message":"Invalid status: %s"}}\n' "${2-}"; exit 4 ;; esac
+        --status) case "${2-}" in all) all=1 ;; open|in_progress|blocked|deferred|closed) ;; *)
+                    printf '{"error":{"code":"VALIDATION_FAILED","message":"Invalid status: %s"}}\n' "${2-}"; exit 4 ;; esac
                   shift ;;
         *) printf "error: unexpected argument '%s' found\n" "$1" >&2; exit 2 ;;
       esac
@@ -149,7 +151,7 @@ case "$cmd" in
     for f in "$STATE"/*.json; do
       case "$f" in *.comments.json) continue ;; esac
       [ -f "$f" ] && jq -c 'if type == "array" then .[] else . end' "$f"
-    done | jq -s -c --arg all "$all" 'if $all == "1" then . else map(select(.status != "closed")) end'
+    done | jq -s -c --arg all "$all" 'if $all == "1" then . else map(select(.status != "closed")) end | {issues: ., total: length, limit: 0, offset: 0, has_more: false}'
     exit 0 ;;
   *) exit 0 ;;
 esac
@@ -818,7 +820,7 @@ else fail "AC3l: no TRIAGE-CLOSE record landed on the bead"; fi
 
 # --- 3l': the SAME cascade, the blocker cited by a unique id PREFIX. `br show` matches exact
 # ids only, so the gate resolves through `br list` — which must carry --all (the blocker is
-# closed) and read br's bare-array answer, or the cascade silently never holds.
+# closed) and read br's list answer (0.5.12's envelope or 0.1.14's bare array), or the cascade silently never holds.
 R="$(mkcase cascade-accept-prefix)"
 cat >"$R/body.md" <<'BODY'
 ## Acceptance Criteria

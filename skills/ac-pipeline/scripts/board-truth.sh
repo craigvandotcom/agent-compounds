@@ -103,7 +103,7 @@ if command -v br >/dev/null 2>&1 && command -v jq >/dev/null 2>&1; then
     || { echo "board-truth: NOT-GATED — 'br doctor health' failed; this binary refuses the board" >&2; exit 2; }
   OPEN_JSON=$(br_call list --status open --limit 0 --json) \
     || { echo "board-truth: NOT-GATED — the br list read refused; the board is unreadable" >&2; exit 2; }
-  # br 0.1.14 answers a BARE array; an {issues: […]} envelope is read the same way.
+  # br 0.5.12 answers an {issues: […]} envelope; br 0.1.14 answered a bare array. Both are read.
   if ! printf '%s' "$OPEN_JSON" | jq -e 'type == "array" or (type == "object" and (.issues | type) == "array")' >/dev/null 2>&1; then
     echo "board-truth: NOT-GATED — the br list read returned no row array; the board shape is unreadable" >&2
     exit 2

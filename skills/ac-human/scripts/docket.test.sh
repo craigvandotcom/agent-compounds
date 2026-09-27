@@ -97,9 +97,10 @@ json.dump({"generated": TODAY, "lanes": [], "errors": [],
           open(f"{R}/memory.json", "w"))
 PY
 
-# Stub br in real br 0.1.14 shapes: `list` refuses an unknown flag (exit 2) or status
-# (INVALID_STATUS, exit 4), answers a BARE array, and omits closed rows unless --all. A stub
-# that serves an {issues:…} envelope to any argv proves nothing about the call docket makes.
+# Real br 0.5.12 (measured 2026-09-27): refuses an unknown flag (exit 2) or status
+# (VALIDATION_FAILED, exit 4), accepts --status all, answers `list` with the
+# {issues, total, limit, offset, has_more} envelope, and omits closed rows unless
+# --all / --status all. A stub that accepts any argv proves nothing about the call made.
 cat > "$W/br" <<'EOF'
 #!/usr/bin/env bash
 [ -n "${BR_FAIL:-}" ] && { echo '{"error":{"message":"db locked"}}'; exit 1; }
@@ -111,14 +112,14 @@ while [ $# -gt 0 ]; do
     --json) ;;
     --all|-a) all=1 ;;
     --limit) [[ "${2-}" =~ ^[0-9]+$ ]] || bad_arg "$1"; shift ;;
-    --status) case "${2-}" in open|in_progress|blocked|deferred|closed) ;; *)
-                printf '{"error":{"code":"INVALID_STATUS","message":"Invalid status: %s"}}\n' "${2-}"; exit 4 ;; esac
+    --status) case "${2-}" in all) all=1 ;; open|in_progress|blocked|deferred|closed) ;; *)
+                printf '{"error":{"code":"VALIDATION_FAILED","message":"Invalid status: %s"}}\n' "${2-}"; exit 4 ;; esac
               shift ;;
     *) bad_arg "$1" ;;
   esac
   shift
 done
-jq -c --arg all "$all" 'if $all == "1" then . else map(select(.status != "closed" and .status != "tombstone")) end' "$BOARD_JSON"
+jq -c --arg all "$all" 'if $all == "1" then . else map(select(.status != "closed" and .status != "tombstone")) end | {issues: ., total: length, limit: 0, offset: 0, has_more: false}' "$BOARD_JSON"
 EOF
 chmod +x "$W/br"
 export BOARD_JSON="$R/board.json" AC2_BR_CMD="$W/br" AC_HUMAN_FRICTION_CMD="cat '$R/frictions.json'" AC_HUMAN_MEMORY_CMD="cat '$R/memory.json'"

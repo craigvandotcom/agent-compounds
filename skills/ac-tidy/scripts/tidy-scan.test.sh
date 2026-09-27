@@ -13,10 +13,11 @@ W=$(mktemp -d); trap 'rm -rf "$W"' EXIT
 R="$W/repo"; mkdir -p "$R/_backlog/pool" "$R/_backlog/_done" "$R/_plans" "$R/.beads" "$W/bin"
 git -C "$R" init -q
 
-# Stub br in real br 0.1.14 shapes: refuses an unknown flag (exit 2) or status
-# (INVALID_STATUS, exit 4); `list` answers a BARE array and omits closed rows unless --all;
-# `show` returns one row. STUB_FAIL refuses. A stub that serves an {issues:…} envelope to
-# any argv proves nothing about the call the scan makes.
+# Real br 0.5.12 (measured 2026-09-27): refuses an unknown flag (exit 2) or status
+# (VALIDATION_FAILED, exit 4), accepts --status all, answers `list` with the
+# {issues, total, limit, offset, has_more} envelope, and omits closed rows unless
+# --all / --status all. A stub that accepts any argv proves nothing about the call made.
+# `show` returns one row; STUB_FAIL refuses.
 cat >"$W/bin/br" <<'STUB'
 #!/usr/bin/env bash
 [ -n "${STUB_FAIL:-}" ] && { echo '{"error":{"message":"stub refused"}}'; exit 1; }
@@ -29,14 +30,14 @@ case "$1" in
         --json) ;;
         --all|-a) all=1 ;;
         --limit) [[ "${2-}" =~ ^[0-9]+$ ]] || bad_arg "$1"; shift ;;
-        --status) case "${2-}" in open|in_progress|blocked|deferred|closed) ;; *)
-                    printf '{"error":{"code":"INVALID_STATUS","message":"Invalid status: %s"}}\n' "${2-}"; exit 4 ;; esac
+        --status) case "${2-}" in all) all=1 ;; open|in_progress|blocked|deferred|closed) ;; *)
+                    printf '{"error":{"code":"VALIDATION_FAILED","message":"Invalid status: %s"}}\n' "${2-}"; exit 4 ;; esac
                   shift ;;
         *) bad_arg "$1" ;;
       esac
       shift
     done
-    jq -c --arg all "$all" 'if $all == "1" then . else map(select(.status != "closed" and .status != "tombstone")) end' "$BOARD" ;;
+    jq -c --arg all "$all" 'if $all == "1" then . else map(select(.status != "closed" and .status != "tombstone")) end | {issues: ., total: length, limit: 0, offset: 0, has_more: false}' "$BOARD" ;;
   show)
     id="${2-}"; [ -n "$id" ] || bad_arg show; shift 2
     for a in "$@"; do [ "$a" = --json ] || bad_arg "$a"; done
