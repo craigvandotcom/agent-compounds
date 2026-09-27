@@ -152,6 +152,40 @@ stamp_refined() {
     return 1
   fi
 
+  # RULING-STALENESS LEG (ac-2h8w). Measured in a consuming app (bd-i01pk): a human ruling
+  # recorded as a `DECISION (<human>): …` comment changed a bead's scope, but the bead kept
+  # `refined` from a polish receipt written the day before — no eligibility filter reads
+  # comments, so a worker built the rejected option and it shipped. "Newer" is comment ARRAY
+  # ORDER, the same axis the family-fixpoint leg below already trusts (it picks the receipt
+  # via `tail -1`, not a timestamp field): `br show --json` returns comments in the order
+  # they were written. Blind to content — this leg never judges whether a ruling changed
+  # scope, only whether one exists after the last receipt. Reuses origin_meta: no bead has
+  # mutated between the read above and here.
+  local ruling_idx receipt_idx
+  ruling_idx=$(printf '%s' "$origin_meta" | jq -r '
+    [ .[0].comments // [] | to_entries[]
+      | select(.value.text != null and (.value.text | test("^DECISION \\([^)]+\\):")))
+      | .key ] | if length > 0 then max else -1 end' 2>/dev/null)
+  if [ -z "$ruling_idx" ]; then
+    echo "stamp_refined: REFUSED $id — could not read comments to check for a ruling; refusing rather than guessing. No label written." >&2
+    return 2
+  fi
+  if [ "$ruling_idx" -ge 0 ]; then
+    receipt_idx=$(printf '%s' "$origin_meta" | jq -r '
+      [ .[0].comments // [] | to_entries[]
+        | select(.value.text != null and (.value.text | test("^POLISH-FIXPOINT:")))
+        | .key ] | if length > 0 then max else -1 end' 2>/dev/null)
+    if [ -z "$receipt_idx" ]; then
+      echo "stamp_refined: REFUSED $id — could not read comments to check for a receipt; refusing rather than guessing. No label written." >&2
+      return 2
+    fi
+    if [ "$receipt_idx" -lt "$ruling_idx" ]; then
+      echo "stamp_refined: REFUSED $id — STALE-RULING: a DECISION ruling is newer than the bead's last polish receipt (or no receipt exists at all); the ruled text has not been re-graded. Re-polish the bead against the ruling, then re-stamp. No label written." >&2
+      _downgrade "$id" "DECISION ruling newer than the last fixpoint receipt" || return $?
+      return 1
+    fi
+  fi
+
   local out rc
   out=$(bash "$ELEMENT4_CHECK" "$id" 2>&1); rc=$?
   if [ "$rc" -ne 0 ]; then

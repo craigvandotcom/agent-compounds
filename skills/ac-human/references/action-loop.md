@@ -14,6 +14,16 @@ auto-advance, Done as escape); this file carries the per-type playbook.
       ```
     - **Memo missing/thin** (a bare "HUMAN: decide X" with no options) → it is **not tap-ready; do NOT fake buttons.** Surface it as `⚠ no memo` and offer: `Frame it now` (research + write the memo onto the bead, then present options) / `Decide raw` / `Skip` / `Done`. The dashboard **self-heals** bare beads into tap-ready ones.
   On tap (either path) → record + execute + close + **confirm the ripple**, then auto-advance.
+  - **Ruling that changes a refined bead's scope — same step, never a separate pass:** when
+    the recorded ruling changes the scope of a bead that holds `refined` (the ruled bead
+    itself, or a bead it gates), in the SAME step rewrite that bead's title and ACs to the
+    ruled option and strip `refined` (remove `refined`, add `unrefined`) so a polish pass
+    re-grades the rewritten text before any claim. Stripping alone is enough when there is
+    no time to rewrite. Never leave `refined` on a bead whose text the ruling contradicts.
+    `skills/_tools/stamp-refined.sh`'s ruling-staleness leg backstops a ruling recorded ON
+    the refined bead itself — refusing and downgrading when the ruling is newer than the
+    last polish receipt — but a ruling recorded on a separate DECISION card leaves no
+    comment on the beads it gates, so for those this rewrite-or-strip step is the only guard.
   `<human>` is copied VERBATIM from the closing board's own `.beads/config.yaml` `humans:`
   key (`beads-standards/reference/bead-conventions.md` § Decision beads is the sole
   restatement) — never a role name, never typed from memory:
