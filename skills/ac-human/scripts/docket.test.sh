@@ -60,7 +60,7 @@ bead("w3", 3, 2, [], desc="loop work")
 bead("w4", 3, 2, [], desc="loop work")
 bead("w5", 3, 2, [], desc="loop work")
 bead("w6", 3, 2, [], desc="loop work")
-json.dump({"issues": B, "total": len(B), "has_more": False, "limit": 0}, open(f"{R}/board.json", "w"))
+json.dump(B, open(f"{R}/board.json", "w"))  # the whole board; the br stub serves br's real shape
 # edges: g-p1-new frees two beads, g-act one; every other pre-existing gate blocks nothing.
 # dep(i, *on) = row i waits on each `on` id: the gate's own row carries its blockers.
 dep = lambda i, *on: dict(id=i, status="open", dependencies=[{"issue_id": i, "depends_on_id": o, "type": "blocks"} for o in on])
@@ -97,13 +97,31 @@ json.dump({"generated": TODAY, "lanes": [], "errors": [],
           open(f"{R}/memory.json", "w"))
 PY
 
-cat > "$W/br" <<EOF
+# Stub br in real br 0.1.14 shapes: `list` refuses an unknown flag (exit 2) or status
+# (INVALID_STATUS, exit 4), answers a BARE array, and omits closed rows unless --all. A stub
+# that serves an {issues:…} envelope to any argv proves nothing about the call docket makes.
+cat > "$W/br" <<'EOF'
 #!/usr/bin/env bash
-[ -n "\${BR_FAIL:-}" ] && { echo '{"error":{"message":"db locked"}}'; exit 1; }
-cat "$R/board.json"
+[ -n "${BR_FAIL:-}" ] && { echo '{"error":{"message":"db locked"}}'; exit 1; }
+bad_arg() { printf "error: unexpected argument '%s' found\n" "$1" >&2; exit 2; }
+[ "${1-}" = list ] || exit 9
+shift; all=""
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --json) ;;
+    --all|-a) all=1 ;;
+    --limit) [[ "${2-}" =~ ^[0-9]+$ ]] || bad_arg "$1"; shift ;;
+    --status) case "${2-}" in open|in_progress|blocked|deferred|closed) ;; *)
+                printf '{"error":{"code":"INVALID_STATUS","message":"Invalid status: %s"}}\n' "${2-}"; exit 4 ;; esac
+              shift ;;
+    *) bad_arg "$1" ;;
+  esac
+  shift
+done
+jq -c --arg all "$all" 'if $all == "1" then . else map(select(.status != "closed" and .status != "tombstone")) end' "$BOARD_JSON"
 EOF
 chmod +x "$W/br"
-export AC2_BR_CMD="$W/br" AC_HUMAN_FRICTION_CMD="cat '$R/frictions.json'" AC_HUMAN_MEMORY_CMD="cat '$R/memory.json'"
+export BOARD_JSON="$R/board.json" AC2_BR_CMD="$W/br" AC_HUMAN_FRICTION_CMD="cat '$R/frictions.json'" AC_HUMAN_MEMORY_CMD="cat '$R/memory.json'"
 
 OUT=$(cd "$R" && "$DOCKET"); ALL="$ALL
 $OUT"

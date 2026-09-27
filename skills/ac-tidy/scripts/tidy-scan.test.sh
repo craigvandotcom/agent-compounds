@@ -13,13 +13,35 @@ W=$(mktemp -d); trap 'rm -rf "$W"' EXIT
 R="$W/repo"; mkdir -p "$R/_backlog/pool" "$R/_backlog/_done" "$R/_plans" "$R/.beads" "$W/bin"
 git -C "$R" init -q
 
-# Stub br: every list returns the whole fixture board; show returns one row; STUB_FAIL refuses.
+# Stub br in real br 0.1.14 shapes: refuses an unknown flag (exit 2) or status
+# (INVALID_STATUS, exit 4); `list` answers a BARE array and omits closed rows unless --all;
+# `show` returns one row. STUB_FAIL refuses. A stub that serves an {issues:…} envelope to
+# any argv proves nothing about the call the scan makes.
 cat >"$W/bin/br" <<'STUB'
 #!/usr/bin/env bash
 [ -n "${STUB_FAIL:-}" ] && { echo '{"error":{"message":"stub refused"}}'; exit 1; }
+bad_arg() { printf "error: unexpected argument '%s' found\n" "$1" >&2; exit 2; }
 case "$1" in
-  list) jq -c '{issues: .}' "$BOARD" ;;
-  show) jq -c --arg id "$2" '[.[] | select(.id == $id) | .dependencies = []]' "$BOARD" ;;
+  list)
+    shift; all=""
+    while [ $# -gt 0 ]; do
+      case "$1" in
+        --json) ;;
+        --all|-a) all=1 ;;
+        --limit) [[ "${2-}" =~ ^[0-9]+$ ]] || bad_arg "$1"; shift ;;
+        --status) case "${2-}" in open|in_progress|blocked|deferred|closed) ;; *)
+                    printf '{"error":{"code":"INVALID_STATUS","message":"Invalid status: %s"}}\n' "${2-}"; exit 4 ;; esac
+                  shift ;;
+        *) bad_arg "$1" ;;
+      esac
+      shift
+    done
+    jq -c --arg all "$all" 'if $all == "1" then . else map(select(.status != "closed" and .status != "tombstone")) end' "$BOARD" ;;
+  show)
+    id="${2-}"; [ -n "$id" ] || bad_arg show; shift 2
+    for a in "$@"; do [ "$a" = --json ] || bad_arg "$a"; done
+    jq -c --arg id "$id" '[.[] | select(.id == $id) | .dependencies = []]' "$BOARD" ;;
+  *) exit 9 ;;
 esac
 STUB
 chmod +x "$W/bin/br"
