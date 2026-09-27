@@ -87,14 +87,17 @@ cases = [
   (ALLOW, 'br create "Epic: x" -t epic -l "origin:ac-triage,impact:data"',           "epic without Probe -> admitted"),
   (BLOCK, 'br create "x" -t task -l "origin:ac-triage,unrefined"',       "task, absent description -> blocked"),
   (ALLOW, 'br create "x" -t task -l "origin:ac-triage,unrefined,impact:data" -d "<body>"', "placeholder body skips probe"),
-  # --- impact axis (ac-wp8i.3): an AUTOMATED origin needs exactly one closed-set impact
-  # label; human/plan origins and human-gate forks are exempt (a refusal names them).
-  (BLOCK, 'br create "x" -t task -l "origin:ac-implement,unrefined" -d "- AC: x. Probe: `true` - tier: none"',
-          "automated origin, no impact -> refused"),
-  (ALLOW, 'br create "x" -t task -l "origin:ac-human-session,unrefined" -d "- AC: x. Probe: `true` - tier: none"',
-          "human origin, no impact -> admitted"),
-  (BLOCK, 'br create "x" -t task -l "origin:ac-implement,unrefined,impact:perf" -d "- AC: x. Probe: `true` - tier: none"',
-          "impact outside the closed set -> refused"),
+  # --- one origin per bead (ac-m9y4.6): the impact axis (ac-wp8i.3) is retired — an
+  # `impact:` label is now inert prose, never checked. `origin:a,origin:b` used to exit 0
+  # on the strength of "at least one origin present"; it must now block.
+  (ALLOW, 'br create "x" -t task -l "origin:ac-implement,unrefined" -d "- AC: x. Probe: `true` - tier: none"',
+          "automated origin, no impact label -> admitted (the impact axis is retired)"),
+  (BLOCK, 'br create "x" -t epic -p 2 -l "origin:ac-beadify,origin:manual" -d y',
+          "two origin: labels -> blocked (one origin per bead)"),
+  (BLOCK, 'br create "x" -t task -l "origin:a" -l "origin:b,unrefined" -d "- AC: x. Probe: `true` - tier: none"',
+          "two origin: labels across separate -l flags -> blocked"),
+  (ALLOW, 'br create "x" -t task -l "origin:ac-review,unrefined,impact:data" -d "- AC: x. Probe: `true` - tier: none"',
+          "exactly one origin, an incidental impact: label alongside it -> admitted"),
   # --- subagent refusal (ac-wp8i.3): a subagent files NOTHING — every create, fork
   # included, is refused and returned to the coordinator as a PROPOSED-BEAD.
   (BLOCK, 'br create "x" -t task -l "origin:ac-review,unrefined,impact:data" -d "- AC: x. Probe: `true` - tier: none"',
@@ -114,14 +117,6 @@ cases = [
           "subagent, bare human-gate on a task -> refused", {"agent_id": "sub-1"}),
   (BLOCK, 'br create "ACTION: do x" -t task -l "origin:ac-review,human-gate" -d "<body>"',
           "subagent, ACTION fork -> refused", {"agent_id": "sub-1"}),
-  # --- impact-axis origins (ac-review 2026-09-11): ac-qa and ac-land file automated
-  # non-gate beads and now require impact; reflect/dream file only human-gate cards.
-  (BLOCK, 'br create "x" -t task -l "origin:ac-qa,unrefined" -d "- AC: x. Probe: `true` - tier: none"',
-          "ac-qa automated origin, no impact -> refused"),
-  (ALLOW, 'br create "x" -t task -l "origin:ac-qa,unrefined,impact:data" -d "- AC: x. Probe: `true` - tier: none"',
-          "ac-qa with impact -> admitted"),
-  (BLOCK, 'br create "x" -t bug -l "origin:ac-land,unrefined" -d "- AC: x. Probe: `true` - tier: none"',
-          "ac-land automated origin, no impact -> refused"),
   # --- subagent marker via the ambient AC_SUBAGENT env seam (harnesses that cannot supply
   # the agent_id stdin field set this instead).
   (BLOCK, 'br create "x" -t decision -l "origin:ac-review,human-gate"',
@@ -222,5 +217,36 @@ for case in cases:
         print(f"FAIL  want={want} got={got}  {name}\n      cmd: {cmd!r}\n      err: {p.stderr[:150]}")
     else:
         print(f"ok    {('BLOCK' if want==2 else 'ALLOW'):5}  {name}")
-print(f"\n{len(cases)-fails}/{len(cases)} passed")
+# --- fail-posture cases (ac-m9y4.6): the guard's own contract has three distinct
+# postures, and each needs its own dedicated case — the "unparseable -> fail open" table
+# row above already pins the first.
+#
+# malformed stdin JSON fails OPEN (exit 0), same doctrine as an unparseable shell command
+# — a guard must not wedge an unattended loop on either input shape.
+extra_total = 2
+extra_fails = 0
+p = subprocess.run([sys.executable, G], input="not valid json {{{",
+                    capture_output=True, text=True, env=dict(os.environ), timeout=30, check=False)
+if p.returncode == 0:
+    print("ok    ALLOW  malformed stdin JSON -> fails open")
+else:
+    extra_fails += 1
+    print(f"FAIL  want=0 got={p.returncode}  malformed stdin JSON -> fails open\n      err: {p.stderr[:150]}")
+
+# A CRASH — bead.py missing or unloadable — fails CLOSED (exit 2), the opposite posture:
+# a crash is not a parse failure. BEAD_MODULE_PATH overrides the real path so this never
+# touches the actual file in a shared checkout.
+crash_env = dict(os.environ)
+crash_env["BEAD_MODULE_PATH"] = "/nonexistent/bead.py"
+crash_payload = {"tool_name": "Bash", "tool_input": {"command": 'br create "x" -t task'}}
+p = subprocess.run([sys.executable, G], input=json.dumps(crash_payload),
+                    capture_output=True, text=True, env=crash_env, timeout=30, check=False)
+if p.returncode == 2 and "internal error" in p.stderr:
+    print("ok    BLOCK  bead.py missing (crash) -> fails closed")
+else:
+    extra_fails += 1
+    print(f"FAIL  want=2 got={p.returncode}  bead.py missing (crash) -> fails closed\n      err: {p.stderr[:150]}")
+
+fails += extra_fails
+print(f"\n{len(cases) + extra_total - fails}/{len(cases) + extra_total} passed")
 sys.exit(1 if fails else 0)

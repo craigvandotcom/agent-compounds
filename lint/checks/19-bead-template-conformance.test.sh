@@ -36,8 +36,9 @@ trap 'rm -rf "$work" "$OUT"' EXIT
 # The VACUOUS guard (>= 20 scanned templates) needs a populated fixture tree, so
 # generate 20 conformant templates plus one missing its origin:<skill> label.
 t="$work/bad"
-mkdir -p "$t/hooks" "$t/skills/bad"
+mkdir -p "$t/hooks" "$t/skills/bad" "$t/skills/_tools"
 cp "$ROOT/hooks/bead-capture-guard.py" "$t/hooks/"
+cp "$ROOT/skills/_tools/bead.py" "$t/skills/_tools/"
 {
   for n in $(seq 1 20); do
     printf '%s\n' '`br create -t task --labels "origin:ac-hygiene,unrefined" --title "fixture-do-not-file '"$n"'"`'
@@ -55,8 +56,9 @@ fi
 # The VACUOUS guard (>= 20 scanned templates) needs a populated fixture tree, so
 # generate 20 conformant templates plus one finding template missing its catch-stage.
 t="$work/nocatch"
-mkdir -p "$t/hooks" "$t/skills/bad"
+mkdir -p "$t/hooks" "$t/skills/bad" "$t/skills/_tools"
 cp "$ROOT/hooks/bead-capture-guard.py" "$t/hooks/"
+cp "$ROOT/skills/_tools/bead.py" "$t/skills/_tools/"
 {
   for n in $(seq 1 20); do
     printf '%s\n' '`br create -t task --labels "origin:ac-hygiene,hygiene-finding,unrefined" --title "fixture-do-not-file '"$n"'"`'

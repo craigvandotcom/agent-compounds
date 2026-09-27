@@ -13,8 +13,7 @@ Enforced here:
     must MEASURE: `probe_shape_violation` refuses three shapes that pass `no probe, no
     bead` while proving nothing (`pnpm <script> -- <file>`, a bare `vitest run <file>`,
     `grep -c` as pass/fail).
-  - exactly one `impact:<class>` label on every bead from an AUTOMATED origin — the class
-    of damage if it ships; human/plan origins and `human-gate` fork beads are exempt.
+  - exactly one `origin:<skill>` label — two is corrupt data, not two provenances.
   - a subagent files NOTHING — every `br create` is refused and returned to the
     coordinator as a PROPOSED-BEAD block; a human-gate fork is a proposal too, never a
     direct create. Subagent identity is harness-dependent: the `agent_id` stdin field OR
@@ -54,10 +53,14 @@ newline becomes a `;` separator. The same pre-pass space-pads `;`, `&&`, `||` an
 glued or not — shlex keeps `true;` and `true&&br` as one token, so CONTROL never saw
 the `br create` after them. Quoted newlines and quoted separators stay intact.
 
-FAIL-OPEN on any parse failure. A guard that cannot understand a command must not wedge an
-unattended ac-loop run at 3am; a missed stamp is caught by ac-tidy.
+FAIL-OPEN on any parse failure (unparseable shell, malformed stdin JSON). A guard that
+cannot understand a command must not wedge an unattended ac-loop run at 3am; a missed
+stamp is caught by ac-tidy. FAIL-CLOSED on a CRASH (bead.py missing or an unhandled
+exception in main()) — a crash is not a parse failure, and the whole point of a hard gate
+is that its own breakage must not silently reopen every door it closes.
 """
 
+import importlib.util
 import json
 import os
 import re
@@ -73,6 +76,38 @@ HELP = {"-h", "--help"}
 WRAPPERS = {"env", "xargs", "sudo", "command", "exec", "nice", "nohup", "time", "stdbuf", "setsid"}
 SHELLS = {"sh", "bash", "zsh", "dash", "ksh"}
 ORIGIN = re.compile(r"(^|,)origin:[A-Za-z0-9][A-Za-z0-9._-]*(,|$)")
+
+
+def _load_bead_module():
+    """Load skills/_tools/bead.py — the one bead reader (ac-m9y4.1) — by path, the same
+    `importlib.util.spec_from_file_location` idiom lint 19 already uses to load THIS
+    guard. `BEAD_MODULE_PATH` is a test-only override (a nonexistent path drives the
+    crash-path fixture without ever touching the real file in a shared checkout)."""
+    override = os.environ.get("BEAD_MODULE_PATH")
+    if override:
+        path = override
+    else:
+        root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        path = os.path.join(root, "skills", "_tools", "bead.py")
+    spec = importlib.util.spec_from_file_location("bead", path)
+    if spec is None or spec.loader is None:
+        raise ImportError(f"cannot load bead.py at {path!r}")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+# Loaded at import time (never lazily inside main()): lint 19 execs this module WITHOUT
+# ever calling main(), and its `guard.all_labels` calls must work regardless. A load
+# failure is captured, never raised here — main() is the one place that turns it into the
+# fail-CLOSED crash this guard's own contract requires (§ FAIL-CLOSED above); a caller that
+# only wants the parsing helpers (lint 19's static templates) never touches `bead` at all.
+try:
+    bead = _load_bead_module()
+    _BEAD_IMPORT_ERROR = None
+except Exception as _bead_exc:  # pragma: no cover - exercised via BEAD_MODULE_PATH
+    bead = None
+    _BEAD_IMPORT_ERROR = _bead_exc
 
 # Readiness: `stamp-refined.sh` is the sole writer AND sole stripper of `refined`
 # (skills/beads-standards/SKILL.md) — applied at refine convergence, never at creation.
@@ -136,22 +171,6 @@ def probe_shape_violation(cmd):
     if GREP_C.search(cmd):
         return "uses `grep -c` as a pass/fail check — exits 1 on a zero count; use `grep -q` / `! grep -q`"
     return None
-
-# The impact axis (ac-wp8i.3): the class of damage if this bead's failure ships. CLOSED
-# set — a new class is a contract change first, then this tuple. An automated origin must
-# carry exactly one of these; `impact:trunk-red` names the failing suite/job in its
-# `User impact:` line. Human origins (`manual`, `ac-human`, formerly `ac-human-session`),
-# plan origins (`ac-beadify`, `ac-backlog`) and `human-gate` fork beads are EXEMPT — a
-# fork is not an impact class — and a refusal must name those exemptions.
-IMPACT_CLASSES = ("user-visible", "data", "security", "trunk-red")
-IMPACT_REQUIRED_ORIGINS = (
-    "ac-implement", "ac-review", "ac-triage", "ac-hygiene", "ac-align", "ac-prove",
-    "ac-qa", "ac-land", "curate-foods",
-)
-
-# The subagent refusal (ac-wp8i.3): a PreToolUse stdin carrying `agent_id` is a subagent,
-# which may file ONLY a `human-gate` fork — everything else is proposed at the boundary.
-SUBAGENT_EXEMPT_LABEL = "human-gate"
 
 REFINED_MESSAGE = """\
 BLOCKED: `br {sub}` carries the `refined` label at creation.
@@ -220,30 +239,26 @@ leads own no probe yet. A filer that cannot name a probe files the bead as
 Canon: beads-standards/reference/bead-create-contract.md § Required axes.\
 """
 
-IMPACT_MESSAGE = """\
-BLOCKED: `br {sub}` from automated origin `{origin}` without exactly one `impact:` label.
-
-`impact:<class>` records the class of damage if this bead's failure ships — exactly one of:
-
-    impact:user-visible · impact:data · impact:security · impact:trunk-red
-
-`impact:trunk-red` names the failing suite or job in the body's `User impact:` line.
-
-Exempt, and never blocked for this axis: human origins (`manual`, `ac-human` — renamed
-from `ac-human-session`), plan origins (`ac-beadify`, `ac-backlog`), and `human-gate`
-fork beads — a fork is not an impact class.
-
-Canon: beads-standards/reference/bead-create-contract.md § Required axes.\
-"""
-
 SUBAGENT_MESSAGE = """\
 BLOCKED: `br {sub}` from a subagent — a subagent files NOTHING.
 
 Return it to your coordinator as a PROPOSED-BEAD block for the conductor to confirm and
-file: title · files · `User impact:` (and for a fork: gate reason · options ·
+file: title · files · a User-impact note (and for a fork: gate reason · options ·
 recommendation). No exceptions — a human-gate fork is a proposal too, never a direct create.
 
 Canon: beads-standards/reference/bead-create-contract.md § Subagent creates.\
+"""
+
+MULTI_ORIGIN_MESSAGE = """\
+BLOCKED: `br {sub}` carries more than one `origin:` label ({origins}).
+
+One origin per bead: two is corrupt data, not two provenances — a card with both
+`origin:a` and `origin:b` cannot say which workflow actually created it. Keep the label
+that names the real creator and drop the rest:
+
+    -l "origin:<skill>,unrefined"
+
+Canon: beads-standards/reference/bead-create-contract.md § Required axes.\
 """
 
 
@@ -427,20 +442,18 @@ def bead_type(cmd):
 
 
 def all_labels(cmd):
-    """Every label across ALL label flags — `-l` is repeatable, so one lookup is not enough."""
-    out = []
-    for i, tok in enumerate(cmd):
-        val = None
-        if tok in ("-l", "--labels"):
-            if i + 1 < len(cmd):
-                val = cmd[i + 1]
-        elif tok.startswith("--labels="):
-            val = tok.split("=", 1)[1]
-        elif tok.startswith("-l") and len(tok) > 2:
-            val = tok[2:]
-        if val:
-            out.extend(p.strip() for p in val.split(","))
-    return out
+    """Every label across ALL label flags — `-l` is repeatable, so one lookup is not
+    enough. Parses through bead.py's argv adapter (ac-m9y4.1/.6): a bead being FILED
+    and a bead that EXISTS now share one label reader."""
+    return bead.from_create_argv(cmd)["labels"]
+
+
+def origin_labels(cmd):
+    """Every `origin:<skill>` label across all label flags — for the one-origin-per-bead
+    enforcement (ac-m9y4.6). `has_origin()` above only asks "at least one?" and a create
+    carrying `-l "origin:a,origin:b"` used to exit 0 on the strength of that alone —
+    "which one is right" is not this guard's call to make; "there must be exactly one" is."""
+    return [lab for lab in all_labels(cmd) if lab.startswith("origin:")]
 
 
 def has_readiness(cmd):
@@ -593,24 +606,6 @@ def has_probe(cmd):
     return probe_reason(cmd) is None
 
 
-def origin_skill(cmd):
-    """The `<skill>` of the first `origin:<skill>` label, or None. One origin per bead."""
-    for label in all_labels(cmd):
-        if label.startswith("origin:"):
-            return label[len("origin:"):]
-    return None
-
-
-def valid_impact(cmd):
-    """True when the labels carry EXACTLY one impact class from the closed set."""
-    classes = [lab[len("impact:"):] for lab in all_labels(cmd) if lab.startswith("impact:")]
-    return len(classes) == 1 and classes[0] in IMPACT_CLASSES
-
-
-def has_label(cmd, name):
-    return name in all_labels(cmd)
-
-
 def scan_tokens(tokens, is_subagent):
     """Run every command in a token stream through the full contract, refusing on the
     first violation. Shared by the outer command and any wrapper-expanded inner command."""
@@ -628,6 +623,10 @@ def scan_tokens(tokens, is_subagent):
         if not has_origin(cmd):
             print(MESSAGE.format(sub=sub), file=sys.stderr)
             sys.exit(2)
+        origins = origin_labels(cmd)
+        if len(origins) > 1:
+            print(MULTI_ORIGIN_MESSAGE.format(sub=sub, origins=", ".join(origins)), file=sys.stderr)
+            sys.exit(2)
         # Standalone axis, checked before the type-scoped ones below: `refined` is
         # refused whatever else rides beside it in --labels and whatever the type
         # (epic and an absent -t included) — sole-writer invariant, no exemption.
@@ -643,17 +642,15 @@ def scan_tokens(tokens, is_subagent):
             if reason is not None:
                 print(PROBE_MESSAGE.format(sub=sub, typ=typ, reason=reason), file=sys.stderr)
                 sys.exit(2)
-        origin = origin_skill(cmd)
-        if (
-            origin in IMPACT_REQUIRED_ORIGINS
-            and not has_label(cmd, SUBAGENT_EXEMPT_LABEL)
-            and not valid_impact(cmd)
-        ):
-            print(IMPACT_MESSAGE.format(sub=sub, origin=origin), file=sys.stderr)
-            sys.exit(2)
 
 
 def main():
+    if bead is None:
+        # bead.py missing or broken IS a crash, not a parse failure — the outer
+        # `__main__` handler turns this into a fail-CLOSED exit 2 (ac-m9y4.6). A guard
+        # that cannot resolve its own reader has no basis to judge anything below.
+        raise RuntimeError(f"bead.py could not be loaded: {_BEAD_IMPORT_ERROR}")
+
     raw = sys.stdin.read()
     try:
         data = json.loads(raw) if raw.strip() else {}
@@ -663,8 +660,9 @@ def main():
     if data.get("tool_name") not in (None, "Bash"):
         allow()
 
-    # A subagent may file only a `human-gate` fork; its discovered work is proposed back
-    # at the batch boundary, never filed directly (bead-create-contract § Subagent creates).
+    # A subagent files NOTHING — every `br create`/`br q`, a human-gate fork included, is
+    # refused below and returned to the coordinator as a PROPOSED-BEAD (bead-create-
+    # contract § Subagent creates; enforced in scan_tokens, no type/label exemption).
     # The subagent marker is harness-dependent: `agent_id` on the stdin payload, OR the
     # ambient `AC_SUBAGENT` a harness wrapper sets when it CAN tell a subagent from the
     # main session. Neither is sent by every deployed harness (opencode sends session_id,
@@ -709,6 +707,12 @@ if __name__ == "__main__":
         main()
     except SystemExit:
         raise
-    except Exception as e:  # never wedge a session on a guard bug
-        print("bead-capture-guard fail-open: %s" % e, file=sys.stderr)
-        sys.exit(0)
+    except Exception as e:
+        # FAIL-CLOSED (ac-m9y4.6): a crash is not a parse failure. An unparseable shell
+        # or malformed stdin JSON is handled explicitly above and still fails OPEN — a
+        # guard must not wedge an unattended ac-loop run on exotic syntax. But an
+        # unhandled exception here (bead.py missing, a real bug) means the guard cannot
+        # tell what it is looking at, and a hard gate that blocks on the strength of not
+        # understanding you must not wave the one input it failed to understand through.
+        print("bead-capture-guard: BLOCKED — internal error: %s" % e, file=sys.stderr)
+        sys.exit(2)

@@ -62,7 +62,21 @@ def _load_guard(root):
     return module
 
 
+def _load_bead(root):
+    """skills/_tools/bead.py — the one bead reader (ac-m9y4.1). Loaded directly (not
+    only transitively through `guard`, whose own `all_labels` already delegates to it —
+    ac-m9y4.6) so this check's `gate_kind` reading is the SAME canonical mapping the
+    runtime guard and docket.sh's binary split already agree on, not a fourth copy."""
+    spec = importlib.util.spec_from_file_location(
+        "bead", os.path.join(root, "skills", "_tools", "bead.py")
+    )
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
 guard = _load_guard(ROOT)
+bead = _load_bead(ROOT)
 
 FLAG = re.compile(r"(^|\s)(-t|-p|-l|-d|--type|--priority|--labels|--title|--body|--description)([=\s]|$)")
 CMD = re.compile(r"(^|[`\s])br (create|q)\b")
@@ -83,7 +97,10 @@ CATCH_STAGE = ("qa-finding", "review-finding", "hygiene-finding", "ci-finding", 
 # INVALID without a `Gate-reason:` body marker, and each canonical title prefix fixes the
 # type. The runtime guard is the other half of this contract; this is its static twin.
 GATE_REASON = re.compile(r"Gate-reason:\s*(fork|authorization|intent|action)\b")
-PREFIX_KIND = {"DECISION": "decision", "HUMAN": "decision", "ACTION": "task"}
+# bead.py's `gate_kind` names the KIND (DECISION/ACTION); this maps kind -> the `-t <type>`
+# it fixes — docket.sh's binary split and this check must never carry a second, drifting
+# copy of the prefix grammar itself, only this thin kind->type translation.
+KIND_TO_TYPE = {"DECISION": "decision", "ACTION": "task"}
 
 
 def _tokens(cmd):
@@ -100,8 +117,9 @@ def human_gate_violation(cmd):
       1. the body must carry `Gate-reason:` (fork|authorization|intent|action) — a
          placeholder body (`<…>`) is skipped, same doctrine as bead_type;
       2. a canonical title prefix fixes the type — `DECISION:`/`HUMAN:` -> decision,
-         `ACTION:` -> task. Only the prefix->type direction is checked; a prefix-less
-         template is legal (most gates are filed without one).
+         `ACTION:` -> task, read through bead.py's `gate_kind` (ac-m9y4.1/.6), never a
+         second copy of the prefix grammar. Only the prefix->type direction is checked;
+         a prefix-less template is legal (most gates are filed without one).
     """
     if "human-gate" not in guard.all_labels(cmd):
         return None
@@ -111,11 +129,11 @@ def human_gate_violation(cmd):
                 "(fork|authorization|intent|action)")
     title = guard.flag_value(cmd, {"--title"}, ("--title=",))
     if title:
-        m = re.match(r"([A-Za-z]+):", title)
-        want = PREFIX_KIND.get(m.group(1).upper()) if m else None
+        want = KIND_TO_TYPE.get(bead.gate_kind(title))
         typ = guard.bead_type(cmd)
         if want and typ and typ != want:
-            return f"title prefix `{m.group(1)}:` requires `-t {want}`, got `-t {typ}`"
+            prefix = title.split(":", 1)[0]
+            return f"title prefix `{prefix}:` requires `-t {want}`, got `-t {typ}`"
     return None
 
 
@@ -292,10 +310,11 @@ def probe_shape_violations():
 
 
 def main(argv=()):
-    global ROOT, guard
+    global ROOT, guard, bead
     args = list(argv)
     ROOT = args[0] if args else _REPO_ROOT_DEFAULT
     guard = _load_guard(ROOT)
+    bead = _load_bead(ROOT)
 
     bad, scanned = violations()
     shape_bad, shape_scanned = probe_shape_violations()

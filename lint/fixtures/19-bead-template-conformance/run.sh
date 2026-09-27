@@ -9,8 +9,9 @@ set -uo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
 CHECK="$ROOT/lint/checks/19-bead-template-conformance.py"
 W="$(mktemp -d)"; trap 'rm -rf "$W"' EXIT
-mkdir -p "$W/hooks" "$W/skills/bad"
+mkdir -p "$W/hooks" "$W/skills/bad" "$W/skills/_tools"
 cp "$ROOT/hooks/bead-capture-guard.py" "$W/hooks/"
+cp "$ROOT/skills/_tools/bead.py" "$W/skills/_tools/"
 {
   for n in $(seq 1 20); do
     printf '%s\n' '`br create -t task --labels "origin:ac-hygiene,unrefined" --title "fixture-do-not-file '"$n"'"`'
