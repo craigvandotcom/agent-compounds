@@ -1,6 +1,6 @@
 ---
 name: ac-plan
-description: 'Turn an idea into ONE ac2 plan file — problem, approach, deliverables, assumptions, risk + sequence, out-of-scope, and a success criterion that can come out FALSE. Explorers optional, chosen by size. Triggers: "ac2 plan", "write an ac2 plan", "plan this for ac2". Hands off to ac-prep (or ac-polish, one stage at a time).'
+description: 'Turn an idea into ONE ac2 plan file — problem, approach, deliverables, assumptions, risk + sequence, out-of-scope, and a success criterion that can come out FALSE. Explorers optional, chosen by size. Triggers: "ac2 plan", "write an ac2 plan", "plan this for ac2". Polishes and approves in-session, then asks to start beadify.'
 ---
 
 # ac-plan — idea in, one plan file out
@@ -14,8 +14,7 @@ description: 'Turn an idea into ONE ac2 plan file — problem, approach, deliver
 | **Artifacts**    | Explorer notes in `_plans/research/` — only if explorers were run             |
 | **Verification** | `ac-polish plan <path>` to fixpoint; `ac-polish/references/plan-checklist.md` is the bar |
 
-Doctrine: `skills/ac-pipeline/SKILL.md` — including the model-tier Calibration (planning runs OPUS-tier; a Calibration with a retirement measurement, not a fact to restate here). Bead and
-commit canon: `beads-standards` and `ac-pipeline/references/` BY POINTER — restated nowhere.
+Doctrine: `skills/ac-pipeline/SKILL.md` — including the model-tier Calibration (planning runs OPUS-tier; a Calibration with a retirement measurement, not a fact to restate here). Bead and commit canon: `beads-standards` and `ac-pipeline/references/` BY POINTER — restated nowhere.
 
 ## Before anything: the task-size floor
 
@@ -32,9 +31,7 @@ a line to cut — the plan is graded on whether its claims are checkable, never 
 
 1. **Size the work.** Below the floor → stop, do it directly. Otherwise continue.
 2. **Ask only the obvious questions** — the ones without which the brief would be a guess; a capable read of the codebase answers the rest. Explorers are OPTIONAL, size selects them. Notes land in `_plans/research/`; none ran → say so.
-3. **Draft the vision brief** in plain words a non-engineer follows — no pipeline
-   jargon, and the same rule wherever the vision or plan is shown to the human —
-   corrected by the human in free text, then frozen verbatim as `## Vision`.
+3. **Draft the vision brief** in plain words a non-engineer follows — no pipeline jargon, and the same rule wherever the vision or plan is shown to the human — corrected by the human in free text, then frozen verbatim as `## Vision`.
 4. **Seams scan.** Every path in the conductor's drafted deliverable list is an object, no
    cap — `## Deliverables` is written in step 5, so the scan reads the draft, never the
    plan. Derive its file list (`skills/_tools/touchers.sh derive <path>` plus the repo's
@@ -52,9 +49,12 @@ a line to cut — the plan is graded on whether its claims are checkable, never 
    experience and reliability with less or simpler. It returns cuts, each naming what replaces it, never edits. The conductor checks each claim and
    applies a cut only when nothing concrete is lost — a safeguard, a Seams finding, a Vision sentence left unmet — keeping the rest without a card; a
    question is answered by lookup; a trade it still backs rides the opt-in line (`references/decisions.md` § Improvements). Stop when a round applies nothing, three rounds at most.
-8. **Approve.** Render `references/approval-brief.md`'s brief and run ONE question round — open cards plus **Approve / Change / Park**. Approve runs
-   `skills/_tools/plan-approve.sh approve <plan> "$(git config user.name)"`, the ONE writer, never a hand edit. Unattended: the plan stays `draft` and the docket shows it waiting.
-9. **Stop.** End with the line `Next: /ac-prep <path>` (or `/ac-polish plan <path>` for one stage at a time) — never invoke the next stage.
+8. **Provisional approval.** Render `references/approval-brief.md`'s provisional shape and run ONE question round — open cards plus **Go / Change / Park**. Go copies the plan to `<STATE>/provisional.md` (`<STATE>` a fresh run-scoped dir under this project's gitignored `_scratch/`, chosen now and reused through step 10) — no stamp, no status change. Unattended: the plan stays `draft` and the docket shows it waiting.
+9. **Polish.** Run `ac-polish plan <path>` in this session — this session spawns the readers, never a delegated coordinator; the loop returns STAMPED to this procedure (`skills/ac-polish/workflows/plan.md`'s `draft` branch).
+10. **Final approval.** Render the final shape (`references/approval-brief.md`, "what polish changed" against `<STATE>/provisional.md`) and run ONE question round — **Approve / Change / Park / Show me the plan**. Approve runs `skills/_tools/plan-approve.sh approve <plan> "$(git config user.name)"` then `skills/_tools/plan-approve.sh ready <plan>` back to back, the ONE writer, never a hand edit.
+11. **Offer beadify.** Ask "Start beadify now? yes / no" — yes runs `/ac-beadify <path>` in this session, a direct yes being the human's own words; no ends with `Next: /ac-beadify <path>`.
+
+Re-entered on an existing draft, this procedure resumes by the plan's own keys: no polish keys present → step 8; polish keys present → step 10 — a `status: refined` plan (ac-beadify's needs-human refusal) and an `approved` plan whose `ready` refused `regate <sections>` resume at step 10 too, re-approve then `ready` again.
 
 ## The success criterion — a refusal, not a suggestion
 
