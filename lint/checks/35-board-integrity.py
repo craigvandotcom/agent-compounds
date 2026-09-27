@@ -69,7 +69,7 @@ def _load_guard(registry_root):
 guard = _load_guard(_REGISTRY_ROOT)
 PROBE = guard.PROBE  # the same shape the runtime capture guard scans for
 
-CUTOVER = "2026-08-23"  # rule 3: origin axis became a hard gate (hooks/hooks.json _doc)
+CUTOVER = "2026-08-23"  # rule 3: origin axis became a hard gate (engine/hooks.wiring.json _doc)
 RULE56_CUTOVER = "2026-09-23"  # rule 6: forward-only from this date — earlier closes are never re-judged
 RULE7_CUTOVER = "2026-09-26"  # rule 7: epic title shape — earlier epics are never re-judged
 EPIC_TITLE_RE = re.compile(r"^(\S.{0,31}?) — (.+)$")

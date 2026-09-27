@@ -70,7 +70,7 @@ git init -q "$W"
 git -C "$W" config user.email t@t.t
 git -C "$W" config user.name t
 
-# Check A: a real disk-scan check shaped like 27-instance-tokens — scope
+# Fixture check A: a real disk-scan check shaped like 27-instance-tokens — scope
 # LIVE_TEXT, FAILs on a banned token. Exercises the MATERIALISATION half.
 cat > "$W/lint/checks/50-demo-token.py" <<'PY'
 #!/usr/bin/env python3
@@ -113,7 +113,7 @@ if __name__ == "__main__":
     sys.exit(main())
 PY
 
-# Check B: scope LEDGER (deliberately NOT the set the staged file below
+# Fixture check B: scope LEDGER (deliberately NOT the set the staged file below
 # belongs to) — reports only whether it RAN. Proves whole-suite execution:
 # with no selection left, this must run regardless of scope or which file
 # is staged — the "engine/hooks.wiring.json alone still runs check 32" class.
@@ -139,7 +139,7 @@ if __name__ == "__main__":
     sys.exit(main())
 PY
 
-# Check C: reads the adopter-local inputs directly off its `root` argument —
+# Fixture check C: reads the adopter-local inputs directly off its `root` argument —
 # proves materialize_staged() links them into the snapshot.
 cat > "$W/lint/checks/55-demo-adopter-local.py" <<'PY'
 #!/usr/bin/env python3
@@ -174,7 +174,7 @@ if __name__ == "__main__":
     sys.exit(main())
 PY
 
-# Check D: a NOT-GATED check (exits 2, scanned nothing) — exit-precedence case.
+# Fixture check D: a NOT-GATED check (exits 2, scanned nothing) — exit-precedence case.
 cat > "$W/lint/checks/56-demo-notgated.py" <<'PY'
 #!/usr/bin/env python3
 # ---
@@ -196,7 +196,7 @@ if __name__ == "__main__":
     sys.exit(main())
 PY
 
-# Check E: an honest skip (exit 77) — must never fail a run alone.
+# Fixture check E: an honest skip (exit 77) — must never fail a run alone.
 cat > "$W/lint/checks/57-demo-skip.py" <<'PY'
 #!/usr/bin/env python3
 # ---
