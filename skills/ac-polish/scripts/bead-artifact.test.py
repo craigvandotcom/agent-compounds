@@ -444,6 +444,40 @@ if code == 2 and "crash" in (msg or "").lower():
 else:
     fail("certify crash", f"code={code} msg={msg}")
 
+# certify()'s outer timeout defaults to 600s, not 60 (2026-09-27): bead.py's own run_probe
+# already bounds each PROBE at 60s, so an outer bound of 60 on the WHOLE check turned any
+# multi-probe bead whose probes' combined runtime crossed 60s into a false NOT-GATED, even
+# though every probe finished inside its own legitimate bound.
+if ba.certify.__defaults__ == (600,):
+    ok("certify: the outer timeout defaults to 600s, six probes' worth of the per-probe "
+       "60s bound, never equal to a single probe's own bound")
+else:
+    fail("certify default timeout", ba.certify.__defaults__)
+
+# The injectable `timeout=` param is exercised end-to-end (never just asserted-and-trusted):
+# a stub that outruns an explicit SHORT bound still crashes NOT-GATED — proving the bound is
+# live, not decorative, and so is the 600s default it replaces the old bare 60 with.
+SLOWCHECK = os.path.join(W, "slow-bead-check.py")
+write(SLOWCHECK, "import time, sys\ntime.sleep(2)\nprint('bead.py check: OK slow-stub')\nsys.exit(0)\n")
+ba.BEAD_PY = SLOWCHECK
+code, msg = ba.certify("ac-t1", timeout=0.2)
+if code == 2 and "crash" in (msg or "").lower():
+    ok("certify: a check that outruns its (injectable) timeout is NOT-GATED (2), never a "
+       "silent pass — the same path a too-small outer bound used to hit on every "
+       "multi-probe bead")
+else:
+    fail("certify timeout", f"code={code} msg={msg}")
+
+# The positive pole: the SAME slow stub, given room under a longer bound (analogous to the
+# 600s default against several 60s-bounded probes), returns cleanly rather than crashing.
+code, msg = ba.certify("ac-t1", timeout=10)
+ba.BEAD_PY = _REAL_BEAD_PY
+if code == 0 and msg is None:
+    ok("certify: the same check, given room under a longer bound, completes cleanly rather "
+       "than crashing — proof the bound (not the check itself) was what used to kill it")
+else:
+    fail("certify slow-but-in-bound", f"code={code} msg={msg}")
+
 # The restamp sweep skips a human-gate bead outright — it never carries `refined` (a ruled
 # exemption), so running it through stamp-refined.sh would only ever miscount as a refusal now
 # that a sweep refusal fails the whole writeback. Typed `task` (not `decision`) so it would

@@ -154,17 +154,25 @@ def show(bead_id):
     return d.get("issue", d), None
 
 
-def certify(bead_id):
+def certify(bead_id, timeout=600):
     """Run `bead.py check <id>` before a write lands (ac-m9y4.8) — the one refusing command
     for every measurable bead rule. Fail-closed: bead.py missing, unrunnable, or crashing is
     NOT-GATED (2), never read as a pass; a content refusal is 1. Returns (code, message) —
-    `message` is None on a clean 0."""
+    `message` is None on a clean 0.
+
+    `timeout` (default 600s, not 60): bead.py's own `run_probe` already bounds each
+    INDIVIDUAL probe at 60s (its own default), and a bead can carry more than one — an outer
+    bound equal to the per-probe bound turned the FIRST multi-probe bead's export NOT-GATED
+    the moment its probes' combined runtime crossed 60s, even though every probe finished
+    inside its own legitimate bound. 600s is the same outer ceiling stamp-refined.sh's own
+    `bead.py check` gate wraps with — one number, one reasoning, both call sites. A test
+    shortens it to exercise the crash/timeout path without an actual multi-minute wait."""
     if not os.path.isfile(BEAD_PY):
         return 2, f"bead.py not found at {BEAD_PY!r} — nothing was certified"
     try:
         r = subprocess.run(
             [sys.executable, BEAD_PY, "check", bead_id],
-            capture_output=True, text=True, timeout=60,
+            capture_output=True, text=True, timeout=timeout,
         )
     except (OSError, subprocess.TimeoutExpired) as exc:
         return 2, f"bead.py check crashed: {exc}"
