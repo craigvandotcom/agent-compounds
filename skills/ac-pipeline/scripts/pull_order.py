@@ -3,7 +3,12 @@
 Imported by ac-board (🎯 NEXT) and ac-human (the docket) so both rank alike.
 The rationale lives in ac-pipeline/references/stage-table.md § Pull order.
 """
+import os
 import re
+import sys
+
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.realpath(__file__)), "../../_tools"))
+import bead  # noqa: E402
 
 # Each rung of the ladder, most mature first. A move's rank is its index here.
 LADDER = ("red-pr",        # interrupt: a red PR poisons whatever lands next
@@ -44,12 +49,14 @@ def plan_stage(fm):
 
 
 def blocks_counts(recs):
-    """{id: open beads waiting on it through a `blocks` edge} from the jsonl records."""
-    is_open = lambda r: r.get("status") not in ("closed", "tombstone") and not r.get("closed_at")
+    """{id: open beads waiting on it through a `blocks` edge} from the jsonl records —
+    bead.py's `is_open` is the sole open/closed axis (its own docstring: `closed` is the
+    only terminal state)."""
     n = {}
     for r in recs.values():
-        if not is_open(r): continue
+        if not bead.is_open(r.get("status")): continue
         for d in r.get("dependencies") or []:
             t = d.get("depends_on_id")
-            if d.get("type") == "blocks" and is_open(recs.get(t, {})): n[t] = n.get(t, 0) + 1
+            if d.get("type") == "blocks" and bead.is_open(recs.get(t, {}).get("status")):
+                n[t] = n.get(t, 0) + 1
     return n

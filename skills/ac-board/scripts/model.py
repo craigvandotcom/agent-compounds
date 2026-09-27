@@ -14,6 +14,8 @@ import datetime as dt, json, os, re, sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.realpath(__file__)), "../../ac-pipeline/scripts"))
 from pull_order import PLAN_ORDER, PLAN_RUNG, blocks_counts, front, plan_stage, rank  # noqa: E402
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.realpath(__file__)), "../../_tools"))
+import bead  # noqa: E402
 
 LIVE_MIN = 60          # an agent active within this many minutes is live
 STALE_H = 24           # an in-progress bead untouched this long is stale
@@ -115,7 +117,7 @@ def build(T, ROOT, COMPACT):
     except (ValueError, KeyError) as e:
         failed.append(f".beads/issues.jsonl: {e}")
 
-    labels = lambda b: set(b.get("labels") or [])
+    labels = lambda b: set(bead.labels_of(b.get("labels")))
     is_open = lambda r: r.get("status") not in ("closed", "tombstone") and not r.get("closed_at")
     rec = lambda i: (recs or {}).get(i, {})
 

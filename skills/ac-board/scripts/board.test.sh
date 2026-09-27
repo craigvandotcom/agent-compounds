@@ -91,6 +91,12 @@ check starved "and routes to implement"        '^   → /ac-implement$'
 fixture idlelive "[$READY]" "[$READY]" "$READY" "$LIVE"
 check idlelive "a live agent holding nothing is idle" '^🥵 IDLE'
 
+# A failed roster read is UNKNOWN, never guessed as empty or as no live agent.
+fixture rosterfail "[$READY]" "[$READY]" "$READY" ""
+put "$W/rosterfail/reads" roster 1 ""; echo "agent-roster.py: db locked" >"$W/rosterfail/reads/roster.err"
+check rosterfail "verdict is unknown — agent roster unreadable" '^\? unknown — agent roster unreadable$'
+check rosterfail "no verdict state is claimed"  'RUNNING|IDLE|STUCK|EMPTY' absent
+
 # Ready but none pickable (device, PREMISE-FAILED, held): not IDLE, and no swarm is sent.
 fixture blind "[$READY]" "[$READY]" "$READY" "" 0
 check blind "not idle when the pick pool is dry" '^⛔ STUCK — nothing can move$'

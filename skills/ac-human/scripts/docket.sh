@@ -71,12 +71,14 @@ if [ "$MODE" = full ]; then
 fi
 wait
 
-python3 - "$T" "$PROJECT_ROOT" "$MODE" "$SKILLS/ac-pipeline/scripts" <<'PY'
+python3 - "$T" "$PROJECT_ROOT" "$MODE" "$SKILLS/ac-pipeline/scripts" "$SKILLS/_tools" <<'PY'
 import datetime as dt, json, os, re, sqlite3, sys
 
 T, ROOT, MODE = sys.argv[1], sys.argv[2], sys.argv[3]
 sys.path.insert(0, sys.argv[4])
 from pull_order import PLAN_ORDER, blocks_counts, front, plan_stage  # noqa: E402
+sys.path.insert(0, sys.argv[5])
+import bead  # noqa: E402
 NOW = dt.datetime.now(dt.timezone.utc)
 TODAY = dt.date.today().isoformat()          # local calendar date — the freshness day boundary
 failed = []
@@ -146,7 +148,7 @@ def pack(parts, width=W - len(IND)):
 
 # ── gate beads (board-scan § Docket health: on_docket) ────────────────────
 DOCKET = {"human-gate", "pipeline-proposal", "dream-proposal"}
-LIFECYCLE = DOCKET | {"refined", "unrefined", "refine-full", "refine-light", "human-ratified",
+LIFECYCLE = DOCKET | {"refined", "unrefined", "refine-full", "refine-light",
                       "gate-incomplete", "plan-gap"}
 beads = None
 raw, ok = read("beads", "br_call list")
@@ -164,12 +166,13 @@ def on_docket(b):
     if u and u > NOW: return False
     return b["status"] in ("open", "blocked", "in_progress")
 
-labels = lambda b: set(b.get("labels") or [])
+labels = lambda b: set(bead.labels_of(b.get("labels")))
 gates = [b for b in beads or [] if labels(b) & DOCKET and on_docket(b)]
 
 def is_open(r):
-    """Same open definition blocks_counts uses for the frees direction."""
-    return r.get("status") not in ("closed", "tombstone") and not r.get("closed_at")
+    """Same open definition blocks_counts uses for the frees direction — bead.py's
+    canonical axis (`closed` is the sole terminal state)."""
+    return bead.is_open(r.get("status"))
 
 # ── every `blocks` edge: the jsonl is the only source, read the other way ──
 # BLOCKS counts what a gate frees; EDGES additionally answers what each bead waits on.
@@ -222,9 +225,9 @@ def fresh_tag(b):
     return "(tap-ready)" if v == TODAY else f"⚠ stale — reverify (verified {v})" if v else "⚠ never verified — reverify"
 
 def kind(b):
-    t, title = b.get("issue_type"), b.get("title", "")
-    if t in ("task", "decision"): return "action" if t == "task" else "decision"
-    return "action" if title.startswith("ACTION:") else "decision"
+    gk = bead.gate_kind(b.get("title", ""))
+    if gk is not None: return gk.lower()
+    return "action" if b.get("issue_type") == "task" else "decision"
 
 MEMO = ("evidence:", "consequence:", "recommendation:")
 def memo_tag(b):
