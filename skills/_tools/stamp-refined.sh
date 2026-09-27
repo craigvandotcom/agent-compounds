@@ -237,6 +237,21 @@ EOF
     _downgrade "$id" "device verdict without device label" || return $?
     return 1
   fi
+  # ECHO-ONLY LEG: an `echo` cannot fail, so a bead whose every probe is one certifies nothing.
+  # One real probe beside an echo still names something that can go RED.
+  local _echo_only=1 _bare
+  while IFS= read -r _pr; do
+    [ -n "$_pr" ] || continue
+    _bare=$(printf '%s' "$_pr" | sed 's/^Probe: `//; s/`$//')
+    printf '%s' "$_bare" | grep -qE '^[[:space:]]*echo([[:space:]]|$)' || { _echo_only=0; break; }
+  done <<EOF
+$(printf '%s\n' "$_allp")
+EOF
+  if [ "$_echo_only" -eq 1 ] && [ -n "$(printf '%s' "$_allp" | tr -d '[:space:]')" ]; then
+    echo "stamp_refined: REFUSED $id — ECHO-ONLY: every probe is an echo, which cannot fail; name a command that goes RED when the work is absent. No label written." >&2
+    _downgrade "$id" "every probe is echo-only" || return $?
+    return 1
+  fi
 
   # PROD-WRITE TRIPWIRE (ac-bhxx). The predicate is judgment; this leg is the mechanical
   # backstop for descriptions that match its signal vocabulary. A signal passes only with

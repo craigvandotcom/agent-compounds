@@ -62,6 +62,20 @@ Guard a local parser.
 '
 WHOLE_SUITE="${BASE/bash skills\/_tools\/stamp-refined.test.sh/pnpm test}"
 DEVICE="${BASE}"$'\n'"- Device verified."$'\n'"  Probe: \`br comments x | grep -q 'DEVICE VERDICT:'\` — tier: none"
+ECHO_ONLY='## Intent
+Investigate a UI feel.
+
+## Acceptance Criteria
+- The morph is evaluated.
+  Probe: `echo "investigation: evaluate gooey morph on FAB add-discs"` — tier: none
+
+## Delivers
+- lib/morph.sh
+
+## Consumes
+- none
+'
+ECHO_PLUS_REAL="${ECHO_ONLY}"$'\n'"- The guard lands."$'\n'"  Probe: \`bash skills/_tools/stamp-refined.test.sh\` — tier: standing-harness"
 SIGNAL="${BASE}"$'\n'"The repair is a one-off data fix for the affected production database rows."
 NEGATIVE="${SIGNAL}"$'\n'"prod-write: none — the repair is confined to the sanitized test fixture."
 NO_DELIVERS='## Intent
@@ -91,11 +105,16 @@ Document a local outcome.
 jq -n \
   --arg base "$BASE" --arg signal "$SIGNAL" --arg negative "$NEGATIVE" \
   --arg none "$NO_DELIVERS" --arg prose "$PROSE_DELIVERS" \
-  --arg whole "$WHOLE_SUITE" --arg device "$DEVICE" '[
+  --arg whole "$WHOLE_SUITE" --arg device "$DEVICE" \
+  --arg echoonly "$ECHO_ONLY" --arg echoplusreal "$ECHO_PLUS_REAL" '[
   {id:"bd-whole-suite", issue_type:"task", title:"whole suite probe", labels:["origin:test"],
    description:$whole, dependencies:[]},
   {id:"bd-device-bare", issue_type:"task", title:"device verdict, no label", labels:["origin:test"],
    description:$device, dependencies:[]},
+  {id:"bd-echo-only", issue_type:"task", title:"every probe is an echo", labels:["origin:test"],
+   description:$echoonly, dependencies:[]},
+  {id:"bd-echo-plus-real", issue_type:"task", title:"echo plus a real probe", labels:["origin:test"],
+   description:$echoplusreal, dependencies:[]},
   {id:"bd-device-labelled", issue_type:"task", title:"device verdict, labelled", labels:["origin:test","device"],
    description:$device, dependencies:[]},
   {id:"bd-prod-unmarked", issue_type:"task", title:"escaped fix", labels:["origin:test","refined"],
@@ -185,6 +204,21 @@ if [ "$STAMP_RC" -eq 0 ] && [ "$(label_count add bd-device-labelled refined)" -e
   pass "a device-verdict probe on a device-labelled bead stamps"
 else
   fail "device-labelled bead" "rc=$STAMP_RC: $STAMP_OUT / log: $(cat "$BR_LOG")"
+fi
+
+run_stamp bd-echo-only
+if [ "$STAMP_RC" -eq 1 ] && printf '%s\n' "$STAMP_OUT" | grep -q "ECHO-ONLY" \
+    && [ "$(label_count add bd-echo-only refined)" -eq 0 ]; then
+  pass "a bead whose every probe is a bare echo is refused"
+else
+  fail "echo-only probe" "rc=$STAMP_RC: $STAMP_OUT / log: $(cat "$BR_LOG")"
+fi
+
+run_stamp bd-echo-plus-real
+if [ "$STAMP_RC" -eq 0 ] && [ "$(label_count add bd-echo-plus-real refined)" -eq 1 ]; then
+  pass "an echo alongside a real probe is not caught by the echo-only leg"
+else
+  fail "echo plus real probe" "rc=$STAMP_RC: $STAMP_OUT / log: $(cat "$BR_LOG")"
 fi
 
 for id in bd-task-no-delivers bd-feature-prose; do
