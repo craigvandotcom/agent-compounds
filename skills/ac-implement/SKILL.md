@@ -66,7 +66,7 @@ Then, and only after it exits 0:
 1. **Batch CI on the committed tree.** The repo-wide gates are authoritative HERE — only here is
    the tree free of half-finished sibling edits. A red is yours: fix a one-commit red through
    claim→gate, file anything larger with a named owner. The run is not over while a red has neither.
-2. **Telemetry.** Report width, wall time, and gate-wait vs work time.
+2. **Push the batch — `bash <scripts>/../../ac-pipeline/scripts/push.sh`, never a worker's own `git push` — then telemetry:** width, wall time, gate-wait vs work time.
 3. **Read back the clean state:** 0 claims held by run actors, 0 active reservations for the
    roster. Force-release strays and deregister only yourself (`ac-land/references/teardown.md`).
    An open item in the report is unfinished work, not an exit.
