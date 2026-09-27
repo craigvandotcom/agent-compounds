@@ -358,8 +358,18 @@ def consumes(text):
         blocker_part, _, artifact_part = line.partition("->")
         m = _BLOCKER_ID_RE.match(blocker_part.strip())
         blocker = m.group(1).rstrip("-._") if m else None
-        artifact = artifact_part.strip() or None
-        placeholder = bool(artifact and _PLACEHOLDER_RE.search(artifact))
+        artifact_remainder = artifact_part.strip()
+        # An unfilled placeholder is read over the WHOLE remainder — it may spell
+        # itself as a multi-word sentence (`<the artifact ac-other promises>`), not
+        # just one token. The artifact itself, once it is a real path rather than a
+        # placeholder, is the first whitespace-delimited token after the arrow — a
+        # trailing note (`(this bead stops the lane pushing; …)`, `(landed)`) is
+        # commentary, never part of the path (fbde324c: "a Consumes artifact is a
+        # whole word", settled earlier in flight-check.sh; this is that same rule's
+        # one home now that flight-check reads Consumes through this reader).
+        placeholder = bool(artifact_remainder and _PLACEHOLDER_RE.search(artifact_remainder))
+        artifact_tokens = artifact_remainder.split()
+        artifact = artifact_tokens[0] if artifact_tokens else None
         out.append({
             "raw": raw_line,
             "blocker": blocker,

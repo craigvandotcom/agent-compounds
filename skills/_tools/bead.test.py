@@ -103,6 +103,24 @@ check(bead.consumes("none") == [], "consumes: bare 'none' -> zero entries")
 check(bead.consumes("None.") == [], "consumes: 'None.' (case + trailing period) -> zero entries")
 check(bead.consumes("") == [], "consumes: empty body -> zero entries")
 
+# A Consumes line may carry a trailing parenthetical note after the artifact — the
+# artifact is the first whitespace-delimited token, the note is never part of the path
+# (ac-m9y4.3 regression: bead.py took the whole remainder, so a present artifact with a
+# note read as absent).
+cons_noted = bead.consumes(
+    "- ac-ftfz.7 -> skills/ac-pipeline/scripts/push.sh (this bead stops the lane pushing; see thread)\n"
+    "- upstream -> ./present-artifact.md (landed)"
+)
+check(len(cons_noted) == 2, "consumes: trailing-note fixture parses two lines", cons_noted)
+check(cons_noted[0]["blocker"] == "ac-ftfz.7"
+      and cons_noted[0]["artifact"] == "skills/ac-pipeline/scripts/push.sh"
+      and cons_noted[0]["placeholder"] is False,
+      "consumes: a trailing parenthetical note is dropped from the artifact", cons_noted[0])
+check(cons_noted[1]["blocker"] == "upstream"
+      and cons_noted[1]["artifact"] == "./present-artifact.md"
+      and cons_noted[1]["placeholder"] is False,
+      "consumes: a short trailing note ('(landed)') is dropped too", cons_noted[1])
+
 # =====================================================================================
 # Delivers: repo-root file, dot-leading extensionless, cross-repo ~/, deleted-<kind>:,
 # the touchers-line exclusion, and the dotted-child-bead-id false-positive
