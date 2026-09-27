@@ -642,6 +642,35 @@ if [ "$GATE_RC" -eq 0 ] && printf '%s' "$out" | grep -q 'COVERAGE ok'; then
   pass "AC3g: a test-predicate chain naming test-shaped files is never the assertion probe — the output-carrying harness probe is"
 else fail "AC3g: rc=$GATE_RC out=$out"; fi
 
+# --- 3h (checker recheck 2026-09-27): a `test`/`[` wrapping a grep/rg run inside a
+# `$(...)` command substitution is a PRESENCE CHECK — its stdout is captured into the
+# shell word it expands to, never forwarded to the real stream this leg reads — so it must
+# never be picked as the assertion-bearing probe over the real harness probe, exactly like
+# a bare `grep -q` or a `test -f` predicate chain (bead-schema.md's probe rule already bans
+# `grep -c` as pass/fail; this is that shape wrapped in a numeric comparison).
+R="$(mkcase coverage-silent-grep-subshell)"
+write_registry_format_harness "$R"; board "$R" in_progress worker
+cat >"$R/body.md" <<'BODY'
+## Acceptance Criteria
+- the harness names the assertion format.
+  Probe: `test "$(grep -c 'PASS' harness.test.sh)" -gt 0` — tier: none
+- the harness passes.
+  Probe: `bash harness.test.sh` — tier: none
+
+## Delivers
+- artifact: subject.txt
+- harness: harness.test.sh
+
+## Consumes
+- none
+BODY
+fly "$R"; fix_subject "$R"
+out="$(gate "$R" --reason "$REASON")"
+GATE_RC=$(cat "$RCFILE")
+if [ "$GATE_RC" -eq 0 ] && printf '%s' "$out" | grep -q 'COVERAGE ok'; then
+  pass "AC3h: a test-wrapped grep/rg command-substitution (a presence check) is never the assertion probe — the output-carrying harness probe is"
+else fail "AC3h: rc=$GATE_RC out=$out"; fi
+
 # --- 3f (the Delivers carve-out, guarded): when EVERY probe's stdout is suppressed by
 # construction, the temporal exit-code pair recorded in the receipt is the assertion —
 # the same case the prose path already handled. This must never have to grow a harness.

@@ -190,6 +190,22 @@ is_test_shaped() {
   esac
 }
 
+# A `test`/`[`/`[[` whose only real work is a grep/rg run inside a `$(...)` command
+# substitution is a PRESENCE CHECK, never an assertion: the substitution's stdout is
+# captured into the shell word it expands to, never forwarded to the real stdout stream
+# is_output_silent's caller reads, so `test "$(grep -c 'X' file.spec.ts)" -gt 0` behaves
+# exactly like a bare `grep -q` for this leg's purposes — it just spells the same shape
+# differently, wrapped in a numeric comparison that reads as a legitimate assertion on a
+# first pass (bead-schema.md's own probe rule already bans `grep -c` as pass/fail; this
+# is that shape again). Checked ahead of the two case/sed legs below so neither has to
+# also recognise it (checker recheck 2026-09-27).
+_ASSERT_TEST_WRAP_RE='^[[:space:]]*(test|\[|\[\[)[[:space:]]'
+_ASSERT_GREP_SUBSHELL_RE='\$\([[:space:]]*(grep|egrep|fgrep|rg)[[:space:]]'
+
+is_test_wrapped_grep_substitution() {
+  [[ "$1" =~ $_ASSERT_TEST_WRAP_RE ]] && [[ "$1" =~ $_ASSERT_GREP_SUBSHELL_RE ]]
+}
+
 # A probe whose stdout is SUPPRESSED BY CONSTRUCTION can never carry assertion lines:
 # a silent test (-q or --quiet) or a redirect into /dev/null produces nothing to count, so selecting
 # it as the assertion-bearing probe bails COVERAGE on a bead whose harness asserts fine
@@ -201,6 +217,7 @@ is_output_silent() {
   case "$1" in
     *grep\ -q*|*rg\ -q*|*\|grep\ -q*|*\>/dev/null*|*\>/\ dev/null*|*--quiet*) return 0 ;;
   esac
+  is_test_wrapped_grep_substitution "$1" && return 0
   # A probe composed solely of existence predicates (`test -f/-d`, `[ ... ]`) joined by
   # connectors emits nothing by construction — `test` has no stdout — so it can never
   # carry assertion lines either (measured: heyt P1 `test -f` chain shadowing the
