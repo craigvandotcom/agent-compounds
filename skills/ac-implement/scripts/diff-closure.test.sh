@@ -36,6 +36,8 @@ run() { local R="$1"; shift; out=$("$SCRIPT" --base HEAD -C "$R" "$@" 2>&1); rc=
 # --- 0. NOT-GATED ------------------------------------------------------------------------
 out=$("$SCRIPT" --base HEAD -C "$W" 2>&1); rc=$?
 [ "$rc" = 2 ] && printf '%s' "$out" | grep -q NOT-GATED && ok "not a repo -> NOT-GATED" || fail "not a repo" "$out"
+printf '%s' "$out" | grep -q 'NEXT: handback' \
+  && ok "a NOT-GATED refusal tells the worker what to do next (NEXT: handback)" || fail "not a repo NEXT" "$out"
 R0="$W/r0"; mkrepo "$R0"
 out=$("$SCRIPT" --base HEAD --bead x --declared /dev/null -C "$R0" 2>&1); rc=$?
 [ "$rc" = 2 ] && ok "--bead with --declared -> NOT-GATED" || fail "exclusive flags" "$out"
@@ -52,6 +54,8 @@ if [ "$rc" = 1 ] && printf '%s' "$out" | grep -q "REFUSED \[unowned-callers\] sy
 else
   fail "undeclared caller" "rc=$rc $out"
 fi
+printf '%s' "$out" | grep -q 'NEXT: pick' \
+  && ok "an unowned-callers REFUSED tells the worker what to do next (NEXT: pick)" || fail "undeclared caller NEXT" "$out"
 
 # --- 2. the same change with a declaration that covers the caller -> PASS -------------------
 printf 'rg -l -w updateFood lib\n' > "$W/decl1"

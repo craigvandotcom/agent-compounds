@@ -81,12 +81,12 @@ while [ $# -gt 0 ]; do
     --print-receipt) PRINT_RECEIPT=1; shift ;;
     --check-only)    CHECK_ONLY=1; shift ;;
     -h|--help)       sed -n '2,60p' "${BASH_SOURCE[0]}"; exit 0 ;;
-    -*)              echo "NOT-GATED: unknown option '$1'" >&2; exit 2 ;;
-    *)               [ -z "$BEAD" ] && BEAD="$1" || { echo "NOT-GATED: unexpected argument '$1'" >&2; exit 2; }; shift ;;
+    -*)              echo "NOT-GATED: unknown option '$1'" >&2; echo "NEXT: handback" >&2; exit 2 ;;
+    *)               [ -z "$BEAD" ] && BEAD="$1" || { echo "NOT-GATED: unexpected argument '$1'" >&2; echo "NEXT: handback" >&2; exit 2; }; shift ;;
   esac
 done
 
-[ -n "$BEAD" ] || { echo "NOT-GATED: usage: $0 <bead-id> [--body-file <path>]" >&2; exit 2; }
+[ -n "$BEAD" ] || { echo "NOT-GATED: usage: $0 <bead-id> [--body-file <path>]" >&2; echo "NEXT: handback" >&2; exit 2; }
 
 if [ -z "$ROOT" ]; then
   # ROOT is the CONSUMER repo's root, never the script's own repo: these scripts are
@@ -97,16 +97,16 @@ if [ -z "$ROOT" ]; then
     || ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." 2>/dev/null && pwd) \
     || ROOT="$PWD"
 fi
-[ -d "$ROOT" ] || { echo "NOT-GATED: repo root '$ROOT' is not a directory" >&2; exit 2; }
+[ -d "$ROOT" ] || { echo "NOT-GATED: repo root '$ROOT' is not a directory" >&2; echo "NEXT: handback" >&2; exit 2; }
 
 # The ONE br_call invocation shape (ac-heyt.3); a refusal below is a NOT-GATED /
 # keep-stamped routing, never empty data. Sourced before the cd: BASH_SOURCE may be
 # relative, so the absolute helper path must resolve from the original cwd.
 # shellcheck source=br-call.sh
 . "$(cd "$(dirname "${BASH_SOURCE[0]}")/../../_tools" 2>/dev/null && pwd)/br-call.sh" 2>/dev/null \
-  || { echo "NOT-GATED: br-call.sh helper missing — br reads cannot be verified" >&2; exit 2; }
+  || { echo "NOT-GATED: br-call.sh helper missing — br reads cannot be verified" >&2; echo "NEXT: handback" >&2; exit 2; }
 
-cd "$ROOT" || { echo "NOT-GATED: cannot enter repo root '$ROOT'" >&2; exit 2; }
+cd "$ROOT" || { echo "NOT-GATED: cannot enter repo root '$ROOT'" >&2; echo "NEXT: handback" >&2; exit 2; }
 
 # --- helpers ---------------------------------------------------------------------------
 
@@ -134,7 +134,7 @@ route_premise_failure() {
 Detected by flight-check.sh at claim, against the tree at $(git rev-parse --short HEAD 2>/dev/null || echo unknown).
 Freshness key: ${STAMP_FRESHNESS_KEY:-unavailable}.
 The bead is not flyable as written: re-refine it against the tree that exists."
-  msg_file=$(mktemp "${TMPDIR:-/tmp}/ac-flight-premise.XXXXXX") || { echo "NOT-GATED: cannot write the premise comment" >&2; return 2; }
+  msg_file=$(mktemp "${TMPDIR:-/tmp}/ac-flight-premise.XXXXXX") || { echo "NOT-GATED: cannot write the premise comment" >&2; echo "NEXT: handback" >&2; return 2; }
   printf '%s\n' "$note" >"$msg_file"
 
   local title new_title
@@ -156,6 +156,7 @@ The bead is not flyable as written: re-refine it against the tree that exists."
   if ! command -v br >/dev/null 2>&1; then
     echo "NOT-GATED: br is not on PATH — the premise failure could not be ROUTED (comment/title/unclaim)." >&2
     echo "NOT-GATED: do it by hand, then pick the next bead. Message body: $msg_file" >&2
+    echo "NEXT: handback" >&2
     return 2
   fi
   br comments add "$BEAD" -f "$msg_file" </dev/null >/dev/null 2>&1 \
@@ -170,24 +171,26 @@ The bead is not flyable as written: re-refine it against the tree that exists."
 
 # --- the bead body ----------------------------------------------------------------------
 
-BODY=$(mktemp "${TMPDIR:-/tmp}/ac-flight-body.XXXXXX") || { echo "NOT-GATED: cannot create a scratch file" >&2; exit 2; }
+BODY=$(mktemp "${TMPDIR:-/tmp}/ac-flight-body.XXXXXX") || { echo "NOT-GATED: cannot create a scratch file" >&2; echo "NEXT: handback" >&2; exit 2; }
 cleanup() { rm -f "$BODY"; }
 trap cleanup EXIT
 
 if [ -n "$BODY_FILE" ]; then
-  [ -r "$BODY_FILE" ] || { echo "NOT-GATED: body file '$BODY_FILE' is unreadable" >&2; exit 2; }
+  [ -r "$BODY_FILE" ] || { echo "NOT-GATED: body file '$BODY_FILE' is unreadable" >&2; echo "NEXT: handback" >&2; exit 2; }
   cat "$BODY_FILE" >"$BODY"
 elif command -v br >/dev/null 2>&1 && command -v jq >/dev/null 2>&1; then
   br_call show "$BEAD" --json \
     | jq -r 'if type == "array" then .[0] else . end | .description // ""' >"$BODY" \
-    || { echo "NOT-GATED: br_call show refused — the bead's premises are unreadable" >&2; exit 2; }
+    || { echo "NOT-GATED: br_call show refused — the bead's premises are unreadable" >&2; echo "NEXT: handback" >&2; exit 2; }
 else
   echo "NOT-GATED: no --body-file and br/jq unavailable — the bead's premises are unreadable" >&2
+  echo "NEXT: handback" >&2
   exit 2
 fi
 
 if [ ! -s "$BODY" ]; then
   echo "NOT-GATED: bead '$BEAD' has an empty body — there are no premises to check" >&2
+  echo "NEXT: handback" >&2
   exit 2
 fi
 
@@ -243,6 +246,7 @@ EOF
     if [ -n "$blocker" ]; then
       if ! command -v br >/dev/null 2>&1 || ! command -v jq >/dev/null 2>&1; then
         echo "NOT-GATED: '$line' names blocker '$blocker' but br/jq are unavailable — closure unverifiable" >&2
+        echo "NEXT: handback" >&2
         exit 2
       fi
       # An exact-id `show` refusal IS the prefix-miss signal — br matches exact ids only,
@@ -260,11 +264,11 @@ EOF
           | jq -r --arg b "$blocker" \
             '[.issues[] | select(.id | startswith($b)) | .id]
              | if length == 1 then .[0] elif length == 0 then "" else "AMBIGUOUS" end') \
-          || { echo "NOT-GATED: 'br list' refused — blocker '$blocker' resolution unverifiable" >&2; exit 2; }
+          || { echo "NOT-GATED: 'br list' refused — blocker '$blocker' resolution unverifiable" >&2; echo "NEXT: handback" >&2; exit 2; }
         if [ -n "$full" ] && [ "$full" != "AMBIGUOUS" ]; then
           bstatus=$(br_call show "$full" --json </dev/null \
             | jq -r 'if type == "array" then .[0] else . end | .status // ""' 2>/dev/null) \
-            || { echo "NOT-GATED: 'br show' refused for resolved blocker '$full' — closure unverifiable" >&2; exit 2; }
+            || { echo "NOT-GATED: 'br show' refused for resolved blocker '$full' — closure unverifiable" >&2; echo "NEXT: handback" >&2; exit 2; }
           blocker="$full"
         fi
       fi
@@ -274,7 +278,7 @@ EOF
       if [ "$BEAD_PARENT_READ" -eq 0 ]; then
         BEAD_PARENT=$(br_call show "$BEAD" --json </dev/null \
           | jq -r 'if type == "array" then .[0] else . end | .parent // .parent_id // ""' 2>/dev/null) \
-          || { echo "NOT-GATED: br_call show refused for '$BEAD' — parent-child closure exemption is unverifiable" >&2; exit 2; }
+          || { echo "NOT-GATED: br_call show refused for '$BEAD' — parent-child closure exemption is unverifiable" >&2; echo "NEXT: handback" >&2; exit 2; }
         BEAD_PARENT_READ=1
       fi
       if [ -n "$BEAD_PARENT" ] && [ "$blocker" = "$BEAD_PARENT" ]; then
@@ -354,6 +358,7 @@ PROBE_COUNT=$(printf '%s\n' "$PROBES" | grep -c '[^[:space:]]' || true)
 if [ -z "$FAIL_CLASS" ] && [ "$PROBE_COUNT" -eq 0 ]; then
   echo "NOT-GATED: bead '$BEAD' names ZERO extractable probes — a bead with no probe cannot" >&2
   echo "NOT-GATED: have a RED, and this gate would report a green it never earned." >&2
+  echo "NEXT: handback" >&2
   exit 2
 fi
 
@@ -459,14 +464,16 @@ fi
 if [ -z "$FAIL_CLASS" ] && [ "$CHECK_ONLY" -eq 0 ]; then
   if [ ! -f "$STAMP_GATE" ]; then
     echo "NOT-GATED: stamp gate not found at '$STAMP_GATE' — the refined stamp cannot be re-gated; refusing rather than trusting it" >&2
+    echo "NEXT: handback" >&2
     exit 2
   fi
   if ! command -v br >/dev/null 2>&1 || ! command -v jq >/dev/null 2>&1; then
     echo "NOT-GATED: br/jq unavailable — the refined stamp cannot be re-gated; refusing rather than trusting it" >&2
+    echo "NEXT: handback" >&2
     exit 2
   fi
   BEAD_JSON=$(br_call show "$BEAD" --json </dev/null) \
-    || { echo "NOT-GATED: br_call show refused — the refined stamp cannot be re-gated; refusing rather than trusting it" >&2; exit 2; }
+    || { echo "NOT-GATED: br_call show refused — the refined stamp cannot be re-gated; refusing rather than trusting it" >&2; echo "NEXT: handback" >&2; exit 2; }
   holds_refined=$(printf '%s' "$BEAD_JSON" \
     | jq -r 'if type == "array" then .[0] else . end
              | [ .labels // [] | .[] | select(. == "refined") ] | length' 2>/dev/null)
@@ -498,6 +505,7 @@ if [ -z "$FAIL_CLASS" ] && [ "$CHECK_ONLY" -eq 0 ]; then
       if [ "$STAMP_RC" -eq 2 ]; then
         printf '%s\n' "$STAMP_OUT" >&2
         echo "NOT-GATED: the stamp gate could not run (rc 2) — the refined stamp is unverified; never a pass" >&2
+        echo "NEXT: handback" >&2
         exit 2
       elif [ "$STAMP_RC" -ne 0 ]; then
         printf '%s\n' "$STAMP_OUT" >&2
@@ -588,6 +596,7 @@ if [ -n "$FAIL_CLASS" ]; then
   route_premise_failure
   rr=$?
   [ "$rr" -eq 2 ] && exit 2
+  echo "NEXT: pick" >&2
   exit 1
 fi
 
@@ -597,7 +606,7 @@ if [ "$CHECK_ONLY" -eq 1 ]; then
 fi
 
 # FLIGHT_DIR/RECEIPT_FILE: derived once, above the STALE-STAMP leg (Refusal 5) — one home.
-mkdir -p "$FLIGHT_DIR" 2>/dev/null || { echo "NOT-GATED: cannot create receipt dir '$FLIGHT_DIR'" >&2; exit 2; }
+mkdir -p "$FLIGHT_DIR" 2>/dev/null || { echo "NOT-GATED: cannot create receipt dir '$FLIGHT_DIR'" >&2; echo "NEXT: handback" >&2; exit 2; }
 
 RECEIPT=$(cat <<EOF
 FLIGHT-RECEIPT v1
@@ -612,7 +621,7 @@ red-green-siblings: $GREEN_COUNT of $PROBE_COUNT probe(s) already green
 EOF
 )
 printf '%s\n\n' "$RECEIPT" >>"$RECEIPT_FILE" 2>/dev/null \
-  || { echo "NOT-GATED: cannot append the flight receipt to '$RECEIPT_FILE'" >&2; exit 2; }
+  || { echo "NOT-GATED: cannot append the flight receipt to '$RECEIPT_FILE'" >&2; echo "NEXT: handback" >&2; exit 2; }
 
 printf '%s\n' "$RECEIPT"
 echo "flight-check: RED observed — receipt appended to ${RECEIPT_FILE}"

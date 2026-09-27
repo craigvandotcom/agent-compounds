@@ -48,7 +48,7 @@
 # removed; SQL `alter table … (add|drop|alter) column NAME`; deleted files (by import stem).
 set -euo pipefail
 
-die2() { printf 'diff-closure: NOT-GATED %s\n' "$*" >&2; exit 2; }
+die2() { printf 'diff-closure: NOT-GATED %s\n' "$*" >&2; echo "NEXT: handback" >&2; exit 2; }
 
 # The ONE br_call invocation shape (ac-heyt.3); a refusal below is a NOT-GATED,
 # never empty data. Absolute path computed before any cd: BASH_SOURCE may be relative.
@@ -295,4 +295,5 @@ fi
 printf 'diff-closure: REFUSED [unowned-callers] symbols=%s undeclared=%s declared=%s tests-outside=%s — a caller outside the diff that no touchers: line named. Own it (update it in this change, or add it to the bead touchers: line with its command), or split the change. No commit.\n' \
   "$((NSYM + NSTEM))" "$NREF" "$NDECL" "$NTEST" >&2
 awk -F'\t' '{ printf "  %s  <- %s\n", $1, $2 }' "$W/refused" >&2
+echo "NEXT: pick" >&2
 exit 1

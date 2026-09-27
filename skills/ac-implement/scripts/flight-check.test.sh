@@ -133,6 +133,9 @@ printf '%s' "$RUN_OUT" | grep -q 'PREMISE-FAILED: CONSUMES' \
   && ok "CONSUMES refusal names its class" || bad "CONSUMES class not named: $RUN_OUT"
 printf '%s' "$RUN_OUT" | grep -q 'absent-artifact.md' \
   && ok "CONSUMES refusal names WHICH artifact is absent" || bad "CONSUMES did not name the artifact"
+printf '%s' "$RUN_OUT" | grep -q 'NEXT: pick' \
+  && ok "a routed premise failure tells the worker what to do next (NEXT: pick)" \
+  || bad "no NEXT: pick after a routed premise failure: $RUN_OUT"
 
 # 2a' CONSUMES passes when the artifact IS on the tree (no blocker id -> no br dependency).
 cat >"$WORK/bodies/consumes-ok.md" <<'BODY'
@@ -395,6 +398,9 @@ run "$WORK/bodies/noprobe.md"
   || bad "no-probe body: expected exit 2, got $RUN_RC"
 printf '%s' "$RUN_OUT" | grep -q 'NOT-GATED' \
   && ok "the unverifiable case carries the NOT-GATED token" || bad "no NOT-GATED token: $RUN_OUT"
+printf '%s' "$RUN_OUT" | grep -q 'NEXT: handback' \
+  && ok "a NOT-GATED refusal tells the worker what to do next (NEXT: handback)" \
+  || bad "no NEXT: handback on a NOT-GATED refusal: $RUN_OUT"
 
 RUN_OUT=$(env AC2_DRY_RUN=1 AC2_FLIGHT_DIR="$WORK/receipts" bash "$GATE" ac-test-0001 \
   --body-file "$WORK/bodies/does-not-exist.md" --root "$WORK/root" 2>&1); RUN_RC=$?
@@ -523,11 +529,15 @@ Re-gate fixture: a deliverable that exists and is referenced owes a touchers lin
 ## Consumes
 - none
 BODY
-mk_json() { jq -n --arg d "$(cat "$1")" \
-  '{id:"ac-l7xt-fix",issue_type:"task",labels:["origin:ac-triage","refined","refine-full"],description:$d,comments:[]}'; }
+# Every origin now owes the fixpoint receipt (ac-m9y4.7): a fixture meant to reach a real
+# STAMP through the touchers gate carries one; the stale-stamp desc1 case is refused earlier
+# (at the touchers leg itself) and needs none.
+FIXTURE_RECEIPT='POLISH-FIXPOINT: mode=bead rounds=2 sha256=deadbeefcafebabe at=2026-08-27T00:00:00Z engine=polish-fixpoint.sh'
+mk_json() { jq -n --arg d "$(cat "$1")" --argjson c "${2:-[]}" \
+  '{id:"ac-l7xt-fix",issue_type:"task",labels:["origin:ac-triage","refined","refine-full"],description:$d,comments:$c}'; }
 
 : >"$WORK/labels1.log"
-mk_json "$WORK/fix-desc1.md" >"$WORK/fix1.json"
+mk_json "$WORK/fix-desc1.md" "[{\"text\":\"$FIXTURE_RECEIPT\"}]" >"$WORK/fix1.json"
 RUN_OUT=$(env AC2_DRY_RUN=1 AC2_FLIGHT_DIR="$WORK/receipts2" PATH="$B2:$PATH" \
   AC_FIXTURE_JSON="$WORK/fix1.json" AC_LABEL_LOG="$WORK/labels1.log" \
   bash "$GATE" ac-l7xt-fix --body-file "$WORK/fix-desc1.md" --root "$R2" 2>&1)
@@ -546,7 +556,7 @@ printf '%s' "$RUN_OUT" | grep -q 'ROUTE (dry-run)' && ok "stale stamp: routed as
 
 # ...and after the touchers line is added, the same bead clears for flight.
 : >"$WORK/labels2.log"
-mk_json "$WORK/fix-desc2.md" >"$WORK/fix2.json"
+mk_json "$WORK/fix-desc2.md" "[{\"text\":\"$FIXTURE_RECEIPT\"}]" >"$WORK/fix2.json"
 RUN_OUT=$(env AC2_DRY_RUN=1 AC2_FLIGHT_DIR="$WORK/receipts2" PATH="$B2:$PATH" \
   AC_FIXTURE_JSON="$WORK/fix2.json" AC_LABEL_LOG="$WORK/labels2.log" \
   bash "$GATE" ac-l7xt-fix --body-file "$WORK/fix-desc2.md" --root "$R2" 2>&1)
@@ -697,7 +707,9 @@ RUN_RC=$?
   || bad "8c: expected exit 0 (no count to go stale), got rc=$RUN_RC: $RUN_OUT"
 
 : >"$WORK/labels8c-gate.log"
-mk_json_c "$WORK/count-desc.md" '[{"text":"CLAIM: someone","created_at":"2024-01-01T00:00:00Z"}]' >"$WORK/count8c-gate.json"
+mk_json_c "$WORK/count-desc.md" \
+  "[{\"text\":\"CLAIM: someone\",\"created_at\":\"2024-01-01T00:00:00Z\"},{\"text\":\"$FIXTURE_RECEIPT\"}]" \
+  >"$WORK/count8c-gate.json"
 RUN_OUT=$(env AC2_DRY_RUN=1 AC2_FLIGHT_DIR="$COUNT_RECEIPTS" PATH="$B2:$PATH" \
   AC_FIXTURE_JSON="$WORK/count8c-gate.json" AC_LABEL_LOG="$WORK/labels8c-gate.log" \
   bash "$GATE" ac-l7xt-fix --body-file "$WORK/count-desc.md" --root "$R3" 2>&1)

@@ -27,6 +27,14 @@ else
   echo "FAIL  hand-back receipt missing"
   fails=$((fails + 1))
 fi
+
+out="$(bash "$S" --actor "FoggyCreek" 2>&1)"
+if printf '%s' "$out" | grep -q 'NEXT: handback'; then
+  echo "ok    a refusal tells the worker what to do next (NEXT: handback)"
+else
+  echo "FAIL  no NEXT: handback on refusal: $out"
+  fails=$((fails + 1))
+fi
 rm -rf "$D"
 if [ "$fails" -eq 0 ]; then
   echo "require-minted-actor: all cases passed"

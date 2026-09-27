@@ -90,11 +90,13 @@ check "empty count is 0" 0 0 --count
 reset; ready "$(bead a task 0 2026-01-01 "$R")"; : > "$FIX/ready.fail"
 check "br ready failure is NOT-GATED" "" 2
 check_err "failure named" "NOT-GATED"
+check_err "failure tells the worker what to do next (NEXT: handback)" "NEXT: handback"
 check "count on failure is NOT-GATED" "" 2 --count
 reset; ready "$(bead a task 0 2026-01-01 "$R")"; : > "$FIX/ready.envelope"
 check "rc-0 error envelope is NOT-GATED" "" 2
 reset; ready "$(bead p task 0 2026-01-01 '["refined","sensitive-prod"]')"; : > "$FIX/show.fail"
 check "br show failure is NOT-GATED" "" 2
+check_err "br show failure tells the worker what to do next (NEXT: handback)" "NEXT: handback"
 
 echo "PASS=$PASS FAIL=$FAIL"
 [ "$FAIL" = 0 ]

@@ -369,6 +369,9 @@ out="$(cd "$R" && "$LANE" --identity t --message-file msg.txt --path mine.txt 2>
 if [ "$rc" -eq 3 ] && printf '%s' "$out" | grep -q 'REFUSED \[unclaimed\]'; then
   pass "refuses a commit for a bead this identity does not hold the claim on, naming unclaimed"
 else fail "unclaimed: rc=$rc out=$out"; fi
+if printf '%s' "$out" | grep -q 'NEXT: repair unclaimed'; then
+  pass "unclaimed: the refusal tells the worker what to do next (NEXT: repair unclaimed)"
+else fail "unclaimed: no NEXT: repair unclaimed: $out"; fi
 if [ "$(git -C "$R" rev-parse HEAD)" = "$(git -C "$R" rev-parse origin/main)" ]; then
   pass "unclaimed: the refused commit never landed"
 else fail "unclaimed: the commit landed anyway"; fi

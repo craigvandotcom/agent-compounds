@@ -84,13 +84,13 @@ while [ $# -gt 0 ]; do
     --vitest-json) VITEST_JSON="${2:-}"; shift 2 ;;
     --dry-run)     DRY=1; shift ;;
     -h|--help)     sed -n '2,55p' "${BASH_SOURCE[0]}"; exit 0 ;;
-    -*)            echo "NOT-CHECKED: unknown option '$1'" >&2; exit 2 ;;
-    *)             [ -z "$BEAD" ] && BEAD="$1" || { echo "NOT-CHECKED: unexpected argument '$1'" >&2; exit 2; }; shift ;;
+    -*)            echo "NOT-CHECKED: unknown option '$1'" >&2; echo "NEXT: handback" >&2; exit 2 ;;
+    *)             [ -z "$BEAD" ] && BEAD="$1" || { echo "NOT-CHECKED: unexpected argument '$1'" >&2; echo "NEXT: handback" >&2; exit 2; }; shift ;;
   esac
 done
 
-[ -n "$BEAD" ]   || { echo "NOT-CHECKED: usage: $0 <bead-id> --reason '<close reason>'" >&2; exit 2; }
-[ -n "$REASON" ] || { echo "NOT-CHECKED: no --reason given — the evidence core has nothing to cross-reference" >&2; exit 2; }
+[ -n "$BEAD" ]   || { echo "NOT-CHECKED: usage: $0 <bead-id> --reason '<close reason>'" >&2; echo "NEXT: handback" >&2; exit 2; }
+[ -n "$REASON" ] || { echo "NOT-CHECKED: no --reason given — the evidence core has nothing to cross-reference" >&2; echo "NEXT: handback" >&2; exit 2; }
 
 if [ -z "$ROOT" ]; then
   # ROOT is the CONSUMER repo's root, never the script's own repo: these scripts are
@@ -101,7 +101,7 @@ if [ -z "$ROOT" ]; then
     || ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." 2>/dev/null && pwd) \
     || ROOT="$PWD"
 fi
-cd "$ROOT" || { echo "NOT-CHECKED: cannot enter repo root '$ROOT'" >&2; exit 2; }
+cd "$ROOT" || { echo "NOT-CHECKED: cannot enter repo root '$ROOT'" >&2; echo "NEXT: handback" >&2; exit 2; }
 
 # The ONE br_call invocation shape (ac-heyt.3). Path computed BEFORE the cd above:
 # BASH_SOURCE may be relative, so the absolute helper path must resolve from the original
@@ -117,8 +117,8 @@ EVIDENCE_CORE="$ROOT/skills/ac-pipeline/scripts/close-evidence-check.sh"
 [ -f "$EVIDENCE_CORE" ] \
   || EVIDENCE_CORE="$ROOT/.agents/skills/ac-pipeline/scripts/close-evidence-check.sh"
 
-refuse()      { echo "CLOSE-REFUSED: $1 — refusing: $2"; exit 1; }
-not_checked() { echo "NOT-CHECKED: $1 — $2" >&2; exit 2; }
+refuse()      { echo "CLOSE-REFUSED: $1 — refusing: $2"; echo "NEXT: repair $1" >&2; exit 1; }
+not_checked() { echo "NOT-CHECKED: $1 — $2" >&2; echo "NEXT: handback" >&2; exit 2; }
 
 . "$BR_CALL" 2>/dev/null || not_checked "READ" "br-call.sh helper missing at '$BR_CALL' — no br read can be verified"
 
@@ -300,6 +300,7 @@ if [ "$BEAD_TYPE" = "decision" ] || has_label "human-gate" || [ "$RULED_INTENT" 
     || not_checked "DECISION" "comments list refused for $BEAD — a ruling cannot be verified"
   if [ -z "$RULING" ]; then
     echo "CLOSE-REFUSED DECISION: no 'DECISION (<actor>): ...' comment on $BEAD is both a real ruling (first line, column 0, no placeholder actor) and signed by an authorized human — or ac-tidy on a pipeline-proposal bead — a ruling must be recorded before this bead can close" >&2
+    echo "NEXT: repair DECISION" >&2
     exit 1
   fi
   if [ "$DRY" = 1 ]; then
@@ -516,6 +517,7 @@ $(delivers_paths "$BODY")
 EOF
   if [ -n "$UNCOMMITTED" ]; then
     echo "CLOSE-REFUSED: UNCOMMITTED — Delivers path(s) carry uncommitted changes:$UNCOMMITTED — the probes run in the working tree, so a green here can be a green no commit carries; commit them and re-run"
+    echo "NEXT: repair UNCOMMITTED" >&2
     exit 1
   fi
   echo "close-gate[$BEAD] UNCOMMITTED ok — every existing Delivers path is committed-clean or ignored"

@@ -76,9 +76,9 @@ REMOTE="origin"
 TIMEOUT=600
 PATHS=()
 
-refuse() { rule="$1"; shift; echo "REFUSED [$rule]: $*" >&2; exit 3; }
-usage()  { echo "usage: $0 --identity <name> --message-file <f> --path <p> [--path <p>...]" >&2; exit 2; }
-not_gated() { echo "NOT-GATED [$1]: $2" >&2; exit 6; }
+refuse() { rule="$1"; shift; echo "REFUSED [$rule]: $*" >&2; echo "NEXT: repair $rule" >&2; exit 3; }
+usage()  { echo "usage: $0 --identity <name> --message-file <f> --path <p> [--path <p>...]" >&2; echo "NEXT: handback" >&2; exit 2; }
+not_gated() { echo "NOT-GATED [$1]: $2" >&2; echo "NEXT: handback" >&2; exit 6; }
 
 # The ONE br_call invocation shape (ac-heyt.3). The witness read below is
 # informational; a refusal names itself on stderr instead of yielding a bare hash.
@@ -174,9 +174,9 @@ done
 
 # --- the lane ----------------------------------------------------------------------------
 FLOCK="$(command -v flock || true)"
-[ -n "$FLOCK" ] || { echo "swarm-commit: NOT-GATED — flock(1) is not installed; the lane cannot be taken and no commit is attempted" >&2; exit 4; }
+[ -n "$FLOCK" ] || { echo "swarm-commit: NOT-GATED — flock(1) is not installed; the lane cannot be taken and no commit is attempted" >&2; echo "NEXT: handback" >&2; exit 4; }
 
-git rev-parse --git-dir >/dev/null 2>&1 || { echo "swarm-commit: not inside a git repository" >&2; exit 2; }
+git rev-parse --git-dir >/dev/null 2>&1 || { echo "swarm-commit: not inside a git repository" >&2; echo "NEXT: handback" >&2; exit 2; }
 
 # NEVER a literal .git/<name>.lock: `.git` is a FILE, not a directory, in a submodule
 # and in every linked worktree, so that path never opens and the mutex silently does nothing.
@@ -192,9 +192,9 @@ if [ "$LOCKED" -eq 0 ]; then
   # `git commit -F` after the flock wait — a sibling rewriting the caller's file
   # during the wait changed the commit subject/body under a different bead's code.
   MSG_SNAPSHOT="$(mktemp "${TMPDIR:-/tmp}/swarm-commit-msg.XXXXXX")" \
-    || { echo "swarm-commit: cannot create message snapshot" >&2; exit 5; }
+    || { echo "swarm-commit: cannot create message snapshot" >&2; echo "NEXT: handback" >&2; exit 5; }
   cp -- "$MSGFILE" "$MSG_SNAPSHOT" \
-    || { rm -f "$MSG_SNAPSHOT"; echo "swarm-commit: cannot snapshot message file" >&2; exit 5; }
+    || { rm -f "$MSG_SNAPSHOT"; echo "swarm-commit: cannot snapshot message file" >&2; echo "NEXT: handback" >&2; exit 5; }
   LOCK_ARGS=()
   _prev_is_msg=0
   for _a in "${ORIG[@]}"; do
@@ -211,7 +211,7 @@ if [ "$LOCKED" -eq 0 ]; then
   "$FLOCK" -w "$TIMEOUT" -E 4 "$LOCKFILE" "$0" --_locked "${LOCK_ARGS[@]}"
   rc=$?
   rm -f "$MSG_SNAPSHOT"
-  [ "$rc" -eq 4 ] && echo "swarm-commit: LANE-BUSY — another writer held $LOCKFILE for ${TIMEOUT}s; nothing was committed" >&2
+  [ "$rc" -eq 4 ] && { echo "swarm-commit: LANE-BUSY — another writer held $LOCKFILE for ${TIMEOUT}s; nothing was committed" >&2; echo "NEXT: pick" >&2; }
   exit "$rc"
 fi
 
@@ -235,7 +235,7 @@ export AGENT_NAME="$IDENTITY" BR_AGENT_NAME="$IDENTITY"
 export GIT_LITERAL_PATHSPECS=1
 
 CUR="$(git rev-parse --abbrev-ref HEAD 2>/dev/null)"
-[ "$CUR" = "$BRANCH" ] || { echo "REFUSED [foreign-branch]: HEAD is on '$CUR', this commit was written for '$BRANCH'; stop and touch nothing" >&2; exit 9; }
+[ "$CUR" = "$BRANCH" ] || { echo "REFUSED [foreign-branch]: HEAD is on '$CUR', this commit was written for '$BRANCH'; stop and touch nothing" >&2; echo "NEXT: handback" >&2; exit 9; }
 
 # ---------------------------------------------------------------------------------------
 # LEG — no-claim-receipt. A commit whose subject names bead X is refused when X has a
@@ -401,10 +401,11 @@ if [ "$LEDGER_IN_PATHS" -eq 1 ]; then
   fi
 fi
 
-git add -- "${PATHS[@]}" || { echo "swarm-commit: git add failed; nothing committed" >&2; exit 5; }
+git add -- "${PATHS[@]}" || { echo "swarm-commit: git add failed; nothing committed" >&2; echo "NEXT: handback" >&2; exit 5; }
 
 if ! git commit -F "$MSGFILE" -- "${PATHS[@]}"; then
   echo "swarm-commit: commit REJECTED (hook or guard); nothing was committed" >&2
+  echo "NEXT: repair hook" >&2
   exit 5
 fi
 
@@ -418,13 +419,13 @@ DIVERGED="$(git diff --name-only HEAD -- "${PATHS[@]}")"
 if [ -n "$DIVERGED" ]; then
   echo "swarm-commit: lint-staged divergence, re-adding post-lint bytes:"
   echo "$DIVERGED" | sed 's/^/  /'
-  git add -- "${PATHS[@]}" || { echo "swarm-commit: re-add failed" >&2; exit 5; }
+  git add -- "${PATHS[@]}" || { echo "swarm-commit: re-add failed" >&2; echo "NEXT: handback" >&2; exit 5; }
   # --no-verify on the AMEND only: the hook already ran and produced these exact bytes;
   # re-running it here would rewrite and diverge again, forever. Pathspec still scopes it.
   git commit --amend --no-edit --no-verify -- "${PATHS[@]}" >/dev/null \
-    || { echo "swarm-commit: amend REJECTED" >&2; exit 5; }
+    || { echo "swarm-commit: amend REJECTED" >&2; echo "NEXT: repair hook" >&2; exit 5; }
   STILL="$(git diff --name-only HEAD -- "${PATHS[@]}")"
-  [ -z "$STILL" ] || { echo "REFUSED [lint-staged-unstable]: worktree still diverges after one repair pass; nothing was committed" >&2; exit 5; }
+  [ -z "$STILL" ] || { echo "REFUSED [lint-staged-unstable]: worktree still diverges after one repair pass; nothing was committed" >&2; echo "NEXT: repair lint-staged-unstable" >&2; exit 5; }
 fi
 
 echo "swarm-commit: committed $(git rev-parse --short HEAD) as $IDENTITY"

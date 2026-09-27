@@ -34,7 +34,7 @@ done
 . "$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/../../_tools" && pwd)/br-call.sh"
 export RUST_LOG=error
 
-ready=$(br_call ready --json -l refined --limit 0) || { echo "NOT-GATED: br ready failed" >&2; exit 2; }
+ready=$(br_call ready --json -l refined --limit 0) || { echo "NOT-GATED: br ready failed" >&2; echo "NEXT: handback" >&2; exit 2; }
 rows=$(printf '%s' "$ready" | jq -r --arg me "$ACTOR" '
   [ .[]
     | select(.status == "open")
@@ -47,18 +47,18 @@ rows=$(printf '%s' "$ready" | jq -r --arg me "$ACTOR" '
   | sort_by(if .issue_type == "bug" then 0 elif .issue_type == "epic" then 2 else 1 end,
             .priority, .created_at)
   | .[] | [.id, .issue_type, ((.labels // []) | index("sensitive-prod") != null)] | @tsv') \
-  || { echo "NOT-GATED: ready rows unparseable" >&2; exit 2; }
+  || { echo "NOT-GATED: ready rows unparseable" >&2; echo "NEXT: handback" >&2; exit 2; }
 
 n=0
 while IFS=$'\t' read -r id type prod; do
   [ -n "$id" ] || continue
   case " $BURNED " in *" $id "*) continue ;; esac
   if [ "$prod" = true ]; then
-    show=$(br_call show "$id" --json) || { echo "NOT-GATED: br show $id failed" >&2; exit 2; }
+    show=$(br_call show "$id" --json) || { echo "NOT-GATED: br show $id failed" >&2; echo "NEXT: handback" >&2; exit 2; }
     edges=$(printf '%s' "$show" | jq -r '[.[0].dependencies[]?
         | select(.dependency_type == "blocks" and (.title | startswith("DECISION")))]
         | "\(length) \(map(select(.status == "closed")) | length)"') \
-      || { echo "NOT-GATED: show rows for $id unparseable" >&2; exit 2; }
+      || { echo "NOT-GATED: show rows for $id unparseable" >&2; echo "NEXT: handback" >&2; exit 2; }
     if [ "${edges#* }" -eq 0 ]; then
       if [ "${edges% *}" -gt 0 ]; then echo "GATED $id" >&2
       else echo "MALFORMED $id: no DECISION blocks edge" >&2; fi

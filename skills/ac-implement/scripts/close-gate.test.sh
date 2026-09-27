@@ -956,6 +956,9 @@ GATE_RC=$(cat "$RCFILE")
 if [ "$GATE_RC" -eq 1 ] && printf '%s' "$out" | grep -q 'CLOSE-REFUSED: UNCOMMITTED'; then
   pass "AC4: an untracked Delivers path refuses with CLOSE-REFUSED: UNCOMMITTED"
 else fail "AC4 untracked: rc=$GATE_RC out=$out"; fi
+if printf '%s' "$out" | grep -q 'NEXT: repair UNCOMMITTED'; then
+  pass "AC4: the refusal tells the worker what to do next (NEXT: repair UNCOMMITTED)"
+else fail "AC4 untracked: no NEXT: repair UNCOMMITTED: $out"; fi
 if [ "$(jq -r .status "$R/.br/$BEAD.json")" = "in_progress" ]; then
   pass "AC4: the refused uncommitted close leaves the bead open"
 else fail "AC4 untracked: the bead was closed despite an uncommitted Delivers path"; fi
@@ -1026,6 +1029,9 @@ GATE_RC=$(cat "$RCFILE")
 if [ "$GATE_RC" -eq 1 ] && printf '%s' "$out" | grep -q 'LANDING'; then
   pass "AC5: a close that silently did not land is caught by reading it back, naming LANDING"
 else fail "AC5 landing: rc=$GATE_RC out=$out"; fi
+if printf '%s' "$out" | grep -q 'NEXT: repair LANDING'; then
+  pass "AC5: the LANDING refusal tells the worker what to do next (NEXT: repair LANDING)"
+else fail "AC5 landing: no NEXT: repair LANDING: $out"; fi
 
 # --- READ: show refused → NOT-CHECKED (ac-8n94). The fixture board stays intact so the
 # failure is the br_field show --json read, not a missing bead file. A refused read is
@@ -1036,6 +1042,9 @@ GATE_RC=$(cat "$RCFILE")
 if [ "$GATE_RC" -eq 2 ] && printf '%s' "$out" | grep -q 'NOT-CHECKED'; then
   pass "AC5: show refused is NOT-CHECKED (exit 2) — a refused read is never a pass"
 else fail "AC5 show refused: rc=$GATE_RC out=$out"; fi
+if printf '%s' "$out" | grep -q 'NEXT: handback'; then
+  pass "AC5: a NOT-CHECKED refusal tells the worker what to do next (NEXT: handback)"
+else fail "AC5 show refused: no NEXT: handback: $out"; fi
 if [ "$(jq -r .status "$R/.br/$BEAD.json")" = "in_progress" ]; then
   pass "AC5: a refused show leaves the bead open — no status is fabricated"
 else fail "AC5 show refused: the bead was closed despite the refused read"; fi

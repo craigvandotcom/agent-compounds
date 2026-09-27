@@ -25,6 +25,7 @@ refuse() {
   mkdir -p "$dir"
   printf 'HAND-BACK: mint failed; actor=%s; claiming nothing\n' "${ACTOR:-<empty>}" > "$dir/hand-back"
   echo "require-minted-actor: hand back — $1" >&2
+  echo "NEXT: handback" >&2
   exit 1
 }
 
