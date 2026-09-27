@@ -21,6 +21,7 @@ FLIGHT="$SCRIPT_DIR/flight-check.sh"
 AC_ROOT="$(cd "$SCRIPT_DIR/../../.." && pwd)"
 EVIDENCE_SRC="$AC_ROOT/skills/ac-pipeline/scripts/close-evidence-check.sh"
 BR_CALL_SRC="$AC_ROOT/skills/_tools/br-call.sh"
+BEAD_PY_SRC="$AC_ROOT/skills/_tools/bead.py"
 CASES=0
 FAILURES=0
 
@@ -30,6 +31,7 @@ fail() { CASES=$((CASES+1)); FAILURES=$((FAILURES+1)); echo "FAIL $*"; }
 command -v jq >/dev/null 2>&1 || { echo "SKIP: jq is not installed — fixtures cannot be built"; exit 77; }
 [ -x "$FLIGHT" ]       || { echo "FAIL flight-check.sh missing at $FLIGHT — the receipt writer is a hard dependency"; exit 1; }
 [ -x "$EVIDENCE_SRC" ] || { echo "FAIL close-evidence-check.sh missing at $EVIDENCE_SRC"; exit 1; }
+[ -f "$BEAD_PY_SRC" ]  || { echo "FAIL bead.py missing at $BEAD_PY_SRC"; exit 1; }
 
 # --- AC 1: the gate ships as an executable script ------------------------------------------
 if [ -x "$GATE" ]; then pass "AC1: close-gate.sh exists and is executable"
@@ -158,6 +160,7 @@ mkcase() {
   mkdir -p "$root/skills/ac-pipeline/scripts" "$root/skills/_tools" "$root/.flight" "$root/.br"
   cp "$EVIDENCE_SRC" "$root/skills/ac-pipeline/scripts/close-evidence-check.sh"
   cp "$BR_CALL_SRC" "$root/skills/_tools/br-call.sh"
+  cp "$BEAD_PY_SRC" "$root/skills/_tools/bead.py"
   chmod +x "$root/skills/ac-pipeline/scripts/close-evidence-check.sh"
   printf 'subject v1\n' >"$root/subject.txt"
   cat >"$root/body.md" <<'BODY'
@@ -203,6 +206,7 @@ mkcase_prose() {
   mkdir -p "$root/skills/ac-pipeline/scripts" "$root/skills/_tools" "$root/.flight" "$root/.br"
   cp "$EVIDENCE_SRC" "$root/skills/ac-pipeline/scripts/close-evidence-check.sh"
   cp "$BR_CALL_SRC" "$root/skills/_tools/br-call.sh"
+  cp "$BEAD_PY_SRC" "$root/skills/_tools/bead.py"
   chmod +x "$root/skills/ac-pipeline/scripts/close-evidence-check.sh"
   printf 'a doc with no token yet\n' >"$root/doc.md"
   cat >"$root/body.md" <<'BODY'
@@ -234,6 +238,7 @@ mkcase_decision() {
   mkdir -p "$root/skills/ac-pipeline/scripts" "$root/skills/_tools" "$root/.flight" "$root/.br" "$root/.beads"
   cp "$EVIDENCE_SRC" "$root/skills/ac-pipeline/scripts/close-evidence-check.sh"
   cp "$BR_CALL_SRC" "$root/skills/_tools/br-call.sh"
+  cp "$BEAD_PY_SRC" "$root/skills/_tools/bead.py"
   chmod +x "$root/skills/ac-pipeline/scripts/close-evidence-check.sh"
   printf 'humans: Alice, Alice Smith\n' >"$root/.beads/config.yaml"
   printf 'Pick between option A and option B.\n' >"$root/body.md"
@@ -684,6 +689,12 @@ cat >"$R/body.md" <<'BODY'
 - none
 BODY
 fly "$R"; fix_subject "$R"
+# bead.py's Delivers extractor (ac-m9y4.4) resolves a bare repo-root filename like
+# subject.txt as a path (the old delivers-paths.sh regex required a `/` and never did),
+# so the UNCOMMITTED leg now correctly sees the fix — commit it so this case still tests
+# what it names (the quiet-probe assertion selection), not LEG 3.
+git -C "$R" -c user.name=t -c user.email=t@t -c commit.gpgsign=false add -A >/dev/null 2>&1
+git -C "$R" -c user.name=t -c user.email=t@t -c commit.gpgsign=false commit -q -m fixed >/dev/null 2>&1
 out="$(gate "$R" --reason "$REASON")"
 GATE_RC=$(cat "$RCFILE")
 if [ "$GATE_RC" -eq 0 ] && printf '%s' "$out" | grep -q 'COVERAGE ok'; then
@@ -918,6 +929,7 @@ mk_gitcase() {
   mkdir -p "$root/skills/ac-pipeline/scripts" "$root/skills/_tools" "$root/.flight" "$root/.br" "$root/$(dirname "$dp")"
   cp "$EVIDENCE_SRC" "$root/skills/ac-pipeline/scripts/close-evidence-check.sh"
   cp "$BR_CALL_SRC" "$root/skills/_tools/br-call.sh"
+  cp "$BEAD_PY_SRC" "$root/skills/_tools/bead.py"
   chmod +x "$root/skills/ac-pipeline/scripts/close-evidence-check.sh"
   printf 'subject v1\n' >"$root/subject.txt"
   cat >"$root/body.md" <<BODY
@@ -1123,6 +1135,19 @@ for f in "PROBE:" "SCHEDULE:" "MODE:" "ON-FAILURE:"; do
 done
 if [ -z "$miss" ]; then pass "AC7: 4-field assurance declaration present"
 else fail "AC7: assurance declaration missing:$miss"; fi
+
+# ============================================================================================
+# AC — bead.py failure is NOT-CHECKED, never a silent pass (ac-m9y4.4): LEG 3 (UNCOMMITTED)
+# derives Delivers paths through bead.py; a crashing bead.py must refuse, never silently
+# skip the leg and read a dirty tree as clean.
+# ============================================================================================
+R="$(mk_git_green bead-py-crash 'skills/demo/artifact.txt')"
+git_commit_clean "$R"
+out="$(BEAD_MODULE_PATH="$WORKDIR/no-such-bead.py" gate "$R" --reason "shipped: the artifact landed. Delivered: skills/demo/artifact.txt")"
+GATE_RC=$(cat "$RCFILE")
+if [ "$GATE_RC" -eq 2 ] && printf '%s' "$out" | grep -q 'NOT-CHECKED'; then
+  pass "AC-bead-py: a crashing bead.py (BEAD_MODULE_PATH override) is NOT-CHECKED, never a silent pass"
+else fail "AC-bead-py crash: rc=$GATE_RC out=$out"; fi
 
 echo "---"
 echo "close-gate.test.sh: $CASES case(s), $FAILURES failure(s)"

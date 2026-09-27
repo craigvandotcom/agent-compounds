@@ -8,9 +8,9 @@
 # meant "an agent merged something", not "proven the way the bead itself declared".
 #
 # Usage:
-#   close-evidence-check.sh [--force] [--report-only] [--list-unverifiable] <bead-id> <intended close reason>
+#   close-evidence-check.sh [--report-only] [--list-unverifiable] <bead-id> <intended close reason>
 #
-# Exit 0  evidence present (or legitimately exempt, or bypassed, or --report-only)
+# Exit 0  evidence present (or legitimately exempt, or --report-only)
 # Exit 1  REFUSED — the close reason carries no evidence of the shape this type declares
 # Exit 2  NOT-CHECKED — the gate could not verify. Never a pass: a gate that verified
 #         nothing must not read as coverage (rule: a-gate-must-fail-when-it-verified-nothing).
@@ -38,24 +38,111 @@
 #
 # HISTORICAL CLOSES ARE NEVER SWEPT: this runs at close time, on the bead being closed.
 #
-# BYPASS is deliberate and permanent: --force is honoured ONLY when the close reason also
-# carries `EVIDENCE-BYPASS: <why>`. The escape therefore lands in the bead's own record
-# where a reader will meet it — a flag alone would vanish with the shell that typed it.
+# NO BYPASS (ac-m9y4.4): the `--force` flag and its paired recorded-reason marker are both
+# deleted — close-gate.sh, this gate's only caller, never passed `--force`, so the escape
+# had never fired. The owner's ruling on ac-m9y4.4, 2026-09-27, supersedes ac-bpth. Every
+# close now runs the same evidence rule.
 #
 set -uo pipefail
 
 # The ONE br_call invocation shape (ac-heyt.3); a refusal is a NOT-CHECKED below,
 # never empty data. Missing helper = nothing can be read = the same NOT-CHECKED.
 # shellcheck source=br-call.sh
-. "$(cd "$(dirname "${BASH_SOURCE[0]}")/../../_tools" 2>/dev/null && pwd)/br-call.sh" 2>/dev/null \
+_TOOLS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../_tools" 2>/dev/null && pwd)"
+. "$_TOOLS_DIR/br-call.sh" 2>/dev/null \
   || { echo "close-evidence NOT-CHECKED: br-call.sh helper missing — no board read can be verified" >&2; exit 2; }
 
-FORCE=0
+# bead.py is the one bead reader every tool parses cards through (ac-m9y4.4): every
+# Delivers-path extraction below — task/feature, epic, and the --list-unverifiable audit
+# alike — reads through its `delivers()` (the touchers-line exclusion and the dotted
+# child-bead-id shape guard are both already built into it there), never a second
+# hand-rolled copy of the pattern. Fail-closed: a missing bead.py or python3 is
+# NOT-CHECKED here, at load time, never a silent "no artifacts".
+[ -f "$_TOOLS_DIR/bead.py" ] \
+  || { echo "close-evidence NOT-CHECKED: bead.py missing at $_TOOLS_DIR/bead.py — Delivers paths cannot be derived" >&2; exit 2; }
+command -v python3 >/dev/null 2>&1 \
+  || { echo "close-evidence NOT-CHECKED: python3 not on PATH — bead.py cannot be run" >&2; exit 2; }
+
+# The program lives in its own file, never a heredoc attached to `python3 -`: a heredoc IS
+# the command's stdin, so a text argument piped in on the same command would starve
+# `sys.stdin.read()` of everything but EOF (the lesson needs-device-gate.sh's own
+# write_device_paths_py already paid for). `BEAD_MODULE_PATH` is the same test-only
+# override bead-capture-guard.py's own `_load_bead_module()` uses: a nonexistent path
+# drives the crash-path fixture without ever touching the real file in a shared checkout.
+_EV_BEAD_HELPER="$(mktemp)"
+trap 'rm -f "$_EV_BEAD_HELPER"' EXIT
+cat >"$_EV_BEAD_HELPER" <<'PY'
+import importlib.util, json, os, sys
+
+
+def _load_bead():
+    override = os.environ.get("BEAD_MODULE_PATH")
+    path = override or os.environ["BEAD_PY_PATH"]
+    spec = importlib.util.spec_from_file_location("bead", path)
+    if spec is None or spec.loader is None:
+        raise ImportError(f"cannot load bead.py at {path!r}")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def _delivers(bead, desc):
+    populated = bool(bead.section(desc, "Delivers").strip())
+    entries = bead.delivers(desc)
+    artifacts = sorted({p for e in entries if not e["deleted_kind"] for p in e["paths"]})
+    deleted = sorted({p for e in entries if e["deleted_kind"] for p in e["paths"]})
+    return populated, artifacts, deleted
+
+
+def main():
+    bead = _load_bead()
+    mode = sys.argv[1]
+    if mode in ("task-feature", "epic"):
+        with open(sys.argv[2], "r") as f:
+            desc = f.read()
+        populated, artifacts, deleted = _delivers(bead, desc)
+        print(f"POPULATED:{'yes' if populated else 'no'}")
+        for a in artifacts:
+            print(f"ARTIFACT:{a}")
+        if mode == "epic":
+            for a in deleted:
+                print(f"DELETED:{a}")
+        return 0
+    if mode == "audit":
+        data = json.load(sys.stdin)
+        rows = data if isinstance(data, list) else data.get("issues", [])
+        count = 0
+        for node in rows:
+            itype = node.get("issue_type") or ""
+            if itype not in ("task", "feature"):
+                continue
+            iid = node.get("id") or ""
+            desc = node.get("description") or ""
+            populated, artifacts, _deleted = _delivers(bead, desc)
+            if not populated:
+                print(f"NO-DELIVERS\t{iid}")
+                count += 1
+            elif not artifacts:
+                print(f"UNVERIFIABLE-DELIVERS\t{iid}")
+                count += 1
+        print(f"close-evidence: {count} open task/feature bead(s) whose closes can never pass evidence check")
+        return 0
+    print(f"unknown helper mode {mode!r}", file=sys.stderr)
+    return 2
+
+
+if __name__ == "__main__":
+    try:
+        sys.exit(main())
+    except Exception as e:
+        print(f"NOT-CHECKED: bead.py unavailable or crashed: {e}", file=sys.stderr)
+        sys.exit(2)
+PY
+
 REPORT_ONLY=0
 LIST_UNVERIFIABLE=0
 while [ $# -gt 0 ]; do
   case "$1" in
-    --force)       FORCE=1; shift ;;
     --report-only) REPORT_ONLY=1; shift ;;
     --list-unverifiable) LIST_UNVERIFIABLE=1; shift ;;
     --) shift; break ;;
@@ -72,33 +159,17 @@ if [ "$LIST_UNVERIFIABLE" = 1 ]; then
     echo "close-evidence NOT-CHECKED: 'br list' returned nothing — the audit verified nothing" >&2
     exit 2
   fi
-  COUNT=0
-  # Only task/feature closes cross-reference ## Delivers; every other type is exempt
-  # from this check by construction, so a prose-only Delivers there verifiable-closes fine.
-  # The br list read returns {issues:[...]} (an array would iterate the same way).
-  while IFS= read -r NODE; do
-    [ -n "$NODE" ] || continue
-    ID=$(printf '%s' "$NODE"   | jq -r '.id // empty')
-    ITYPE=$(printf '%s' "$NODE" | jq -r '.issue_type // empty')
-    DESC=$(printf '%s' "$NODE" | jq -r '.description // ""')
-    [ "$ITYPE" = "task" ] || [ "$ITYPE" = "feature" ] || continue
-    DEL=$(printf '%s' "$DESC" | awk '/^##[[:space:]]*Delivers/{p=1;next} p&&/^##[[:space:]]/{exit} p')
-    if [ -z "$(printf '%s' "$DEL" | tr -d '[:space:]')" ]; then
-      printf 'NO-DELIVERS\t%s\n' "$ID"; COUNT=$((COUNT + 1))
-    elif [ -z "$(printf '%s' "$DEL" \
-            | grep -oE '[A-Za-z0-9_.][A-Za-z0-9_./-]*\.[A-Za-z0-9]+' \
-            | grep -vE '^\.+$' | head -1)" ]; then
-      printf 'UNVERIFIABLE-DELIVERS\t%s\n' "$ID"; COUNT=$((COUNT + 1))
-    fi
-  done < <(printf '%s' "$RAW" | jq -c 'if type == "object" then (.issues // [])[] else .[] end')
-  printf 'close-evidence: %s open task/feature bead(s) whose closes can never pass evidence check\n' "$COUNT"
+  AUDIT_OUT=$(printf '%s' "$RAW" | BEAD_PY_PATH="$_TOOLS_DIR/bead.py" python3 "$_EV_BEAD_HELPER" audit); AUDIT_RC=$?
+  [ "$AUDIT_RC" -eq 0 ] \
+    || { echo "close-evidence NOT-CHECKED: bead.py audit crashed (exit $AUDIT_RC) — the audit verified nothing" >&2; exit 2; }
+  printf '%s\n' "$AUDIT_OUT"
   exit 0
 fi
 
 BEAD_ID="${1:-}"
 REASON="${2:-}"
 
-verdict() { # <PASS|REFUSE|NOT-CHECKED|EXEMPT|BYPASS> <message> <exit>
+verdict() { # <PASS|REFUSE|NOT-CHECKED|EXEMPT> <message> <exit>
   printf 'close-evidence[%s] %s: %s\n' "$BEAD_ID" "$1" "$2"
   if [ "$REPORT_ONLY" = 1 ]; then
     printf 'close-evidence[%s] (report-only: exiting 0 regardless)\n' "$BEAD_ID"
@@ -108,7 +179,7 @@ verdict() { # <PASS|REFUSE|NOT-CHECKED|EXEMPT|BYPASS> <message> <exit>
 }
 
 if [ -z "$BEAD_ID" ] || [ -z "$REASON" ]; then
-  echo "usage: $(basename "$0") [--force] [--report-only] <bead-id> <close reason>" >&2
+  echo "usage: $(basename "$0") [--report-only] <bead-id> <close reason>" >&2
   echo "close-evidence NOT-CHECKED: missing bead id or close reason" >&2
   exit 2
 fi
@@ -137,17 +208,6 @@ fi
 case ",$LABELS," in
   *,human-gate,*) verdict "EXEMPT" "human-gate bead — closure is a recorded human decision" 0 ;;
 esac
-
-# --- deliberate, recorded bypass -------------------------------------------
-if printf '%s' "$REASON" | grep -qE 'EVIDENCE-BYPASS:[[:space:]]*[^[:space:]]'; then
-  if [ "$FORCE" = 1 ]; then
-    verdict "BYPASS" "EVIDENCE-BYPASS present in the close reason and --force given — recorded on the bead" 0
-  fi
-  verdict "REFUSE" "close reason carries EVIDENCE-BYPASS but --force was not passed — the bypass must be BOTH" 1
-fi
-if [ "$FORCE" = 1 ]; then
-  verdict "REFUSE" "--force given without 'EVIDENCE-BYPASS: <why>' in the close reason — a bypass that leaves no trace on the bead is not a bypass" 1
-fi
 
 # --- per-type rules --------------------------------------------------------
 case "$ITYPE" in
@@ -190,21 +250,24 @@ case "$ITYPE" in
     ;;
 
   task|feature)
-    DELIVERS=$(printf '%s' "$DESC" | awk '/^##[[:space:]]*Delivers/{p=1;next} p&&/^##[[:space:]]/{exit} p')
-    if [ -z "$(printf '%s' "$DELIVERS" | tr -d '[:space:]')" ]; then
-      verdict "NOT-CHECKED" "$ITYPE has no populated '## Delivers' section — there is no declared artifact to cross-reference. Give the bead a Delivers section, or bypass explicitly" 2
+    # Delivers extraction reads through bead.py's `delivers()` (ac-m9y4.4) — the touchers-
+    # line exclusion is already built in there, never a second hand-rolled copy.
+    _DESCFILE=$(mktemp) || verdict "NOT-CHECKED" "cannot create a scratch file for the Delivers read" 2
+    printf '%s' "$DESC" >"$_DESCFILE"
+    _HELP_OUT=$(BEAD_PY_PATH="$_TOOLS_DIR/bead.py" python3 "$_EV_BEAD_HELPER" task-feature "$_DESCFILE" 2>&1); _HELP_RC=$?
+    rm -f "$_DESCFILE"
+    [ "$_HELP_RC" -eq 0 ] \
+      || verdict "NOT-CHECKED" "bead.py failed extracting Delivers paths: $_HELP_OUT" 2
+
+    _POPULATED=$(printf '%s\n' "$_HELP_OUT" | sed -n 's/^POPULATED://p')
+    if [ "$_POPULATED" != "yes" ]; then
+      verdict "NOT-CHECKED" "$ITYPE has no populated '## Delivers' section — there is no declared artifact to cross-reference. Give the bead a Delivers section" 2
     fi
 
-    # Path-shaped tokens only. Prose in Delivers is not a checkable promise.
-    # A touchers: line's command carries path-shaped search stems (`-F "_tools/touchers.test"`)
-    # that are not artifacts — the same exclusion both sibling Delivers readers apply.
-    ARTIFACTS=$(printf '%s' "$DELIVERS" \
-      | grep -v '^[[:space:]]*touchers:' \
-      | grep -oE '[A-Za-z0-9_.][A-Za-z0-9_./-]*\.[A-Za-z0-9]+' \
-      | grep -vE '^\.+$' | LC_ALL=C sort -u)
+    ARTIFACTS=$(printf '%s\n' "$_HELP_OUT" | sed -n 's/^ARTIFACT://p')
 
     if [ -z "$ARTIFACTS" ]; then
-      verdict "UNVERIFIABLE-DELIVERS" "$ITYPE bead $BEAD_ID carries a prose-only '## Delivers' — no path-shaped artifact exists to cross-reference, so NO close of this bead can ever pass evidence check. Fix the bead (give Delivers a path) or bypass explicitly. Audit siblings: close-evidence-check.sh --list-unverifiable" 2
+      verdict "UNVERIFIABLE-DELIVERS" "$ITYPE bead $BEAD_ID carries a prose-only '## Delivers' — no path-shaped artifact exists to cross-reference, so NO close of this bead can ever pass evidence check. Fix the bead (give Delivers a path). Audit siblings: close-evidence-check.sh --list-unverifiable" 2
     fi
 
     while IFS= read -r art; do
@@ -230,45 +293,34 @@ case "$ITYPE" in
     # the epic promises integration, so a promised path that was never created is a
     # refusal, not a wave-through. (That every probe exited 0 is close-gate.sh's GREEN
     # leg, which runs before this core; the citation is what lands it in the record.)
-    DELIVERS=$(printf '%s' "$DESC" | awk '/^##[[:space:]]*Delivers/{p=1;next} p&&/^##[[:space:]]/{exit} p')
-    if [ -z "$(printf '%s' "$DELIVERS" | tr -d '[:space:]')" ]; then
-      verdict "NOT-CHECKED" "epic has no populated '## Delivers' section — there is no declared artifact to cross-reference. Give the bead a Delivers section, or bypass explicitly" 2
+    #
+    # Delivers extraction reads through bead.py's `delivers()` (ac-m9y4.4): the
+    # touchers-line exclusion and the dotted child-bead-id shape guard (a touchers line's
+    # `owned by: <child bead id>` is path-shaped but is not a file — measured on ac-4y7l,
+    # whose nine Delivers bullets each name their owner bead) are both already built in
+    # there, never a second hand-rolled copy. A `deleted-*:` declaration (`deleted-script:`,
+    # `deleted-test:`, …) promises the artifact's ABSENCE: the deletion IS the deliverable,
+    # verified by the closing child's own `test ! -e` probes and the closeout's
+    # delivered-marker — never by a file on disk, so it is read separately (DELETED) and
+    # never required to exist. Measured live on ac-ac-review-narrowing-aq10: 9/9 children
+    # closed, 6/6 probes green, refused on the two files its own D6 deleted.
+    _DESCFILE=$(mktemp) || verdict "NOT-CHECKED" "cannot create a scratch file for the Delivers read" 2
+    printf '%s' "$DESC" >"$_DESCFILE"
+    _HELP_OUT=$(BEAD_PY_PATH="$_TOOLS_DIR/bead.py" python3 "$_EV_BEAD_HELPER" epic "$_DESCFILE" 2>&1); _HELP_RC=$?
+    rm -f "$_DESCFILE"
+    [ "$_HELP_RC" -eq 0 ] \
+      || verdict "NOT-CHECKED" "bead.py failed extracting Delivers paths: $_HELP_OUT" 2
+
+    _POPULATED=$(printf '%s\n' "$_HELP_OUT" | sed -n 's/^POPULATED://p')
+    if [ "$_POPULATED" != "yes" ]; then
+      verdict "NOT-CHECKED" "epic has no populated '## Delivers' section — there is no declared artifact to cross-reference. Give the bead a Delivers section" 2
     fi
 
-    # A `deleted-*:` declaration (`deleted-script:`, `deleted-test:`, …) promises the
-    # artifact's ABSENCE: the deletion IS the deliverable, verified by the closing child's
-    # own `test ! -e` probes and the closeout's delivered-marker — never by a file on disk.
-    # Read as a promised path it refuses every deletion epic, and no close reason can
-    # satisfy it (naming the path requires it to exist; omitting it trips the cross-
-    # reference above). Measured live on ac-ac-review-narrowing-aq10: 9/9 children closed,
-    # 6/6 probes green, refused on the two files its own D6 deleted. Strip them in the
-    # same pass that already drops `touchers:` lines; they still COUNT as declared
-    # artifacts, so a deletion-only epic is not UNVERIFIABLE-DELIVERS either.
-    DELETED_ARTIFACTS=$(printf '%s' "$DELIVERS" \
-      | grep -E '^[[:space:]]*-[[:space:]]*deleted-[A-Za-z0-9_-]+:' \
-      | grep -oE '[A-Za-z0-9_.][A-Za-z0-9_./-]*\.[A-Za-z0-9]+' \
-      | grep -vE '^\.+$' \
-      | grep -vE '^[a-z0-9]+(-[a-z0-9]+)+(\.[0-9]+)+$' \
-      | LC_ALL=C sort -u)
-
-    # A dotted CHILD BEAD ID (`ac-4y7l.5`, which a touchers line's `owned by:` clause
-    # names) is path-shaped to this regex but is not a file, so reading it as an artifact
-    # refuses the epic for a path that can never exist on disk — measured on ac-4y7l,
-    # whose nine Delivers bullets each name their owner bead. Board ids are dropped
-    # before the on-disk check; a real path carries a `/`, or an extension that is not
-    # a run of digits.
-    # A touchers: line's command carries path-shaped search stems (`-F "_tools/touchers.test"`)
-    # that are not artifacts — the same exclusion both sibling Delivers readers apply.
-    ARTIFACTS=$(printf '%s' "$DELIVERS" \
-      | grep -v '^[[:space:]]*touchers:' \
-      | grep -vE '^[[:space:]]*-[[:space:]]*deleted-[A-Za-z0-9_-]+:' \
-      | grep -oE '[A-Za-z0-9_.][A-Za-z0-9_./-]*\.[A-Za-z0-9]+' \
-      | grep -vE '^\.+$' \
-      | grep -vE '^[a-z0-9]+(-[a-z0-9]+)+(\.[0-9]+)+$' \
-      | LC_ALL=C sort -u)
+    ARTIFACTS=$(printf '%s\n' "$_HELP_OUT" | sed -n 's/^ARTIFACT://p')
+    DELETED_ARTIFACTS=$(printf '%s\n' "$_HELP_OUT" | sed -n 's/^DELETED://p')
 
     if [ -z "$ARTIFACTS" ] && [ -z "$DELETED_ARTIFACTS" ]; then
-      verdict "UNVERIFIABLE-DELIVERS" "epic bead $BEAD_ID carries a prose-only '## Delivers' — no path-shaped artifact exists to cross-reference, so NO close of this bead can ever pass evidence check. Fix the bead (give Delivers a path) or bypass explicitly. Audit siblings: close-evidence-check.sh --list-unverifiable" 2
+      verdict "UNVERIFIABLE-DELIVERS" "epic bead $BEAD_ID carries a prose-only '## Delivers' — no path-shaped artifact exists to cross-reference, so NO close of this bead can ever pass evidence check. Fix the bead (give Delivers a path). Audit siblings: close-evidence-check.sh --list-unverifiable" 2
     fi
 
     if ! printf '%s' "$REASON" | grep -qiE 'probe receipt'; then

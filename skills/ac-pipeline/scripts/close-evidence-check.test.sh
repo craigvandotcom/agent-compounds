@@ -240,10 +240,29 @@ else
   FAILURES=$((FAILURES + 1))
 fi
 
-echo "--- the bypass must be BOTH the flag and the record ---"
-run_gate 1 "EVIDENCE-BYPASS without --force -> REFUSE" -- bd-task "shipped EVIDENCE-BYPASS: outage"
-run_gate 0 "EVIDENCE-BYPASS with --force -> PASS" -- --force bd-task "shipped EVIDENCE-BYPASS: outage"
-run_gate 1 "--force with no EVIDENCE-BYPASS in the reason -> REFUSE" -- --force bd-task "shipped"
+echo "--- no bypass: --force is deleted, an unknown flag now refuses (ac-m9y4.4) ---"
+run_gate 2 "--force is no longer a recognized flag -> NOT-CHECKED (unknown flag)" -- --force bd-task "shipped EVIDENCE-BYPASS: outage"
+run_gate 1 "EVIDENCE-BYPASS in the reason carries no special meaning anymore -> REFUSE (names no artifact)" -- bd-task "shipped EVIDENCE-BYPASS: outage"
+
+echo "--- bead.py failure is NOT-CHECKED, never a silent pass (ac-m9y4.4) ---"
+CASES=$((CASES + 1))
+out=$(env "PATH=$MOCK_BIN:$PATH" BEAD_MODULE_PATH="$WORKDIR/no-such-bead.py" bash "$GATE" bd-task "shipped: thing.sh landed" 2>&1); rc=$?
+if [ "$rc" = 2 ] && printf '%s' "$out" | grep -q 'NOT-CHECKED'; then
+  printf '  PASS  a crashing bead.py (BEAD_MODULE_PATH override) -> NOT-CHECKED\n'
+else
+  printf '  FAIL  a crashing bead.py (BEAD_MODULE_PATH override) -> NOT-CHECKED (rc=%s)\n' "$rc"
+  printf '%s\n' "$out" | sed 's/^/          | /'
+  FAILURES=$((FAILURES + 1))
+fi
+CASES=$((CASES + 1))
+out=$(cd "$WORKDIR" && env "PATH=$MOCK_BIN:$PATH" BEAD_MODULE_PATH="$WORKDIR/no-such-bead.py" bash "$GATE" bd-epic-ship "shipped: epic landed. Delivered: epicship/thing.sh. probe receipt: FLIGHT-RECEIPT v1 exit 0" 2>&1); rc=$?
+if [ "$rc" = 2 ] && printf '%s' "$out" | grep -q 'NOT-CHECKED'; then
+  printf '  PASS  a crashing bead.py on the epic path (BEAD_MODULE_PATH override) -> NOT-CHECKED\n'
+else
+  printf '  FAIL  a crashing bead.py on the epic path (BEAD_MODULE_PATH override) -> NOT-CHECKED (rc=%s)\n' "$rc"
+  printf '%s\n' "$out" | sed 's/^/          | /'
+  FAILURES=$((FAILURES + 1))
+fi
 
 echo "--- a gate that verified nothing is never a pass ---"
 run_gate 2 "unresolvable bead -> NOT-CHECKED" -- bd-does-not-exist "shipped"

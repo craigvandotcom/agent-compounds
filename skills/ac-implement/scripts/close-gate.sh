@@ -122,11 +122,58 @@ not_checked() { echo "NOT-CHECKED: $1 — $2" >&2; echo "NEXT: handback" >&2; ex
 
 . "$BR_CALL" 2>/dev/null || not_checked "READ" "br-call.sh helper missing at '$BR_CALL' — no br read can be verified"
 
-# The Delivers-path extraction pattern has ONE home (skills/_tools/delivers-paths.sh).
-# Same resolution rule as BR_CALL: computed BEFORE the cd, from the original cwd.
-# shellcheck source=delivers-paths.sh
-DP_HOME="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../_tools" 2>/dev/null && pwd)/delivers-paths.sh"
-. "$DP_HOME" 2>/dev/null || not_checked "READ" "delivers-paths.sh helper missing at '$DP_HOME' — the Delivers-path extraction pattern cannot be resolved"
+# bead.py is the one bead reader every tool parses cards through (ac-m9y4.4): the
+# Delivers-path extraction below reads through its `delivers()` (the touchers-line
+# exclusion already built in), never a second hand-rolled copy of the pattern.
+# TOOLS_DIR is computed the same way as BR_CALL: BEFORE the cd, from the script's own
+# location, never the consumer repo's ROOT — these scripts are symlinked into consumer
+# repos, so a ROOT-relative resolution would miss the one real bead.py.
+TOOLS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../_tools" 2>/dev/null && pwd)"
+[ -f "$TOOLS_DIR/bead.py" ] || not_checked "SETUP" "bead.py missing at '$TOOLS_DIR/bead.py' — Delivers paths cannot be derived"
+command -v python3 >/dev/null 2>&1 || not_checked "SETUP" "python3 not on PATH — bead.py cannot be run"
+
+# The program lives in its own file, never a heredoc attached to `python3 -`: a heredoc IS
+# the command's stdin, so a text argument piped in on the same command would starve
+# `sys.stdin.read()` of everything but EOF (the lesson needs-device-gate.sh's own
+# write_device_paths_py already paid for). `BEAD_MODULE_PATH` is the same test-only
+# override bead-capture-guard.py's own `_load_bead_module()` uses: a nonexistent path
+# drives the crash-path fixture without ever touching the real file in a shared checkout.
+DELIVERS_PY="$(mktemp)"
+trap 'rm -f "$DELIVERS_PY"' EXIT
+cat >"$DELIVERS_PY" <<'PY'
+import importlib.util, os, sys
+
+
+def _load_bead():
+    override = os.environ.get("BEAD_MODULE_PATH")
+    path = override or os.environ["BEAD_PY_PATH"]
+    spec = importlib.util.spec_from_file_location("bead", path)
+    if spec is None or spec.loader is None:
+        raise ImportError(f"cannot load bead.py at {path!r}")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def main():
+    bead = _load_bead()
+    with open(sys.argv[1], "r") as f:
+        text = f.read()
+    paths = set()
+    for d in bead.delivers(text):
+        paths.update(p for p in d["paths"] if p)
+    for p in sorted(paths):
+        print(p)
+    return 0
+
+
+if __name__ == "__main__":
+    try:
+        sys.exit(main())
+    except Exception as e:
+        print(f"NOT-CHECKED: bead.py unavailable or crashed: {e}", file=sys.stderr)
+        sys.exit(2)
+PY
 
 sha256_of_stdin() {
   if command -v shasum >/dev/null 2>&1; then shasum -a 256 | awk '{print $1}'
@@ -455,7 +502,7 @@ fi
 # a question nobody is asking any more.
 # ---------------------------------------------------------------------------------------
 BODY=$(mktemp "${TMPDIR:-/tmp}/ac-close-body.XXXXXX") || not_checked "SETUP" "cannot create a scratch file"
-trap 'rm -f "$BODY"' EXIT
+trap 'rm -f "$DELIVERS_PY" "$BODY"' EXIT
 
 if [ -n "$BODY_FILE" ]; then
   [ -r "$BODY_FILE" ] || not_checked "PROBE-DRIFT" "body file '$BODY_FILE' is unreadable"
@@ -492,18 +539,18 @@ fi
 # Ignored and committed-clean paths print nothing under `git status --porcelain` and pass.
 # Outside a git work tree the leg reports the skip; it never implies clean.
 #
-# The path extraction is touchers.sh's own shape (skills/_tools/touchers.sh): parens and
-# square brackets are admitted, so a Next.js route-group path like `app/(auth)/page.tsx`
-# survives intact, and the `touchers:` line is dropped — its globs and reason name paths
-# that are not deliveries.
+# The path extraction reads through bead.py's `delivers()` (ac-m9y4.4): parens and square
+# brackets are admitted, so a Next.js route-group path like `app/(auth)/page.tsx` survives
+# intact, and the `touchers:` line is excluded — its globs and reason name paths that are
+# not deliveries — a rule already built into `delivers()`, never a second copy of it.
 # ---------------------------------------------------------------------------------------
-delivers_paths() { # <body-file> — path-shaped tokens under ## Delivers, touchers: lines excluded
-  awk '/^## Delivers/{on=1; next} /^## /{on=0} on' "$1" \
-    | grep -v '^[[:space:]]*touchers:' \
-    | extract_paths
+delivers_paths() { # <body-file> — path-shaped tokens under ## Delivers via bead.py's delivers()
+  BEAD_PY_PATH="$TOOLS_DIR/bead.py" python3 "$DELIVERS_PY" "$1"
 }
 
 if [ "$(git rev-parse --is-inside-work-tree 2>/dev/null)" = "true" ]; then
+  DP_OUT=$(delivers_paths "$BODY" 2>&1); DP_RC=$?
+  [ "$DP_RC" -eq 0 ] || not_checked "SETUP" "bead.py failed extracting Delivers paths: $DP_OUT"
   UNCOMMITTED=""
   while IFS= read -r dp; do
     [ -n "$dp" ] || continue
@@ -513,7 +560,7 @@ if [ "$(git rev-parse --is-inside-work-tree 2>/dev/null)" = "true" ]; then
       UNCOMMITTED="$UNCOMMITTED $dp"
     fi
   done <<EOF
-$(delivers_paths "$BODY")
+$DP_OUT
 EOF
   if [ -n "$UNCOMMITTED" ]; then
     echo "CLOSE-REFUSED: UNCOMMITTED — Delivers path(s) carry uncommitted changes:$UNCOMMITTED — the probes run in the working tree, so a green here can be a green no commit carries; commit them and re-run"
@@ -534,7 +581,7 @@ PROBE_RUN=0
 PROBE_GREEN=0
 PROBE_RESULTS=()
 ASSERT_OUT=$(mktemp "${TMPDIR:-/tmp}/ac-close-out.XXXXXX") || not_checked "SETUP" "cannot create a scratch file"
-trap 'rm -f "$BODY" "$ASSERT_OUT"' EXIT
+trap 'rm -f "$DELIVERS_PY" "$BODY" "$ASSERT_OUT"' EXIT
 
 # The assertion-bearing probe is the one that RUNS A HARNESS, which is not always the probe
 # that happened to be RED first: `test -x <script>` is a legitimate RED and emits no
