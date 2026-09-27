@@ -1,1 +1,2 @@
 - [spawn-prompt-is-a-snapshot-spawn-after-sweep](spawn-prompt-is-a-snapshot-spawn-after-sweep.md) — spawned prompts are snapshots: spawn after the refly sweep; workers re-read the live worker.md once
+- [flight-check-check-only-executes-probes](flight-check-check-only-executes-probes.md) — --check-only writes nothing but still runs every probe; read probes before sweeping a board
