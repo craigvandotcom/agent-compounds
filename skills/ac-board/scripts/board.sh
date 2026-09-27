@@ -87,7 +87,7 @@ if [ "$COMPACT" = 0 ]; then
   slow prs    15 'gh pr list --state open --json number,title,createdAt,isDraft,statusCheckRollup'
 fi
 job triage  5 "'$SKILLS/ac-triage/scripts/triage-gate.sh' --status"
-job roster 15 "python3 '$SELF/agent-roster.py'"   # compact too: the verdict needs live agents
+job roster 15 "python3 '$SKILLS/_tools/agent-roster.py'"   # compact too: the verdict needs live agents
 wait
 
 if [ -n "${AC_BOARD_CACHE:-}" ]; then  # keep fresh network answers; a failure is never cached
