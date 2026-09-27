@@ -354,6 +354,22 @@ else
   fail "Case 16: expected the bare-name alternative omitted for a shared basename, rc=$RC. derive cmd: $D_CMD"
 fi
 
+# --- Case 17: a crashing bead.py is NOT-GATED, never a silent pass (ac-m9y4.10) ----------
+# `BEAD_MODULE_PATH` pointing nowhere drives the crash-path fixture without ever touching
+# the real file in a shared checkout (the same seam plan-approve.test.sh and
+# planned-layer.test.sh already use). A bullet whose Delivers path exists and is
+# referenced must refuse, not silently read the crash as "no paths, nothing owed".
+D=$(write_desc beadcrash.md "## Delivers
+- \`$TARGET\` — the fixture artifact
+  touchers: \`$CMD_TARGET\` · owned by: bd-fixture-refs
+")
+OUT=$(BEAD_MODULE_PATH="$WORK/no-such-bead.py" bash "$TOOL" check "$D" beadcrash 2>&1); RC=$?
+if [ "$RC" -eq 2 ] && echo "$OUT" | grep -q "NOT-GATED"; then
+  pass "Case 17: a crashing bead.py (BEAD_MODULE_PATH override) is NOT-GATED, never a silent pass"
+else
+  fail "Case 17: expected exit 2 + NOT-GATED, got $RC. Output: $OUT"
+fi
+
 echo
 if [ "$FAILURES" -eq 0 ]; then
   echo "All touchers fixture tests passed."

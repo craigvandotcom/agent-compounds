@@ -53,11 +53,53 @@ else
   _TOUCHERS_SELF="${BASH_SOURCE[0]}"
 fi
 
-# The Delivers-path extraction pattern has ONE home (skills/_tools/delivers-paths.sh);
-# sourcing it here keeps the writer and the gate on the same pattern.
-_DP_HOME="$(cd "$(dirname "$_TOUCHERS_SELF")" && pwd)/delivers-paths.sh"
-[ -f "$_DP_HOME" ] || { printf 'touchers: NOT-GATED — delivers-paths.sh missing at %s — the extraction pattern cannot be resolved\n' "$_DP_HOME" >&2; return 2 2>/dev/null || exit 2; }
-. "$_DP_HOME"
+# bead.py is the one bead reader every tool parses cards through (ac-m9y4.10): the
+# Delivers-path extraction below reads through its plain-text `extract_paths()`, never a
+# second hand-rolled copy of the pattern (the prior shared-pattern file is deleted by this
+# same bead). Checked at load time — this file is SOURCED, so a missing/unusable bead.py
+# must refuse before any caller (stamp-refined.sh, touchers.test.sh) ever reaches a check.
+_TOUCHERS_TOOLS_DIR="$(cd "$(dirname "$_TOUCHERS_SELF")" && pwd)"
+_BEAD_PY_HOME="$_TOUCHERS_TOOLS_DIR/bead.py"
+[ -f "$_BEAD_PY_HOME" ] || { printf 'touchers: NOT-GATED — bead.py missing at %s — the Delivers-path extraction pattern cannot be resolved\n' "$_BEAD_PY_HOME" >&2; return 2 2>/dev/null || exit 2; }
+command -v python3 >/dev/null 2>&1 || { printf 'touchers: NOT-GATED — python3 not on PATH — bead.py cannot be run\n' >&2; return 2 2>/dev/null || exit 2; }
+
+# extract_paths [body] (else stdin) -> sorted unique path tokens, via bead.py's plain-text
+# extractor. No temp file: this library is SOURCED into other scripts (stamp-refined.sh),
+# so an EXIT trap set here would stomp — or be stomped by — the caller's own trap; the
+# python code travels as a `-c` argument instead, leaving stdin free for the piped body
+# (a heredoc attached to `python3 -` would starve `sys.stdin.read()` of everything but
+# EOF — the lesson needs-device-gate.sh's own write_device_paths_py already paid for).
+# `BEAD_MODULE_PATH` is the same test-only override bead-capture-guard.py's own
+# `_load_bead_module()` uses: a nonexistent path drives the crash-path fixture without
+# ever touching the real file in a shared checkout.
+extract_paths() {
+  local input
+  if [ "$#" -gt 0 ]; then input="$1"; else input="$(cat)"; fi
+  printf '%s' "$input" | BEAD_PY_PATH="$_BEAD_PY_HOME" python3 -c '
+import importlib.util, os, sys
+
+
+def _load_bead():
+    override = os.environ.get("BEAD_MODULE_PATH")
+    path = override or os.environ["BEAD_PY_PATH"]
+    spec = importlib.util.spec_from_file_location("bead", path)
+    if spec is None or spec.loader is None:
+        raise ImportError(f"cannot load bead.py at {path!r}")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+try:
+    bead = _load_bead()
+    text = sys.stdin.read()
+    for p in bead.extract_paths(text):
+        print(p)
+except Exception as e:
+    print(f"NOT-GATED: bead.py unavailable or crashed: {e}", file=sys.stderr)
+    sys.exit(2)
+'
+}
 
 # The exclusion set is part of the DERIVATION, not a caller's taste: change it here and the
 # writer and the gate change together. `.beads/**`, `_plans/**` and the doc dirs are excluded
@@ -177,7 +219,7 @@ touchers_derive() {
 # The whole leg over one bead description. One verdict, one greppable token.
 touchers_check() {
   local file="${1:-}" label="${2:-}" root dl numbered maxb b block paths existing count
-  local rel dout stem cmd refs tline tcmd actual
+  local rel dout stem cmd refs tline tcmd actual ep_rc
   [ -n "$label" ] || label="${file:-description}"
 
   if [ -z "$file" ] || [ ! -f "$file" ]; then
@@ -212,7 +254,11 @@ touchers_check() {
     # those as deliveries invented obligations no bullet could ever satisfy (measured
     # 2026-09-06), so the disposition is excluded from the extraction, never from the check.
     paths=$(printf '%s\n' "$block" | grep -v '^[[:space:]]*touchers:' \
-      | extract_paths)
+      | extract_paths); ep_rc=$?
+    if [ "$ep_rc" -ne 0 ]; then
+      printf 'touchers: NOT-GATED %s — bead.py failed extracting Delivers paths for this bullet (exit %s); nothing was checked.\n' "$label" "$ep_rc" >&2
+      return 2
+    fi
     existing=$(printf '%s\n' "$paths" | while IFS= read -r p; do
       p="${p#./}"
       [ -n "$p" ] || continue
