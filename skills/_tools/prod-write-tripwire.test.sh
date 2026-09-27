@@ -44,6 +44,21 @@ Refactor the local parser and add unit coverage.
 prod-write: none — this changes only local test fixtures and no runtime data path.
 EOF
 
+# Prose false positives (ac-m9y4.7): "the probe executed" and "backfill" over test/doc
+# coverage read as a production mechanism/data-write signal today, though neither is one.
+cat >"$WORK/executed-prose.md" <<'EOF'
+## Intent
+Confirm the guard lands.
+
+## Acceptance Criteria
+- The probe executed cleanly in CI, so the guard is proven.
+EOF
+
+cat >"$WORK/backfill-prose.md" <<'EOF'
+## Intent
+Backfill the missing test coverage for the parser's edge cases.
+EOF
+
 if [ ! -x "$TOOL" ]; then
   fail "tripwire harness is executable" "$TOOL missing or not executable"
 else
@@ -54,6 +69,10 @@ run_case "escaped data fix is refused as data-state with the matched text" 1 \
   "[data-state]" "$FIXTURE" "refined" 0
 run_case "a plain code-only description passes" 0 "no prod-write signal" "$WORK/plain.md" "refined" 0
 run_case "a non-empty negative verdict passes" 0 "recorded negative verdict" "$WORK/negative.md" "refined" 0
+run_case "a probe that executed in prose is not a mechanism signal" 0 "no prod-write signal" \
+  "$WORK/executed-prose.md" "refined" 0
+run_case "backfill over test/doc coverage is not a data-state signal" 0 "no prod-write signal" \
+  "$WORK/backfill-prose.md" "refined" 0
 # The negative verdict must be in the fixture itself, so append it to a disposable copy.
 cp "$FIXTURE" "$WORK/negative-fixture.md"
 printf '%s\n' 'prod-write: none — the sanitized fixture is classifier input only.' >>"$WORK/negative-fixture.md"

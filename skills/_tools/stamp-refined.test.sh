@@ -102,11 +102,19 @@ Document a local outcome.
 - none
 '
 
+HUMAN_GATE="${BASE}"
+
+# The fixpoint receipt now owes on EVERY origin, not just the family six (ac-m9y4.7) — every
+# fixture below that is meant to reach a real STAMP carries one; a fixture whose OWN leg
+# refuses earlier (whole-suite, device, echo-only, prod-write-unmarked/label-only, no-Delivers)
+# never reaches the receipt leg, so it needs none.
+RECEIPT='POLISH-FIXPOINT: mode=bead rounds=2 sha256=deadbeefcafebabe at=2026-08-27T00:00:00Z engine=polish-fixpoint.sh'
+
 jq -n \
   --arg base "$BASE" --arg signal "$SIGNAL" --arg negative "$NEGATIVE" \
   --arg none "$NO_DELIVERS" --arg prose "$PROSE_DELIVERS" \
-  --arg whole "$WHOLE_SUITE" --arg device "$DEVICE" \
-  --arg echoonly "$ECHO_ONLY" --arg echoplusreal "$ECHO_PLUS_REAL" '[
+  --arg whole "$WHOLE_SUITE" --arg device "$DEVICE" --arg humangate "$HUMAN_GATE" \
+  --arg echoonly "$ECHO_ONLY" --arg echoplusreal "$ECHO_PLUS_REAL" --arg receipt "$RECEIPT" '[
   {id:"bd-whole-suite", issue_type:"task", title:"whole suite probe", labels:["origin:test"],
    description:$whole, dependencies:[]},
   {id:"bd-device-bare", issue_type:"task", title:"device verdict, no label", labels:["origin:test"],
@@ -114,25 +122,28 @@ jq -n \
   {id:"bd-echo-only", issue_type:"task", title:"every probe is an echo", labels:["origin:test"],
    description:$echoonly, dependencies:[]},
   {id:"bd-echo-plus-real", issue_type:"task", title:"echo plus a real probe", labels:["origin:test"],
-   description:$echoplusreal, dependencies:[]},
+   description:$echoplusreal, dependencies:[], comments:[{text:$receipt}]},
   {id:"bd-device-labelled", issue_type:"task", title:"device verdict, labelled", labels:["origin:test","device"],
-   description:$device, dependencies:[]},
+   description:$device, dependencies:[], comments:[{text:$receipt}]},
   {id:"bd-prod-unmarked", issue_type:"task", title:"escaped fix", labels:["origin:test","refined"],
    description:$signal, dependencies:[]},
   {id:"bd-prod-negative", issue_type:"task", title:"recorded negative", labels:["origin:test"],
-   description:$negative, dependencies:[]},
+   description:$negative, dependencies:[], comments:[{text:$receipt}]},
   {id:"bd-prod-gated", issue_type:"task", title:"gated fix", labels:["origin:test","sensitive-prod"],
-   description:$signal, dependencies:[{id:"dec-1", title:"DECISION: approve repair", status:"closed", dependency_type:"blocks"}]},
+   description:$signal, dependencies:[{id:"dec-1", title:"DECISION: approve repair", status:"closed", dependency_type:"blocks"}],
+   comments:[{text:$receipt}]},
   {id:"bd-prod-label-only", issue_type:"task", title:"label without edge", labels:["origin:test","sensitive-prod"],
    description:$signal, dependencies:[]},
   {id:"bd-prod-plain", issue_type:"task", title:"plain code", labels:["origin:test"],
-   description:$base, dependencies:[]},
+   description:$base, dependencies:[], comments:[{text:$receipt}]},
   {id:"bd-task-no-delivers", issue_type:"task", title:"task without artifacts", labels:["origin:test"],
    description:$none, dependencies:[]},
   {id:"bd-feature-prose", issue_type:"feature", title:"feature without artifacts", labels:["origin:test"],
    description:$prose, dependencies:[]},
   {id:"bd-bug-prose", issue_type:"bug", title:"bug outside Delivers scope", labels:["origin:test"],
-   description:$prose, dependencies:[]}
+   description:$prose, dependencies:[], comments:[{text:$receipt}]},
+  {id:"bd-human-gate", issue_type:"task", title:"human-gate co-present", labels:["origin:test","human-gate"],
+   description:$humangate, dependencies:[], comments:[{text:$receipt}]}
 ]' >"$BOARD"
 
 PASSES=0
@@ -237,6 +248,14 @@ if [ "$STAMP_RC" -eq 0 ] && [ "$(label_count add bd-bug-prose refined)" -eq 1 ];
   pass "the Delivers leg stays scoped to task/feature; a prose-only bug still stamps"
 else
   fail "bug outside Delivers scope" "rc=$STAMP_RC: $STAMP_OUT / log: $(cat "$BR_LOG")"
+fi
+
+run_stamp bd-human-gate
+if [ "$STAMP_RC" -eq 1 ] && printf '%s\n' "$STAMP_OUT" | grep -q "human-gate" \
+    && [ "$(label_count add bd-human-gate refined)" -eq 0 ]; then
+  pass "a human-gate bead is refused refined, prospectively, before every other leg"
+else
+  fail "human-gate co-present" "rc=$STAMP_RC: $STAMP_OUT / log: $(cat "$BR_LOG")"
 fi
 
 echo

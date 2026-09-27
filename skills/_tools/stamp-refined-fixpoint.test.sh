@@ -143,8 +143,15 @@ Test `x` must FAIL before the fix; assert exit 1.
 - lib/lonely.ts
 '
 
+# The fixpoint receipt now owes on EVERY origin, not just the family six (ac-m9y4.7). A
+# fixture built to isolate a LATER leg (touchers, read-back, Delivers-bullet scoping) now
+# carries this same receipt so it still reaches that leg; a fixture that is ITSELF proving
+# the receipt gate (or is refused even earlier, at the origin/probe gates) carries none.
+RECEIPT='POLISH-FIXPOINT: mode=bead rounds=2 sha256=deadbeefcafebabe at=2026-08-27T00:00:00Z engine=polish-fixpoint.sh'
+
 write_board() {
-  jq -n --arg schema_desc "$SCHEMA_DESC" --arg leg "$LEGACY_DESC" --arg legp "$LEGACY_PROBED_DESC" '[
+  jq -n --arg schema_desc "$SCHEMA_DESC" --arg leg "$LEGACY_DESC" --arg legp "$LEGACY_PROBED_DESC" \
+    --arg receipt "$RECEIPT" '[
     {id:"bd-ac-noreceipt", issue_type:"task", labels:["origin:ac-beadify"], description:$schema_desc, comments:[]},
     {id:"bd-ac-receipt",   issue_type:"task", labels:["origin:ac-beadify"], description:$schema_desc, comments:[]},
     {id:"bd-ac-malformed", issue_type:"task", labels:["origin:ac-beadify"], description:$schema_desc,
@@ -155,11 +162,14 @@ write_board() {
     {id:"bd-legacy",        issue_type:"task", labels:["origin:ac-beadify"],  description:$leg, comments:[]},
     {id:"bd-legacy-probed", issue_type:"task", labels:["origin:ac-beadify"],  description:$legp, comments:[]},
     {id:"bd-external-probed", issue_type:"task", labels:["origin:ac-triage"], description:$legp, comments:[]},
+    {id:"bd-external-receipted", issue_type:"task", labels:["origin:ac-triage"], description:$legp,
+     comments:[{text:$receipt}]},
     {id:"bd-legacy-stale",  issue_type:"task", labels:["origin:ac-triage","refined","refine-full"], description:$leg, comments:[]},
     {id:"bd-ac-stale-receipt", issue_type:"task", labels:["origin:ac-beadify","refined"], description:$schema_desc, comments:[]},
-    {id:"bd-external-already", issue_type:"task", labels:["origin:ac-triage","refined","refine-full"], description:$legp, comments:[]},
-    {id:"bd-clean",        issue_type:"task", labels:["origin:ac-triage"], description:$legp, comments:[]},
-    {id:"bd-path-partial", issue_type:"task", labels:["origin:ac-triage"], description:$legp, comments:[]},
+    {id:"bd-external-already", issue_type:"task", labels:["origin:ac-triage","refined","refine-full"], description:$legp,
+     comments:[{text:$receipt}]},
+    {id:"bd-clean",        issue_type:"task", labels:["origin:ac-triage"], description:$legp, comments:[{text:$receipt}]},
+    {id:"bd-path-partial", issue_type:"task", labels:["origin:ac-triage"], description:$legp, comments:[{text:$receipt}]},
     {id:"bd-no-origin",    issue_type:"task", labels:[], description:$legp, comments:[]}
   ]' >"$FIXTURE_BEADS"
 }
@@ -221,14 +231,15 @@ else
   fail "Case 3b: expected receipt refusal, rc=$RC. Output: $OUT / log: $(cat "$BR_LOG")"
 fi
 
-# --- Case 3c: a probed bead from OUTSIDE the family stamps with no receipt --------------
-# --- (the receipt gate is scoped to family origins, not the whole board) ----------------
+# --- Case 3c: a probed bead from OUTSIDE the family ALSO now owes the receipt ----------
+# --- (ac-m9y4.7: the receipt gate is no longer scoped to family origins) ----------------
 : >"$BR_LOG"
 OUT=$(PATH="$MOCK:$PATH" bash "$STAMP" bd-external-probed 2>&1); RC=$?
-if [ "$RC" -eq 0 ] && [ "$(stamped_count bd-external-probed)" -eq 1 ]; then
-  pass "Case 3c: a probed non-family-origin bead still stamps with no receipt (the receipt gate stays family-scoped)"
+if [ "$RC" -ne 0 ] && [ "$(stamped_count bd-external-probed)" -eq 0 ] \
+   && echo "$OUT" | grep -qi "fixpoint"; then
+  pass "Case 3c: a probed non-family-origin bead is ALSO refused with no receipt — the gate covers every origin"
 else
-  fail "Case 3c: expected the non-family probed bead to stamp, rc=$RC. Output: $OUT / log: $(cat "$BR_LOG")"
+  fail "Case 3c: expected receipt refusal, rc=$RC. Output: $OUT / log: $(cat "$BR_LOG")"
 fi
 
 # --- Case 4: a receipt header with no rounds/sha is ABSENT, not satisfied --------------
@@ -368,13 +379,14 @@ T_MALFORMED=${T_OK/ · owned by: bd-api-caller/}
 T_LONELY=${T_NONE/lib\/db\/foods.ts\` — updateFood row-count guard/lib\/lonely.ts\` — lonely constant}
 T_NEW=${T_NONE/lib\/db\/foods.ts\` — updateFood row-count guard/lib\/new-module.ts\` — a file that does not exist yet}
 tmp=$(mktemp)
-jq --arg none "$T_NONE" --arg ok "$T_OK" --arg zero "$T_ZERO" --arg mal "$T_MALFORMED" --arg lonely "$T_LONELY" --arg new "$T_NEW" '. + [
-  {id:"bd-t-none",   issue_type:"task", labels:["origin:ac-triage"], description:$none,   comments:[]},
-  {id:"bd-t-ok",     issue_type:"task", labels:["origin:ac-triage"], description:$ok,     comments:[]},
-  {id:"bd-t-zero",   issue_type:"task", labels:["origin:ac-triage","refined"], description:$zero, comments:[]},
-  {id:"bd-t-mal",    issue_type:"task", labels:["origin:ac-triage"], description:$mal,    comments:[]},
-  {id:"bd-t-lonely", issue_type:"task", labels:["origin:ac-triage"], description:$lonely, comments:[]},
-  {id:"bd-t-new",    issue_type:"task", labels:["origin:ac-triage"], description:$new,    comments:[]}
+jq --arg none "$T_NONE" --arg ok "$T_OK" --arg zero "$T_ZERO" --arg mal "$T_MALFORMED" --arg lonely "$T_LONELY" \
+   --arg new "$T_NEW" --arg receipt "$RECEIPT" '. + [
+  {id:"bd-t-none",   issue_type:"task", labels:["origin:ac-triage"], description:$none,   comments:[{text:$receipt}]},
+  {id:"bd-t-ok",     issue_type:"task", labels:["origin:ac-triage"], description:$ok,     comments:[{text:$receipt}]},
+  {id:"bd-t-zero",   issue_type:"task", labels:["origin:ac-triage","refined"], description:$zero, comments:[{text:$receipt}]},
+  {id:"bd-t-mal",    issue_type:"task", labels:["origin:ac-triage"], description:$mal,    comments:[{text:$receipt}]},
+  {id:"bd-t-lonely", issue_type:"task", labels:["origin:ac-triage"], description:$lonely, comments:[{text:$receipt}]},
+  {id:"bd-t-new",    issue_type:"task", labels:["origin:ac-triage"], description:$new,    comments:[{text:$receipt}]}
 ]' "$FIXTURE_BEADS" >"$tmp" && mv "$tmp" "$FIXTURE_BEADS"
 
 : >"$BR_LOG"
@@ -441,11 +453,13 @@ fi
 # so the bead is refused for a defect the READER invented, not one the bead has.
 # element4-check.sh is STUBBED here on purpose: it maps a non-array to `[]` and exits 2
 # (its own NOT-GATED leg), so without the stub this case would measure that gate instead of
-# this script's meta reader. The verdict below is the normaliser's alone.
+# this script's meta reader. The verdict below is the normaliser's alone. Uses
+# bd-external-receipted (carries the receipt every origin now owes, ac-m9y4.7) so the ONLY
+# thing standing between it and a stamp is the shape normaliser under test.
 E4STUB="$WORK/e4-pass.sh"; printf '#!/usr/bin/env bash\nexit 0\n' >"$E4STUB"; chmod +x "$E4STUB"
 : >"$BR_LOG"
-OUT=$(PATH="$MOCK:$PATH" BR_SHOW_OBJECT=1 ELEMENT4_CHECK="$E4STUB" bash "$STAMP" bd-external-probed 2>&1); RC=$?
-if [ "$RC" -eq 0 ] && [ "$(stamped_count bd-external-probed)" -eq 1 ]; then
+OUT=$(PATH="$MOCK:$PATH" BR_SHOW_OBJECT=1 ELEMENT4_CHECK="$E4STUB" bash "$STAMP" bd-external-receipted 2>&1); RC=$?
+if [ "$RC" -eq 0 ] && [ "$(stamped_count bd-external-receipted)" -eq 1 ]; then
   pass "Case 18a: an object-shaped 'br show --json' answer is normalised — the bead still stamps"
 else
   fail "Case 18a: expected rc 0 + one stamp on the object shape, rc=$RC. Output: $OUT / log: $(cat "$BR_LOG")"
@@ -461,8 +475,8 @@ else
 fi
 : >"$BR_LOG"
 OUT=$(PATH="$MOCK:$PATH" BR_SHOW_OBJECT=1 ELEMENT4_CHECK="$E4STUB" TOUCHERS_TOOL="$DIR/touchers.sh" \
-      bash "$MUTDIR/stamp-refined.sh" bd-external-probed 2>&1); RC=$?
-if [ "$RC" -ne 0 ] && [ "$(stamped_count bd-external-probed)" -eq 0 ]; then
+      bash "$MUTDIR/stamp-refined.sh" bd-external-receipted 2>&1); RC=$?
+if [ "$RC" -ne 0 ] && [ "$(stamped_count bd-external-receipted)" -eq 0 ]; then
   pass "Case 18b-ii: NEGATIVE CONTROL — without the normaliser the object shape refuses a conforming bead"
 else
   fail "Case 18b-ii: the un-normalised reader accepted the object shape — Case 18a proves nothing, rc=$RC. Output: $OUT"
@@ -522,10 +536,10 @@ Guard updateFood against zero-row updates.
 - none
 '
 tmp=$(mktemp)
-jq --arg clause "$B_CLAUSE" --arg first "$B_CLAUSE_FIRST" --arg own "$B_OWN_CMD" '. + [
-  {id:"bd-b-clause",  issue_type:"task", labels:["origin:ac-triage"], description:$clause, comments:[]},
-  {id:"bd-b-first",   issue_type:"task", labels:["origin:ac-triage"], description:$first,  comments:[]},
-  {id:"bd-b-own-cmd", issue_type:"task", labels:["origin:ac-triage"], description:$own,    comments:[]}
+jq --arg clause "$B_CLAUSE" --arg first "$B_CLAUSE_FIRST" --arg own "$B_OWN_CMD" --arg receipt "$RECEIPT" '. + [
+  {id:"bd-b-clause",  issue_type:"task", labels:["origin:ac-triage"], description:$clause, comments:[{text:$receipt}]},
+  {id:"bd-b-first",   issue_type:"task", labels:["origin:ac-triage"], description:$first,  comments:[{text:$receipt}]},
+  {id:"bd-b-own-cmd", issue_type:"task", labels:["origin:ac-triage"], description:$own,    comments:[{text:$receipt}]}
 ]' "$FIXTURE_BEADS" >"$tmp" && mv "$tmp" "$FIXTURE_BEADS"
 
 : >"$BR_LOG"
@@ -556,10 +570,12 @@ fi
 # --- (or a board that cannot be re-read) is WRITE-FAILED, never a silent STAMPED -----
 # The stamp leg and the downgrade leg each RE-READ the board after writing and assert
 # the label set they meant to produce. Exit codes are never trusted: the sensor is the
-# read-back. bd-external-probed is the clean-stamp bead (Case 3c/18a); its flow makes
-# three show reads before the read-back (the origin-label gate + element4 + the meta
-# read) — BR_SHOW_BUDGET is set one higher than that read count in Cases 23-24 so the
-# dead read lands on the call each case names, not on an earlier leg.
+# read-back. bd-clean's flow (Case 23) makes FOUR show reads before the read-back (the
+# origin-label gate + element4 + the meta read + bead.py's own decision-blocks-count read,
+# ac-m9y4.7) — BR_SHOW_BUDGET is set one higher than that read count so the dead read lands
+# on the read-back, not an earlier leg. bd-legacy-stale (Case 24) is refused at the
+# probe-presence leg, before ever reaching the decision-blocks-count read, so its own count
+# (three) and budget are unchanged.
 
 # Case 22: a FAILED `br label add` — the board is not updated, the read-back refuses.
 # bd-clean is a never-stamped bead, so the read-back cannot find an earlier refined.
@@ -575,7 +591,7 @@ fi
 # Case 23: a DEAD READ after the write — the read-back cannot verify the stamp.
 : >"$BR_LOG"
 : >"$BR_SHOW_COUNT"
-OUT=$(PATH="$MOCK:$PATH" BR_SHOW_BUDGET=3 bash "$STAMP" bd-clean 2>&1); RC=$?
+OUT=$(PATH="$MOCK:$PATH" BR_SHOW_BUDGET=4 bash "$STAMP" bd-clean 2>&1); RC=$?
 if [ "$RC" -eq 2 ] && echo "$OUT" | grep -q "WRITE-FAILED bd-clean"; then
   pass "Case 23: a dead read after the write is WRITE-FAILED — the stamp is not trusted on exit codes"
 else

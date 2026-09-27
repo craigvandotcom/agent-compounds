@@ -35,7 +35,7 @@ fi
 _prod_write_signal() { # <description-file> -> "<class>\t<matched line>" or exit 1
   local file="$1" match
   if match=$(grep -Em1 -- \
-    'execute|supabase[[:space:]]+db[[:space:]]+push|--linked|--project-ref|[.]supabase[.]co|psql' \
+    '\bexecute\b|supabase[[:space:]]+db[[:space:]]+push|--linked|--project-ref|[.]supabase[.]co|psql' \
     "$file"); then
     printf 'mechanism\t%s\n' "$match"
     return 0
@@ -47,7 +47,7 @@ _prod_write_signal() { # <description-file> -> "<class>\t<matched line>" or exit
     return 0
   fi
   if match=$(grep -Eim1 -- \
-    'backfill|data[ -]fix|one-off.{0,80}(write|update|fix|script)|prod(uction)?[[:space:][:punct:]]+(rows?|data|table|database|db)' \
+    'backfill.{0,20}(rows?|data|values?|records?|columns?|table|database|db)|data[ -]fix|one-off.{0,80}(write|update|fix|script)|prod(uction)?[[:space:][:punct:]]+(rows?|data|table|database|db)' \
     "$file"); then
     printf 'data-state\t%s\n' "$match"
     return 0

@@ -33,7 +33,10 @@ _STAMP_REFINED_DIR="$(cd "$(dirname "$_STAMP_REFINED_SELF")" && pwd)"
 ELEMENT4_CHECK="${ELEMENT4_CHECK:-$_STAMP_REFINED_DIR/element4-check.sh}"
 TOUCHERS_TOOL="${TOUCHERS_TOOL:-$_STAMP_REFINED_DIR/touchers.sh}"
 PROD_WRITE_TRIPWIRE_TOOL="${PROD_WRITE_TRIPWIRE_TOOL:-$_STAMP_REFINED_DIR/prod-write-tripwire.sh}"
-DELIVERS_PATHS_TOOL="${DELIVERS_PATHS_TOOL:-$_STAMP_REFINED_DIR/delivers-paths.sh}"
+# The one bead reader (ac-m9y4): this script no longer derives a DECISION blocks-edge count
+# or a Delivers path list by its own hand — both now run through bead.py's own functions,
+# called in-process via python3, the single home the rest of the registry already reads through.
+BEAD_PY_TOOL="${BEAD_PY_TOOL:-$_STAMP_REFINED_DIR/bead.py}"
 
 # 0 when a probe still runs something after text and existence clauses are removed.
 # grep, rg, and `test -e|-f|-x` are not a run. `test -x p && bash p` leaves `bash p`.
@@ -76,6 +79,10 @@ stamp_refined() {
 
   if [ ! -x "$ELEMENT4_CHECK" ] && [ ! -f "$ELEMENT4_CHECK" ]; then
     echo "stamp_refined: FATAL — element4-check.sh not found at '$ELEMENT4_CHECK'; refusing to stamp $id" >&2
+    return 2
+  fi
+  if [ ! -f "$BEAD_PY_TOOL" ]; then
+    echo "stamp_refined: FATAL — bead.py not found at '$BEAD_PY_TOOL'; refusing to stamp $id" >&2
     return 2
   fi
 
@@ -152,6 +159,24 @@ stamp_refined() {
     return 1
   fi
 
+  # HUMAN-GATE LEG (the operator's ruling): `refined` is what the worker loop selects on, and a
+  # human-gate bead is a decision/action for a HUMAN, never a worker claim — the two labels
+  # never coexist. Prospective, not a co-presence check: this runs BEFORE the label is
+  # written, so a human-gate bead is refused the FIRST time it is stamped, not only caught
+  # once it already (wrongly) carries both.
+  local human_gate_hits
+  human_gate_hits=$(printf '%s' "$origin_meta" \
+    | jq -r '[ .[0].labels // [] | .[] | select(. == "human-gate") ] | length' 2>/dev/null)
+  if [ -z "$human_gate_hits" ]; then
+    echo "stamp_refined: REFUSED $id — could not read labels to check for human-gate; refusing rather than guessing. No label written." >&2
+    return 2
+  fi
+  if [ "$human_gate_hits" -gt 0 ]; then
+    echo "stamp_refined: REFUSED $id — human-gate: co-present with a stamp attempt; a human-gate bead is a decision/action for a human and never carries refined. No label written." >&2
+    _downgrade "$id" "human-gate co-present" || return $?
+    return 1
+  fi
+
   # RULING-STALENESS LEG (ac-2h8w). Measured in a consuming app (bd-i01pk): a human ruling
   # recorded as a `DECISION (<human>): …` comment changed a bead's scope, but the bead kept
   # `refined` from a polish receipt written the day before — no eligibility filter reads
@@ -195,29 +220,18 @@ stamp_refined() {
     return "$rc"
   fi
 
-  # FAMILY-ORIGIN BEADS ADDITIONALLY REQUIRE A FIXPOINT RECEIPT (ac-gv70).
-  # The producer is skills/_tools/polish-fixpoint.sh, which writes
+  # EVERY ORIGIN OWES A FIXPOINT RECEIPT (2026-09-27, ac-m9y4.7 — the old six-label family
+  # scoping is gone). The producer is skills/_tools/polish-fixpoint.sh, which writes
   #   POLISH-FIXPOINT: mode=<m> rounds=<n> sha256=<digest> at=<ts> engine=polish-fixpoint.sh
   # as a bead comment at fixpoint. The gate lives HERE because this is the sole sanctioned
   # writer of `refined` — in ac-polish's procedure it would be a check every other caller
-  # could route around. Selector is the LABEL token — the EXPLICIT six origin labels of the
-  # lean pipeline (the renamed origin-label series; see beads-standards' migration note) —
-  # never the description's shape: shape cannot tell a lean bead from a legacy one that
-  # merely lacks a Declared RED, and mis-scoping would silently refuse live beads. It is
-  # also never a `startswith("origin:ac-")`: that would sweep EVERY ac-* origin label
-  # (ac-hygiene, ac-triage, the manual ac-review panel's own findings) — over-catching,
-  # and refusing beads this gate was never meant to gate.
-  local meta family_hits receipt rounds
+  # could route around.
+  local meta receipt rounds
   meta=$(_show_json "$id" || true)
   if [ -z "$meta" ]; then
     echo "stamp_refined: REFUSED $id — could not re-read the bead to check its origin; refusing rather than guessing. No label written." >&2
     return 2
   fi
-  family_hits=$(printf '%s' "$meta" | jq -r '
-    [ .[0].labels // [] | .[] | select(
-        . == "origin:ac-plan" or . == "origin:ac-polish" or . == "origin:ac-beadify" or
-        . == "origin:ac-implement" or . == "origin:ac-review" or . == "origin:ac-publish"
-      ) ] | length' 2>/dev/null || echo 0)
 
   # PROBE-PRESENCE LEG (2026-08-29, runs-something 2026-09-22): `refined` must
   # certify something a worker can execute. Zero `Probe:` lines is still a refusal —
@@ -296,9 +310,17 @@ EOF
   desc=$(printf '%s' "$meta" | jq -r '.[0].description // ""')
   issue_type=$(printf '%s' "$meta" | jq -r '.[0].issue_type // ""')
   labels_csv=$(printf '%s' "$meta" | jq -r '.[0].labels // [] | join(",")')
-  decision_edges=$(printf '%s' "$meta" | jq -r '[.[0].dependencies[]?
-    | select(.dependency_type == "blocks" and ((.title // "") | startswith("DECISION")))]
-    | length')
+  # The DECISION blocks-edge count is bead.py's own `_decision_blocks_count`, never a second
+  # edge-type select of this script's own (ac-m9y4.7) — it re-reads the bead itself, the one
+  # home. Args, never string-interpolated into the script — untrusted text either way.
+  decision_edges=$(python3 -c '
+import os, sys
+sys.path.insert(0, os.path.dirname(sys.argv[1]))
+import bead
+n = bead._decision_blocks_count(sys.argv[2])
+print(n if n is not None else 0)
+' "$BEAD_PY_TOOL" "$id" 2>/dev/null)
+  decision_edges=${decision_edges:-0}
   if [ ! -f "$PROD_WRITE_TRIPWIRE_TOOL" ]; then
     echo "stamp_refined: FATAL — prod-write-tripwire.sh not found at '$PROD_WRITE_TRIPWIRE_TOOL'; refusing to stamp $id" >&2
     return 2
@@ -328,18 +350,20 @@ EOF
   # routes through the one shared pattern; touchers: dispositions are not deliveries.
   if [ "$issue_type" = task ] || [ "$issue_type" = feature ]; then
     local del_body del_paths
-    if [ ! -f "$DELIVERS_PATHS_TOOL" ]; then
-      echo "stamp_refined: FATAL — delivers-paths.sh not found at '$DELIVERS_PATHS_TOOL'; refusing to stamp $id" >&2
-      return 2
-    fi
-    command -v extract_paths >/dev/null 2>&1 || . "$DELIVERS_PATHS_TOOL"
     del_body=$(printf '%s\n' "$desc" | awk '/^## Delivers/{on=1; next} /^## /{on=0} on')
     if [ -z "$(printf '%s' "$del_body" | tr -d '[:space:]')" ]; then
       echo "stamp_refined: REFUSED $id — NO-DELIVERS — task/feature bead has no populated '## Delivers' section, so no close can carry evidence. No label written." >&2
       _downgrade "$id" "task/feature has no Delivers section" || return $?
       return 1
     fi
-    del_paths=$(printf '%s\n' "$del_body" | grep -v '^[[:space:]]*touchers:' | extract_paths)
+    # Path extraction is bead.py's own `extract_paths`, never a second copy of that pattern
+    # sourced from a sibling tool (ac-m9y4.7) — one reader. Args, never interpolated text.
+    del_paths=$(printf '%s\n' "$del_body" | grep -v '^[[:space:]]*touchers:' | python3 -c '
+import os, sys
+sys.path.insert(0, os.path.dirname(sys.argv[1]))
+import bead
+print("\n".join(bead.extract_paths(sys.stdin.read())))
+' "$BEAD_PY_TOOL")
     if [ -z "$del_paths" ]; then
       echo "stamp_refined: REFUSED $id — UNVERIFIABLE-DELIVERS — task/feature bead's '## Delivers' is prose-only; add a path-shaped artifact. No label written." >&2
       _downgrade "$id" "task/feature Delivers is prose-only" || return $?
@@ -347,23 +371,21 @@ EOF
     fi
   fi
 
-  if [ "${family_hits:-0}" -gt 0 ]; then
-    # A header alone declares nothing (the rule element4-check applies to `## Declared RED`):
-    # a receipt without a round count and a digest is treated as ABSENT.
-    receipt=$(printf '%s' "$meta" \
-      | jq -r '[.[0].comments // [] | .[] | .text // ""] | join("\n")' 2>/dev/null \
-      | grep -E '^POLISH-FIXPOINT:[[:space:]].*rounds=[0-9]+.*sha256=[0-9a-f]{8,}' | tail -1)
-    if [ -z "$receipt" ]; then
-      echo "stamp_refined: REFUSED $id — family-origin bead with no conforming fixpoint receipt (expected a 'POLISH-FIXPOINT: … rounds=<n> sha256=<digest>' comment from skills/_tools/polish-fixpoint.sh). No label written." >&2
-      _downgrade "$id" "no conforming fixpoint receipt" || return $?
-      return 1
-    fi
-    rounds=$(printf '%s' "$receipt" | sed -E 's/.*rounds=([0-9]+).*/\1/')
-    if [ "${rounds:-0}" -lt 2 ]; then
-      echo "stamp_refined: REFUSED $id — fixpoint receipt records rounds=$rounds; a clean FIRST round proves nothing, so a fixpoint needs a clean round >= 2. No label written." >&2
-      _downgrade "$id" "fixpoint receipt below rounds=2" || return $?
-      return 1
-    fi
+  # A header alone declares nothing (the rule element4-check applies to `## Declared RED`):
+  # a receipt without a round count and a digest is treated as ABSENT.
+  receipt=$(printf '%s' "$meta" \
+    | jq -r '[.[0].comments // [] | .[] | .text // ""] | join("\n")' 2>/dev/null \
+    | grep -E '^POLISH-FIXPOINT:[[:space:]].*rounds=[0-9]+.*sha256=[0-9a-f]{8,}' | tail -1)
+  if [ -z "$receipt" ]; then
+    echo "stamp_refined: REFUSED $id — no conforming fixpoint receipt (expected a 'POLISH-FIXPOINT: … rounds=<n> sha256=<digest>' comment from skills/_tools/polish-fixpoint.sh). No label written." >&2
+    _downgrade "$id" "no conforming fixpoint receipt" || return $?
+    return 1
+  fi
+  rounds=$(printf '%s' "$receipt" | sed -E 's/.*rounds=([0-9]+).*/\1/')
+  if [ "${rounds:-0}" -lt 2 ]; then
+    echo "stamp_refined: REFUSED $id — fixpoint receipt records rounds=$rounds; a clean FIRST round proves nothing, so a fixpoint needs a clean round >= 2. No label written." >&2
+    _downgrade "$id" "fixpoint receipt below rounds=2" || return $?
+    return 1
   fi
 
   # TOUCHERS LEG (2026-09-03; derivation extracted to skills/_tools/touchers.sh 2026-09-06):
