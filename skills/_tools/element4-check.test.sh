@@ -401,7 +401,7 @@ fi
 # --- Case 16: the example bead SHIPPED in bead-schema.md passes the gate ---------------
 # The contract this widening accepts is a real file, not a fixture invented here: if the
 # shipped example stops passing, the schema and its gate have diverged.
-SCHEMA="$ROOT/skills/ac-beadify/references/bead-schema.md"
+SCHEMA="$ROOT/skills/beads-standards/reference/bead-schema.md"
 if [ ! -f "$SCHEMA" ]; then
   fail "Case 16: $SCHEMA is missing — the lean schema this widening accepts does not exist"
 else

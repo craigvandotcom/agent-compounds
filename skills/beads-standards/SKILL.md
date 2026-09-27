@@ -103,14 +103,11 @@ inherited machine-wide, not repeated here.
 | `unrefined` | Needs a refinement pass before agent pickup. Default at creation. |
 | *(neither)* | **Ungraded — never assume ready.** Missing-both is not "not ready" either; it's unknown. Fail-safe: treat as unrefined until graded. |
 
-**Kind — the filing axis:**
+**`kind:` is retired** — do not label a new bead with it; a factory defect belongs in a
+`friction:` block, never the board, and a real factory action already carries its own
+trigger or dependency edge without a third filing axis.
 
-| Label | Meaning |
-|---|---|
-| `kind:product` | A defect in the thing users touch. The only kind the board admits, and only at priority `0`/`1` with a verified reproduction. |
-| `kind:machinery` | A DEFECT in the factory — pipeline, skill text, lint, bead schema, CI wrappers, harness, tool flags, local stack. Belongs in a `friction:` block, NEVER the board. On the board it is a filing defect, not a category. A factory **action** carrying a real trigger or dependency edge is not this: a friction log holds no trigger, so it stays a bead. |
-
-Kind is set at creation by whoever files. A bead with no kind is unrouted, so an autonomous run may not file one. **Every `br create` in the fleet satisfies one capture contract — `reference/bead-create-contract.md`.** It names the required axes (`origin:<skill>` for the creating workflow; a readiness label on every non-epic bead) and the two enforcers that hold them: `hooks/bead-capture-guard.py` at creation, `lint.sh` Check 19 on the templates the registry ships. Skills carry their own template, never their own copy of the rules — point at the contract with a `§` anchor. Origin values and the `skill:`/`discovered-from:` boundaries: `reference/origin-provenance.md`.
+**Every `br create` in the fleet satisfies one capture contract — `reference/bead-schema.md` § Required axes.** It names the required axes (`origin:<skill>` for the creating workflow; a readiness label on every non-epic bead) and the two enforcers that hold them: `hooks/bead-capture-guard.py` at creation, `lint.sh` Check 19 on the templates the registry ships. Skills carry their own template, never their own copy of the rules — point at the contract with a `§` anchor. Origin values: `reference/bead-schema.md` § The origin label.
 
 Readiness for pickup = **presence** of `refined`, never inferred from the absence of
 `unrefined`. This is what gates loop/agent pickup everywhere this labelling is adopted.
@@ -194,11 +191,11 @@ new `br` schema fields (labels are too coarse for a per-ceremony verdict).
 **Grammar** (mirrors `close_reason`'s outcome-verb shape, so one clustering pass reads both):
 
 ```
-VERDICT: <outcome-verb>: <detail>
+VERDICT: passed: <detail>
 discovered-from: <bead-id|unknown>
 ```
 
-- `<outcome-verb>` leads, colon, then detail — exactly like `shipped:`/`fixed:`. Closed
+- The outcome verb leads, colon, then detail — exactly like `shipped:`/`fixed:`. Closed
   verb set: `passed` · `failed` · `blocked` (couldn't verify — env/infra) · `waived`
   (verification deliberately skipped, reason in the detail).
 - `discovered-from: <bead-id>` — origin linkage, on **finding beads only** (a bead a
@@ -238,7 +235,6 @@ checklist). The frozen set:
 - the VERDICT grammar tokens — `passed`/`failed`/`blocked`/`waived` + `discovered-from`
 - the catch-stage closed set — `qa-finding`/`review-finding`/`hygiene-finding`/`ci-finding`/`prod-finding`
 - the refine-path pair — `refine-full`/`refine-light` (stamped by `ac-polish` at finalize; `refine-light` records a disclosed reduced-process deviation, making the light-path frequency/safety measurable)
-- `human-ratified` — fast-track provenance stamped only by `ac-human` after a lightweight completeness check; not a synonym for the gauntlet and never a stamp of `refined`
 - `origin:<skill>` — the creator/provenance axis, enforced forward-only by `hooks/bead-capture-guard.py`
 
 Adding a NEW load-bearing label is allowed (it breaks no existing series); **renaming or retiring** a frozen one requires the migration note. Worked example — **`degraded-solo`** (added 2026-07-29, bd-nreuv): a capability-starved run (no `Task` tool, or spawns exhausted) stamps it **alongside** the path label, never instead of it, so the pair series above stays intact and `refine-full ∧ degraded-solo` is one grep; grammar + the `refine-light-solo` criteria live in `ac-pipeline/references/degraded-mode.md`. Migration log:
@@ -254,22 +250,9 @@ Adding a NEW load-bearing label is allowed (it breaks no existing series); **ren
   Zero-probe stamps from before the floor are labeling defects — restamp on sight, never
   grandfather. (Measured: 18/22 ready-pool beads probe-less, ac-implement run 2026-08-29.)
 
-## Worker-identity stamp (structured comment)
-
-A bead's `assignee` is the conductor (loop) identity — the agent that actually implemented it
-is a per-child session + model, otherwise unrecoverable. At close, the implementing skill
-(`ac-implement`) stamps a structured comment recording it, written in the same
-stable-greppable-prefix style as the VERDICT grammar (`grep 'WORKER:' .beads/issues.jsonl`):
-
-```
-WORKER: model=<model-id> actor=<actor-id> tree=<tree-sha>
-```
-
-Fields are **joinable for future model-level comparison**: `model` groups runs by model,
-`tree` (the tree SHA at close) is the **skills-eval before/after axis** — it lets a doctrine
-change be measured against outcomes. Per-bead **token cost is excluded** (a child can't
-observe its own usage — a per-bead split would be fabricated precision); token cost is
-reported at batch/child granularity by the batch boundary.
+**The per-close worker-identity stamp is retired** (maintainer ruling, 2026-09-27) — dream's
+model-change trigger was its one reader and both are retired together; the stamp step
+itself comes out of the worker procedure and dream's own check in the same sweep.
 
 ## Label hygiene rules
 

@@ -140,7 +140,7 @@ stamp_refined() {
   # ORIGIN-LABEL GATE — runs before every other leg. Every leg below trusts the origin axis
   # to scope itself (family-fixpoint, touchers, probe-presence); a bead that shipped with
   # none must not reach any of them on the strength of everything else looking fine.
-  # Contract: beads-standards/reference/bead-create-contract.md § Required axes.
+  # Contract: beads-standards/reference/bead-schema.md § Required axes.
   local origin_meta origin_hits
   origin_meta=$(_show_json "$id" || true)
   if [ -z "$origin_meta" ]; then
@@ -154,7 +154,7 @@ stamp_refined() {
     return 2
   fi
   if [ "$origin_hits" -eq 0 ]; then
-    echo "stamp_refined: REFUSED $id — no origin:<skill> label (bead-create-contract.md § Required axes). No label written. Repair: br update $id --add-label origin:<skill> (origin:unknown when unattributable)." >&2
+    echo "stamp_refined: REFUSED $id — no origin:<skill> label (bead-schema.md § Required axes). No label written. Repair: br update $id --add-label origin:<skill> (origin:unknown when unattributable)." >&2
     _downgrade "$id" "no origin: label" || return $?
     return 1
   fi
@@ -391,7 +391,7 @@ print("\n".join(bead.extract_paths(sys.stdin.read())))
   # TOUCHERS LEG (2026-09-03; derivation extracted to skills/_tools/touchers.sh 2026-09-06):
   # a bead that changes a file something else references must NAME those references —
   # command-derived, count reproduced — or say why they are out of scope. Canon:
-  # beads-standards/reference/bead-create-contract.md § Touchers. The trigger is DERIVED,
+  # beads-standards/reference/bead-schema.md § Required axes. The trigger is DERIVED,
   # never declared. Why here: bead-polish measured a 16.2% repair rate from hand-listed
   # consumer sets; the slate's caller list was short by two; this very script was once
   # archived with four live callers. A stale count is refused too — the list being stale

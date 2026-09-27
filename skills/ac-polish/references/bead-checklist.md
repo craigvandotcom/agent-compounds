@@ -4,7 +4,7 @@ The loop that runs this (fresh reader per round, severity gating, fixpoint at ze
 per-epic not per-bead) belongs to `ac-polish/SKILL.md`. This file is only the questions.
 **Routine bound-exhaustion indicts THIS FILE, not the beads.**
 
-Grade against the schema — `ac-beadify/references/bead-schema.md` — and cite, don't restate:
+Grade against the schema — `beads-standards/reference/bead-schema.md` — and cite, don't restate:
 bead taxonomy, status/priority, close reasons and labels are `beads-standards`
 (`reference/bead-conventions.md`); the test-tier slugs are the schema's own
 (`bead-schema.md` § Test-tier slugs); commit and run discipline are `ac-pipeline/references/`.
@@ -55,7 +55,7 @@ is the reader doing its job; reaching for a finding to justify the round is not.
   its absence stated as deliberate? Write it as the contract's line beneath the `## Delivers`
   bullet — ``touchers: `<command>` · owned by: … | out-of-scope: …`` — because
   `stamp-refined.sh` re-runs that command LIVE and refuses a missing one or one that now
-  finds nothing (beads-standards `bead-create-contract.md` § Touchers; no count is stored to
+  finds nothing (beads-standards `bead-schema.md` § Required axes; no count is stored to
   go stale). Command shapes per question: `ac-polish/references/seams-checklist.md`.
 - Evaluate every bead against the prod-write predicate in
   `skills/beads-standards/reference/bead-conventions.md` § The prod-write gate predicate; cite

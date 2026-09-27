@@ -4,7 +4,7 @@
 canon for every repo with a `.beads/` directory: types, labels, lifecycle wiring, routing,
 pick-order, claim semantics, body template, decision beads, per-type close artifacts,
 admission tests, anti-inflation. One pipeline exists (ac2), and it has one bead contract:
-the ac2 four-section schema (`skills/ac-beadify/references/bead-schema.md`).
+the ac2 four-section schema (`reference/bead-schema.md`).
 
 Shared by the skills that file and work beads — ac-beadify, ac-implement, ac-polish,
 ac-backlog, ac-review, ac-hygiene, ac-qa, ac-qa, ac-triage, ac-align,
@@ -48,14 +48,13 @@ an epic just because its currently-open children are done.
 
 | Label | Meaning |
 | ----- | ------- |
-| `origin:<skill>` | Which workflow created the bead (`origin:manual`, `origin:unknown` also legal) — required by the capture contract, `beads-standards/reference/bead-create-contract.md`, which every `br create` in the fleet satisfies. Complementary to `discovered-from` (a typed dep/body field naming the SOURCE BEAD an escape traces to): `origin:` names the CREATING WORKFLOW, `discovered-from` names the SOURCE BEAD — not duplicates. |
+| `origin:<skill>` | Which workflow created the bead (`origin:manual`, `origin:unknown` also legal) — required by the capture contract, `reference/bead-schema.md` § The origin label, which every `br create` in the fleet satisfies. Complementary to `discovered-from` (a typed dep/body field naming the SOURCE BEAD an escape traces to): `origin:` names the CREATING WORKFLOW, `discovered-from` names the SOURCE BEAD — not duplicates. |
 | `qa-finding` / `review-finding` / `hygiene-finding` | Which lens found it |
 | `qa-infra` | QA harness/infra failure — the NO-STAMP verdict (flaky gate, daemon crash, stuck load, env gap), never FAIL/PASS. Filed by the QA twins (`ac-qa` / `ac-qa`) for infra-shaped NO-STAMPs so the verdict stays resolvable without mislabeling the product. |
 | `qa-blocker` | REPO-WIDE gate — Hard-stops batch close-out for every batch in this repo while open, not a per-bead "blocked" marker. For a single bead, use a `blocks` dependency — never this label. |
 | `human-gate` | Agents may enrich but NEVER close — see decision beads below |
 | `unrefined` | Not implementation-ready — ac-implement skips it |
 | `refined` | Implementation-ready — the ONLY green light (see lifecycle contract below) |
-| `human-ratified` | Fast-track provenance from `ac-human` (completeness check, not the gauntlet). Implement-eligible without `refined`; does NOT stamp `refined` / `refine-full` / `refine-light` |
 | `tooling` | Infra/toolchain work, not app code |
 | `pipeline-proposal` | Names a plan for a human to decide on — it does NOT implement one, so it **never counts as implementation proof**. Any gate that counts beads as evidence of work done (archive gates, coverage counts, "all matching beads closed") MUST exclude these, closed ones included: a workflow that emits proposal beads and then counts them is self-certifying. Pair with `human-gate` **only** when the body states `Gate-reason: fork —` or `Gate-reason: authorization —`; otherwise the pairing is invalid. |
 
@@ -157,10 +156,14 @@ Exhaust beads filed inside a batch's verify → review → close window would, i
 stamped **`post-merge` at creation** — the literal label `beads-closed-gate.sh` excludes
 from its open-bead union, letting a batch close cleanly despite its own fresh exhaust.
 
-**Every claim path strips `post-merge` at claim** — wave claim-at-selection, bug-lane batch
-claim, and `ac-implement`'s incremental/replacement claims all remove the label the moment
-they take the bead. One definition, stated once here, so no claim path forgets it and no
-permanently gate-excluded zombie bead can form.
+**`post-merge` STAYS on the bead** — no claim path strips it. It is a batch-close exclusion
+marker, read by exactly two consumers: `beads-closed-gate.sh` (the exclusion itself, above)
+and `ac-tidy`'s `tidy-scan.sh`, which flags a still-OPEN `post-merge` bead as a
+`post-merge-tail` finding once the merge it was waiting on has plainly landed — a human
+ruling then strips the label or re-queues the bead (`ac-tidy/SKILL.md` § 4); no code path
+auto-removes it at claim, selection, or anywhere else. One definition, stated once here, so
+no reader invents a strip that does not exist and no permanently gate-excluded zombie bead
+can form for want of the actual mechanism (the tidy finding).
 
 ## Body template (the `br lint` contract)
 
@@ -170,7 +173,7 @@ CREATION time** — a later refine pass verifies them, it must not have to autho
 them (otherwise a refine pass spends its whole first round doing
 creation's job):
 
-The body is the FOUR-SECTION schema (`skills/ac-beadify/references/bead-schema.md`): first
+The body is the FOUR-SECTION schema (`reference/bead-schema.md`): first
 section · `## Acceptance Criteria` · `## Delivers` · `## Consumes` — nothing else, no Test Scope,
 Evidence, Scope, Proof or Notes section (test scope is an AC's probe; evidence is a `found-by`
 command; both live inside the four). `br lint` v0.2.16 (re-verified on 0.5.12) compiles per-type headers in and cannot
@@ -190,7 +193,7 @@ Two rules that survive from the old body template because the four sections carr
   the branch or split the criterion. A claim about currently-failing external state (CI red,
   a 404) is stamped `observed: <ISO date> · <run id/URL>` and is advisory, never binding.
 - **`## Delivers` + `## Consumes`** — `## Delivers` names the promised artifacts (and, for a
-  referenced path, its `touchers:` line — `bead-create-contract.md` § Touchers); `## Consumes`
+  referenced path, its `touchers:` line — `bead-schema.md` § Required axes); `## Consumes`
   is one `<blocker-id> → <artifact>` per line or the literal `none`, and every Consumes line
   pairs with a dependency edge.
 

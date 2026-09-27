@@ -57,7 +57,7 @@ BR_CALL="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../_tools" 2>/dev/null && pwd)/
 # bead.py is the one bead reader every tool parses cards through (ac-m9y4.10): a `--bead`
 # scope reads a bead's own `## Delivers` paths through its plain-text `extract_paths()`,
 # never a second hand-rolled copy of the pattern (canon:
-# beads-standards/reference/bead-create-contract.md § Touchers).
+# beads-standards/reference/bead-schema.md § Required axes).
 TOOLS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../_tools" 2>/dev/null && pwd)"
 BEAD_PY_HOME="$TOOLS_DIR/bead.py"
 [ -f "$BEAD_PY_HOME" ] || die2 "bead.py missing at '$BEAD_PY_HOME' — the Delivers-path extraction pattern cannot be resolved"

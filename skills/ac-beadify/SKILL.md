@@ -14,7 +14,7 @@ description: 'Compile an APPROVED ac2 plan into lean beads — the four-section 
 | **Artifacts**    | The epic bead; the plan moved to `_plans/_done/` (retirement)                  |
 | **Verification** | `br dep cycles` · `br lint` · the probe-extractor below · Consumes↔edge parity |
 
-Contract compiled TO: `references/bead-schema.md` (mandatory load); canon by pointer:
+Contract compiled TO: `beads-standards/reference/bead-schema.md` (mandatory load); canon by pointer:
 `skills/ac-pipeline/SKILL.md`, `beads-standards`.
 
 ## The refusal that defines this skill
@@ -42,7 +42,7 @@ has yet to create keeps the guarded form `test -x <path> && bash <path>`, honest
 
 ## Procedure
 
-1. **Read the plan and check it mechanically.** Load `references/bead-schema.md`. Run
+1. **Read the plan and check it mechanically.** Load `beads-standards/reference/bead-schema.md`. Run
    `skills/_tools/plan-approve.sh check <plan>`, then `skills/_tools/planned-layer.sh check
    <plan>` — the writer's own read-back, never a hand grep of its keys. Non-zero from either
    (`REFUSED …` or `NOT-GATED …`) is REFUSED and the plan is returned, never compiled: the
@@ -77,7 +77,7 @@ has yet to create keeps the guarded form `test -x <path> && bash <path>`, honest
       stored count; write it beneath the bullet as ``touchers: `<command>` · owned by: <sibling
       bead>`` — else `out-of-scope: <why>`.
 5b. **Emit the closeout bead** — D3: every plan-derived epic gets one even with no one-shots
-    (keyed off `beadified:` absent); emit the closeout bead per `references/bead-schema.md` § Closeout (D8 shape, edges + readback, one-shot refusal D4, `Detect:` lift D7).
+    (keyed off `beadified:` absent); emit the closeout bead per `beads-standards/reference/bead-schema.md` § Closeout (D8 shape, edges + readback, one-shot refusal D4, `Detect:` lift D7).
 6. **Create the beads** per the schema's Header fields (an epic off `<Name> — <what it implements>` is REFUSED) — bodies go `-d "$(cat <file>)"` (`br create` REJECTS `-f` with a title); bead text stays dcg-safe.
 7. **Retire the plan** (§ below) — only once `skills/_tools/plan-coverage.sh <plan> <epic>` prints `COVERED`; a `COVERAGE GAP` line is a dropped or reworded deliverable: bead it, then re-run.
 

@@ -82,7 +82,7 @@
         "SCHEDULE": "PreToolUse(Bash) - every Bash call (org/app/machine)",
         "MODE": "blocking",
         "ON-FAILURE": "open",
-        "BACKSTOP": "skills/_tools/stamp-refined.sh - the refine stamp-gate catches an unlabelled bead that slips past a fail-open parse. Deliberate ruling (maintainer, 2026-08-23): a guard must not wedge an unattended 3am loop."
+        "BACKSTOP": "skills/_tools/stamp-refined.sh - the refine stamp-gate catches an unlabelled bead that slips past a fail-open parse. Deliberate ruling (maintainer, 2026-08-23): a guard must not wedge an unattended 3am loop. ON-FAILURE: open covers unparseable shell only — a CRASH (bead.py missing, an unhandled exception in main()) fails CLOSED (exit 2), the opposite posture; a single ON-FAILURE field cannot express both, so the split lives here in prose (hooks/bead-capture-guard.py § FAIL-OPEN/FAIL-CLOSED)."
       },
       "event": "PreToolUse",
       "matcher": "Bash",

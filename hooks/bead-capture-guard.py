@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """PreToolUse(Bash) guard — the bead creation contract, enforced at the moment of capture.
 
-Canon: skills/beads-standards/reference/bead-create-contract.md. Change the contract THERE
+Canon: skills/beads-standards/reference/bead-schema.md. Change the contract THERE
 first; this file and lint/checks/19-bead-template-conformance.py both implement it. The lint imports this
 module, so the two enforcers cannot drift — they share one implementation of the rules.
 
@@ -183,7 +183,7 @@ type (epic included). Drop it:
     -l "origin:<skill>,unrefined"     # needs a refine pass first — the usual case
     -l "origin:<skill>,human-gate"    # a decision/action card only a human can close
 
-Canon: beads-standards/reference/bead-create-contract.md\
+Canon: beads-standards/reference/bead-schema.md § Required axes\
 """
 
 READINESS_MESSAGE = """\
@@ -199,7 +199,7 @@ note. Add one to --labels:
 Do NOT pass `refined` at creation: it is stamped exclusively by a refine pass on
 convergence. Epics are exempt — they are containers, never picked up.
 
-Canon: beads-standards/reference/bead-create-contract.md\
+Canon: beads-standards/reference/bead-schema.md § Required axes\
 """
 
 MESSAGE = """\
@@ -215,7 +215,7 @@ If you are creating it by hand, outside any skill, use origin:manual.
 If you genuinely cannot tell, `origin:unknown` is legal and honest — use it
 rather than guessing or inventing a source.
 
-Canon: beads-standards/reference/origin-provenance.md. Rationale: the
+Canon: beads-standards/reference/bead-schema.md § The origin label. Rationale: the
 optional-hint version of this rule left half the board with no provenance,
 so it is now gated rather than advised.\
 """
@@ -236,7 +236,7 @@ read as pass/fail all pass `no probe, no bead` while proving nothing. `epic`,
 leads own no probe yet. A filer that cannot name a probe files the bead as
 `investigation` — the type that says so — never as a probe-less task.
 
-Canon: beads-standards/reference/bead-create-contract.md § Required axes.\
+Canon: beads-standards/reference/bead-schema.md § Required axes.\
 """
 
 SUBAGENT_MESSAGE = """\
@@ -246,7 +246,7 @@ Return it to your coordinator as a PROPOSED-BEAD block for the conductor to conf
 file: title · files · a User-impact note (and for a fork: gate reason · options ·
 recommendation). No exceptions — a human-gate fork is a proposal too, never a direct create.
 
-Canon: beads-standards/reference/bead-create-contract.md § Subagent creates.\
+Canon: beads-standards/reference/bead-schema.md § Subagent creates.\
 """
 
 MULTI_ORIGIN_MESSAGE = """\
@@ -258,7 +258,7 @@ that names the real creator and drop the rest:
 
     -l "origin:<skill>,unrefined"
 
-Canon: beads-standards/reference/bead-create-contract.md § Required axes.\
+Canon: beads-standards/reference/bead-schema.md § Required axes.\
 """
 
 

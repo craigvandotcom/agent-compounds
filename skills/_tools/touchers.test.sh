@@ -219,7 +219,7 @@ fi
 # Case 12 executes its commands moves. (Measured: ac-4y7l.5 added five hand-close referrers to
 # `scripts/close-gate` and the live count moved from 8 to 13 with no edit to this bead or the
 # schema — a flake, not evidence, exactly what fixture-scoping every other case here avoids.)
-SCHEMA="$ROOT/skills/ac-beadify/references/bead-schema.md"
+SCHEMA="$ROOT/skills/beads-standards/reference/bead-schema.md"
 if [ ! -f "$SCHEMA" ]; then
   fail "Case 12: $SCHEMA is missing — the schema whose example this gate judges does not exist"
 else

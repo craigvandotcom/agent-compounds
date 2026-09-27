@@ -33,7 +33,7 @@ diff — the board is adopter-local and gitignored, so there is nothing to diff 
      `closed_at`: a close that happened before the cutover is never re-judged.
   7. an OPEN epic created on or after `RULE7_CUTOVER` whose title is not
      `<Name> — <what it implements>`: a Name of at most 32 characters, then ` — `, then a
-     clause of at least six words (ac-beadify/references/bead-schema.md § Epic title).
+     clause of at least six words (beads-standards/reference/bead-schema.md § Epic title).
 
 Rules 1 and 2 scan every row unconditionally — they catch corruption at any lifecycle
 stage. Rules 3 and 6 are each forward-only by their own cutover and their own timestamp

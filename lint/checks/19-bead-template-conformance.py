@@ -12,7 +12,7 @@ TYPES; this catches what the registry SHIPS. Neither alone is enough — a corre
 template can be typed wrong, and a stale template poisons every future run that
 copies it. This check IMPORTS the runtime guard rather than reimplementing its
 contract, so the two enforcers cannot drift: change
-skills/beads-standards/reference/bead-create-contract.md, then the guard; this
+skills/beads-standards/reference/bead-schema.md, then the guard; this
 follows for free.
 
 A "template" is a `br create`/`br q` carrying at least one flag. A bare prose mention
@@ -335,7 +335,7 @@ def main(argv=()):
     if bad:
         print(
             f"\n{len(bad)} non-conforming bead template(s). "
-            "Contract: skills/beads-standards/reference/bead-create-contract.md"
+            "Contract: skills/beads-standards/reference/bead-schema.md"
         )
         print("FAIL 19-bead-template-conformance: non-conforming bead template(s) — see above")
         return 1

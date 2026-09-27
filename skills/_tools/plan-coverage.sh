@@ -2,7 +2,7 @@
 # plan-coverage.sh — every plan "Done when:" line reached a bead (plan → beads coverage).
 #
 # The schema already makes each child AC quote its plan "Done when:" verbatim
-# (ac-beadify/references/bead-schema.md), so the quote IS the trace: each plan line must
+# (beads-standards/reference/bead-schema.md), so the quote IS the trace: each plan line must
 # reappear in one of the epic's children — never the epic itself, whose own text would
 # cover every line without any bead doing the work. A deliverable the cut dropped
 # whole — or reworded — passes every other gate and retires with the plan; this is the

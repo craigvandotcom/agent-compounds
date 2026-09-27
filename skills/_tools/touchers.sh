@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # touchers.sh — the single home of the `touchers:` derivation and its check.
 #
-# Canon: beads-standards/reference/bead-create-contract.md § Touchers. A `## Delivers` path
+# Canon: beads-standards/reference/bead-schema.md § Required axes. A `## Delivers` path
 # that git TRACKS and that is REFERENCED by another file owes, beneath its bullet, one
 # line naming who updates those referrers:
 #

@@ -63,7 +63,7 @@ a deliberate tool, run when the operator asks for one.
   epic — never a new child of the closed one, never a silent reopen. The follow-up carries
   its own `discovered-from:` trail back to the finding; the closed epic stays closed.
 - **Severity orders the report; only a named `impact:` makes a bead**
-  (`bead-create-contract.md` § Required axes). A shipped defect → `-t bug`;
+  (`bead-schema.md` § Required axes). A shipped defect → `-t bug`;
   mutation-probe-convicted test → `-t task`; labels
   `origin:ac-review,impact:<class>,review-finding,unrefined`, plus a `Probe:` line carrying
   the reviewer's reproducing command. A confirmed defect is never re-reviewed.

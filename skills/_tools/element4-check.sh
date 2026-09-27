@@ -3,7 +3,7 @@
 #
 # The six-element implementation contract this gate consumed (`beads-standards/reference/bead-conventions.md`
 # § Implementation contract) is RETIRED — archived with the legacy ac-* pipeline; the live
-# contract is the lean bead schema (`skills/ac-beadify/references/bead-schema.md`). Remaining live role:
+# contract is the lean bead schema (`skills/beads-standards/reference/bead-schema.md`). Remaining live role:
 # stamp-refined.sh runs this gate before writing `refined`; legacy boards still carry Declared-RED beads.
 #
 # Usage:
@@ -23,7 +23,7 @@
 #
 # TWO ACCEPTED SHAPES, and which one applies is an EXPLICIT RULE, never grep order:
 #   - `## Declared RED` present -> the legacy Declared-RED shape decides, alone.
-#   - `## Declared RED` absent  -> the lean schema (ac-beadify/references/bead-schema.md),
+#   - `## Declared RED` absent  -> the lean schema (beads-standards/reference/bead-schema.md),
 #     where element 4's ASSERTION is carried by the ACs: EVERY top-level bullet of
 #     `## Acceptance Criteria` must name an executable probe as ``Probe: `<command>` ``.
 #     A bulletless AC section FAILS (vacuously "every bullet has a probe"), and PARTIAL
