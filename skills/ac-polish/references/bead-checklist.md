@@ -35,9 +35,9 @@ is the reader doing its job; reaching for a finding to justify the round is not.
   named assertion? An AC with no observable at all is a finding; an informally worded one is not.
 - Grading a bead against the other shape's rule manufactures findings it cannot act on. A
   finding against a bead `element4-check.sh` PASSes is a finding against this file.
-- Extract them mechanically. Does each command run — `sh -c` reaches completion, no syntax
-  error, no *command not found* for its leading word? A probe you did not execute is a
-  probe nobody ran.
+- Runs, RED-at-HEAD and banned-shape are now MECHANICAL — `bead.py check` extracts every
+  probe and runs it; the reader's job is judgment (does the probe actually test what the AC
+  claims?), not re-executing what the gate already measures.
 - Is any "probe" a prose fragment (`wc -l`, "diff it", "check the output")? No probe, no bead.
 - An `investigation` is probe-exempt at capture, not at the stamp or the close. An agent can
   answer it? Give it an exit probe — the findings file it writes, the fix bead it spawns —
@@ -46,17 +46,13 @@ is the reader doing its job; reaching for a finding to justify the round is not.
 
 ## 3. consumer-verification
 
-- A `## Delivers` bullet naming a GIT-TRACKED, REFERENCED path with no `touchers:` line is
-  class (c) — the `refined` stamp cannot survive `stamp-refined.sh`'s touchers leg, so the
-  bead is unimplementable as a refined bead. Add the line; never decline it as a format gap.
+- A `## Delivers` bullet's `touchers:` line is now MECHANICAL, missing or stale alike —
+  `bead.py check` re-runs every command live and refuses a missing line or one that now
+  finds nothing (no count is stored to go stale). The reader's job is judgment, not
+  re-deriving what the gate already measures.
 - Was the touched surface's consumer set **grep-derived**, or hand-listed from memory?
   Hand-listed scopes carried a measured **16.2% repair rate** from consumers nobody found.
-- Name the grep that derived it. Does every consumer it returns appear in the bead, or is
-  its absence stated as deliberate? Write it as the contract's line beneath the `## Delivers`
-  bullet — ``touchers: `<command>` · owned by: … | out-of-scope: …`` — because
-  `stamp-refined.sh` re-runs that command LIVE and refuses a missing one or one that now
-  finds nothing (beads-standards `bead-schema.md` § Required axes; no count is stored to
-  go stale). Command shapes per question: `ac-polish/references/seams-checklist.md`.
+  Command shapes per question: `ac-polish/references/seams-checklist.md`.
 - Evaluate every bead against the prod-write predicate in
   `skills/beads-standards/reference/bead-conventions.md` § The prod-write gate predicate; cite
   that section, do not restate it. When the predicate does not apply, write the exact line
@@ -99,7 +95,8 @@ is the reader doing its job; reaching for a finding to justify the round is not.
   this pipeline's most repeated repair.
 - Is the direction right (`<blocked> depends-on <blocker>`) and the graph acyclic
   (`br dep cycles`)? Reversed edges are silent.
-- Does every cited artifact appear verbatim in the blocker's `## Delivers`?
+- Does every cited artifact appear verbatim in the blocker's `## Delivers`? Now MECHANICAL —
+  `bead.py check` refuses an artifact absent from the tree with no blocker promise.
 - Is any epic-child relation (either direction) wired as `blocks` instead of parent-child?
   Containment alone sequences the epic's terminal pick — no other edge is needed.
 

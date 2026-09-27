@@ -8,9 +8,9 @@ what bead mode binds, and it is a MANDATORY load for a bead run.
 | knob | bead mode |
 | --- | --- |
 | **TARGET** | the epic id |
-| **ARTIFACT** | the epic plus its OPEN children, exported to one file by `scripts/bead-artifact.py export --ids <epic>,<open children>`. Never a closed bead: a closed description is the record of what shipped, and export REFUSES a closed id (see § Scope) |
+| **ARTIFACT** | the epic plus its OPEN children, exported to one file by `scripts/bead-artifact.py export --ids <epic>,<open children>` — export certifies each id through `bead.py check` before writing it into the artifact. Never a closed bead: a closed description is the record of what shipped, and export REFUSES a closed id (see § Scope) |
 | **CHECKLIST** | `references/bead-checklist.md` |
-| **VALIDATE** | `skills/_tools/element4-check.sh` over every bead in the artifact PLUS the touchers leg per bead: `skills/_tools/touchers.sh check <description-file> <bead-id>` — the `--file` mode reads the artifact's description block, so a round cannot record while a Delivers path that exists and is referenced owes a `touchers:` line (the reader sees RED and must fix it) |
+| **VALIDATE** | `skills/_tools/element4-check.sh` over every bead in the artifact (the AC-bullet probe-coverage leg) PLUS `python3 skills/_tools/bead.py check <description-file>` per bead — touchers freshness, Consumes validity, Delivers symlink safety, origin/refined-vs-human-gate, sensitive-prod; either RED blocks the round from recording |
 | **READERS** | ONE `coordinator` per round — it applies its own edits and must fix a VALIDATE RED itself, so it needs judgment tier AND the Edit tool; `references/reader-prompt.md` verbatim |
 | **STAMP** | `polish-fixpoint.sh --mode bead` writes the `POLISH-FIXPOINT:` receipt comment to EVERY bead in the artifact, not only the epic — no hand fan-out |
 
@@ -20,8 +20,9 @@ Read child status BEFORE scoping. The ids are the epic plus every child still op
 `RUST_LOG=error br list --json` excludes closed beads by default; keep the ids that start with
 `<epic>.`. Say the count out loud before round 1: *"ac-xxxx: 3 open of 15 children"*. A
 request for "all open beads" resolves to the epics that HAVE open children. An epic whose
-children are all closed is not polished — it is done-checked (`bead-checklist.md` § 10): run
-its own probes, and each red one is a finding that blocks the close, never a decline.
+children are all closed is not polished — it is done-checked (`bead-checklist.md` §
+epic done-check): run its own probes, and each red one is a finding that blocks the
+close, never a decline.
 A bead with no epic is its own TARGET and a one-bead artifact; several open standalones may
 share one artifact to share the round cost, and a closed one is refused like any other.
 Measured 2026-09-15: "all open beads" run as "all open epics" rewrote 52 closed descriptions
@@ -55,14 +56,16 @@ or `unrefined` — those belong to `stamp-refined.sh` alone.
 The receipt this loop writes is a PRECONDITION of `refined`, not a grant of it.
 `skills/_tools/stamp-refined.sh` is the sole sanctioned writer: it runs `element4-check.sh`,
 REFUSES any description carrying no executable `Probe:` line — a stamp that certifies nothing
-a gate can execute is a labeling defect — and for an `origin:ac-*` bead additionally
-requires a conforming receipt at rounds >= 2.
+a gate can execute is a labeling defect — and requires a conforming fixpoint receipt at
+rounds >= 2 from EVERY origin, no family exemption.
 
 The restamp is a MECHANISM, not a remembering exercise: `bead-artifact.py writeback --apply`
 ends with a RESTAMP SWEEP that re-gates every implementable bead in the artifact through
-`stamp-refined.sh`. A conforming bead is restamped under the current contract; a stale one
-(a pre-floor stamp, a missing receipt) is stripped by the gate's downgrade leg and returns
-to the refine lane. A cannot-check result mutates nothing. Never grandfathered, mechanically.
+`stamp-refined.sh`, SKIPPING a human-gate bead outright (it never carries `refined`). A
+conforming bead is restamped under the current contract; a stale one (a pre-floor stamp, a
+missing receipt) is stripped by the gate's downgrade leg and returns to the refine lane. Any
+refusal inside the sweep exits the sweep non-zero — it is never silently swallowed. A
+cannot-check result mutates nothing. Never grandfathered, mechanically.
 
 Stamp `refined` only on beads that are implementable work. A `decision`-type bead is a human
 fork and element 4 exempts it — a receipt records that it was polished; it does not make it

@@ -24,13 +24,7 @@ returned to the plan — a refusal, never a warning, never a label: softening it
 vacuous-AC regression (measured H-impact, recurrence 5). Mechanically, for every candidate bead:
 
 ```sh
-# every AC must yield a probe; every probe must be runnable AND RED against current HEAD
-grep -o 'Probe: `[^`]*`' "$BEAD" | sed 's/^Probe: `//; s/`$//' \
-  | while IFS= read -r p; do
-      sh -n -c "$p" || { echo "REFUSED: unrunnable probe: $p"; continue; }
-      sh -c "$p" >/dev/null 2>&1 \
-        && echo "REFUSED: already green — this probe passes before the work exists: $p"
-    done
+python3 skills/_tools/bead.py check "$BEAD"   # 0 clean · 1 REFUSED (each named) · 2 NOT-GATED
 ```
 
 Count the extracted probes against the AC bullets; fewer = REFUSED. A prose fragment
