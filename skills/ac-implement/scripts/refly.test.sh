@@ -290,6 +290,28 @@ printf '%s' "$RUN_OUT" | grep -q 'NOT-GATED' && ok "no br: says NOT-GATED" || ba
 [ ! -s "$WRITES" ] && ok "no br: wrote nothing" || bad "no br: wrote: $(cat "$WRITES")"
 
 # ---------------------------------------------------------------------------------------
+echo "refly.test: case 4 — a broken bead.py (BEAD_MODULE_PATH override) skips only the disposition attempt"
+# ---------------------------------------------------------------------------------------
+# BEAD_MODULE_PATH pointing nowhere drives the broken-reader fixture without ever touching
+# the real bead.py in this shared checkout (the same seam plan-approve.test.sh and
+# planned-layer.test.sh already use).
+: >"$WRITES"; : >"$COMMENTS"
+newbead landed "PREMISE-FAILED: fix(y): landed elsewhere" open landed
+RUN_OUT=$(env BR_WRITES="$WRITES" BR_STATE="$WORK/board" BR_COMMENTS_LOG="$COMMENTS" \
+  BEAD_MODULE_PATH="$WORK/no-such-bead.py" PATH="$WORK/bin:$PATH" \
+  bash "$REFLY" --root "$WORK/root" 2>&1); RUN_RC=$?
+[ "$RUN_RC" -eq 0 ] && ok "a broken bead.py still exits 0 (a per-bead skip, never a whole-run refusal)" \
+  || bad "expected exit 0, got $RUN_RC: $RUN_OUT"
+printf '%s' "$RUN_OUT" | grep -q 'bead.py could not be read' \
+  && ok "broken bead.py: the skip is reported by name" \
+  || bad "broken bead.py: no skip line: $RUN_OUT"
+status=$(jq -r .status "$WORK/board/landed.json")
+[ "$status" = "open" ] && ok "broken bead.py: the landed bead was never disposition-closed" \
+  || bad "broken bead.py: landed bead status '$status', expected open"
+grep -q -- 'close landed' "$WRITES" && bad "broken bead.py: a close was written despite the crash" \
+  || ok "broken bead.py: no close was ever written despite the crash"
+
+# ---------------------------------------------------------------------------------------
 echo ""
 echo "refly.test: $PASS passed, $FAIL failed"
 [ "$PASS" -gt 0 ] || { echo "refly.test: NOT-GATED — zero cases ran"; exit 1; }

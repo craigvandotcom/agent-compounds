@@ -36,14 +36,13 @@
 #   --bead       read the bead's own scope and `touchers:` command(s) via the br show read.
 #                Scope oracle, in order: an explicit --territory/--scope below; else the
 #                bead's own `## Delivers` paths (skills/_tools/delivers-paths.sh, touchers:
-#                lines excluded — the same paths close-gate's UNCOMMITTED leg reads); else,
-#                when Delivers names none, the retired `## Territory` section as a fallback;
-#                else unscoped (today's behaviour for a bead with neither).
+#                lines excluded — the same paths close-gate's UNCOMMITTED leg reads); else
+#                unscoped (today's behaviour for a bead with no Delivers paths).
 #   --declared   a file of touchers commands, one per line (what --bead would have found)
 #   --territory  limit the diff and caller snapshot to these repo-relative paths; repeat for
-#                more than one path. Wins outright over a bead's own Delivers/Territory scope.
+#                more than one path. Wins outright over a bead's own Delivers scope.
 #                `--base HEAD --territory <path>` is the shared-checkout mode: it measures this
-#                worker's uncommitted Territory without the batch history or sibling WIP.
+#                worker's uncommitted scope without the batch history or sibling WIP.
 # Symbols: TS/JS `export (function|const|class|interface|type|enum) NAME` lines added or
 # removed; SQL `alter table … (add|drop|alter) column NAME`; deleted files (by import stem).
 set -euo pipefail
@@ -104,7 +103,7 @@ git rev-parse --verify -q "$BASE^{commit}" >/dev/null || die2 "base is not a com
 
 W=$(mktemp -d "${TMPDIR:-/tmp}/diff-closure-XXXXXX"); trap 'rm -rf "$W"' EXIT
 
-# Read a bead once. The same description supplies its Territory (when present) and its
+# Read a bead once. The same description supplies its Delivers scope (when present) and its
 # touchers commands; a scoped closure must never silently fall back to the whole tree just
 # because the caller forgot to repeat the paths.
 BEAD_RAW=""
@@ -120,10 +119,9 @@ fi
 
 # A bead's own `## Delivers` paths ARE its scope oracle — the same paths `touchers.sh` and
 # close-gate's UNCOMMITTED leg already read, through the one shared extraction pattern
-# (delivers-paths.sh). This is the PRIMARY scope for a `--bead` read; `## Territory` below is
-# a retired transitional section (present on a minority of refined beads across the fleet)
-# read only as a FALLBACK when Delivers names no path. An explicit --territory/--scope still
-# wins outright, so a caller can inspect a deliberate subset without editing the declaration.
+# (delivers-paths.sh). An explicit --territory/--scope still wins outright, so a caller can
+# inspect a deliberate subset without editing the declaration. A bead with no Delivers paths
+# and no explicit --territory/--scope stays unscoped (today's behaviour, unchanged).
 if [ "$SCOPE" -eq 0 ] && [ -n "$BEAD" ]; then
   DELIVERS_LIST=$(printf '%s\n' "$BEAD_DESC" \
     | awk '/^## Delivers/{on=1; next} /^## /{on=0} on' \
@@ -136,28 +134,6 @@ if [ "$SCOPE" -eq 0 ] && [ -n "$BEAD" ]; then
       TERRITORY+=("$path")
     done <<< "$DELIVERS_LIST"
   fi
-fi
-
-# A bead with a Territory, and no usable Delivers scope, gets that scope automatically —
-# today's behaviour, unchanged, so a scope-less bead is never silently passed by an empty
-# scope. An explicit --territory/--scope (SCOPE already 1 above) still wins.
-if [ "$SCOPE" -eq 0 ] && [ -n "$BEAD" ] && printf '%s\n' "$BEAD_DESC" | grep -qE '^## Territory[[:space:]]*$'; then
-  SCOPE=1
-  printf '%s\n' "$BEAD_DESC" | awk '
-    /^## Territory[[:space:]]*$/ { in_territory = 1; next }
-    in_territory && /^##[[:space:]]/ { exit }
-    in_territory && /^[[:space:]]*-[[:space:]]+/ {
-      line = $0
-      sub(/^[[:space:]]*-[[:space:]]+/, "", line)
-      sub(/[[:space:]]+$/, "", line)
-      gsub(/^`|`$/, "", line)
-      if (line != "") print line
-    }' > "$W/territory"
-  while IFS= read -r path; do
-    [ -n "$path" ] || continue
-    TERRITORY+=("$path")
-  done < "$W/territory"
-  [ "${#TERRITORY[@]}" -gt 0 ] || die2 "bead $BEAD has an empty ## Territory — scope is explicit, never guessed"
 fi
 
 if [ "$SCOPE" -eq 1 ]; then
@@ -240,8 +216,8 @@ sort -u "$W/declared" -o "$W/declared"
 NDECL=$(grep -c . "$W/declared" || true)
 
 # --- 3. the closure: callers outside the diff, per symbol; tests reported, never refused -----
-# In a Territory scope, the caller corpus is the committed HEAD snapshot plus the current
-# Territory only. A sibling's dirty file is not a caller of this bead, and must not be able
+# In a scoped read, the caller corpus is the committed HEAD snapshot plus the current
+# scope paths only. A sibling's dirty file is not a caller of this bead, and must not be able
 # to turn a clean bead into a false REFUSED verdict.
 GIT_GREP_TYPES=(":(glob)**/*.ts" ":(glob)**/*.tsx" ":(glob)**/*.mts" ":(glob)**/*.cts" ":(glob)**/*.js" ":(glob)**/*.jsx" ":(glob)**/*.mjs" ":(glob)**/*.cjs")
 GIT_GREP_SQL_TYPES=("${GIT_GREP_TYPES[@]}" ":(glob)**/*.sql")

@@ -9,7 +9,9 @@
 #               the harness runs on every scripts/run-all-proofs.sh invocation, scheduled
 #               by CI's `proofs` job.
 #   MODE:       advisory — a bead it cannot prove anything about stays exactly as it was
-#   ON-FAILURE: closed — br/jq missing or a gate script absent exits 2 and touches nothing
+#   ON-FAILURE: closed — br/jq/python3 missing, a gate script absent, or bead.py missing exits
+#               2 and touches nothing; a bead.py that loads but crashes mid-read skips only
+#               that one bead's disposition attempt (kept stamped), never the whole run
 #
 # WHY IT EXISTS: flight-check.sh stamps `PREMISE-FAILED:` onto a title and every worker
 # skips that title forever. The stamp is a cached verdict with no expiry. When the verdict
@@ -32,7 +34,7 @@
 #   refly.sh [--root <repo root>] [--dry-run]
 #
 # Exit 0  every stamped bead re-checked (stripped, disposition-closed, or left, each reported)
-# Exit 2  NOT-GATED — br/jq/gate scripts unavailable; nothing was touched
+# Exit 2  NOT-GATED — br/jq/python3/gate scripts/bead.py unavailable; nothing was touched
 #
 set -uo pipefail
 
@@ -52,15 +54,79 @@ CLOSE_GATE="$HERE/close-gate.sh"
 for G in "$GATE" "$CLOSE_GATE"; do
   [ -x "$G" ] || { echo "NOT-GATED: gate script missing or not executable at $G" >&2; exit 2; }
 done
-command -v br >/dev/null 2>&1 && command -v jq >/dev/null 2>&1 \
-  || { echo "NOT-GATED: br/jq are not on PATH — stamped beads cannot be re-checked" >&2; exit 2; }
+TOOLS_DIR="$(cd "$HERE/../../_tools" 2>/dev/null && pwd)"
+# bead.py is the one bead reader (ac-m9y4.1): the Delivers artifact named in a disposition
+# close reason reads through its own `delivers()` extractor, never a second hand-rolled
+# regex. Same closed-failure loop as the gate scripts above (extended, per this bead): a
+# missing reader stops the refly at load, before any bead is touched.
+_BEAD_PY_HOME="${TOOLS_DIR:+$TOOLS_DIR/bead.py}"
+[ -n "$TOOLS_DIR" ] && [ -f "$_BEAD_PY_HOME" ] \
+  || { echo "NOT-GATED: bead.py missing at ${_BEAD_PY_HOME:-<unresolved _tools dir>} — Delivers paths cannot be read" >&2; exit 2; }
+command -v br >/dev/null 2>&1 && command -v jq >/dev/null 2>&1 && command -v python3 >/dev/null 2>&1 \
+  || { echo "NOT-GATED: br/jq/python3 are not on PATH — stamped beads cannot be re-checked" >&2; exit 2; }
 
 # The ONE br_call invocation shape (ac-heyt.3); a refusal below is a NOT-GATED /
 # keep-stamped routing, never empty data. Sourced before the cd: BASH_SOURCE may be
 # relative, so the absolute helper path must resolve from the original cwd.
 # shellcheck source=br-call.sh
-. "$(cd "$(dirname "${BASH_SOURCE[0]}")/../../_tools" 2>/dev/null && pwd)/br-call.sh" 2>/dev/null \
+. "$TOOLS_DIR/br-call.sh" 2>/dev/null \
   || { echo "NOT-GATED: br-call.sh helper missing — stamped beads cannot be re-checked" >&2; exit 2; }
+
+# The program lives in its own file, never a heredoc attached to `python3 -`: a heredoc IS
+# the command's stdin, so a text argument piped in on the same command would starve
+# `sys.stdin.read()` of everything but EOF (needs-device-gate.sh's own write_device_paths_py
+# already paid for this lesson). `BEAD_MODULE_PATH` is the same test-only override
+# bead-capture-guard.py's own `_load_bead_module()` uses: a nonexistent path drives the
+# broken-reader fixture without ever touching the real bead.py in a shared checkout.
+_write_delivers_py() {
+  cat > "$1" <<'PY'
+import importlib.util, os, sys
+
+
+def _load_bead():
+    override = os.environ.get("BEAD_MODULE_PATH")
+    path = override or os.environ["BEAD_PY_PATH"]
+    spec = importlib.util.spec_from_file_location("bead", path)
+    if spec is None or spec.loader is None:
+        raise ImportError(f"cannot load bead.py at {path!r}")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def main():
+    bead = _load_bead()
+    with open(sys.argv[1], "r") as f:
+        desc = f.read()
+    paths = []
+    for d in bead.delivers(desc):
+        paths.extend(p for p in d["paths"] if p)
+    print(" ".join(paths[:3]))
+    return 0
+
+
+if __name__ == "__main__":
+    try:
+        sys.exit(main())
+    except Exception as e:
+        print(f"NOT-GATED: bead.py unavailable or crashed: {e}", file=sys.stderr)
+        sys.exit(2)
+PY
+}
+
+# <body-file> -> the first 3 ## Delivers paths, space-joined, via bead.py's own extractor —
+# stdout on rc 0 (empty is a legitimate "Delivers names no path"). A non-zero rc is a broken
+# reader, never a silent empty extraction; the caller skips that bead's disposition rather
+# than pass a reason it could not verify.
+_delivers_via_bead() {
+  local bf="$1" py out rc
+  py=$(mktemp) || return 2
+  _write_delivers_py "$py"
+  out=$(BEAD_PY_PATH="$_BEAD_PY_HOME" python3 "$py" "$bf" 2>&1); rc=$?
+  rm -f "$py"
+  [ "$rc" -eq 0 ] && printf '%s' "$out"
+  return $rc
+}
 
 if [ -z "$ROOT" ]; then
   ROOT=$(git rev-parse --show-toplevel 2>/dev/null) || ROOT="$PWD"
@@ -86,7 +152,7 @@ TRIAGE_ACTOR="refly-triage-$(date -u +%Y%m%d-%H%M%S)-$$"
 # untouched. The reason names a Delivers artifact when the board declares one — the evidence
 # core (LEG 7) cross-references it; a bead with no checkable Delivers stays stamped.
 triage_disposition() {
-  local id="$1" flight_out="$2" body deliv cls reason f close_out close_rc
+  local id="$1" flight_out="$2" body deliv deliv_rc cls reason f close_out close_rc
   if [ "$DRY" -eq 1 ]; then
     echo "refly (dry-run): $id — would attempt a disposition close through close-gate.sh"
     return 0
@@ -99,10 +165,14 @@ triage_disposition() {
   body=$(br_call show "$id" --json </dev/null \
     | jq -r 'if type == "array" then .[0] else . end | .description // ""' 2>/dev/null) || body=""
   printf '%s\n' "$body" >"$bf"
-  deliv=$(printf '%s\n' "$body" \
-    | awk '/^## /{ inb = ($0 ~ "^## Delivers([[:space:]]|$)") ? 1 : 0; next }
-            inb { print }' \
-    | grep -oE '[A-Za-z0-9_.][A-Za-z0-9_./-]*\.[A-Za-z0-9]+' | grep -vE '^\.+$' | head -3 | tr '\n' ' ')
+  deliv=$(_delivers_via_bead "$bf"); deliv_rc=$?
+  if [ "$deliv_rc" -ne 0 ]; then
+    echo "refly: $id — triage skipped: bead.py could not be read (Delivers paths unavailable): $deliv" >&2
+    br update "$id" --status open --assignee "" </dev/null >/dev/null 2>&1 \
+      || echo "warn: could not unclaim $id after the broken-reader skip" >&2
+    rm -f "$f" "$bf"
+    return 1
+  fi
   cls=$(printf '%s\n' "$flight_out" | grep -m1 -oE 'PREMISE-FAILED: [A-Z-]+')
   reason="obsolete: TRIAGE — flight-check refuses ${cls:-the premises} at claim; the defect is resolved at HEAD by other work (${TREE}) or the bead is superseded by a disposition-closed blocker. Delivered: ${deliv:-see the ## Delivers section}"
   printf '%s\n' "$reason" >"$f"
