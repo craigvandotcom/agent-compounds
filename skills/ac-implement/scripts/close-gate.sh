@@ -359,18 +359,26 @@ cascade_holds() {
     bnode=$(br_call show "$blocker" --json </dev/null 2>/dev/null) || bnode=""
     if [ -z "$bnode" ]; then
       # br matches EXACT ids only; a Consumes line may cite a unique prefix — resolve
-      # exactly one, the same rule flight-check applies. An ambiguous or absent blocker
-      # fails BOTH legs: the premise cannot be proven settled.
+      # exactly one, the same rule flight-check applies (flight-check.sh Refusal 1). The
+      # first `show` above is deliberately ambiguous (not-found and a read failure both
+      # land here), but `list` has no "ambiguous absence" reading: it always succeeds
+      # unless br itself cannot be read, so a FAILURE here — never an empty result — is
+      # the genuine outage signal. Swallowing it into "not held" is exactly the silent
+      # pass this leg exists to catch (ac-ftfz.5); it is NOT-GATED, same as flight-check.
       full=$(br_call list --json --limit 0 </dev/null \
         | jq -r --arg b "$blocker" \
             '[.issues[] | select(.id | startswith($b)) | .id]
-               | if length == 1 then .[0] elif length == 0 then "" else "AMBIGUOUS" end' 2>/dev/null) || full=""
+               | if length == 1 then .[0] elif length == 0 then "" else "AMBIGUOUS" end' 2>/dev/null) \
+        || { echo "NOT-GATED: 'br list' refused — blocker '$blocker' resolution unverifiable, the cascade cannot be judged" >&2; exit 2; }
       if [ -n "$full" ] && [ "$full" != "AMBIGUOUS" ]; then
         blocker="$full"
-        bnode=$(br_call show "$blocker" --json </dev/null 2>/dev/null) || bnode=""
+        bnode=$(br_call show "$blocker" --json </dev/null 2>/dev/null) \
+          || { echo "NOT-GATED: 'br show' refused for resolved blocker '$blocker' — the cascade cannot be judged" >&2; exit 2; }
       fi
     fi
-    [ -n "$bnode" ] || return 0
+    # A genuinely absent blocker (list ran clean, found nothing) is a live premise, not an
+    # outage: the cascade legitimately does not hold, and the caller refuses the close.
+    if [ -z "$bnode" ]; then return 0; fi
     bstatus=$(printf '%s' "$bnode" | jq -r 'if type == "array" then .[0] else . end | .status // ""' 2>/dev/null)
     [ "$bstatus" = "closed" ] || return 0
     bclose=$(printf '%s' "$bnode" | jq -r 'if type == "array" then .[0] else . end | (.close_reason // .closeReason // "")' 2>/dev/null)

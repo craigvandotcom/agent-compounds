@@ -130,6 +130,20 @@ case "$cmd" in
     printf '%s\n' "$body" >> "$STATE/comments.log"
     append_comment "$cid" "$body"
     exit 0 ;;
+  list)
+    # `br list --json --limit 0` — the cascade's prefix-resolution fallback (ac-ftfz.5).
+    # AC2_TEST_BR_LIST_FAIL=1 drives the genuine-outage case: list itself refuses, never a
+    # fabricated empty result.
+    [ "${AC2_TEST_BR_LIST_FAIL:-0}" = "1" ] && exit 1
+    ids="[]"
+    for f in "$STATE"/*.json; do
+      [ -f "$f" ] || continue
+      case "$f" in *.comments.json) continue ;; esac
+      bid=$(jq -r '.id // empty' "$f" 2>/dev/null)
+      [ -n "$bid" ] || continue
+      ids=$(printf '%s' "$ids" | jq --arg id "$bid" '. + [$id]')
+    done
+    jq -n --argjson ids "$ids" '{issues: ($ids | map({id: .}))}' ;;
   *) exit 0 ;;
 esac
 MOCKBR
@@ -257,6 +271,7 @@ gate() { # <root> [extra args...]
   ( cd "$root" && AC2_FLIGHT_DIR="$root/.flight" AC2_TEST_BR_STATE="$root/.br" \
       AC2_TEST_BR_CLOSE_NOOP="${AC2_TEST_BR_CLOSE_NOOP:-0}" \
       AC2_TEST_BR_SHOW_FAIL="${AC2_TEST_BR_SHOW_FAIL:-0}" \
+      AC2_TEST_BR_LIST_FAIL="${AC2_TEST_BR_LIST_FAIL:-0}" \
       bash "$GATE" "$BEAD" --body-file "$root/body.md" --root "$root" "$@" 2>&1
     echo $? > "$RCFILE" )
 }
@@ -862,6 +877,33 @@ GATE_RC=$(cat "$RCFILE")
 if [ "$GATE_RC" -eq 1 ] && printf '%s' "$out" | grep -q 'fresh-verify'; then
   pass "AC3o: a wontfix: close with a red probe is refused by the fresh-verify guard — wontfix is not a carve-out verb; intent stays human"
 else fail "AC3o: rc=$GATE_RC out=$out"; fi
+
+# --- 3p: a genuine `br` read failure while resolving the Consumes blocker is NOT-GATED
+# (exit 2), never a silent "not held" pass (ac-ftfz.5). The Consumes line cites a PREFIX of
+# the blocker's real id, so the exact-id `show` misses and the cascade falls to the `list`
+# prefix-resolution fallback — which is the leg forced to fail here.
+R="$(mkcase cascade-list-refused)"
+cat >"$R/body.md" <<'BODY'
+## Acceptance Criteria
+- the consumed artifact exists.
+  Probe: `test -f gone.md` — tier: none
+
+## Delivers
+- artifact: gone.md
+
+## Consumes
+- bd-upstream -> gone.md (landed)
+BODY
+board "$R" in_progress worker
+board_dep "$R" closed "triager" "wontfix: the upstream chose not to ship — premise retired (bd-upstream-9zz)"
+out="$(AC2_TEST_BR_LIST_FAIL=1 gate "$R" --reason "obsolete: TRIAGE — the consumed blocker closed wontfix. Delivered: gone.md" --actor worker)"
+GATE_RC=$(cat "$RCFILE")
+if [ "$GATE_RC" -eq 2 ] && printf '%s' "$out" | grep -q 'NOT-GATED'; then
+  pass "AC3p: a refused 'br list' while resolving a Consumes blocker is NOT-GATED (exit 2), never a silent pass"
+else fail "AC3p: rc=$GATE_RC out=$out"; fi
+if [ "$(jq -r .status "$R/.br/$BEAD.json")" = "in_progress" ]; then
+  pass "AC3p: the NOT-GATED cascade leaves the bead open — no status is fabricated"
+else fail "AC3p: the bead was closed despite the refused list read"; fi
 
 # ============================================================================================
 # AC 4 — the UNCOMMITTED leg: a Delivers path the working tree carries but no commit does
