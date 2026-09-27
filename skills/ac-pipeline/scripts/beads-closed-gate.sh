@@ -376,7 +376,7 @@ fi
 # then UNION the results (dedupe by id).
 FULL_CLAIMED="[]"
 for a in "${ASSIGNEES[@]}"; do
-  part=$(br_call list --json --limit 0 --all --assignee "$a" | jq '.issues') || exit 2
+  part=$(br_call list --json --limit 0 --all --assignee "$a" | jq 'if type == "array" then . else .issues end') || exit 2
   FULL_CLAIMED=$(jq -s 'add | unique_by(.id)' \
     <(printf '%s' "$FULL_CLAIMED") <(printf '%s' "$part")) || exit 2
 done

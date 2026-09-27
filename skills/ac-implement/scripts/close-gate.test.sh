@@ -130,6 +130,27 @@ case "$cmd" in
     printf '%s\n' "$body" >> "$STATE/comments.log"
     append_comment "$cid" "$body"
     exit 0 ;;
+  list)
+    # Real br 0.1.14: refuses an unknown flag (exit 2) or status (INVALID_STATUS, exit 4),
+    # answers a BARE array of the board, and omits closed rows unless --all.
+    all=""
+    while [ $# -gt 0 ]; do
+      case "$1" in
+        --json) ;;
+        --all|-a) all=1 ;;
+        --limit) [[ "${2-}" =~ ^[0-9]+$ ]] || { echo "error: invalid --limit" >&2; exit 2; }; shift ;;
+        --status) case "${2-}" in open|in_progress|blocked|deferred|closed) ;; *)
+                    printf '{"error":{"code":"INVALID_STATUS","message":"Invalid status: %s"}}\n' "${2-}"; exit 4 ;; esac
+                  shift ;;
+        *) printf "error: unexpected argument '%s' found\n" "$1" >&2; exit 2 ;;
+      esac
+      shift
+    done
+    for f in "$STATE"/*.json; do
+      case "$f" in *.comments.json) continue ;; esac
+      [ -f "$f" ] && jq -c 'if type == "array" then .[] else . end' "$f"
+    done | jq -s -c --arg all "$all" 'if $all == "1" then . else map(select(.status != "closed")) end'
+    exit 0 ;;
   *) exit 0 ;;
 esac
 MOCKBR
@@ -794,6 +815,29 @@ else fail "AC3l: the cascade close did not land"; fi
 if [ -f "$R/.br/comments.log" ] && grep -q 'TRIAGE-CLOSE' "$R/.br/comments.log"; then
   pass "AC3l: the cascade evidence is RECORDED on the bead (TRIAGE-CLOSE comment)"
 else fail "AC3l: no TRIAGE-CLOSE record landed on the bead"; fi
+
+# --- 3l': the SAME cascade, the blocker cited by a unique id PREFIX. `br show` matches exact
+# ids only, so the gate resolves through `br list` — which must carry --all (the blocker is
+# closed) and read br's bare-array answer, or the cascade silently never holds.
+R="$(mkcase cascade-accept-prefix)"
+cat >"$R/body.md" <<'BODY'
+## Acceptance Criteria
+- the consumed artifact exists.
+  Probe: `test -f gone.md` — tier: none
+
+## Delivers
+- artifact: gone.md
+
+## Consumes
+- bd-upstream -> gone.md (landed)
+BODY
+board "$R" in_progress worker
+board_dep "$R" closed "triager" "wontfix: the upstream chose not to ship — premise retired (bd-upstream.abc)"
+out="$(gate "$R" --reason "obsolete: TRIAGE — the consumed blocker closed wontfix. Delivered: gone.md" --actor worker)"
+GATE_RC=$(cat "$RCFILE")
+if [ "$GATE_RC" -eq 0 ] && printf '%s' "$out" | grep -q 'cascade'; then
+  pass "AC3l': a blocker cited by a unique id prefix resolves through br list and holds the cascade"
+else fail "AC3l': rc=$GATE_RC out=$out"; fi
 
 # --- 3m: the SAME red-probe disposition close where the blocker closed shipped: (the
 # deliverable is final, not retired) → REFUSED. The cascade does not rescue a premise

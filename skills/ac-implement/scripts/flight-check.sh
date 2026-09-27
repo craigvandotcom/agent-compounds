@@ -256,9 +256,9 @@ EOF
       if [ -z "$bstatus" ]; then
         # br show matches EXACT ids only; a Consumes line may cite a unique prefix
         # (bd-decision-no-drafts for bd-decision-no-drafts-huc5z). Resolve exactly one.
-        full=$(br_call list --json --limit 0 </dev/null \
+        full=$(br_call list --json --limit 0 --all </dev/null \
           | jq -r --arg b "$blocker" \
-            '[.issues[] | select(.id | startswith($b)) | .id]
+            '[(if type == "array" then . else .issues end)[] | select(.id | startswith($b)) | .id]
              | if length == 1 then .[0] elif length == 0 then "" else "AMBIGUOUS" end') \
           || { echo "NOT-GATED: 'br list' refused — blocker '$blocker' resolution unverifiable" >&2; exit 2; }
         if [ -n "$full" ] && [ "$full" != "AMBIGUOUS" ]; then

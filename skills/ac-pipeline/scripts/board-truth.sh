@@ -94,7 +94,8 @@ awk -F'|' '
 
 # --- the unexaminable board is a NOT-GATED, never a clean shortlist (D6) -------------
 # A non-zero `br doctor health` (the schema tripwire — it exits 1 on a board this binary
-# refuses), a refused list read, a response without `.issues[]`, or a row missing the
+# refuses), a refused list read, a response that is neither br's bare array nor an
+# `{issues: […]}` envelope, or a row missing the
 # timestamps the flag needs all exit 2 with the named line. The FLAG-ONLY contract is
 # untouched: this scan still closes, labels and defers nothing.
 if command -v br >/dev/null 2>&1 && command -v jq >/dev/null 2>&1; then
@@ -102,11 +103,12 @@ if command -v br >/dev/null 2>&1 && command -v jq >/dev/null 2>&1; then
     || { echo "board-truth: NOT-GATED — 'br doctor health' failed; this binary refuses the board" >&2; exit 2; }
   OPEN_JSON=$(br_call list --status open --limit 0 --json) \
     || { echo "board-truth: NOT-GATED — the br list read refused; the board is unreadable" >&2; exit 2; }
-  if ! printf '%s' "$OPEN_JSON" | jq -e 'type == "object" and has("issues")' >/dev/null 2>&1; then
-    echo "board-truth: NOT-GATED — the br list read returned no .issues[]; the board shape is unreadable" >&2
+  # br 0.1.14 answers a BARE array; an {issues: […]} envelope is read the same way.
+  if ! printf '%s' "$OPEN_JSON" | jq -e 'type == "array" or (type == "object" and (.issues | type) == "array")' >/dev/null 2>&1; then
+    echo "board-truth: NOT-GATED — the br list read returned no row array; the board shape is unreadable" >&2
     exit 2
   fi
-  MISSING=$(printf '%s' "$OPEN_JSON" | jq -r '[.issues[] | select((.updated_at // "") == "" or (.created_at // "") == "")] | length' 2>/dev/null)
+  MISSING=$(printf '%s' "$OPEN_JSON" | jq -r '[(if type == "array" then . else .issues end)[] | select((.updated_at // "") == "" or (.created_at // "") == "")] | length' 2>/dev/null)
   if [ -z "${MISSING:-}" ] || [ "${MISSING:-0}" -gt 0 ]; then
     if [ -z "${MISSING:-}" ]; then
       echo "board-truth: NOT-GATED — the open-bead rows are unreadable; the flag would be silent" >&2
@@ -116,7 +118,7 @@ if command -v br >/dev/null 2>&1 && command -v jq >/dev/null 2>&1; then
     exit 2
   fi
   printf '%s' "$OPEN_JSON" \
-    | jq -r '.issues[] | [.id, .updated_at, .created_at] | @tsv' 2>/dev/null \
+    | jq -r '(if type == "array" then . else .issues end)[] | [.id, .updated_at, .created_at] | @tsv' 2>/dev/null \
     | tee "$D/open-beads" >/dev/null
 else
   echo "board-truth: NOT-GATED — br/jq unavailable; the board cannot be read" >&2

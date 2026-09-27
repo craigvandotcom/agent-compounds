@@ -361,9 +361,9 @@ cascade_holds() {
       # br matches EXACT ids only; a Consumes line may cite a unique prefix — resolve
       # exactly one, the same rule flight-check applies. An ambiguous or absent blocker
       # fails BOTH legs: the premise cannot be proven settled.
-      full=$(br_call list --json --limit 0 </dev/null \
+      full=$(br_call list --json --limit 0 --all </dev/null \
         | jq -r --arg b "$blocker" \
-            '[.issues[] | select(.id | startswith($b)) | .id]
+            '[(if type == "array" then . else .issues end)[] | select(.id | startswith($b)) | .id]
                | if length == 1 then .[0] elif length == 0 then "" else "AMBIGUOUS" end' 2>/dev/null) || full=""
       if [ -n "$full" ] && [ "$full" != "AMBIGUOUS" ]; then
         blocker="$full"

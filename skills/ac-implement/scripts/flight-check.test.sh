@@ -65,7 +65,25 @@ case "${1:-}" in
       ac-parent-epic) echo '[{"id":"ac-parent-epic","status":"open"}]' ;;
       *) exit 3 ;;  # exact-id miss: not on the board under that spelling
     esac ;;
-  list) echo '{"issues":[{"id":"upstream","status":"closed"},{"id":"bd-epic-kb-seams-573x7.1","status":"closed"},{"id":"bd-epic-ing-ownership-k2mpd.1","status":"closed"}],"total":3,"has_more":false,"limit":5000,"offset":0}' ;;
+  list)
+    # Real br 0.1.14: refuses an unknown flag (exit 2) or status (INVALID_STATUS, exit 4),
+    # answers a BARE array, and omits closed rows unless --all — a stub that serves an
+    # {issues:…} envelope to any argv proves nothing about the call the gate makes.
+    shift; all=""
+    while [ $# -gt 0 ]; do
+      case "$1" in
+        --json) ;;
+        --all|-a) all=1 ;;
+        --limit) [[ "${2-}" =~ ^[0-9]+$ ]] || { echo "error: invalid --limit" >&2; exit 2; }; shift ;;
+        --status) case "${2-}" in open|in_progress|blocked|deferred|closed) ;; *)
+                    printf '{"error":{"code":"INVALID_STATUS","message":"Invalid status: %s"}}\n' "${2-}"; exit 4 ;; esac
+                  shift ;;
+        *) printf "error: unexpected argument '%s' found\n" "$1" >&2; exit 2 ;;
+      esac
+      shift
+    done
+    echo '[{"id":"upstream","status":"closed"},{"id":"bd-epic-kb-seams-573x7.1","status":"closed"},{"id":"bd-epic-ing-ownership-k2mpd.1","status":"closed"}]' \
+      | jq -c --arg all "$all" 'if $all == "1" then . else map(select(.status != "closed")) end' ;;
   *) echo '{}' ;;
 esac
 STUB

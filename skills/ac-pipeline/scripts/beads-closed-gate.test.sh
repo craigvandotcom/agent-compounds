@@ -95,19 +95,29 @@ if [ "$1" = "show" ]; then
   exit 0
 fi
 if [ "$1" = "list" ]; then
+  # Real br 0.1.14: refuses an unknown flag (exit 2) or status (INVALID_STATUS, exit 4),
+  # answers a BARE array, and omits closed rows unless --all. A stub that serves an
+  # {issues:…} envelope to any argv proves nothing about the call the gate makes.
   shift
-  assignee=""
+  assignee=""; all=""
   while [ $# -gt 0 ]; do
     case "$1" in
-      --assignee) assignee="$2"; shift 2 ;;
-      *) shift ;;
+      --json) ;;
+      --all|-a) all=1 ;;
+      --assignee) assignee="${2-}"; shift ;;
+      --limit) [[ "${2-}" =~ ^[0-9]+$ ]] || { echo "error: invalid --limit" >&2; exit 2; }; shift ;;
+      --status) case "${2-}" in open|in_progress|blocked|deferred|closed) ;; *)
+                  printf '{"error":{"code":"INVALID_STATUS","message":"Invalid status: %s"}}\n' "${2-}"; exit 4 ;; esac
+                shift ;;
+      *) printf "error: unexpected argument '%s' found\n" "$1" >&2; exit 2 ;;
     esac
+    shift
   done
   fx="${FIXTURE_DIR:-}/${assignee}.json"
   if [ -n "$assignee" ] && [ -f "$fx" ]; then
-    printf '{"issues":%s}\n' "$(cat "$fx")"
+    jq -c --arg all "$all" 'if $all == "1" then . else map(select(.status != "closed")) end' "$fx"
   else
-    echo '{"issues":[]}'
+    echo '[]'
   fi
 fi
 EOF

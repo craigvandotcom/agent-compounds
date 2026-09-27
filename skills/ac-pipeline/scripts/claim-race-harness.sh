@@ -93,7 +93,7 @@ cleanup() {
   # mid-run, prior aborted invocation left beads behind).
   local strays
   strays=$(br_call list --json --limit 0 --label "$LABEL" --no-auto-flush --no-auto-import \
-    | jq -r '.issues[]?.id' 2>/dev/null) \
+    | jq -r '(if type == "array" then . else .issues end)[].id' 2>/dev/null) \
     || { fail "br list refused in cleanup — the stray sweep is unverified"; strays=""; }
   if [ -n "$strays" ]; then
     # word-split intentional, IDs are single tokens
