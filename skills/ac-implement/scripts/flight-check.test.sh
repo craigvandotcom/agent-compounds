@@ -732,6 +732,67 @@ printf '%s' "$RUN_OUT" | grep -q 'not on the board' \
   || ok "resolved-blocker refusal did not fabricate a not-on-the-board status"
 
 # ---------------------------------------------------------------------------------------
+echo "flight-check.test: case 10 — the RED is the first EXECUTING probe, static is only the fallback"
+# ---------------------------------------------------------------------------------------
+# A static probe (grep/test/ls/rg/find/stat, alone or joined by connectors) proves only
+# that a file is absent or a pattern is unmatched — never that a fix runs and fails. An
+# executing probe (anything else, e.g. invoking a script) is a real failing test. When
+# both are red, the executing one is the recorded RED; a static-only bead is unchanged.
+printf 'exit 1\n' >"$WORK/root/failing.test.sh"
+chmod +x "$WORK/root/failing.test.sh"
+
+# 10a — a failing grep (static) first, a failing test (executing) second -> the test wins.
+cat >"$WORK/bodies/static-then-exec.md" <<'BODY'
+## Acceptance Criteria
+- A pattern that is not on the tree.
+  Probe: `grep -q NEVER-MATCHES ./failing.test.sh` — tier: none
+- A real test that is honestly red.
+  Probe: `bash ./failing.test.sh` — tier: none
+
+## Consumes
+- none
+BODY
+run "$WORK/bodies/static-then-exec.md"
+[ "$RUN_RC" -eq 0 ] && ok "10a: premises hold, RED observed" || bad "10a: expected exit 0, got $RUN_RC: $RUN_OUT"
+grep -q '^red-probe: bash ./failing.test.sh$' "$RECEIPT" \
+  && ok "10a: the first EXECUTING probe is the recorded RED, not the earlier static grep" \
+  || bad "10a: wrong red-probe recorded: $(grep '^red-probe:' "$RECEIPT")"
+
+# 10b — the executing probe comes FIRST, the static one second -> order does not matter,
+# the executing probe still wins over a later static red.
+cat >"$WORK/bodies/exec-then-static.md" <<'BODY'
+## Acceptance Criteria
+- A real test that is honestly red.
+  Probe: `bash ./failing.test.sh` — tier: none
+- A pattern that is not on the tree.
+  Probe: `grep -q NEVER-MATCHES ./failing.test.sh` — tier: none
+
+## Consumes
+- none
+BODY
+run "$WORK/bodies/exec-then-static.md"
+grep -q '^red-probe: bash ./failing.test.sh$' "$RECEIPT" \
+  && ok "10b: the executing probe still wins when it is named first" \
+  || bad "10b: wrong red-probe recorded: $(grep '^red-probe:' "$RECEIPT")"
+
+# 10c — a STATIC-ONLY bead (no executing probe at all) is UNCHANGED: the first failing
+# static probe, in document order, is still the one recorded.
+cat >"$WORK/bodies/static-only.md" <<'BODY'
+## Acceptance Criteria
+- The first absent path.
+  Probe: `test -f ./static-only-a.md` — tier: none
+- A second absent path, also red.
+  Probe: `test -f ./static-only-b.md` — tier: none
+
+## Consumes
+- none
+BODY
+run "$WORK/bodies/static-only.md"
+grep -q '^red-probe: test -f ./static-only-a.md$' "$RECEIPT" \
+  && ok "10c: a static-only bead falls back to the first failing static probe, unchanged" \
+  || bad "10c: static-only fallback picked the wrong probe: $(grep '^red-probe:' "$RECEIPT")"
+
+# ---------------------------------------------------------------------------------------
 echo ""
 echo "flight-check.test: $PASS passed, $FAIL failed"
 if [ "$PASS" -eq 0 ]; then

@@ -512,9 +512,31 @@ fi
 
 # --- Refusal 4: RED, and the receipt ----------------------------------------------------
 
+# is_static_probe <command> — true when the probe is built ENTIRELY from read-only
+# existence/text-match inspection (test/[ ... ], grep/rg/egrep/fgrep, ls, find, stat),
+# joined by connectors and an optional leading `!`. Each of these proves only that
+# something is already on the tree or matches a pattern — never that a fix runs and
+# passes, so a bead anchored on one of these alone proves "the work has not started",
+# not "the work is done". Construction-based (it reads the probe TEXT, never re-runs
+# it): the same predicate-stripping shape close-gate.sh's is_output_silent/rest check
+# already use for a different judgement (COVERAGE, not RED selection) — that function
+# stays close-gate's own (OUT of scope here), so this is a scoped, independent copy.
+is_static_probe() {
+  local rest
+  rest=$(printf '%s' "$1" \
+    | sed -E 's/\[[^]]*\]//g' \
+    | sed -E 's/(^|&&|\|\||;)[[:space:]]*!?[[:space:]]*(test|grep|egrep|fgrep|rg|ls|find|stat)[[:space:]]+[^&|;]*//g' \
+    | sed -E 's/&&|\|\||;//g; s/[[:space:]]//g')
+  [ -z "$rest" ]
+}
+
 RED_PROBE=""
 RED_EXIT=""
 GREEN_COUNT=0
+RED_STATIC_PROBE=""
+RED_STATIC_EXIT=""
+RED_EXEC_PROBE=""
+RED_EXEC_EXIT=""
 # A probe that never exits must refuse, not hang: a hang writes no stamp, so every next
 # worker re-picks the bead. No timeout(1) on PATH → the probe runs bare.
 PROBE_TIMEOUT="${AC2_PROBE_TIMEOUT:-120}"
@@ -528,14 +550,30 @@ if [ -z "$FAIL_CLASS" ]; then
       premise_failed ENVIRONMENT "probe '$pr' did not exit within ${PROBE_TIMEOUT}s — a probe runs once and exits, never watches"
       break
     fi
-    if [ "$rc" -ne 0 ] && [ -z "$RED_PROBE" ]; then
-      RED_PROBE="$pr"; RED_EXIT="$rc"
-    elif [ "$rc" -eq 0 ]; then
+    if [ "$rc" -ne 0 ]; then
+      if is_static_probe "$pr"; then
+        [ -z "$RED_STATIC_PROBE" ] && { RED_STATIC_PROBE="$pr"; RED_STATIC_EXIT="$rc"; }
+      else
+        [ -z "$RED_EXEC_PROBE" ] && { RED_EXEC_PROBE="$pr"; RED_EXEC_EXIT="$rc"; }
+      fi
+    else
       GREEN_COUNT=$(( GREEN_COUNT + 1 ))
     fi
   done <<EOF
 $PROBES
 EOF
+
+  # THE SELECTION: the first EXECUTING probe that failed wins — it is a real failing
+  # test, not proof the file is merely absent. A static probe is the FALLBACK, used only
+  # when the bead names no failing executing probe at all (every candidate red is
+  # static, or there is no red among the executing set). `red-probe:` stays
+  # byte-identical to whichever `Probe:` command it names either way — close-gate's
+  # exact-match on that line does not change, only WHICH candidate reaches it.
+  if [ -n "$RED_EXEC_PROBE" ]; then
+    RED_PROBE="$RED_EXEC_PROBE"; RED_EXIT="$RED_EXEC_EXIT"
+  elif [ -n "$RED_STATIC_PROBE" ]; then
+    RED_PROBE="$RED_STATIC_PROBE"; RED_EXIT="$RED_STATIC_EXIT"
+  fi
 
   if [ -z "$FAIL_CLASS" ] && [ -z "$RED_PROBE" ]; then
     premise_failed RED "all $PROBE_COUNT named probe(s) are ALREADY GREEN — there is no RED for a diff to flip, so no causal claim is available"
