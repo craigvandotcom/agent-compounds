@@ -86,7 +86,11 @@ bead whose gate edge cannot be wired is HELD for the human and is never stamped 
 Retype every `MISFILED: human fork` a reader declined to `decision` + `human-gate`, with its
 memo (`beads-standards/reference/human-gate-template.md`), before handing off.
 
-Report `rounds-to-fixpoint` with the verdict token, then stop: `Next: /ac-implement <epic>` —
-or name what still blocks it. **Never invoke `ac-implement` from this hand-off** — the stamp
-makes the beads eligible, not the swarm authorized. The next call is the human's, or an
-"X then Y" the human typed in this session (`ac-pipeline/references/stage-table.md`).
+**Called from ac-beadify:** report `rounds-to-fixpoint` and return the verdict token to the caller — no `Next:` line. ac-beadify is the one that asks the human whether to start implement;
+this workflow never asks it and never prints one.
+
+**Run standalone:** report `rounds-to-fixpoint` with the verdict token, then stop: `Next: /ac-implement <epic>` — or name what still blocks it.
+
+**Never invoke `ac-implement` from this hand-off**, in either branch — the stamp makes the
+beads eligible, not the swarm authorized. The next call is the human's, or an "X then Y" the
+human typed in this session (`ac-pipeline/references/stage-table.md`).
