@@ -1,2 +1,4 @@
 - [spawn-prompt-is-a-snapshot-spawn-after-sweep](spawn-prompt-is-a-snapshot-spawn-after-sweep.md) — spawned prompts are snapshots: spawn after the refly sweep; workers re-read the live worker.md once
 - [flight-check-check-only-executes-probes](flight-check-check-only-executes-probes.md) — --check-only writes nothing but still runs every probe; read probes before sweeping a board
+- [long-running-watcher-keeps-old-code-after-field-rename](long-running-watcher-keeps-old-code-after-field-rename.md) — a watcher that loaded its parser once shows an impossible 0 after a JSON field rename; check process start vs commit, restart it
+- [failed-br-create-can-leave-an-empty-bead](failed-br-create-can-leave-an-empty-bead.md) — a half-failed br create leaves a "…" bead that trips lint for everyone; verify abandoned, close obsolete + TRIAGE-CLOSE
