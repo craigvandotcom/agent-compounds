@@ -336,6 +336,7 @@ def probes(text):
 
 _PLACEHOLDER_RE = re.compile(r"<[^>]*>")
 _BLOCKER_ID_RE = re.compile(r"^([A-Za-z][A-Za-z0-9._-]*)")
+_GATE_ONLY_RE = re.compile(r"^none\s*\(gate\)\.?$", re.IGNORECASE)
 
 
 def _is_label_token(tok):
@@ -387,6 +388,13 @@ def consumes(text):
             else:
                 blocker = m.group(1).rstrip("-._")
         artifact_remainder = artifact_part.strip()
+        # `none (gate)`: a GATE-ONLY blocker — a decision, human-gate, or milestone bead
+        # that delivers no artifact of its own; the dependency is satisfied by the blocker
+        # simply being CLOSED, never a path to cross-reference (checker recheck 2026-09-27,
+        # evidence bd-pz8md/bd-1s800: a real Consumes edge to a gate-only closed blocker was
+        # refused because "none" parsed as a literal (and absent) artifact token). Checked
+        # BEFORE the placeholder/artifact reads below so it never falls into either.
+        gate_only = bool(_GATE_ONLY_RE.match(artifact_remainder))
         # An unfilled placeholder is read over the WHOLE remainder — it may spell
         # itself as a multi-word sentence (`<the artifact ac-other promises>`), not
         # just one token. The artifact itself, once it is a real path rather than a
@@ -397,19 +405,23 @@ def consumes(text):
         # (fbde324c: "a Consumes artifact is a whole word", settled earlier in
         # flight-check.sh; this is that same rule's one home now that flight-check
         # reads Consumes through this reader).
-        placeholder = bool(artifact_remainder and _PLACEHOLDER_RE.search(artifact_remainder))
+        placeholder = (not gate_only) and bool(
+            artifact_remainder and _PLACEHOLDER_RE.search(artifact_remainder)
+        )
         artifact = None
-        for tok in artifact_remainder.split():
-            if _is_label_token(tok):
-                continue
-            artifact = tok
-            break
+        if not gate_only:
+            for tok in artifact_remainder.split():
+                if _is_label_token(tok):
+                    continue
+                artifact = tok
+                break
         out.append({
             "raw": raw_line,
             "blocker": blocker,
             "artifact": artifact,
             "placeholder": placeholder,
             "malformed": malformed,
+            "gate": gate_only,
         })
     return out
 
@@ -619,10 +631,39 @@ def run_probe(cmd, timeout=60):
         return 124
 
 
+_COUNT_LITERAL_RE = re.compile(r"^-?\d+$")
+_NUMERIC_COMPARE_OPS = {"-eq", "-ne", "-gt", "-lt", "-ge", "-le"}
+
+
+def _is_explicit_count_comparison(clause_tokens):
+    """A CLAUSE (its own token list, one already split at `&&`/`||`/`;`/`|`) that
+    explicitly COMPARES a count against a literal number, rather than just reading it:
+    `grep -qx <N>` (quiet, exact-line match against a digit literal — the checker
+    recheck's own `grep -cE ... | grep -qx 0` shape) piped from the count, or a
+    `test`/`[`/`[[` clause carrying a numeric comparison operator."""
+    if not clause_tokens:
+        return False
+    head = clause_tokens[0]
+    if head in ("grep", "egrep", "fgrep", "rg"):
+        rest = clause_tokens[1:]
+        quiet = any(
+            t in ("--quiet",) or (t.startswith("-") and not t.startswith("--") and "q" in t[1:])
+            for t in rest
+        )
+        literal = next((t for t in reversed(rest) if not t.startswith("-")), None)
+        return bool(quiet and literal and _COUNT_LITERAL_RE.match(literal))
+    if head in ("test", "[", "[["):
+        return any(t in _NUMERIC_COMPARE_OPS for t in clause_tokens)
+    return False
+
+
 def _has_grep_dash_c(cmd):
     """A `grep`/`rg`/`egrep`/`fgrep` clause carrying a `-c`/`--count` flag: bare count
     output always exits 0 on any match, so a probe naming only the count proves nothing
-    unless the count is compared — banned outright per the plan's D2 list."""
+    unless the count is compared — banned outright per the plan's D2 list. EXEMPT: the
+    count piped straight into an explicit comparison clause (`grep -cE ... | grep -qx 0`,
+    `rg -c ... | test ... -eq 3`) — that IS a comparison, not a bare count read (checker
+    recheck: the two were conflated, refusing a probe that already compares)."""
     try:
         tokens = shlex.split(cmd)
     except ValueError:
@@ -632,13 +673,26 @@ def _has_grep_dash_c(cmd):
     while i < n:
         if tokens[i] in ("grep", "egrep", "fgrep", "rg"):
             j = i + 1
+            has_c = False
             while j < n and tokens[j] not in ("&&", "||", ";", "|"):
                 tok = tokens[j]
                 if tok == "--count":
-                    return True
+                    has_c = True
                 if tok.startswith("-") and not tok.startswith("--") and "c" in tok[1:]:
-                    return True
+                    has_c = True
                 j += 1
+            if has_c:
+                if j < n and tokens[j] == "|":
+                    k = j + 1
+                    m = k
+                    while m < n and tokens[m] not in ("&&", "||", ";", "|"):
+                        m += 1
+                    if _is_explicit_count_comparison(tokens[k:m]):
+                        i = m
+                        continue
+                return True
+            i = j
+            continue
         i += 1
     return False
 
@@ -803,8 +857,10 @@ def touchers_freshness_check(desc, label=""):
 
 def consumes_violations(cons_entries, root, resolve_blocker=None):
     """An unfilled `<placeholder>` is always refused (the plan's canon: Consumes accepts
-    `->`/`→` and `none`, never a placeholder). Otherwise: the artifact must already exist
-    on the tree, OR the named blocker's own `## Delivers` must promise that exact path.
+    `->`/`→` and `none`, never a placeholder). A `none (gate)` entry names a blocker that
+    delivers no artifact of its own (a decision, human-gate, or milestone) — satisfied by
+    the blocker being CLOSED, never a path. Otherwise: the artifact must already exist on
+    the tree, OR the named blocker's own `## Delivers` must promise that exact path.
     `resolve_blocker` defaults to `read_bead` (a real `br show`); a caller injects a fake
     for a test that must not shell out. Returns (refused, not_gated)."""
     if resolve_blocker is None:
@@ -814,6 +870,32 @@ def consumes_violations(cons_entries, root, resolve_blocker=None):
     for c in cons_entries:
         if c.get("placeholder"):
             refused.append(f"Consumes: unfilled <placeholder> artifact ({c['raw'].strip()})")
+            continue
+        if c.get("gate"):
+            if c.get("malformed"):
+                refused.append(
+                    f"Consumes: malformed line — the left side is not a bead id "
+                    f"({c['raw'].strip()})"
+                )
+                continue
+            blocker = c.get("blocker")
+            if not blocker:
+                refused.append(
+                    f"Consumes: 'none (gate)' names no blocker to verify closed "
+                    f"({c['raw'].strip()})"
+                )
+                continue
+            bcanon, berr = resolve_blocker(blocker)
+            if berr:
+                not_gated.append(
+                    f"Consumes: cannot verify gate-only blocker '{blocker}' is closed — {berr}"
+                )
+                continue
+            if is_open(bcanon.get("status")):
+                refused.append(
+                    f"Consumes: gate-only blocker '{blocker}' is not yet closed "
+                    f"(status={bcanon.get('status')!r})"
+                )
             continue
         artifact = c.get("artifact")
         if not artifact:
@@ -898,6 +980,35 @@ def refined_human_gate_violation(labels):
     labels = labels or []
     if "refined" in labels and "human-gate" in labels:
         return "refined: co-present with human-gate — a human-gate bead never carries refined"
+    return None
+
+
+# --- task/feature Delivers: NO-DELIVERS / UNVERIFIABLE-DELIVERS -------------------------
+
+
+def task_feature_delivers_violation(issue_type, desc):
+    """A `task`/`feature` bead whose `## Delivers` is empty (NO-DELIVERS) or prose-only —
+    no path-shaped artifact once each bullet's own `touchers:` line is excluded
+    (UNVERIFIABLE-DELIVERS) — can never carry a closable claim: close-evidence-check.sh
+    already refuses these closes, so passing either through VALIDATE or a restamp sends a
+    structurally unclosable bead through a worker claim. ONE HOME for the rule both readers
+    apply (checker recheck 2026-09-27: VALIDATE ran `bead.py check` alone, which lacked this
+    leg, and passed a bead the restamp gate's own copy of it then downgraded — evidence
+    bd-pz8md, bd-1s800). The caller exempts a human-gate bead (a decision/action for a
+    human, routinely typed `task`, never expected to carry an artifact) — never checked
+    here, since this function has no label to read."""
+    if issue_type not in ("task", "feature"):
+        return None
+    body = section(desc, "Delivers")
+    if not body.strip():
+        return ("NO-DELIVERS: task/feature bead has no populated '## Delivers' section, "
+                 "so no close can carry evidence")
+    non_touchers = "\n".join(
+        ln for ln in body.splitlines() if not _TOUCHERS_LINE_RE.match(ln)
+    )
+    if not extract_paths(non_touchers):
+        return ("UNVERIFIABLE-DELIVERS: task/feature bead's '## Delivers' is prose-only; "
+                 "add a path-shaped artifact")
     return None
 
 
@@ -1015,6 +1126,14 @@ def cmd_check(target):
         rhv = refined_human_gate_violation(labels)
         if rhv:
             refused.append(rhv)
+
+        # A human-gate bead is exempt (decision/action for a human, routinely typed
+        # `task`, never expected to carry an artifact) — the same exemption the probe
+        # rule already carries above.
+        if not human_gate:
+            tfd = task_feature_delivers_violation(canon.get("issue_type"), desc)
+            if tfd:
+                refused.append(tfd)
 
         dbc = _decision_blocks_count(bead_id)
         if dbc is None:

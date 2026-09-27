@@ -165,9 +165,9 @@ jq -n \
   {id:"bd-prod-plain", issue_type:"task", title:"plain code", labels:["origin:test"],
    description:$base, dependencies:[], comments:[{text:$receipt}]},
   {id:"bd-task-no-delivers", issue_type:"task", title:"task without artifacts", labels:["origin:test"],
-   description:$none, dependencies:[]},
+   description:$none, dependencies:[], comments:[{text:$receipt}]},
   {id:"bd-feature-prose", issue_type:"feature", title:"feature without artifacts", labels:["origin:test"],
-   description:$prose, dependencies:[]},
+   description:$prose, dependencies:[], comments:[{text:$receipt}]},
   {id:"bd-bug-prose", issue_type:"bug", title:"bug outside Delivers scope", labels:["origin:test"],
    description:$prose, dependencies:[], comments:[{text:$receipt}]},
   {id:"bd-human-gate", issue_type:"task", title:"human-gate co-present", labels:["origin:test","human-gate"],
@@ -270,6 +270,22 @@ else
   fail "echo plus real probe" "rc=$STAMP_RC: $STAMP_OUT / log: $(cat "$BR_LOG")"
 fi
 
+# NO-DELIVERS/UNVERIFIABLE-DELIVERS MOVED into bead.py's own `task_feature_delivers_violation`
+# (checker recheck 2026-09-27) — this script no longer carries the rule, so a global PASS
+# stub for the new gate would silently pass these two fixtures. The exact content distinction
+# (empty vs. prose-only Delivers) is unit-tested directly against bead.py itself
+# (bead.test.py); this integration level only needs to prove stamp-refined.sh still relays
+# a bead.py-check REFUSED verdict for either shape into its own REFUSED/no-stamp behaviour —
+# a stub standing in for the now-single home of the rule.
+cat >"$WORK/bead-check-delivers-refuse.py" <<'EOF'
+import sys
+bid = sys.argv[-1]
+label = "NO-DELIVERS" if "no-delivers" in bid else "UNVERIFIABLE-DELIVERS"
+print(f"bead.py check: REFUSED {bid} — {label}: task/feature bead has no usable "
+      "Delivers artifact (test stub)", file=sys.stderr)
+sys.exit(1)
+EOF
+BEAD_PY_CHECK_TOOL_OVERRIDE="$WORK/bead-check-delivers-refuse.py"
 for id in bd-task-no-delivers bd-feature-prose; do
   run_stamp "$id"
   if [ "$STAMP_RC" -eq 1 ] && { printf '%s\n' "$STAMP_OUT" | grep -q "NO-DELIVERS" \
@@ -280,6 +296,7 @@ for id in bd-task-no-delivers bd-feature-prose; do
     fail "$id" "rc=$STAMP_RC: $STAMP_OUT / log: $(cat "$BR_LOG")"
   fi
 done
+unset BEAD_PY_CHECK_TOOL_OVERRIDE
 
 run_stamp bd-bug-prose
 if [ "$STAMP_RC" -eq 0 ] && [ "$(label_count add bd-bug-prose refined)" -eq 1 ]; then

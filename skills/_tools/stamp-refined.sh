@@ -315,9 +315,8 @@ EOF
   # the reader's recorded `prod-write: none — <reason>` verdict or the board's existing
   # sensitive-prod + DECISION blocks gate pair. Neither is ever written by this script:
   # a label or edge the gate invents would be its own evidence.
-  local desc issue_type labels_csv decision_edges pdesc pout prc
+  local desc labels_csv decision_edges pdesc pout prc
   desc=$(printf '%s' "$meta" | jq -r '.[0].description // ""')
-  issue_type=$(printf '%s' "$meta" | jq -r '.[0].issue_type // ""')
   labels_csv=$(printf '%s' "$meta" | jq -r '.[0].labels // [] | join(",")')
   # The DECISION blocks-edge count is bead.py's own `_decision_blocks_count`, never a second
   # edge-type select of this script's own (ac-m9y4.7) — it re-reads the bead itself, the one
@@ -353,32 +352,11 @@ print(n if n is not None else 0)
     return 2
   fi
 
-  # TASK/FEATURE DELIVERS LEG (ac-bhxx). close-evidence-check.sh already refuses these
-  # closes as NO-DELIVERS / UNVERIFIABLE-DELIVERS, so letting them acquire `refined`
-  # only sends a structurally unclosable bead through a worker claim. Path extraction
-  # routes through the one shared pattern; touchers: dispositions are not deliveries.
-  if [ "$issue_type" = task ] || [ "$issue_type" = feature ]; then
-    local del_body del_paths
-    del_body=$(printf '%s\n' "$desc" | awk '/^## Delivers/{on=1; next} /^## /{on=0} on')
-    if [ -z "$(printf '%s' "$del_body" | tr -d '[:space:]')" ]; then
-      echo "stamp_refined: REFUSED $id — NO-DELIVERS — task/feature bead has no populated '## Delivers' section, so no close can carry evidence. No label written." >&2
-      _downgrade "$id" "task/feature has no Delivers section" || return $?
-      return 1
-    fi
-    # Path extraction is bead.py's own `extract_paths`, never a second copy of that pattern
-    # sourced from a sibling tool (ac-m9y4.7) — one reader. Args, never interpolated text.
-    del_paths=$(printf '%s\n' "$del_body" | grep -v '^[[:space:]]*touchers:' | python3 -c '
-import os, sys
-sys.path.insert(0, os.path.dirname(sys.argv[1]))
-import bead
-print("\n".join(bead.extract_paths(sys.stdin.read())))
-' "$BEAD_PY_TOOL")
-    if [ -z "$del_paths" ]; then
-      echo "stamp_refined: REFUSED $id — UNVERIFIABLE-DELIVERS — task/feature bead's '## Delivers' is prose-only; add a path-shaped artifact. No label written." >&2
-      _downgrade "$id" "task/feature Delivers is prose-only" || return $?
-      return 1
-    fi
-  fi
+  # TASK/FEATURE DELIVERS LEG — MOVED to bead.py's own `task_feature_delivers_violation`
+  # (checker recheck 2026-09-27: VALIDATE ran `bead.py check` alone, which lacked this
+  # leg, and passed a bead this script's own now-retired copy of the SAME rule then
+  # downgraded — evidence bd-pz8md, bd-1s800). The ONE-BEAD CHECK GATE below already
+  # carries it: no caller reads a weaker rule than any other.
 
   # A header alone declares nothing (the rule element4-check applies to `## Declared RED`):
   # a receipt without a round count and a digest is treated as ABSENT.

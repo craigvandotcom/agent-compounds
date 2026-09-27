@@ -103,6 +103,21 @@ check(bead.consumes("none") == [], "consumes: bare 'none' -> zero entries")
 check(bead.consumes("None.") == [], "consumes: 'None.' (case + trailing period) -> zero entries")
 check(bead.consumes("") == [], "consumes: empty body -> zero entries")
 
+# `none (gate)`: a GATE-ONLY blocker (decision / human-gate / milestone — no artifact of
+# its own); satisfied by the blocker being CLOSED, never a path (checker recheck
+# 2026-09-27, evidence bd-pz8md/bd-1s800: "none" parsed as a literal absent artifact and
+# was refused even though the blocker had long since closed).
+cons_gate = bead.consumes("- ac-decision -> none (gate)")
+check(len(cons_gate) == 1 and cons_gate[0]["gate"] is True
+      and cons_gate[0]["artifact"] is None and cons_gate[0]["placeholder"] is False
+      and cons_gate[0]["blocker"] == "ac-decision",
+      "consumes: 'none (gate)' parses as a gate-only entry, never an artifact or a placeholder",
+      cons_gate)
+check(bead.consumes("- ac-decision -> NONE (GATE).")[0]["gate"] is True,
+      "consumes: 'none (gate)' is case-insensitive and tolerates a trailing period")
+check(bead.consumes("- ac-decision -> none")[0]["gate"] is False,
+      "consumes: bare 'none' (no '(gate)' annotation) is an ordinary absent-artifact entry, not gate-only")
+
 # A Consumes line may carry a trailing parenthetical note after the artifact — the
 # artifact is the first whitespace-delimited token, the note is never part of the path
 # (ac-m9y4.3 regression: bead.py took the whole remainder, so a present artifact with a
@@ -420,6 +435,16 @@ check(bead.probe_shape_violation('grep -c "TODO" file.py') is not None,
       "probe_shape_violation: bare grep -c always exits 0 on any match — banned")
 check(bead.probe_shape_violation('test $(grep -o TODO file.py | wc -l) -eq 3') is None,
       "probe_shape_violation: grep WITHOUT -c, counted via wc -l, is NOT banned")
+
+# checker recheck 2026-09-27: `grep -c` piped into an EXPLICIT comparison is a comparison,
+# never a bare count read — only a `-c`/`--count` clause with NOTHING comparing its output
+# is banned.
+check(bead.probe_shape_violation('grep -cE "TODO" file.py | grep -qx 0') is None,
+      "probe_shape_violation: grep -c piped into an explicit `grep -qx <N>` comparison is NOT banned")
+check(bead.probe_shape_violation('rg -c PATTERN file.py | test -eq 3') is None,
+      "probe_shape_violation: rg -c piped into an explicit `test -eq <N>` comparison is NOT banned")
+check(bead.probe_shape_violation('grep -c "TODO" file.py | wc -l') is not None,
+      "probe_shape_violation: grep -c piped into something OTHER than a comparison (wc -l alone) is still banned")
 check(bead.probe_shape_violation('pnpm exec vitest run') is not None,
       "probe_shape_violation: bare pnpm exec vitest run (whole suite) is banned")
 check(bead.probe_shape_violation('pnpm exec vitest run src/x.test.ts') is None,
@@ -585,6 +610,34 @@ r_ph = bead.consumes_violations(cons_placeholder, _ctmp)
 check(len(r_ph[0]) == 1 and "placeholder" in r_ph[0][0],
       "consumes_violations: an unfilled <placeholder> artifact is always refused", r_ph)
 
+# --- consumes_violations: 'none (gate)' — satisfied by CLOSED, never a path -------------
+
+cons_gate_entry = [{"raw": "- ac-decision -> none (gate)", "blocker": "ac-decision",
+                     "artifact": None, "placeholder": False, "gate": True}]
+r_gate_closed = bead.consumes_violations(cons_gate_entry, _ctmp,
+    resolve_blocker=lambda bid: ({"status": "closed"}, None))
+check(r_gate_closed == ([], []),
+      "consumes_violations: a gate-only entry whose blocker is CLOSED is satisfied", r_gate_closed)
+
+r_gate_open = bead.consumes_violations(cons_gate_entry, _ctmp,
+    resolve_blocker=lambda bid: ({"status": "open"}, None))
+check(len(r_gate_open[0]) == 1 and "not yet closed" in r_gate_open[0][0] and r_gate_open[1] == [],
+      "consumes_violations: a gate-only entry whose blocker is still OPEN is refused", r_gate_open)
+
+r_gate_err = bead.consumes_violations(cons_gate_entry, _ctmp,
+    resolve_blocker=lambda bid: (None, "br show exited 1: no such issue"))
+check(r_gate_err[0] == [] and len(r_gate_err[1]) == 1,
+      "consumes_violations: a gate-only entry whose blocker cannot be read is NOT-GATED, "
+      "never a silent pass", r_gate_err)
+
+cons_gate_malformed = [{"raw": "- garbage prose -> none (gate)", "blocker": None,
+                         "artifact": None, "placeholder": False, "gate": True, "malformed": True}]
+r_gate_malformed = bead.consumes_violations(
+    cons_gate_malformed, _ctmp, resolve_blocker=_resolve_blocker_must_not_be_called)
+check(len(r_gate_malformed[0]) == 1 and "malformed" in r_gate_malformed[0][0],
+      "consumes_violations: a malformed gate-only line is REFUSED by name, never NOT-GATED "
+      "via br show", r_gate_malformed)
+
 # --- delivers_symlink_violations: a symlink resolving outside the repo root ------------
 
 _droot = _tf.mkdtemp()
@@ -618,6 +671,50 @@ check(bead.refined_human_gate_violation(["refined"]) is None,
       "refined_human_gate_violation: refined alone is clean")
 check(bead.refined_human_gate_violation(["human-gate"]) is None,
       "refined_human_gate_violation: human-gate alone (not yet refined) is clean")
+
+# --- task_feature_delivers_violation: NO-DELIVERS / UNVERIFIABLE-DELIVERS ---------------
+# Moved into bead.py FROM stamp-refined.sh's own copy (checker recheck 2026-09-27,
+# evidence bd-pz8md/bd-1s800): VALIDATE ran `bead.py check` alone, which lacked this leg,
+# and passed a bead the restamp gate's own (now-retired) copy of the SAME rule then
+# downgraded — one home now, read by both callers.
+
+check(bead.task_feature_delivers_violation("decision", "## Intent\nno Delivers at all.\n") is None,
+      "task_feature_delivers_violation: a non-task/feature issue_type (decision) is exempt")
+
+NO_DELIVERS_DESC = "## Intent\nsomething.\n\n## Acceptance Criteria\n- x.\n"
+r_nd = bead.task_feature_delivers_violation("task", NO_DELIVERS_DESC)
+check(r_nd is not None and r_nd.startswith("NO-DELIVERS"),
+      "task_feature_delivers_violation: a task with no '## Delivers' section at all is NO-DELIVERS", r_nd)
+
+EMPTY_DELIVERS_DESC = "## Intent\nsomething.\n\n## Delivers\n\n## Consumes\n- none\n"
+r_empty = bead.task_feature_delivers_violation("feature", EMPTY_DELIVERS_DESC)
+check(r_empty is not None and r_empty.startswith("NO-DELIVERS"),
+      "task_feature_delivers_violation: a feature whose '## Delivers' section is present but "
+      "empty is NO-DELIVERS", r_empty)
+
+PROSE_DELIVERS_DESC = ("## Intent\nsomething.\n\n## Delivers\n"
+                       "- a documented outcome with no artifact path\n\n## Consumes\n- none\n")
+r_prose = bead.task_feature_delivers_violation("task", PROSE_DELIVERS_DESC)
+check(r_prose is not None and r_prose.startswith("UNVERIFIABLE-DELIVERS"),
+      "task_feature_delivers_violation: a task whose '## Delivers' is prose-only "
+      "(no path-shaped artifact) is UNVERIFIABLE-DELIVERS", r_prose)
+
+TOUCHERS_ONLY_DESC = ("## Intent\nsomething.\n\n## Delivers\n"
+                     "- a documented outcome\n"
+                     "  touchers: `rg -l -F \"x\" .` -> 2 · owned by: bd-fixture\n"
+                     "\n## Consumes\n- none\n")
+r_touchers_only = bead.task_feature_delivers_violation("task", TOUCHERS_ONLY_DESC)
+check(r_touchers_only is not None and r_touchers_only.startswith("UNVERIFIABLE-DELIVERS"),
+      "task_feature_delivers_violation: a bullet's own touchers: line is excluded from the "
+      "path search — its command's path mentions don't count as the delivered artifact",
+      r_touchers_only)
+
+REAL_DELIVERS_DESC = "## Intent\nsomething.\n\n## Delivers\n- lib/parser.sh\n\n## Consumes\n- none\n"
+check(bead.task_feature_delivers_violation("task", REAL_DELIVERS_DESC) is None,
+      "task_feature_delivers_violation: a task with a real path-shaped Delivers artifact is clean")
+check(bead.task_feature_delivers_violation("bug", PROSE_DELIVERS_DESC) is None,
+      "task_feature_delivers_violation: the leg stays scoped to task/feature; a bug is exempt "
+      "even with a prose-only Delivers")
 
 # --- sensitive_prod_check: derived by calling prod-write-tripwire.sh, live ------------
 
