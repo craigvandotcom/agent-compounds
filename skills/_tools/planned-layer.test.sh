@@ -53,7 +53,7 @@ case "$1" in
         --limit) [[ "${2-}" =~ ^[0-9]+$ ]] || bad_arg "$1"; shift ;;
         --status)
           case "${2-}" in
-            open|in_progress|blocked|deferred|closed) ;;
+            all|open|in_progress|blocked|deferred|closed) ;;
             *) printf '{"error":{"code":"INVALID_STATUS","message":"Invalid status: %s"}}\n' "${2-}"; exit 4 ;;
           esac
           shift ;;
@@ -78,7 +78,7 @@ mk_bead() {  # id type status title [delivers-body]
   jq -n --arg id "$id" --arg t "$itype" --arg s "$status" --arg ti "$title" --arg d "$desc" \
     '{id:$id, title:$ti, description:$d, status:$s, issue_type:$t}'
 }
-write_board() { printf '%s\n' "$@" | jq -s '.' > "$FIX/list.json"; }  # br list --json is a bare array
+write_board() { printf '%s\n' "$@" | jq -s '{issues: ., total: length, limit: 0, offset: 0, has_more: false}' > "$FIX/list.json"; }  # br list --json envelope
 write_show()  { printf '%s' "$2" > "$FIX/show-$1.json"; }
 
 VISION_LINE='writes the vision back in plain prose'
