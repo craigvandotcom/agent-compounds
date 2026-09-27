@@ -7,19 +7,17 @@ surface, not doctrine — the owner skill is the doctrine; this table only route
 contradictory orders and none contained polish, prove or distribute.)
 
 **No stage invokes the next.** Every stage ends by stopping on its own `Next` cell below —
-a question first when a human act comes next, then the skill. Chaining happens only when
-the human types "X then Y" in this session. A session goal ("finish the epic"), a board
-ranking, the pull order or a `Next:` line is never that permission — and a stage's stamp
-makes work eligible, it does not authorize the next stage. The one named chain is `/ac-prep
-<plan>`: typing it grants plan polish, beadify and bead polish for that plan, and nothing past
-bead polish.
+a question first when a human act comes next, then the skill. A direct yes to that question
+is the human's own words, and so is the human typing "X then Y" in this session — a `Next:`
+line alone is never that permission. A session goal ("finish the epic"), a board ranking or
+the pull order grants nothing either, and a stage's stamp makes work eligible, it does not
+authorize the next stage.
 
 | Stage | Owner skill | Trigger | Human gate | Artifact | Next | Non-ac skills loaded |
 |---|---|---|---|---|---|---|
 | Align | `ac-align` | weekly (scheduled) + on demand | proposal only — human approves direction | alignment report | "Approve the direction?" then `/ac-plan` | — |
-| Plan | `ac-plan` | human intent | human approval via `plan-approve.sh approve` | ONE plan file (`_plans/`) | "Approve the plan?" then `/ac-prep <path>` (or `/ac-polish plan <path>`) | — |
-| Polish (plan) | `ac-polish` | plan authored | conditional regate via `plan-approve.sh ready` — only when an approved section moved | refined plan (seams maps where traced) | `/ac-beadify <path>` (regate: re-approve, then retry) | `context-engineering` |
-| Beadify | `ac-beadify` | `plan-approve.sh check` passes | none — ACs gate themselves (`no probe, no bead`) | beads, Consumes-wired | `/ac-polish bead <epic>` | `beads-standards` |
+| Plan | `ac-plan` | human intent | human approval — provisional Go, then final approval via `plan-approve.sh approve` | ONE plan file (`_plans/`) | "Start beadify now?" then `/ac-beadify <path>` | `context-engineering` |
+| Beadify | `ac-beadify` | `plan-approve.sh check` passes | none — ACs gate themselves (`no probe, no bead`) | beads, Consumes-wired | "Start implement now?" then `/ac-implement <epic>` | `beads-standards` |
 | Implement | `ac-implement` (conductor) + workers (`references/worker.md`) | eligible beads on the board (`ac-triage` must have fed it ≥30 min prior) | human-gate beads only | commits on the run's branch, closed beads | `/ac-publish` | `beads-standards` · `agent-mail` (+ domain skill per bead) |
 | Publish | `ac-publish` (prover: `ac-prove`) | batch ready to ship | release gate — version + tag are human-priced | version tag on the proven SHA | "Authorize the release?" then `/ac-distribute` | `beads-standards` |
 | Distribute | `ac-distribute` | proven build in hand | store submission is human-authorized | TestFlight / App Store submission | "Authorize store submission?" then `/ac-land` | app `CORE/distribution.md` |
@@ -44,9 +42,9 @@ docket presents its human rungs (3 · 7 · 8) in the same order. Code: `scripts/
 | 2 | implement ready beads | `ac-implement` |
 | 3 | human gates that block beads, most beads freed first | `ac-human` |
 | 4 | polish unrefined beads | `ac-polish bead` |
-| 5 | plans nearest beads: `bead-ready` → beadify · `refined` (a needs-human card) → rule · approved and polished → `plan-approve.sh ready` | `ac-beadify` · `ac-human` |
+| 5 | plans nearest beads: `bead-ready` → beadify · `refined` (a needs-human card) → `/ac-plan` · approved and polished → `/ac-plan` (regate: re-approve, then ready) | `ac-beadify` · `/ac-plan` |
 | 6 | polish approved plans | `ac-polish plan` |
-| 7 | approve draft plans | `ac-human` |
+| 7 | approve draft plans | `/ac-plan` |
 | 8 | human gates that block nothing, then promote the pool | `ac-human` · `ac-align` |
 
 Within a rung: most beads freed, then priority, then oldest.
