@@ -48,9 +48,8 @@ an epic just because its currently-open children are done.
 
 | Label | Meaning |
 | ----- | ------- |
-| `origin:<skill>` | Which workflow created the bead (`origin:manual`, `origin:unknown` also legal) — required by the capture contract, `reference/bead-schema.md` § The origin label, which every `br create` in the fleet satisfies. Complementary to `discovered-from` (a typed dep/body field naming the SOURCE BEAD an escape traces to): `origin:` names the CREATING WORKFLOW, `discovered-from` names the SOURCE BEAD — not duplicates. |
+| `origin:<skill>` | Which workflow created the bead (`origin:manual`, `origin:unknown` also legal) — required by the capture contract, `reference/bead-schema.md` § The origin label, which every `br create` in the fleet satisfies. Complementary to the `discovered-from` dep type naming the SOURCE BEAD an escape traces to: `origin:` names the CREATING WORKFLOW, `discovered-from` names the SOURCE BEAD — not duplicates. |
 | `qa-finding` / `review-finding` / `hygiene-finding` | Which lens found it |
-| `qa-infra` | QA harness/infra failure — the NO-STAMP verdict (flaky gate, daemon crash, stuck load, env gap), never FAIL/PASS. Filed by the QA twins (`ac-qa` / `ac-qa`) for infra-shaped NO-STAMPs so the verdict stays resolvable without mislabeling the product. |
 | `qa-blocker` | REPO-WIDE gate — Hard-stops batch close-out for every batch in this repo while open, not a per-bead "blocked" marker. For a single bead, use a `blocks` dependency — never this label. |
 | `human-gate` | Agents may enrich but NEVER close — see decision beads below |
 | `unrefined` | Not implementation-ready — ac-implement skips it |
@@ -123,8 +122,7 @@ opposite of what a provenance link should cost. **Reserve `--parent` for genuine
 containment: "this bead is part of that epic's `## Delivers`."**
 
 - **Provenance instead:** the `discovered-from` dep type
-  (`br dep add <fix-id> <origin-id> -t discovered-from`, § Lineage below) or the
-  `discovered-from:` body field (`beads-standards` § Agent bead template). Neither gates a
+  (`br dep add <fix-id> <origin-id> -t discovered-from`, § Lineage below). It doesn't gate a
   close — § Lineage even has you close the origin once the trail is wired.
 - **Recovery — you are NOT stuck.** If a parent is already blocked by a dot-child, closing
   or re-minting the child is **not** the only way out: `br close -f/--force` is the

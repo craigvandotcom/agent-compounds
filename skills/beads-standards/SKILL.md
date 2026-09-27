@@ -190,26 +190,16 @@ new `br` schema fields (labels are too coarse for a per-ceremony verdict).
 
 **Grammar** (mirrors `close_reason`'s outcome-verb shape, so one clustering pass reads both):
 
-```
-VERDICT: passed: <detail>
-discovered-from: <bead-id|unknown>
-```
-
-- The outcome verb leads, colon, then detail — exactly like `shipped:`/`fixed:`. Closed
-  verb set: `passed` · `failed` · `blocked` (couldn't verify — env/infra) · `waived`
-  (verification deliberately skipped, reason in the detail).
-- `discovered-from: <bead-id>` — origin linkage, on **finding beads only** (a bead a
-  ceremony filed because it caught an escape). It names the bead whose work the escape
-  traces back to. **`unknown` is a legal value** — the escape-depth metric counts only
-  linked findings, so an honest `unknown` is the correct entry when the origin can't be
-  pinned; a fabricated link is worse than none.
+- The outcome verb leads the `VERDICT:` label, colon, then detail — exactly like
+  `shipped:`/`fixed:`. Closed verb set: `passed` · `failed` · `blocked` (couldn't verify —
+  env/infra) · `waived` (verification deliberately skipped, reason in the detail).
 - Stable greppable prefix: `grep 'VERDICT:' .beads/issues.jsonl`.
 
-**VERIFIERS write verdicts + linkage; IMPLEMENTERS never do (Goodhart guard).** The agent
-that produced the work does not grade it — the verdict is written by the QA / review / CI /
-prod ceremony that checks it. An implementer stamping its own `VERDICT: passed` is grading
-its own homework; that is a convention violation, not a verdict. This separation is what
-makes the verdict trustworthy as an eval label.
+**VERIFIERS write verdicts; IMPLEMENTERS never do (Goodhart guard).** The agent that
+produced the work does not grade it — the verdict is written by the QA / review / CI /
+prod ceremony that checks it. An implementer stamping its own verdict as `passed` is
+grading its own homework; that is a convention violation, not a verdict. This separation
+is what makes the verdict trustworthy as an eval label.
 
 **Catch-stage vocabulary — a CLOSED set.** A finding bead carries exactly one catch-stage
 label naming the lens that caught the escape:
