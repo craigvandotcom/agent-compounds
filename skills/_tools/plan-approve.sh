@@ -35,8 +35,8 @@
 #                         bead-ready, beadified and done all pass. Answers "is this
 #                         approval still valid?" for a plan sitting at status: approved
 #                         that has not yet been polished to bead-ready. Plain `check` is
-#                         unchanged — ac-beadify and ac-prep gate on it and must keep
-#                         refusing an approved-but-unpolished plan.
+#                         unchanged — ac-beadify gates on it and must keep refusing an
+#                         approved-but-unpolished plan.
 #
 # THE DIGEST: sha256 over the concatenated bodies of `## Vision`, `## Deliverables`,
 # `## Decisions`, `## Out of scope`, `## Success Criteria` (matcher `## Success [Cc]`,
