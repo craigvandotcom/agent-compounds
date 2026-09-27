@@ -643,6 +643,20 @@ def _has_grep_dash_c(cmd):
     return False
 
 
+_QUOTED_SPAN_RE = re.compile(r"'[^']*'|\"[^\"]*\"")
+
+
+def _unquoted(cmd):
+    """`cmd` with every single- or double-quoted span blanked out (same length, so a
+    caller's own word-boundary regex still lines up on what remains) — a command word
+    never sits inside a quoted string; only an UNQUOTED position is a real invocation.
+    Shared by the two legs below that used to substring-match the raw command (ac-m9y4
+    recheck 2026-09-27, evidence ac-tv83.14): a `rg -q 'lookupCompoundRecipe\\(supabase,
+    slug' app/` search pattern and a `jq -e '.[] | test("run-all-proofs.sh")'` string
+    literal were both refused on the strength of a match that only existed inside quotes."""
+    return _QUOTED_SPAN_RE.sub(lambda m: " " * len(m.group(0)), cmd or "")
+
+
 _VITEST_RUN_RE = re.compile(r"pnpm\s+exec\s+vitest\s+run\b")
 _PNPM_WHOLE_TEST_RE = re.compile(r"\bpnpm\s+test(:all)?\s*(?:$|&&|\|\||;)")
 
@@ -675,8 +689,10 @@ def _invokes_supabase_cli(cmd):
     a path that contains "supabase" (`supabase/migrations/*.sql`,
     `lib/supabase/types.ts`, a `__tests__/supabase-integration/*.test.ts` file) is never
     banned by this leg (ac-m9y4 recheck 2026-09-27: 28 of the recheck's refused probes
-    were a path mention, not a CLI call)."""
-    return bool(_SUPABASE_CLI_RE.search(cmd or ""))
+    were a path mention, not a CLI call). Matched against the UNQUOTED view only: a
+    literal `(` inside a quoted search pattern (`rg -q 'fn\\(supabase, x' app/`) is not a
+    shell subshell/group open and must never be read as one (ac-tv83.14 evidence)."""
+    return bool(_SUPABASE_CLI_RE.search(_unquoted(cmd)))
 
 
 def _is_echo_only(cmd):
@@ -700,7 +716,7 @@ def probe_shape_violation(cmd):
     if _has_grep_dash_c(cmd):
         return ("bare `grep -c`/`--count` always exits 0 on any match count > 0; "
                 "compare the count explicitly instead of naming the bare count")
-    if re.search(r"\brun-all-proofs(?:\.sh)?\b", cmd):
+    if re.search(r"\brun-all-proofs(?:\.sh)?\b", _unquoted(cmd)):
         return "`run-all-proofs.sh` runs the WHOLE suite; name this bead's own test file instead"
     if _is_bare_vitest_run(cmd):
         return "bare `pnpm exec vitest run` runs the WHOLE suite; scope it to this bead's own test file"

@@ -426,6 +426,15 @@ check(bead.probe_shape_violation('pnpm exec vitest run src/x.test.ts') is None,
       "probe_shape_violation: pnpm exec vitest run scoped to a file is NOT banned")
 check(bead.probe_shape_violation('bash scripts/run-all-proofs.sh') is not None,
       "probe_shape_violation: run-all-proofs.sh is banned (the whole-suite CI script)")
+check(bead.probe_shape_violation('./scripts/run-all-proofs.sh') is not None,
+      "probe_shape_violation: a ./scripts/run-all-proofs.sh invocation is still banned")
+# checker recheck 2026-09-27 (evidence: ac-tv83.14): a `jq` test STRING that names
+# "run-all-proofs.sh" as a literal to assert AGAINST (never invokes it) is not a probe that
+# runs the whole suite — only an unquoted invocation counts.
+check(bead.probe_shape_violation(
+      'test -f .claude/factory.json && jq -e \'.ship.prove | test("run-all-proofs.sh")\' '
+      '.claude/factory.json >/dev/null') is None,
+      "probe_shape_violation: 'run-all-proofs.sh' inside a quoted jq test string is not an invocation")
 check(bead.probe_shape_violation('supabase db push --linked') is not None,
       "probe_shape_violation: a direct supabase invocation is banned")
 
@@ -460,6 +469,16 @@ check(bead.probe_shape_violation('true && supabase db reset') is not None,
       "probe_shape_violation: `supabase` after a `&&` clause separator is still banned")
 check(bead.probe_shape_violation('cd app; supabase db reset') is not None,
       "probe_shape_violation: `supabase` after a `;` clause separator is still banned")
+
+# checker recheck 2026-09-27 (evidence: ac-tv83.14): a `(` inside a QUOTED search pattern
+# is never a shell subshell/group open — a command word never sits inside a quoted string,
+# so "supabase" following a literal `(` there is not an invocation.
+check(bead.probe_shape_violation(
+      "rg -q 'lookupCompoundRecipe\\(supabase, slug' app/") is None,
+      "probe_shape_violation: 'supabase' after a literal '(' INSIDE a quoted rg pattern is not an invocation")
+check(bead.probe_shape_violation(
+      'grep -q "fn(supabase, x)" lib/recipe.ts') is None,
+      "probe_shape_violation: 'supabase' after a '(' inside a double-quoted grep pattern is not an invocation")
 
 check(bead.probe_shape_violation('pnpm db:reset') is not None,
       "probe_shape_violation: db:reset is banned (destructive)")

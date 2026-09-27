@@ -125,12 +125,19 @@ _touchers_extract_paths() {
 
 # The exclusion set is part of the DERIVATION, not a caller's taste: change it here and the
 # writer and the gate change together. `.beads/**`, `_plans/**` and the doc dirs are excluded
-# because a bead body or a retired plan naming a path is not a caller of it.
+# because a bead body or a retired plan naming a path is not a caller of it. `_scratch/**` is
+# excluded the same way, not left to each consuming repo's own `.gitignore`: an agent's
+# session scratch (CLAUDE.md's `_scratch/<run-id>/` convention) routinely holds a COPY of a
+# tracked file's own text, and a fresh checkout — or one whose `.gitignore` has not yet
+# picked up the convention — leaves rg's default ignore with nothing to exclude on, so a
+# scratch artifact counts as a live referrer (measured: a temp repo with no `_scratch/`
+# `.gitignore` rule at all still matched `_scratch/leak.md` against a tracked file's stem).
 _touchers_globs() {
   local _tg_q="'"
-  printf -- '-g %s!node_modules/**%s -g %s!.beads/**%s -g %s!_plans/**%s -g %s!_backlog/**%s -g %s!_docs/**%s -g %s!docs/**%s -g %s!memory/**%s -g %s!CHANGELOG*%s' \
+  printf -- '-g %s!node_modules/**%s -g %s!.beads/**%s -g %s!_plans/**%s -g %s!_backlog/**%s -g %s!_docs/**%s -g %s!docs/**%s -g %s!memory/**%s -g %s!CHANGELOG*%s -g %s!_scratch/**%s' \
     "$_tg_q" "$_tg_q" "$_tg_q" "$_tg_q" "$_tg_q" "$_tg_q" "$_tg_q" "$_tg_q" \
-    "$_tg_q" "$_tg_q" "$_tg_q" "$_tg_q" "$_tg_q" "$_tg_q" "$_tg_q" "$_tg_q"
+    "$_tg_q" "$_tg_q" "$_tg_q" "$_tg_q" "$_tg_q" "$_tg_q" "$_tg_q" "$_tg_q" \
+    "$_tg_q" "$_tg_q"
 }
 
 # The stem is the last TWO path segments with the extension dropped — narrow enough that

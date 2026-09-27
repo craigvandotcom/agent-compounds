@@ -354,6 +354,28 @@ else
   fail "Case 16: expected the bare-name alternative omitted for a shared basename, rc=$RC. derive cmd: $D_CMD"
 fi
 
+# --- Case 18: derive's command never counts a `_scratch/` scratch artifact as a referrer -
+# (checker recheck 2026-09-27). `_scratch/<run-id>/` is an agent's session scratch (the
+# CLAUDE.md convention) and routinely holds a COPY of a tracked file's own text. Excluding
+# it must be derive's OWN exclusion, never borrowed from the consuming repo's `.gitignore` —
+# this fixture carries NO ignore rule for `_scratch/` at all (measured: without the fix, a
+# plain `rg` run with derive's old glob set matched `_scratch/leak.md` against a tracked
+# file's stem).
+SCRATCH_FIX="$WORK/scratch-fixture"
+mkdir -p "$SCRATCH_FIX/_scratch"
+git -C "$SCRATCH_FIX" init -q
+printf 'abc-target content\n' >"$SCRATCH_FIX/abc-target.md"
+git -C "$SCRATCH_FIX" add abc-target.md
+printf 'a reference to abc-target here\n' >"$SCRATCH_FIX/_scratch/leak.md"
+DER=$(cd "$SCRATCH_FIX" && bash "$TOOL" derive "abc-target.md" 2>&1); RC=$?
+D_CMD=$(printf '%s' "$DER" | cut -f2-)
+D_HITS=$(cd "$SCRATCH_FIX" && bash -c "$D_CMD" 2>/dev/null)
+if [ "$RC" -eq 0 ] && ! printf '%s\n' "$D_HITS" | grep -q "_scratch/leak.md"; then
+  pass "Case 18: derive's command never counts a _scratch/ scratch artifact as a referrer, even with no .gitignore rule for it"
+else
+  fail "Case 18: expected _scratch/leak.md excluded from derive's referrer command, rc=$RC. derive cmd: $D_CMD / hits: $D_HITS"
+fi
+
 # --- Case 17: a crashing bead.py is NOT-GATED, never a silent pass (ac-m9y4.10) ----------
 # `BEAD_MODULE_PATH` pointing nowhere drives the crash-path fixture without ever touching
 # the real file in a shared checkout (the same seam plan-approve.test.sh and
