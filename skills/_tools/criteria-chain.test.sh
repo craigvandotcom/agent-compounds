@@ -99,10 +99,13 @@ exit 0
 EOF
 chmod +x "$MOCK/br"
 
-bead_json() { # <id> <description-file>
-  jq -n --arg id "$1" --rawfile d "$2" \
-    '{id:$id,title:"chain fixture",issue_type:"task",status:"open",assignee:"",labels:["origin:ac-triage"],description:$d,comments:[]}'
+bead_json() { # <id> <description-file> [<comments-json>]
+  jq -n --arg id "$1" --rawfile d "$2" --argjson comments "${3:-[]}" \
+    '{id:$id,title:"chain fixture",issue_type:"task",status:"open",assignee:"",labels:["origin:ac-triage"],description:$d,comments:$comments}'
 }
+# Every origin now owes the fixpoint receipt (ac-m9y4.7) — a fixture meant to reach a real
+# STAMP carries one; bd-grep is refused earlier (nothing left to run) and needs none.
+RECEIPT_JSON='[{"text":"POLISH-FIXPOINT: mode=bead rounds=2 sha256=deadbeefcafebabe at=2026-08-27T00:00:00Z engine=polish-fixpoint.sh"}]'
 
 cat >"$WORK/d-grep.md" <<'EOF'
 ## Acceptance Criteria
@@ -130,8 +133,8 @@ cat >"$WORK/d-bash.md" <<'EOF'
 EOF
 jq -s '.' \
   <(bead_json bd-grep "$WORK/d-grep.md") \
-  <(bead_json bd-vitest "$WORK/d-vitest.md") \
-  <(bead_json bd-bash "$WORK/d-bash.md") >"$FIXTURE"
+  <(bead_json bd-vitest "$WORK/d-vitest.md" "$RECEIPT_JSON") \
+  <(bead_json bd-bash "$WORK/d-bash.md" "$RECEIPT_JSON") >"$FIXTURE"
 
 : >"$BR_LOG"
 OUT=$(PATH="$MOCK:$PATH" bash "$STAMP" bd-grep 2>&1); RC=$?

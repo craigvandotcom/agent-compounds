@@ -115,9 +115,10 @@ jq -n --arg desc "$DESC" \
   # Case 3 — a ruling with no receipt at all: never polished into the text.
   {id:"bd-ruling-no-receipt", issue_type:"task", labels:["origin:ac-triage"],
    description:$desc, comments:[{text:$d1}]},
-  # Case 4 — no DECISION comment at all: this leg must not touch it.
+  # Case 4 — no DECISION comment at all: this leg must not touch it. Carries the receipt
+  # every origin now owes (ac-m9y4.7) so it still reaches a real STAMP.
   {id:"bd-no-decision", issue_type:"task", labels:["origin:ac-triage"],
-   description:$desc, comments:[]},
+   description:$desc, comments:[{text:$r1}]},
   # Case 5 — two receipts either side of one ruling: the NEWEST receipt is after the ruling.
   {id:"bd-newest-receipt-after-ruling", issue_type:"task", labels:["origin:ac-triage"],
    description:$desc, comments:[{text:$r1},{text:$d1},{text:$r2}]},

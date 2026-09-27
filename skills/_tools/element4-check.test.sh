@@ -174,9 +174,13 @@ chmod +x "$MOCK/br"
 
 RED_OK='## Declared RED\nTest `x` must FAIL before the fix; assert exit 1.\n'
 RED_PROBED='## Declared RED\nTest `x` must FAIL before the fix; assert exit 1.\n\n## Acceptance Criteria\n- The fix lands.\n  Probe: `grep -q "the fix" src/x.ts` — tier: none\n'
-jq -n --arg red "$(printf "$RED_OK")" --arg redp "$(printf "$RED_PROBED")" '[
+# Every origin now owes the fixpoint receipt (ac-m9y4.7) — bd-good-probed is meant to reach
+# a real STAMP, so it carries one; bd-good/bd-bad are refused earlier and need none.
+RECEIPT='POLISH-FIXPOINT: mode=bead rounds=2 sha256=deadbeefcafebabe at=2026-08-27T00:00:00Z engine=polish-fixpoint.sh'
+jq -n --arg red "$(printf "$RED_OK")" --arg redp "$(printf "$RED_PROBED")" --arg receipt "$RECEIPT" '[
   {id:"bd-good", issue_type:"bug", description:$red, labels:["origin:ac-triage"]},
-  {id:"bd-good-probed", issue_type:"bug", description:$redp, labels:["origin:ac-triage"]},
+  {id:"bd-good-probed", issue_type:"bug", description:$redp, labels:["origin:ac-triage"],
+   comments:[{text:$receipt}]},
   {id:"bd-bad",  issue_type:"bug", description:"## Anchors\nnone\n", labels:["origin:ac-triage"]}
 ]' >"$FIXTURE_BEADS"
 
@@ -224,9 +228,9 @@ if ! command -v zsh >/dev/null 2>&1; then
 else
   FIXED="$WORK/fixed"; MUTANT="$WORK/mutant"; mkdir -p "$FIXED" "$MUTANT"
   cp "$STAMP" "$FIXED/stamp-refined.sh"; cp "$CHECK" "$FIXED/element4-check.sh"
-  cp "$DIR/br-call.sh" "$FIXED/br-call.sh"
+  cp "$DIR/br-call.sh" "$FIXED/br-call.sh"; cp "$DIR/bead.py" "$FIXED/bead.py"
   cp "$CHECK" "$MUTANT/element4-check.sh"
-  cp "$DIR/br-call.sh" "$MUTANT/br-call.sh"
+  cp "$DIR/br-call.sh" "$MUTANT/br-call.sh"; cp "$DIR/bead.py" "$MUTANT/bead.py"
   # The mutation: force the ZSH_VERSION sentinel false so both self-reads fall back to
   # the bash-only branch — exactly the pre-fix script.
   sed 's/\[ -n "${ZSH_VERSION:-}" \]/false/g' "$STAMP" >"$MUTANT/stamp-refined.sh"
@@ -532,10 +536,14 @@ SH_RUNS='## Acceptance Criteria
 ## Delivers
 - script: scripts/x.sh
 '
-jq --arg bare "$(printf '%s' "$SH_BARE")" --arg runs "$(printf '%s' "$SH_RUNS")" \
+# Every origin now owes the fixpoint receipt (ac-m9y4.7) — bd-sh-runs is meant to reach a
+# real STAMP, so it carries one; bd-sh-bare is refused earlier (nothing left to run).
+RECEIPT='POLISH-FIXPOINT: mode=bead rounds=2 sha256=deadbeefcafebabe at=2026-08-27T00:00:00Z engine=polish-fixpoint.sh'
+jq --arg bare "$(printf '%s' "$SH_BARE")" --arg runs "$(printf '%s' "$SH_RUNS")" --arg receipt "$RECEIPT" \
   '. + [
     {id:"bd-sh-bare", issue_type:"task", description:$bare, labels:["origin:ac-triage"]},
-    {id:"bd-sh-runs", issue_type:"task", description:$runs, labels:["origin:ac-triage"]}
+    {id:"bd-sh-runs", issue_type:"task", description:$runs, labels:["origin:ac-triage"],
+     comments:[{text:$receipt}]}
   ]' "$FIXTURE_BEADS" >"$FIXTURE_BEADS.tmp" && mv "$FIXTURE_BEADS.tmp" "$FIXTURE_BEADS"
 
 : >"$BR_LOG"
