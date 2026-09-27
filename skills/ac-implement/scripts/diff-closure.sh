@@ -28,12 +28,20 @@
 #
 # Usage: diff-closure.sh [--base <ref>] [--bead <id> | --declared <file>]
 #                        [--territory <path> ...] [-C <repo>]
-#   --base       what to diff the WORKING TREE against (default: branch upstream merge-base,
-#                then the shared trunk resolver when the branch has no upstream)
-#   --bead       read the bead's `touchers:` command(s) via the br show read and run them
+#   --base       what to diff the WORKING TREE against. Default when --bead is given: HEAD —
+#                a bead's own uncommitted change, never the branch's whole history, so a
+#                sibling's already-committed WIP cannot seed a symbol this close depends on.
+#                Default otherwise: the branch's tracking-ref merge-base, then the shared
+#                trunk resolver when the branch tracks nothing.
+#   --bead       read the bead's own scope and `touchers:` command(s) via the br show read.
+#                Scope oracle, in order: an explicit --territory/--scope below; else the
+#                bead's own `## Delivers` paths (skills/_tools/delivers-paths.sh, touchers:
+#                lines excluded — the same paths close-gate's UNCOMMITTED leg reads); else,
+#                when Delivers names none, the retired `## Territory` section as a fallback;
+#                else unscoped (today's behaviour for a bead with neither).
 #   --declared   a file of touchers commands, one per line (what --bead would have found)
 #   --territory  limit the diff and caller snapshot to these repo-relative paths; repeat for
-#                more than one path. A bead's ## Territory is used automatically when present.
+#                more than one path. Wins outright over a bead's own Delivers/Territory scope.
 #                `--base HEAD --territory <path>` is the shared-checkout mode: it measures this
 #                worker's uncommitted Territory without the batch history or sibling WIP.
 # Symbols: TS/JS `export (function|const|class|interface|type|enum) NAME` lines added or
@@ -47,6 +55,11 @@ die2() { printf 'diff-closure: NOT-GATED %s\n' "$*" >&2; exit 2; }
 # shellcheck source=br-call.sh
 BR_CALL="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../_tools" 2>/dev/null && pwd)/br-call.sh"
 . "$BR_CALL" 2>/dev/null || die2 "br-call.sh helper missing at '$BR_CALL' — no br read can be verified"
+# The Delivers-path extraction pattern has ONE home (skills/_tools/delivers-paths.sh) — a
+# `--bead` scope reads a bead's own `## Delivers` paths through it, never a second copy of
+# the pattern (canon: beads-standards/reference/bead-create-contract.md § Touchers).
+DP_HOME="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../_tools" 2>/dev/null && pwd)/delivers-paths.sh"
+. "$DP_HOME" 2>/dev/null || die2 "delivers-paths.sh helper missing at '$DP_HOME' — the Delivers-path extraction pattern cannot be resolved"
 SELF_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
 TRUNK="$SELF_DIR/../../_tools/trunk.sh"
 
@@ -69,8 +82,16 @@ done
 git -C "$REPO" rev-parse --is-inside-work-tree >/dev/null 2>&1 || die2 "not a git repo: $REPO"
 ROOT=$(git -C "$REPO" rev-parse --show-toplevel)
 cd "$ROOT"
+if [ -z "$BASE" ] && [ -n "$BEAD" ]; then
+  # A `--bead` read is the swarm-facing call (worker §5, code-checklist §1): the diff must
+  # measure THIS bead's own uncommitted change against the last commit, never the branch's
+  # whole history back to its tracking ref — that longer reach is what let a sibling's
+  # already-landed WIP seed a symbol this bead's close then depended on.
+  BASE="HEAD"
+fi
 if [ -z "$BASE" ]; then
-  BASE=$(git merge-base '@{upstream}' HEAD 2>/dev/null || true)
+  TRACKING_REF='@{u}'
+  BASE=$(git merge-base "$TRACKING_REF" HEAD 2>/dev/null || true)
   if [ -z "$BASE" ]; then
     [ -f "$TRUNK" ] || die2 "no branch upstream and trunk.sh is missing at '$TRUNK'"
     trunk=$(bash "$TRUNK") || die2 "no branch upstream and the shared trunk resolver failed"
@@ -97,8 +118,29 @@ if [ -n "$BEAD" ]; then
     || die2 "cannot parse bead $BEAD description"
 fi
 
-# A bead with a Territory gets that scope automatically. An explicit --territory/--scope
-# wins, so a caller can intentionally inspect a subset without editing the bead declaration.
+# A bead's own `## Delivers` paths ARE its scope oracle — the same paths `touchers.sh` and
+# close-gate's UNCOMMITTED leg already read, through the one shared extraction pattern
+# (delivers-paths.sh). This is the PRIMARY scope for a `--bead` read; `## Territory` below is
+# a retired transitional section (present on a minority of refined beads across the fleet)
+# read only as a FALLBACK when Delivers names no path. An explicit --territory/--scope still
+# wins outright, so a caller can inspect a deliberate subset without editing the declaration.
+if [ "$SCOPE" -eq 0 ] && [ -n "$BEAD" ]; then
+  DELIVERS_LIST=$(printf '%s\n' "$BEAD_DESC" \
+    | awk '/^## Delivers/{on=1; next} /^## /{on=0} on' \
+    | grep -v '^[[:space:]]*touchers:' \
+    | extract_paths || true)
+  if [ -n "$DELIVERS_LIST" ]; then
+    SCOPE=1
+    while IFS= read -r path; do
+      [ -n "$path" ] || continue
+      TERRITORY+=("$path")
+    done <<< "$DELIVERS_LIST"
+  fi
+fi
+
+# A bead with a Territory, and no usable Delivers scope, gets that scope automatically —
+# today's behaviour, unchanged, so a scope-less bead is never silently passed by an empty
+# scope. An explicit --territory/--scope (SCOPE already 1 above) still wins.
 if [ "$SCOPE" -eq 0 ] && [ -n "$BEAD" ] && printf '%s\n' "$BEAD_DESC" | grep -qE '^## Territory[[:space:]]*$'; then
   SCOPE=1
   printf '%s\n' "$BEAD_DESC" | awk '

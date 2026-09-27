@@ -212,6 +212,70 @@ else
   fail "trunk fallback base" "rc=$rc $out"
 fi
 
+# --- 13. --bead reads a bead's own ## Delivers paths as its scope (through a stub br), with no
+# --territory and no --base: BASE must default to HEAD, and a sibling's dirty file plus
+# _docs/_plans/memory prose must stay outside the closure -> PASS. Same fixture shape as case 10,
+# proving the Delivers-derived scope is the SAME oracle the explicit --territory path already is.
+BINDIR="$W/bin"; mkdir -p "$BINDIR"
+cat > "$BINDIR/br" <<'BREOF'
+#!/usr/bin/env bash
+if [ "$1" = "show" ]; then cat "${BR_STUB_JSON:?BR_STUB_JSON unset}"; exit 0; fi
+printf '{"error":{"message":"stub br: unsupported"}}\n'; exit 1
+BREOF
+chmod +x "$BINDIR/br"
+
+R16="$W/r16"; mkdir -p "$R16/lib" "$R16/_docs/seams/foods.status" "$R16/_plans" "$R16/memory"
+git -C "$R16" init -q
+printf 'export function ownSymbol() { return 1 }\n' > "$R16/lib/territory.ts"
+printf 'export function siblingWip() { return 1 }\n' > "$R16/lib/sibling.ts"
+printf 'import { siblingWip } from "./sibling"\nexport const siblingCall = siblingWip()\n' > "$R16/lib/sibling-caller.ts"
+printf 'title="ALTER TABLE foods ALTER COLUMN %s"\n' sibling_status > "$R16/_docs/seams/foods.status/map.html"
+printf 'alter table foods add column %s text\n' plan_status > "$R16/_plans/schema.md"
+printf 'alter table foods add column %s text\n' memory_status > "$R16/memory/schema.md"
+git -C "$R16" add -A >/dev/null
+git -C "$R16" -c user.name=t -c user.email=t@t -c commit.gpgsign=false commit -q -m sibling-base >/dev/null
+printf 'export function ownSymbol() { return 2 }\n' > "$R16/lib/territory.ts"
+printf 'export function siblingWip() { return 2 }\nexport function siblingOnly() { return 3 }\n' > "$R16/lib/sibling.ts"
+printf 'import { siblingWip } from "./sibling"\nimport { ownSymbol } from "./territory"\nexport const siblingCall = siblingWip() + ownSymbol()\n' > "$R16/lib/sibling-caller.ts"
+printf 'title="ALTER TABLE foods ALTER COLUMN %s"\n' sibling_status_v2 > "$R16/_docs/seams/foods.status/map.html"
+printf 'alter table foods add column %s text\n' plan_status_v2 > "$R16/_plans/schema.md"
+printf 'alter table foods add column %s text\n' memory_status_v2 > "$R16/memory/schema.md"
+
+jq -n '[{description: "## Delivers\n- own change: lib/territory.ts\n"}]' > "$W/bead-delivers-1.json"
+out=$(BR_STUB_JSON="$W/bead-delivers-1.json" PATH="$BINDIR:$PATH" "$SCRIPT" --bead bd-delivers-1 -C "$R16" 2>&1); rc=$?
+if [ "$rc" = 0 ] && printf '%s' "$out" | grep -q 'PASS symbols=1 callers=0' \
+   && ! printf '%s' "$out" | grep -q 'sibling'; then
+  ok "--bead scope reads ## Delivers (stub br), base defaults to HEAD; sibling WIP and doc prose stay outside"
+else
+  fail "bead-delivers scope" "rc=$rc $out"
+fi
+
+# --- 13a. the same --bead/Delivers oracle refuses an undeclared caller outside its scope -------
+R17="$W/r17"; mkdir -p "$R17/lib"; git -C "$R17" init -q
+printf 'export function scopedCallerSymbol() { return 1 }\n' > "$R17/lib/source.ts"
+printf 'import { scopedCallerSymbol } from "./source"\nexport const call = scopedCallerSymbol()\n' > "$R17/lib/caller.ts"
+git -C "$R17" add -A >/dev/null; git -C "$R17" -c user.name=t -c user.email=t@t -c commit.gpgsign=false commit -q -m scoped-base >/dev/null
+printf 'export function scopedCallerSymbol() { return 2 }\n' > "$R17/lib/source.ts"
+
+jq -n '[{description: "## Delivers\n- own change: lib/source.ts\n"}]' > "$W/bead-delivers-2.json"
+out=$(BR_STUB_JSON="$W/bead-delivers-2.json" PATH="$BINDIR:$PATH" "$SCRIPT" --bead bd-delivers-2 -C "$R17" 2>&1); rc=$?
+[ "$rc" = 1 ] && printf '%s' "$out" | grep -q 'scopedCallerSymbol  <- lib/caller.ts' \
+  && ok "--bead Delivers scope refuses an undeclared caller outside scope (base defaults to HEAD)" \
+  || fail "bead-delivers refused" "rc=$rc $out"
+
+# --- 13b. a bead with an empty ## Delivers still falls back to ## Territory (today's behaviour) -
+R18="$W/r18"; mkdir -p "$R18/lib"; git -C "$R18" init -q
+printf 'export function fallbackSymbol() { return 1 }\n' > "$R18/lib/source.ts"
+printf 'import { fallbackSymbol } from "./source"\nexport const call = fallbackSymbol()\n' > "$R18/lib/caller.ts"
+git -C "$R18" add -A >/dev/null; git -C "$R18" -c user.name=t -c user.email=t@t -c commit.gpgsign=false commit -q -m fallback-base >/dev/null
+printf 'export function fallbackSymbol() { return 2 }\n' > "$R18/lib/source.ts"
+
+jq -n '[{description: "## Delivers\nnone\n## Territory\n- lib/source.ts\n"}]' > "$W/bead-delivers-3.json"
+out=$(BR_STUB_JSON="$W/bead-delivers-3.json" PATH="$BINDIR:$PATH" "$SCRIPT" --bead bd-delivers-3 -C "$R18" 2>&1); rc=$?
+[ "$rc" = 1 ] && printf '%s' "$out" | grep -q 'fallbackSymbol  <- lib/caller.ts' \
+  && ok "an empty ## Delivers falls back to ## Territory scope, unchanged from today" \
+  || fail "delivers-empty territory-fallback" "rc=$rc $out"
+
 # --- 13. spawns nothing; assurance declared ---------------------------------------------------
 if grep -nE '(^|[^[:alnum:]_-])(claude|codex|droid)[[:space:]]|subagent' "$SCRIPT" >/dev/null; then fail "script invokes an agent"; else ok "diff-closure spawns nothing"; fi
 miss=""; for f in PROBE: SCHEDULE: MODE: ON-FAILURE:; do grep -q "$f" "$SCRIPT" || miss="$miss $f"; done
