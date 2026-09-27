@@ -7,17 +7,25 @@
 SELF_DIR=$(cd "$(dirname "$0")" && pwd)
 PICK="$SELF_DIR/pick.sh"
 W=$(mktemp -d); trap 'rm -rf "$W"' EXIT
-export FIX="$W/fix" AC2_BR_CMD="$W/br"
+mkdir -p "$W/bin"
+export FIX="$W/fix" AC2_BR_CMD="$W/bin/br"
+export PATH="$W/bin:$PATH"
 PASS=0; FAIL=0
 
+# The DECISION-edge leg now shells through bead.py, which calls `br` itself (subprocess,
+# resolved on PATH — never $AC2_BR_CMD). This one stub answers both routes: pick's own
+# `br_call` (honors AC2_BR_CMD) and bead.py's `_run_br` (PATH lookup only).
 cat > "$AC2_BR_CMD" <<'STUB'
 #!/usr/bin/env bash
 case $1 in
   ready) [ -f "$FIX/ready.fail" ] && { echo '{"error":{"message":"database locked"}}'; exit 1; }
          [ -f "$FIX/ready.envelope" ] && { echo '{"error":{"message":"schema mismatch"}}'; exit 0; }
          cat "$FIX/ready.json" ;;
-  show)  [ -f "$FIX/show.fail" ] && exit 1
-         cat "$FIX/show-$2.json" ;;
+  show)  shift
+         id=""
+         for a in "$@"; do case "$a" in --json) ;; *) id="$a" ;; esac; done
+         [ -f "$FIX/show.fail" ] && exit 1
+         cat "$FIX/show-$id.json" ;;
   *)     exit 9 ;;
 esac
 STUB
@@ -29,8 +37,13 @@ bead() {  # bead <id> <type> <priority> <created> <labels-json> [assignee] [titl
     "$1" "$2" "$3" "$4" "$5" "${6-}" "${7:-work $1}"
 }
 ready() { local IFS=,; printf '[%s]' "$*" > "$FIX/ready.json"; }
-show() {  # show <id> <deps-json>
-  printf '[{"id":"%s","dependencies":%s}]' "$1" "$2" > "$FIX/show-$1.json"
+show() {  # show <id> <edge-id> <edge-title> <edge-status> <edge-type>
+  # Writes two fixtures: the SUBJECT bead's own edge (id + axis only — bead.py's canonical
+  # dependency dict drops title/status on purpose) and the edge TARGET's own show (title +
+  # status), since bead.py re-reads each blocking id to check its title/closed state.
+  printf '[{"id":"%s","dependencies":[{"id":"%s","dependency_type":"%s"}]}]' \
+    "$1" "$2" "${5:-blocks}" > "$FIX/show-$1.json"
+  printf '[{"id":"%s","title":"%s","status":"%s"}]' "$2" "$3" "$4" > "$FIX/show-$2.json"
 }
 check() {  # check <name> <expected-stdout> <expected-exit> [pick args…]
   local name=$1 want=$2 wrc=$3; shift 3
@@ -66,9 +79,9 @@ reset
 SP='["refined","sensitive-prod"]'
 ready "$(bead p-ok task 0 2026-01-01 "$SP")" "$(bead p-open task 0 2026-01-02 "$SP")" \
       "$(bead p-none task 0 2026-01-03 "$SP")" "$(bead plain task 1 2026-01-04 "$R")"
-show p-ok   '[{"id":"d1","title":"DECISION: ship it","status":"closed","dependency_type":"blocks"}]'
-show p-open '[{"id":"d2","title":"DECISION: ship it?","status":"open","dependency_type":"blocks"}]'
-show p-none '[{"id":"e1","title":"epic","status":"open","dependency_type":"parent-child"}]'
+show p-ok   d1 "DECISION: ship it"  closed blocks
+show p-open d2 "DECISION: ship it?" open   blocks
+show p-none e1 epic                 open   parent-child
 check "closed decision edge proceeds" p-ok 0
 check "open decision edge is skipped" plain 0 --burned p-ok
 check_err "GATED reported" "^GATED p-open$"

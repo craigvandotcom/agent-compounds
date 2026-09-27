@@ -9,6 +9,8 @@
 # The prod-write gate is claim-time eligibility: a bead labelled `sensitive-prod` (ac-polish's
 # stamp for beads-standards' prod-write predicate) is eligible only with a CLOSED `blocks` edge
 # to a DECISION bead. An open DECISION edge → GATED; no DECISION edge → MALFORMED. Both skip.
+# The edge itself is read through bead.py's own public reader (`read_bead` + `blocking_ids`,
+# ac-m9y4.3) — never a second inline edge-axis/title select of pick's own.
 #
 # Usage:  pick.sh [--actor NAME] [--burned "id id …"]   → `<id>`, `EPIC <id>`, or `DRY`
 #         pick.sh --count [--actor NAME]               → the eligible pool size
@@ -31,8 +33,10 @@ while [ $# -gt 0 ]; do
   esac
 done
 
-. "$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/../../_tools" && pwd)/br-call.sh"
+_TOOLS_DIR="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/../../_tools" && pwd)"
+. "$_TOOLS_DIR/br-call.sh"
 export RUST_LOG=error
+BEAD_PY_TOOL="${BEAD_PY_TOOL:-$_TOOLS_DIR/bead.py}"
 
 ready=$(br_call ready --json -l refined --limit 0) || { echo "NOT-GATED: br ready failed" >&2; echo "NEXT: handback" >&2; exit 2; }
 rows=$(printf '%s' "$ready" | jq -r --arg me "$ACTOR" '
@@ -54,11 +58,38 @@ while IFS=$'\t' read -r id type prod; do
   [ -n "$id" ] || continue
   case " $BURNED " in *" $id "*) continue ;; esac
   if [ "$prod" = true ]; then
-    show=$(br_call show "$id" --json) || { echo "NOT-GATED: br show $id failed" >&2; echo "NEXT: handback" >&2; exit 2; }
-    edges=$(printf '%s' "$show" | jq -r '[.[0].dependencies[]?
-        | select(.dependency_type == "blocks" and (.title | startswith("DECISION")))]
-        | "\(length) \(map(select(.status == "closed")) | length)"') \
-      || { echo "NOT-GATED: show rows for $id unparseable" >&2; echo "NEXT: handback" >&2; exit 2; }
+    # DECISION edge via bead.py: total/closed counts of this bead's `blocks` edges onto a
+    # DECISION-titled bead. `blocking_ids` (public, bead.py) selects the `blocks` axis; the
+    # title/closed check reads each blocking id's own `read_bead` (title/status are dropped
+    # from the canonical dependency dict on purpose, so each edge target is re-read once).
+    edges=$(python3 -c '
+import os, sys
+sys.path.insert(0, os.path.dirname(sys.argv[1]))
+import bead
+
+canon, err = bead.read_bead(sys.argv[2])
+if err:
+    print("ERR " + err)
+    sys.exit(2)
+total = 0
+closed_n = 0
+for bid in bead.blocking_ids(canon):
+    bcanon, berr = bead.read_bead(bid)
+    if berr:
+        print("ERR " + berr)
+        sys.exit(2)
+    if bcanon["title"].startswith("DECISION"):
+        total += 1
+        if bcanon["status"] == "closed":
+            closed_n += 1
+print("%d %d" % (total, closed_n))
+' "$BEAD_PY_TOOL" "$id")
+    rc=$?
+    if [ "$rc" -ne 0 ]; then
+      echo "NOT-GATED: bead.py could not read the DECISION edges for $id — $edges" >&2
+      echo "NEXT: handback" >&2
+      exit 2
+    fi
     if [ "${edges#* }" -eq 0 ]; then
       if [ "${edges% *}" -gt 0 ]; then echo "GATED $id" >&2
       else echo "MALFORMED $id: no DECISION blocks edge" >&2; fi

@@ -20,8 +20,11 @@
 # must say so and FAIL — silence is never success.
 #
 # THE REFUSALS, each named in the output so the caller can branch on the class:
-#   PREMISE-FAILED: CONSUMES     a `## Consumes` artifact is absent, or its blocker is not closed
-#                                (a direct parent-child containment edge is exempt)
+#   PREMISE-FAILED: CONSUMES     via bead.py check: a `## Consumes` artifact is absent from
+#                                the tree AND its blocker's own `## Delivers` does not promise
+#                                it (an unfilled `<placeholder>`, or a `## Delivers` path that
+#                                is a symlink into another repo, refuse the same way) — the
+#                                blocker need not be CLOSED, only promising
 #   PREMISE-FAILED: ENVIRONMENT  a declared environment/infra precondition does not hold, or a
 #                                probe outlives AC2_PROBE_TIMEOUT (default 120s)
 #                                (a prod-only env once blocked a live-DB acceptance criterion
@@ -30,7 +33,9 @@
 #                                longer holds when re-run
 #   PREMISE-FAILED: RED          no RED is recorded per the bead's named probes — every one
 #                                of them is ALREADY GREEN, so there is nothing for the diff
-#                                to cause
+#                                to cause; or bead.py check names a banned probe shape
+#                                (`grep -c`, a bare whole-suite script, a destructive
+#                                invocation, echo-only) — a probe that can't bank a valid RED
 #   PREMISE-FAILED: STALE-STAMP  the `refined` stamp no longer passes the stamp gate; the
 #                                gate's downgrade leg has stripped it, the bead returns to
 # the refine lane, and the batch report carries the reason
@@ -110,14 +115,6 @@ cd "$ROOT" || { echo "NOT-GATED: cannot enter repo root '$ROOT'" >&2; echo "NEXT
 
 # --- helpers ---------------------------------------------------------------------------
 
-# section <name> — print the body lines under `## <name>` up to the next `## ` header.
-section() {
-  awk -v want="## $1" '
-    /^## /   { inb = ($0 ~ "^" want "([[:space:]]|$)") ? 1 : 0; next }
-    inb      { print }
-  ' "$BODY"
-}
-
 # premise_failed <CLASS> <detail…> — record; the router runs once, at the end.
 FAIL_CLASS=""
 FAIL_DETAIL=""
@@ -196,107 +193,93 @@ fi
 
 echo "flight-check: $BEAD @ $(git rev-parse --short HEAD 2>/dev/null || echo no-git)"
 
-# --- Refusal 1: CONSUMES ----------------------------------------------------------------
-# Every `## Consumes` line is `<blocker-id> -> <artifact>`, or the single word `none`.
-# BOTH halves are checked: the artifact must be on the tree AND the blocker must be closed.
-# An open blocker with its artifact already present is still a premise failure — the
-# artifact is not yet the committed thing this bead was refined against.
+# --- Refusal 1: CONSUMES, via bead.py's own reader ---------------------------------------
+# The one bead reader (ac-m9y4.3): this leg no longer slices `## Consumes` or resolves a
+# blocker id by its own hand — it calls bead.py's PUBLIC functions directly (`consumes`,
+# `consumes_violations`, `delivers`, `delivers_symlink_violations`, `probe_shape_violation`)
+# to prove a Consumes artifact exists on the tree OR is promised by its blocker's own
+# `## Delivers` (no unfilled `<placeholder>`), that no `## Delivers` path is a symlink into
+# another repo, and that no probe is a banned shape (`grep -c`, a bare whole-suite script, a
+# destructive/whole-environment invocation, echo-only) — mapped to RED, since a badly-shaped
+# probe can never bank a valid RED either. That Consumes premise is looser than the old one
+# on purpose: it no longer requires the blocker be CLOSED — an artifact a blocker's own
+# Delivers already promises is enough, per the plan this bead executes (D3a).
+#
+# Deliberately NOT `bead.py check` (its whole-bundle CLI): that command also EXECUTES every
+# probe to test whether all of them are already green — redundant with this script's own RED
+# loop below, and with no timeout of its own (AC2_PROBE_TIMEOUT means nothing to it), so a
+# slow or hanging probe would block this leg for up to bead.py's hardcoded bound before the
+# RED loop's own timeout ever ran. Calling only the non-executing functions this leg actually
+# needs avoids both problems. Fail-closed per the plan: bead.py missing, unreadable, or
+# crashing is NOT-GATED, never a silent pass.
+BEAD_PY_TOOL="${BEAD_PY_TOOL:-$(cd "$(dirname "${BASH_SOURCE[0]}")/../../_tools" 2>/dev/null && pwd)/bead.py}"
+CONSUME_LINES=$(awk '/^## Consumes/{f=1;next} /^## /{f=0} f' "$BODY" \
+  | grep -Ec -- '->|→' || true)
+if [ -z "$FAIL_CLASS" ]; then
+  if [ ! -f "$BEAD_PY_TOOL" ]; then
+    echo "NOT-GATED: bead.py not found at '$BEAD_PY_TOOL' — Consumes/probe-shape cannot be checked; refusing rather than trusting it" >&2
+    echo "NEXT: handback" >&2
+    exit 2
+  fi
+  if ! command -v python3 >/dev/null 2>&1; then
+    echo "NOT-GATED: python3 is not on PATH — bead.py cannot be called; refusing rather than trusting it" >&2
+    echo "NEXT: handback" >&2
+    exit 2
+  fi
+  BEAD_CHECK_OUT=$(python3 -c '
+import os, sys
 
-# consumed_paths <text> — the artifacts a Consumes line names, one per line. A path is a whole
-# whitespace word (wrapping punctuation stripped, never truncated) that is `~/`- or `.`-rooted,
-# ends in `/`, or carries an extension; any other slash word is prose (N/A, D4a/D4b) and is not
-# checked. `~/` resolves against $HOME; a `<placeholder>` becomes a `*` glob.
-consumed_paths() {
-  local words w last
-  read -ra words <<<"$1"
-  [ "${#words[@]}" -gt 0 ] || return 0
-  printf '%s\n' "${words[@]}" | sed -E "s/^[(\"'\`[]+//; s/[])\"'\`,;:.]+\$//" | while IFS= read -r w; do
-    case $w in */*) ;; *) continue ;; esac
-    last=${w%/}; last=${last##*/}
-    case $w in '~/'*|.*|*/) ;; *) case $last in *.[A-Za-z0-9]*) ;; *) continue ;; esac ;; esac
-    case $w in '~/'*) w="$HOME/${w#\~/}" ;; esac
-    printf '%s\n' "$w" | sed -E 's/<[^>]*>/*/g'
-  done
-}
+try:
+    sys.path.insert(0, os.path.dirname(sys.argv[1]))
+    import bead
 
-CONSUMES=$(section "Consumes" | sed 's/^[[:space:]]*-[[:space:]]*//; s/→/->/g' | grep -v '^[[:space:]]*$')
-CONSUME_LINES=0
-BEAD_PARENT=""
-BEAD_PARENT_READ=0
-if [ -n "$CONSUMES" ] && ! printf '%s' "$CONSUMES" | grep -qiE '^none\.?$'; then
-  while IFS= read -r line; do
-    [ -n "$line" ] || continue
-    case "$line" in *"->"*) ;; *) continue ;; esac
-    CONSUME_LINES=$(( CONSUME_LINES + 1 ))
-    # Bead ids contain internal hyphens (bd-epic-kb-seams-573x7.3): the class must
-    # include them, and a trailing separator run is trimmed (a "-/._" tail can only
-    # come from the arrow or punctuation, never from a minted id).
-    blocker=$(printf '%s' "$line" | sed -n 's/^\([A-Za-z][A-Za-z0-9._-]*\).*/\1/p' | sed 's/[-._]*$//')
-    absent=""
-    while IFS= read -r a; do
-      [ -n "$a" ] || continue
-      case $a in *'*'*) compgen -G "$a" >/dev/null ;; *) [ -e "$a" ] ;; esac || { absent=$a; break; }
-    done <<EOF
-$(consumed_paths "${line#*->}")
-EOF
-    if [ -n "$absent" ]; then
-      premise_failed CONSUMES "consumed artifact '$absent' (from ${blocker:-an unnamed blocker}) is not on the tree"
-      break
-    fi
-    if [ -n "$blocker" ]; then
-      if ! command -v br >/dev/null 2>&1 || ! command -v jq >/dev/null 2>&1; then
-        echo "NOT-GATED: '$line' names blocker '$blocker' but br/jq are unavailable — closure unverifiable" >&2
-        echo "NEXT: handback" >&2
-        exit 2
-      fi
-      # An exact-id `show` refusal IS the prefix-miss signal — br matches exact ids only,
-      # so a Consumes line citing a unique prefix (bd-decision-no-drafts for
-      # bd-decision-no-drafts-huc5z) refuses here BY DESIGN and resolves below. The
-      # resolution reads are the cannot-check points: a refused list/show there is a
-      # NOT-GATED, never a fabricated "not on the board".
-      bstatus=$(br_call show "$blocker" --json </dev/null \
-        | jq -r 'if type == "array" then .[0] else . end | .status // ""' 2>/dev/null) \
-        || bstatus=""
-      if [ -z "$bstatus" ]; then
-        # br show matches EXACT ids only; a Consumes line may cite a unique prefix
-        # (bd-decision-no-drafts for bd-decision-no-drafts-huc5z). Resolve exactly one.
-        full=$(br_call list --json --limit 0 </dev/null \
-          | jq -r --arg b "$blocker" \
-            '[.issues[] | select(.id | startswith($b)) | .id]
-             | if length == 1 then .[0] elif length == 0 then "" else "AMBIGUOUS" end') \
-          || { echo "NOT-GATED: 'br list' refused — blocker '$blocker' resolution unverifiable" >&2; echo "NEXT: handback" >&2; exit 2; }
-        if [ -n "$full" ] && [ "$full" != "AMBIGUOUS" ]; then
-          bstatus=$(br_call show "$full" --json </dev/null \
-            | jq -r 'if type == "array" then .[0] else . end | .status // ""' 2>/dev/null) \
-            || { echo "NOT-GATED: 'br show' refused for resolved blocker '$full' — closure unverifiable" >&2; echo "NEXT: handback" >&2; exit 2; }
-          blocker="$full"
-        fi
-      fi
-      # A child may not cite its parent in ## Consumes, but legacy/malformed bodies can.
-      # Parent-child containment is not sequencing-by-closure: once the cited id has been
-      # resolved and found, exempt only the direct parent from the closed-status premise.
-      if [ "$BEAD_PARENT_READ" -eq 0 ]; then
-        BEAD_PARENT=$(br_call show "$BEAD" --json </dev/null \
-          | jq -r 'if type == "array" then .[0] else . end | .parent // .parent_id // ""' 2>/dev/null) \
-          || { echo "NOT-GATED: br_call show refused for '$BEAD' — parent-child closure exemption is unverifiable" >&2; echo "NEXT: handback" >&2; exit 2; }
-        BEAD_PARENT_READ=1
-      fi
-      if [ -n "$BEAD_PARENT" ] && [ "$blocker" = "$BEAD_PARENT" ]; then
-        echo "flight-check: CONSUMES parent '$blocker' exempted (containment, not closure)"
-        continue
-      fi
-      if [ -z "$bstatus" ]; then
-        premise_failed CONSUMES "blocker '$blocker' is not on the board — the premise cites a bead that does not exist"
-        break
-      fi
-      if [ "$bstatus" != "closed" ]; then
-        premise_failed CONSUMES "blocker '$blocker' is '$bstatus', not closed — its deliverable is not final"
-        break
-      fi
-    fi
-  done <<EOF
-$CONSUMES
-EOF
+    root = os.getcwd()
+    with open(sys.argv[2], encoding="utf-8", errors="replace") as fh:
+        desc = fh.read()
+
+    cons = bead.consumes(bead.section(desc, "Consumes"))
+    c_refused, c_not_gated = bead.consumes_violations(cons, root)
+    if c_not_gated:
+        print("NOT-GATED " + "; ".join(c_not_gated))
+        sys.exit(2)
+
+    refused = [("CONSUMES", m) for m in c_refused]
+    refused += [("CONSUMES", m) for m in bead.delivers_symlink_violations(bead.delivers(desc), root)]
+    for p in bead.probes(desc):
+        reason = bead.probe_shape_violation(p)
+        if reason:
+            refused.append(("RED", "banned probe shape: `%s` — %s" % (p, reason)))
+
+    if refused:
+        cls, msg = refused[0]
+        print("REFUSED %s %s" % (cls, msg))
+        sys.exit(1)
+    print("OK")
+    sys.exit(0)
+except SystemExit:
+    raise
+except Exception as exc:
+    print("NOT-GATED bead.py crashed: %s" % exc)
+    sys.exit(2)
+' "$BEAD_PY_TOOL" "$BODY" 2>&1); BEAD_CHECK_RC=$?
+  case "$BEAD_CHECK_RC" in
+    0) : ;;
+    1)
+      case "$BEAD_CHECK_OUT" in
+        "REFUSED CONSUMES "*) premise_failed CONSUMES "${BEAD_CHECK_OUT#REFUSED CONSUMES }" ;;
+        "REFUSED RED "*)      premise_failed RED "${BEAD_CHECK_OUT#REFUSED RED }" ;;
+        *)
+          echo "NOT-GATED: bead.py produced an unrecognised refusal — $BEAD_CHECK_OUT" >&2
+          echo "NEXT: handback" >&2
+          exit 2 ;;
+      esac
+      ;;
+    *)
+      echo "NOT-GATED: bead.py could not verify $BEAD (exit $BEAD_CHECK_RC) — $BEAD_CHECK_OUT" >&2
+      echo "NEXT: handback" >&2
+      exit 2
+      ;;
+  esac
 fi
 [ -z "$FAIL_CLASS" ] && echo "flight-check: CONSUMES ok ($CONSUME_LINES resolved)"
 

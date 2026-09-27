@@ -41,31 +41,38 @@ mkdir -p "$WORK/root" "$WORK/receipts" "$WORK/bodies" "$WORK/bin"
 : >"$WORK/root/present-artifact.md"
 printf 'assert one\nassert two\n' >"$WORK/root/existing-harness.test.sh"
 
-# Hermetic br shim: every Consumes blocker resolves CLOSED, list answers prefix
-# queries — the suite must never depend on a developer's real beads DB, and the
-# CONSUMES leg must be reachable (a machine with real br on PATH must not leak
-# live board state into these cases).
-# AC_TEST_SHOW_FAIL=1 makes show exit 3. The exact-id miss is already the
-# prefix-resolution signal; the switch is for the resolved-id re-read, whose
-# refusal must be NOT-GATED rather than a fabricated "not on the board".
+# Hermetic br shim: CONSUMES now runs through bead.py's own public reader (ac-m9y4.3:
+# `consumes`, `consumes_violations`, `delivers`, `delivers_symlink_violations`,
+# `probe_shape_violation` — never `bead.py check`'s whole CLI, which also EXECUTES every
+# probe and has no timeout of its own). `consumes_violations` shells to `br show --json
+# <id>` on PATH (never $AC2_BR_CMD — that indirection is br-call.sh's, and bead.py is not
+# one of its callers) only for a blocker whose artifact is still absent, to read the
+# blocker's own `## Delivers` and see whether it promises the missing path; whether the
+# blocker is CLOSED no longer matters (D3a: the blocker-closed premise is deleted, an
+# artifact its own Delivers already promises is enough).
+# `show` is scanned for its id ANYWHERE in the trailing args — bead.py calls
+# `show --json <id>`, not this suite's old `show <id> --json`.
+# AC_TEST_SHOW_FAIL=1 makes every show exit 3 (a blocker's own read is unverifiable).
 cat >"$WORK/bin/br" <<'STUB'
 #!/usr/bin/env bash
 case "${1:-}" in
   show)
     [ "${AC_TEST_SHOW_FAIL:-}" = "1" ] && exit 3
-    case "${2:-}" in
-      upstream|bd-epic-kb-seams-573x7.1|bd-epic-ing-ownership-k2mpd.1)
-        echo '[{"id":"resolved","status":"closed"}]' ;;
+    shift
+    id=""
+    for a in "$@"; do case "$a" in --json) ;; *) id="$a" ;; esac; done
+    case "$id" in
       ac-test-0001)
-        if [ -n "${AC_TEST_PARENT:-}" ]; then
-          printf '[{"id":"ac-test-0001","parent":"%s","labels":[]}]\n' "$AC_TEST_PARENT"
-        else
-          echo '[{"id":"ac-test-0001","labels":[]}]'  # the SUT holds no refined — the stamp leg correctly skips
-        fi ;;
-      ac-parent-epic) echo '[{"id":"ac-parent-epic","status":"open"}]' ;;
+        # The STALE-STAMP leg (Refusal 5) reads the bead itself unconditionally once
+        # premises hold this far — labels:[] means it holds no `refined` and that leg
+        # correctly skips re-gating.
+        echo '[{"id":"ac-test-0001","labels":[]}]' ;;
+      blocker-promises)
+        printf '[{"id":"blocker-promises","description":"## Delivers\\n- `skills/never-built/absent-artifact.md` — the thing this bead builds on\\n"}]\n' ;;
+      blocker-silent)
+        printf '[{"id":"blocker-silent","description":"## Delivers\\n- `skills/other/unrelated.md` — a different artifact entirely\\n"}]\n' ;;
       *) exit 3 ;;  # exact-id miss: not on the board under that spelling
     esac ;;
-  list) echo '{"issues":[{"id":"upstream","status":"closed"},{"id":"bd-epic-kb-seams-573x7.1","status":"closed"},{"id":"bd-epic-ing-ownership-k2mpd.1","status":"closed"}],"total":3,"has_more":false,"limit":5000,"offset":0}' ;;
   *) echo '{}' ;;
 esac
 STUB
@@ -117,14 +124,15 @@ fi
 echo "flight-check.test: case 2 — the named refusals fire and each NAMES itself"
 # ---------------------------------------------------------------------------------------
 
-# 2a CONSUMES — the artifact is not on the tree.
+# 2a CONSUMES, via bead.py check (ac-m9y4.3) — the artifact is absent and no blocker is
+# named to check a promise against.
 cat >"$WORK/bodies/consumes.md" <<'BODY'
 ## Acceptance Criteria
 - Something.
   Probe: `test -e ./nope.md` — tier: none
 
 ## Consumes
-- ac-blocker.1 -> skills/never-built/absent-artifact.md (the thing this bead builds on)
+- -> skills/never-built/absent-artifact.md
 BODY
 run "$WORK/bodies/consumes.md"
 [ "$RUN_RC" -eq 1 ] && ok "CONSUMES refusal exits 1 (routing decision, not an error)" \
@@ -137,7 +145,7 @@ printf '%s' "$RUN_OUT" | grep -q 'NEXT: pick' \
   && ok "a routed premise failure tells the worker what to do next (NEXT: pick)" \
   || bad "no NEXT: pick after a routed premise failure: $RUN_OUT"
 
-# 2a' CONSUMES passes when the artifact IS on the tree (no blocker id -> no br dependency).
+# 2a' CONSUMES passes when the artifact IS on the tree — no blocker read needed at all.
 cat >"$WORK/bodies/consumes-ok.md" <<'BODY'
 ## Acceptance Criteria
 - Something.
@@ -150,97 +158,115 @@ run "$WORK/bodies/consumes-ok.md"
 [ "$RUN_RC" -eq 0 ] && ok "CONSUMES clears when the artifact is present" \
   || bad "CONSUMES(ok): expected exit 0, got $RUN_RC: $RUN_OUT"
 
-# 2a'' A path is a whole word: `~/` resolves against $HOME, prose slashes (N/A) are not
-# paths, route groups and placeholders are not truncated, and an absent `~/` path still refuses.
-mkdir -p "$WORK/home/other-repo" "$WORK/root/app/(g)/[id]" "$WORK/root/mig"
-: >"$WORK/home/other-repo/.gitignore"; : >"$WORK/root/app/(g)/[id]/page.tsx"; : >"$WORK/root/mig/20260927_x.sql"
-cat >"$WORK/bodies/consumes-words.md" <<'BODY'
-## Acceptance Criteria
-- Something.
-  Probe: `test -e ./nope.md` — tier: none
-
-## Consumes
-- upstream -> other: ~/other-repo/.gitignore and app/(g)/[id]/page.tsx (N/A, D4a/D4b); mig/<ts>_x.sql
-BODY
-run "$WORK/bodies/consumes-words.md" HOME="$WORK/home"
-[ "$RUN_RC" -eq 0 ] && ok "CONSUMES reads ~/, route-group, placeholder paths whole and skips prose" \
-  || bad "CONSUMES(words): expected exit 0, got $RUN_RC: $RUN_OUT"
-sed 's|~/other-repo/.gitignore|~/other-repo/absent.md|' "$WORK/bodies/consumes-words.md" >"$WORK/bodies/consumes-home-absent.md"
-run "$WORK/bodies/consumes-home-absent.md" HOME="$WORK/home"
-[ "$RUN_RC" -eq 1 ] && printf '%s' "$RUN_OUT" | grep -q "$WORK/home/other-repo/absent.md" \
-  && ok "CONSUMES still refuses an absent ~/ path, named where it was looked for" \
-  || bad "CONSUMES(home-absent): expected refusal naming the expanded path, got rc=$RUN_RC: $RUN_OUT"
-
-# 2a''' A Consumes line written with `→` is the same premise as `->`: its open blocker refuses.
-printf '## Acceptance Criteria\n- Something.\n  Probe: `test -e ./nope.md` — tier: none\n\n## Consumes\n- ac-parent-epic → the scaffold\n' \
+# 2a'' A Consumes line written with `→` is the same premise as `->` — no blocker read
+# needed here either, since the artifact already exists.
+printf '## Acceptance Criteria\n- Something.\n  Probe: `test -e ./nope.md` — tier: none\n\n## Consumes\n- upstream → ./present-artifact.md\n' \
   >"$WORK/bodies/consumes-arrow.md"
 run "$WORK/bodies/consumes-arrow.md"
-[ "$RUN_RC" -eq 1 ] && printf '%s' "$RUN_OUT" | grep -q "blocker 'ac-parent-epic' is 'open'" \
-  && ok "CONSUMES reads a → line and refuses its open blocker" \
-  || bad "CONSUMES(arrow): expected open-blocker refusal, got rc=$RUN_RC: $RUN_OUT"
+[ "$RUN_RC" -eq 0 ] && ok "CONSUMES reads a → line the same as ->" \
+  || bad "CONSUMES(arrow): expected exit 0, got $RUN_RC: $RUN_OUT"
 
-# A parent-child citation is containment, not a closure premise. The schema forbids the
-# citation, but flight-check must not deadlock a legacy/malformed child if one survives.
-cat >"$WORK/bodies/consumes-parent.md" <<'BODY'
+# 2a''' the looser premise this bead lands (D3a): an absent artifact is still fine when
+# its blocker's OWN `## Delivers` promises the exact same path — the blocker need not be
+# CLOSED. This is the behaviour bead.py check adds that flight-check's own hand-rolled
+# Consumes leg never had.
+cat >"$WORK/bodies/consumes-promised.md" <<'BODY'
 ## Acceptance Criteria
 - Something.
   Probe: `test -e ./nope.md` — tier: none
 
 ## Consumes
-- ac-parent-epic -> ./present-artifact.md (the containing epic)
+- blocker-promises -> skills/never-built/absent-artifact.md
 BODY
-run "$WORK/bodies/consumes-parent.md" AC_TEST_PARENT=ac-parent-epic
-[ "$RUN_RC" -eq 0 ] && ok "CONSUMES exempts a direct parent-child containment edge" \
-  || bad "CONSUMES(parent): expected exit 0, got $RUN_RC: $RUN_OUT"
-printf '%s' "$RUN_OUT" | grep -q "CONSUMES parent 'ac-parent-epic' exempted" \
-  && ok "parent-child exemption names the relation it honored" \
-  || bad "parent-child exemption was not named: $RUN_OUT"
-run "$WORK/bodies/consumes-parent.md" AC_TEST_PARENT=some-other-epic
-[ "$RUN_RC" -eq 1 ] && ok "CONSUMES still refuses an ordinary open blocker" \
-  || bad "CONSUMES(non-parent): expected exit 1, got $RUN_RC: $RUN_OUT"
-printf '%s' "$RUN_OUT" | grep -q "blocker 'ac-parent-epic' is 'open'" \
-  && ok "the non-parent open blocker is named" \
-  || bad "non-parent blocker was not named: $RUN_OUT"
+run "$WORK/bodies/consumes-promised.md"
+[ "$RUN_RC" -eq 0 ] && ok "CONSUMES clears when the blocker's own Delivers promises the artifact" \
+  || bad "CONSUMES(promised): expected exit 0, got $RUN_RC: $RUN_OUT"
 
-# 2a'' multi-hyphen blocker ids parse whole, and unique id prefixes resolve —
-# the extractor once truncated bd-epic-kb-seams-573x7.3 to 'bd-epic' and refused
-# the whole bd-epic-* family at claim (five beads burned, one consumer-app run).
-cat >"$WORK/bodies/consumes-hyphen.md" <<'BODY'
+# 2a'''' the blocker resolves but its Delivers does NOT promise the missing artifact —
+# still refused, naming both halves.
+cat >"$WORK/bodies/consumes-not-promised.md" <<'BODY'
 ## Acceptance Criteria
 - Something.
   Probe: `test -e ./nope.md` — tier: none
 
 ## Consumes
-- bd-epic-kb-seams-573x7.1 -> ./present-artifact.md (the landed blocker)
+- blocker-silent -> skills/never-built/absent-artifact.md
 BODY
-run "$WORK/bodies/consumes-hyphen.md"
-[ "$RUN_RC" -eq 0 ] && ok "CONSUMES parses multi-hyphen blocker ids whole" \
-  || bad "CONSUMES(hyphen): expected exit 0, got $RUN_RC: $RUN_OUT"
+run "$WORK/bodies/consumes-not-promised.md"
+[ "$RUN_RC" -eq 1 ] && printf '%s' "$RUN_OUT" | grep -q "blocker 'blocker-silent' does not promise it" \
+  && ok "CONSUMES refuses when the blocker's own Delivers does not promise the artifact" \
+  || bad "CONSUMES(not-promised): expected a named refusal, got rc=$RUN_RC: $RUN_OUT"
 
-cat >"$WORK/bodies/consumes-prefix.md" <<'BODY'
+# 2a''''' an unfilled <placeholder> artifact always refuses, regardless of any blocker.
+cat >"$WORK/bodies/consumes-placeholder.md" <<'BODY'
 ## Acceptance Criteria
 - Something.
   Probe: `test -e ./nope.md` — tier: none
 
 ## Consumes
-- bd-epic-kb-seams-573x7 -> ./present-artifact.md (prefix of a closed blocker)
+- blocker-promises -> skills/<name>/thing.md
 BODY
-run "$WORK/bodies/consumes-prefix.md"
-[ "$RUN_RC" -eq 0 ] && ok "CONSUMES resolves a unique blocker id prefix" \
-  || bad "CONSUMES(prefix): expected exit 0, got $RUN_RC: $RUN_OUT"
+run "$WORK/bodies/consumes-placeholder.md"
+[ "$RUN_RC" -eq 1 ] && printf '%s' "$RUN_OUT" | grep -q 'unfilled <placeholder>' \
+  && ok "CONSUMES refuses an unfilled <placeholder> artifact" \
+  || bad "CONSUMES(placeholder): expected a named refusal, got rc=$RUN_RC: $RUN_OUT"
 
-cat >"$WORK/bodies/consumes-ambiguous.md" <<'BODY'
+# 2a'''''' a blocker's own read is unverifiable (br show refuses entirely, not merely a
+# prefix miss) — NOT-GATED, never a fabricated refusal. bead.py's Consumes reader resolves
+# EXACT ids only (no prefix-resolution fallback — that mechanism lived in flight-check's
+# own deleted code, never in bead.py); an id this stub does not know at all stands in for
+# an unresolvable blocker of any shape.
+cat >"$WORK/bodies/consumes-blocker-unreadable.md" <<'BODY'
 ## Acceptance Criteria
 - Something.
   Probe: `test -e ./nope.md` — tier: none
 
 ## Consumes
-- bd-epic -> ./present-artifact.md (matches more than one id — must refuse)
+- blocker-unknown -> skills/never-built/absent-artifact.md (the thing this bead builds on)
 BODY
-run "$WORK/bodies/consumes-ambiguous.md"
-printf '%s' "$RUN_OUT" | grep -q "blocker 'bd-epic' is not on the board" \
-  && ok "CONSUMES refuses an ambiguous prefix (fail closed)" \
-  || bad "CONSUMES(ambiguous): expected refusal, got rc=$RUN_RC: $RUN_OUT"
+run "$WORK/bodies/consumes-blocker-unreadable.md"
+[ "$RUN_RC" -eq 2 ] && ok "an unresolvable blocker read is NOT-GATED, not a fabricated refusal" \
+  || bad "CONSUMES(unreadable blocker): expected exit 2, got $RUN_RC: $RUN_OUT"
+printf '%s' "$RUN_OUT" | grep -q 'NOT-GATED' \
+  && ok "the unreadable-blocker case carries the NOT-GATED token" || bad "no NOT-GATED token: $RUN_OUT"
+printf '%s' "$RUN_OUT" | grep -q 'NEXT: handback' \
+  && ok "NOT-GATED tells the worker what to do next (NEXT: handback)" || bad "no NEXT: handback: $RUN_OUT"
+
+# 2f a banned probe shape (bead.py's own rule, ac-m9y4.3's new claim-time reach) maps to
+# RED — a probe built only from a bare `grep -c` can never bank a valid RED either.
+cat >"$WORK/bodies/probe-shape.md" <<'BODY'
+## Acceptance Criteria
+- A count-only probe that always exits 0 on any match.
+  Probe: `grep -c NEEDLE ./haystack.md` — tier: none
+
+## Consumes
+- none
+BODY
+run "$WORK/bodies/probe-shape.md"
+[ "$RUN_RC" -eq 1 ] && ok "a banned probe shape refuses exit 1 (routing decision)" \
+  || bad "probe-shape: expected exit 1, got $RUN_RC: $RUN_OUT"
+printf '%s' "$RUN_OUT" | grep -q 'PREMISE-FAILED: RED' \
+  && ok "a banned probe shape is mapped to RED" || bad "probe-shape did not map to RED: $RUN_OUT"
+printf '%s' "$RUN_OUT" | grep -q 'bare `grep -c`' \
+  && ok "the banned-shape refusal names which rule fired" || bad "banned-shape reason not named: $RUN_OUT"
+
+# 2g bead.py missing or crashing is NOT-GATED, never a silent pass (the plan's fail-closed
+# rule for every adopting gate).
+run "$WORK/bodies/clear.md" BEAD_PY_TOOL=/definitely/not/a/real/path/bead.py
+[ "$RUN_RC" -eq 2 ] && ok "a missing bead.py is NOT-GATED" \
+  || bad "bead.py missing: expected exit 2, got $RUN_RC: $RUN_OUT"
+printf '%s' "$RUN_OUT" | grep -q 'NOT-GATED' && ok "the missing-bead.py case carries the NOT-GATED token" \
+  || bad "no NOT-GATED token: $RUN_OUT"
+printf '%s' "$RUN_OUT" | grep -q 'NEXT: handback' && ok "missing bead.py tells the worker what to do next" \
+  || bad "no NEXT: handback: $RUN_OUT"
+
+cat >"$WORK/bin/bead-crash.py" <<'PY'
+import sys
+sys.exit(99)
+PY
+run "$WORK/bodies/clear.md" BEAD_PY_TOOL="$WORK/bin/bead-crash.py"
+[ "$RUN_RC" -eq 2 ] && ok "a crashing bead.py (an exit code this leg does not recognise) is NOT-GATED, not a silent pass" \
+  || bad "bead.py crash: expected exit 2, got $RUN_RC: $RUN_OUT"
 
 # 2b ENVIRONMENT — a declared env precondition, not mere artifact existence.
 cat >"$WORK/bodies/env.md" <<'BODY'
@@ -725,23 +751,12 @@ grep -q "freshness-key: tree=$NEW_TREE3;tracked=clean" "$COUNT_RECEIPTS/ac-l7xt-
   || bad "8c: receipt does not carry the new freshness key"
 
 # ---------------------------------------------------------------------------------------
-echo "flight-check.test: case 9 — a refused resolved-blocker show is NOT-GATED, never a fabricated status"
+# case 9 (a refused resolved-blocker show is NOT-GATED, never a fabricated status) tested
+# flight-check's own br-list prefix-resolution — deleted along with the rest of its
+# hand-rolled Consumes parsing (ac-m9y4.3). bead.py's Consumes reader resolves EXACT ids
+# only; the equivalent "an unresolvable blocker read is NOT-GATED" coverage now lives in
+# case 2's consumes-blocker-unreadable.md.
 # ---------------------------------------------------------------------------------------
-# consumes-prefix.md already proves list resolves the prefix to exactly one id and
-# the re-read succeeds. The same body with AC_TEST_SHOW_FAIL=1 fails that re-read:
-# list still succeeds, so the gate is past prefix-resolution when show refuses.
-run "$WORK/bodies/consumes-prefix.md" AC_TEST_SHOW_FAIL=1
-[ "$RUN_RC" -eq 2 ] && ok "resolved-blocker show refusal exits 2 (NOT-GATED, not a fabricated status)" \
-  || bad "resolved-blocker refusal: expected exit 2, got $RUN_RC: $RUN_OUT"
-printf '%s' "$RUN_OUT" | grep -q 'NOT-GATED' \
-  && ok "resolved-blocker refusal carries NOT-GATED" || bad "no NOT-GATED token: $RUN_OUT"
-printf '%s' "$RUN_OUT" | grep -q 'refused for resolved blocker' \
-  && ok "resolved-blocker refusal names the read that refused" || bad "did not name the read: $RUN_OUT"
-printf '%s' "$RUN_OUT" | grep -q 'closure unverifiable' \
-  && ok "resolved-blocker refusal says closure is unverifiable" || bad "did not say unverifiable: $RUN_OUT"
-printf '%s' "$RUN_OUT" | grep -q 'not on the board' \
-  && bad "resolved-blocker refusal fabricated a not-on-the-board status: $RUN_OUT" \
-  || ok "resolved-blocker refusal did not fabricate a not-on-the-board status"
 
 # ---------------------------------------------------------------------------------------
 echo "flight-check.test: case 10 — the RED is the first EXECUTING probe, static is only the fallback"
