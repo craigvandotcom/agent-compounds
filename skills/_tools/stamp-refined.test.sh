@@ -344,6 +344,41 @@ else
 fi
 unset BEAD_PY_CHECK_TOOL_OVERRIDE BEAD_PY_CHECK_TIMEOUT_OVERRIDE
 
+# --- root resolution: the CALLER's repo, never this script's own (measured 2026-09-27) --
+# stamp-refined.sh is symlinked into every consuming app; a run from one such app once
+# had every restamp read the agent-compounds board instead (`br show` exited 3, NOT-GATED,
+# 15 beads in one day) because root resolution crossed the symlink at the OS level. Proof:
+# invoke stamp-refined.sh from a SEPARATE throwaway git repo and confirm the bead.py-check
+# gate actually ran with THAT repo as its cwd — never $DIR (this script's own directory)
+# and never wherever this test file's own process happens to sit.
+OTHERREPO="$WORK/other-repo"
+mkdir -p "$OTHERREPO"
+git -C "$OTHERREPO" init -q
+OTHERREPO_ROOT=$(git -C "$OTHERREPO" rev-parse --show-toplevel)
+THIS_TEST_ROOT=$(git rev-parse --show-toplevel 2>/dev/null || true)
+
+cat >"$WORK/bead-check-record-cwd.py" <<'EOF'
+import os, sys
+with open(os.environ["BPC_CWD_LOG"], "a") as f:
+    f.write(os.getcwd() + "\n")
+print("bead.py check: OK stub (cwd recorded)")
+sys.exit(0)
+EOF
+
+CWD_LOG="$WORK/bpc-cwd.log"; : >"$CWD_LOG"
+: >"$BR_LOG"
+STAMP_OUT=$(cd "$OTHERREPO" && PATH="$MOCK:$PATH" ELEMENT4_CHECK="$WORK/e4-pass.sh" \
+  TOUCHERS_TOOL="$WORK/touchers-pass.sh" BEAD_PY_CHECK_TOOL="$WORK/bead-check-record-cwd.py" \
+  BPC_CWD_LOG="$CWD_LOG" bash "$STAMP" bd-prod-plain 2>&1); STAMP_RC=$?
+RECORDED_CWD=$(tail -1 "$CWD_LOG" 2>/dev/null || true)
+if [ "$STAMP_RC" -eq 0 ] && [ -n "$RECORDED_CWD" ] && [ "$RECORDED_CWD" = "$OTHERREPO_ROOT" ] \
+    && { [ -z "$THIS_TEST_ROOT" ] || [ "$RECORDED_CWD" != "$THIS_TEST_ROOT" ]; } \
+    && [ "$RECORDED_CWD" != "$DIR" ]; then
+  pass "a call from a different repo root runs bead.py check against THAT repo, not this script's own"
+else
+  fail "root resolution" "rc=$STAMP_RC recorded='$RECORDED_CWD' want='$OTHERREPO_ROOT' (not '$THIS_TEST_ROOT', not '$DIR')"
+fi
+
 echo
 if [ "$FAILURES" -eq 0 ]; then
   echo "$PASSES passed, $FAILURES failed — all stamp-refined integration tests passed."

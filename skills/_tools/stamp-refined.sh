@@ -439,24 +439,26 @@ print("\n".join(bead.extract_paths(sys.stdin.read())))
   # never a stamp bead.py would itself refuse (measured: ac-tv83.14 held `refined` while
   # `bead.py check ac-tv83.14` refused it). Runs the ID form, never a re-derivation of any
   # rule bead.py already owns — every leg above this one stays exactly as it was; this is an
-  # ADDITIONAL, final gate, not a replacement for any of them. From the bead's own repo
-  # root, so bead.py's Consumes/Delivers path resolution and probe execution both run
-  # relative to the same tree bead.py's `_git_root()` would resolve on its own — never
-  # wherever this script's caller happened to be cwd'd. `timeout` wraps the WHOLE call:
-  # bead.py's own `run_probe` already bounds each individual probe, but a wedged `br show`
-  # or a hung `touchers.sh`/`prod-write-tripwire.sh` subprocess inside bead.py's own check
-  # must not hang this stamp forever either. REFUSED (rc 1) downgrades an existing stamp,
-  # same as every other content leg; NOT-GATED (rc 2) or a timeout (rc 124) mutates
+  # ADDITIONAL, final gate, not a replacement for any of them. `timeout` wraps the WHOLE
+  # call: bead.py's own `run_probe` already bounds each individual probe, but a wedged
+  # `br show` or a hung `touchers.sh`/`prod-write-tripwire.sh` subprocess inside bead.py's
+  # own check must not hang this stamp forever either. REFUSED (rc 1) downgrades an existing
+  # stamp, same as every other content leg; NOT-GATED (rc 2) or a timeout (rc 124) mutates
   # NOTHING — a cannot-check result is never read as a pass.
   local bpc_root bpc_out bpc_rc
-  # Rooted at THIS SCRIPT's own location (_STAMP_REFINED_DIR), never BEAD_PY_CHECK_TOOL's —
-  # a test overriding BEAD_PY_CHECK_TOOL to a stub under a scratch dir must not make repo-root
-  # resolution fail; the bead's own repo is wherever stamp-refined.sh itself was reached from
-  # (its symlinked location inside the consuming app, same resolution _STAMP_REFINED_DIR
-  # already did at load time).
-  bpc_root=$(cd "$_STAMP_REFINED_DIR" 2>/dev/null && git rev-parse --show-toplevel 2>/dev/null)
+  # ROOT IS THE CALLER'S REPO, NEVER THIS SCRIPT'S OWN (same fix as close-gate.sh's own
+  # "ROOT is the CONSUMER repo's root, never the script's own repo"): this script is
+  # symlinked into every consuming app, and `cd`-ing into its OWN location first (via
+  # _STAMP_REFINED_DIR, or any other script-relative path) crosses that symlink at the OS
+  # level — `git rev-parse` then resolves the REGISTRY's toplevel, not the app's. Measured
+  # 2026-09-27: run from a consuming app, every `bead.py check` looked up a bd-* id against
+  # the agent-compounds board and `br show` exited 3 — 15 restamps NOT-GATED in one day.
+  # `git rev-parse --show-toplevel` alone, with NO prior `cd`, reads the PROCESS's inherited
+  # cwd — whatever directory the caller (ac-implement, a human shell) was actually in when
+  # it invoked stamp-refined.sh — never this script's own path.
+  bpc_root=$(git rev-parse --show-toplevel 2>/dev/null)
   if [ -z "$bpc_root" ]; then
-    echo "stamp_refined: REFUSED $id — could not resolve the bead's own repo root to run bead.py check; refusing rather than guessing. No label written." >&2
+    echo "stamp_refined: REFUSED $id — could not resolve the caller's own repo root (not inside a git repo?) to run bead.py check; refusing rather than guessing. No label written." >&2
     return 2
   fi
   bpc_out=$(cd "$bpc_root" && timeout "$BEAD_PY_CHECK_TIMEOUT" python3 "$BEAD_PY_CHECK_TOOL" check "$id" 2>&1); bpc_rc=$?
