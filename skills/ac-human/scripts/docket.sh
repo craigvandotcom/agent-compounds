@@ -391,8 +391,8 @@ def fm_of(path):
     try: return front(open(path, errors="replace").read())
     except OSError: return {}
 
-ACT = {"refined": "→ rule on its needs-human card", "polished": "→ ready (plan-approve.sh ready)",
-       "approved": "waiting on polish (/ac-polish)", "draft": "→ approve / refine"}
+ACT = {"refined": "→ continue planning (/ac-plan)", "polished": "→ final approval (/ac-plan)",
+       "approved": "waiting on polish (/ac-polish)", "draft": "→ continue planning (/ac-plan)"}
 plans = []
 pdir = os.path.join(ROOT, "_plans")
 for f in sorted(os.listdir(pdir)) if os.path.isdir(pdir) else []:

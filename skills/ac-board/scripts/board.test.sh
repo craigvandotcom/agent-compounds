@@ -134,12 +134,13 @@ printf -- '---\nstatus: draft\n---\n' >"$W/planorder/repo/_plans/d.md"
 printf -- '---\nstatus: approved\n---\n' >"$W/planorder/repo/_plans/a.md"
 printf -- '---\nstatus: approved\npolish_rounds: 2\npolish_fixpoint_sha256: x\n---\n' >"$W/planorder/repo/_plans/p.md"
 printf -- '---\nstatus: refined\n---\n' >"$W/planorder/repo/_plans/r.md"
-check planorder "a refused plan needs a ruling"  '^1\. rule on 1 plan$'
-check planorder "a polished plan is marked ready" '^2\. mark ready 1 plan$'
+check planorder "a refined plan continues planning" '^1\. continue planning 1 plan$'
+check planorder "a refined plan routes to /ac-plan" '^   → /ac-plan$'
+check planorder "a polished plan needs final approval" '^2\. final approval 1 plan$'
 check planorder "an unpolished plan is polished" '^3\. polish 1 plan$'
 check planorder "the refusal is flagged in PLANS" '^   refined +1 ▓+░* needs you$'
 rm "$W/planorder/repo/_plans/r.md" "$W/planorder/repo/_plans/p.md"
-check planorder "a draft waits on approval"    '^2\. approve 1 plan$'
+check planorder "a draft continues planning"    '^2\. continue planning 1 plan$'
 
 # A failed read renders `?` and is named — never a guessed count.
 fixture failed "[$READY]" "[$READY]" "$READY" "$LIVE"

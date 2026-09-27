@@ -406,9 +406,9 @@ def build(T, ROOT, COMPACT):
                       "subject": f"refine {plural(n_unref, 'bead')}",
                       "detail": "" if n_ready else "nothing is ready without them",
                       "route": "/ac-polish bead"}))
-        plan_move = {"bead-ready": ("beadify", "/ac-beadify"), "refined": ("rule on", "/ac-human"),
-                     "polished": ("mark ready", "plan-approve.sh ready"), "approved": ("polish", "/ac-polish plan"),
-                     "draft": ("approve", "/ac-human")}
+        plan_move = {"bead-ready": ("beadify", "/ac-beadify"), "refined": ("continue planning", "/ac-plan"),
+                     "polished": ("final approval", "/ac-plan"), "approved": ("polish", "/ac-polish plan"),
+                     "draft": ("continue planning", "/ac-plan")}
         for i, st in enumerate(PLAN_ORDER):
             names = [p["name"] for p in plans if p["stage"] == st]
             if names:
