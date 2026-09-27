@@ -643,7 +643,7 @@ r_ph = bead.consumes_violations(cons_placeholder, _ctmp)
 check(len(r_ph[0]) == 1 and "placeholder" in r_ph[0][0],
       "consumes_violations: an unfilled <placeholder> artifact is always refused", r_ph)
 
-# --- consumes_violations: 'none (gate)' — satisfied by CLOSED, never a path -------------
+# --- consumes_violations: 'none (gate)' — valid whether the blocker is open or closed --
 
 cons_gate_entry = [{"raw": "- ac-decision -> none (gate)", "blocker": "ac-decision",
                      "artifact": None, "placeholder": False, "gate": True}]
@@ -654,14 +654,23 @@ check(r_gate_closed == ([], []),
 
 r_gate_open = bead.consumes_violations(cons_gate_entry, _ctmp,
     resolve_blocker=lambda bid: ({"status": "open"}, None))
-check(len(r_gate_open[0]) == 1 and "not yet closed" in r_gate_open[0][0] and r_gate_open[1] == [],
-      "consumes_violations: a gate-only entry whose blocker is still OPEN is refused", r_gate_open)
+check(r_gate_open == ([], []),
+      "consumes_violations: a gate-only entry whose blocker is still OPEN is ALSO satisfied — "
+      "the bead simply waits on the edge; flight-check/pick already honour it (checker "
+      "recheck 2026-09-27)", r_gate_open)
+
+r_gate_in_progress = bead.consumes_violations(cons_gate_entry, _ctmp,
+    resolve_blocker=lambda bid: ({"status": "in_progress"}, None))
+check(r_gate_in_progress == ([], []),
+      "consumes_violations: a gate-only entry whose blocker is in_progress is satisfied too — "
+      "every non-closed status is 'still waiting', never a Consumes-line defect",
+      r_gate_in_progress)
 
 r_gate_err = bead.consumes_violations(cons_gate_entry, _ctmp,
     resolve_blocker=lambda bid: (None, "br show exited 1: no such issue"))
 check(r_gate_err[0] == [] and len(r_gate_err[1]) == 1,
-      "consumes_violations: a gate-only entry whose blocker cannot be read is NOT-GATED, "
-      "never a silent pass", r_gate_err)
+      "consumes_violations: a gate-only entry whose blocker cannot be read AT ALL (garbage "
+      "id, br down) is still NOT-GATED, never a silent pass", r_gate_err)
 
 cons_gate_malformed = [{"raw": "- garbage prose -> none (gate)", "blocker": None,
                          "artifact": None, "placeholder": False, "gate": True, "malformed": True}]

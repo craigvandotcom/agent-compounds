@@ -944,11 +944,16 @@ def touchers_freshness_check(desc, label=""):
 def consumes_violations(cons_entries, root, resolve_blocker=None):
     """An unfilled `<placeholder>` is always refused (the plan's canon: Consumes accepts
     `->`/`→` and `none`, never a placeholder). A `none (gate)` entry names a blocker that
-    delivers no artifact of its own (a decision, human-gate, or milestone) — satisfied by
-    the blocker being CLOSED, never a path. Otherwise: the artifact must already exist on
-    the tree, OR the named blocker's own `## Delivers` must promise that exact path.
-    `resolve_blocker` defaults to `read_bead` (a real `br show`); a caller injects a fake
-    for a test that must not shell out. Returns (refused, not_gated)."""
+    delivers no artifact of its own (a decision, human-gate, or milestone) — the dependency
+    is a plain `blocks` edge, valid whether that blocker is OPEN or CLOSED: an open one just
+    means the bead is still waiting on it, exactly like any other blocker, and
+    flight-check.sh/pick.sh already refuse to hand a bead to a worker while a real `blocks`
+    edge is still open (they read the dependency graph directly) — re-deriving "and it must
+    already be closed" here duplicated that gate and refused an otherwise-legal Consumes
+    line for no reason of its own (checker recheck 2026-09-27). Otherwise: the artifact must
+    already exist on the tree, OR the named blocker's own `## Delivers` must promise that
+    exact path. `resolve_blocker` defaults to `read_bead` (a real `br show`); a caller
+    injects a fake for a test that must not shell out. Returns (refused, not_gated)."""
     if resolve_blocker is None:
         resolve_blocker = read_bead
     refused = []
@@ -967,21 +972,17 @@ def consumes_violations(cons_entries, root, resolve_blocker=None):
             blocker = c.get("blocker")
             if not blocker:
                 refused.append(
-                    f"Consumes: 'none (gate)' names no blocker to verify closed "
+                    f"Consumes: 'none (gate)' names no blocker to verify "
                     f"({c['raw'].strip()})"
                 )
                 continue
             bcanon, berr = resolve_blocker(blocker)
             if berr:
                 not_gated.append(
-                    f"Consumes: cannot verify gate-only blocker '{blocker}' is closed — {berr}"
+                    f"Consumes: cannot verify gate-only blocker '{blocker}' resolves — {berr}"
                 )
-                continue
-            if is_open(bcanon.get("status")):
-                refused.append(
-                    f"Consumes: gate-only blocker '{blocker}' is not yet closed "
-                    f"(status={bcanon.get('status')!r})"
-                )
+            # Valid open or closed (see docstring) — no status check. The blocker only
+            # needed to resolve to a real bead, checked above.
             continue
         artifact = c.get("artifact")
         if not artifact:
