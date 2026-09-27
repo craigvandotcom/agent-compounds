@@ -518,7 +518,7 @@ Re-gate fixture: a deliverable that exists and is referenced owes a touchers lin
 
 ## Delivers
 - `fix/fixture-deliverable.md` — the re-gate fixture deliverable
-  touchers: `rg -l -F "fix/fixture-deliverable" .` → 1 · owned by: ac-l7xt-fix | out-of-scope: fixture
+  touchers: `rg -l -F "fix/fixture-deliverable" .` · owned by: ac-l7xt-fix | out-of-scope: fixture
 
 ## Consumes
 - none
@@ -635,12 +635,14 @@ grep -q 'remove ac-l7xt-fix refined' "$WORK/labels8b-c.log" \
   || bad "8b(c): no downgrade in the label log: $(cat "$WORK/labels8b-c.log")"
 
 # ---------------------------------------------------------------------------------------
-echo "flight-check.test: case 8c — a stale touchers count is re-derived after a tree change"
+echo "flight-check.test: case 8c — a predecessor's new referrer does NOT bounce the stamp (ac-ftfz.6)"
 # ---------------------------------------------------------------------------------------
-# This is the measured failure shape: a predecessor commits a new referrer after a receipt
-# was written.  The old receipt is not a cache of the new tree.  The first check-only pass
-# re-derives the count and refuses; after the count is re-derived at the new tree, the same
-# claim can fly and the receipt carries the new freshness key.
+# The measured failure this bead retires: a predecessor commits a new referrer after a
+# receipt was written, the OLD count comparison read the touchers line as stale (declared
+# N no longer equal to the reproduced count) and downgraded `refined` — polish measured
+# 15/19, 31/48 and 24/42 artifacts downgraded for exactly this. With no stored count to
+# compare, the SAME touchers line survives the predecessor untouched: the command still
+# finds something, so neither check-only nor the claim-time gate bounces.
 R3="$WORK/root3"; mkdir -p "$R3/fix"
 printf 'the count fixture deliverable\n' >"$R3/fix/fixture-deliverable.md"
 printf 'references fix/fixture-deliverable\n' >"$R3/fix/referrer.txt"
@@ -648,9 +650,9 @@ git -C "$R3" init -q
 git -C "$R3" -c user.email=f@f -c user.name=f add -A
 git -C "$R3" -c user.email=f@f -c user.name=f commit -qm initial
 
-cat >"$WORK/count-desc-old.md" <<'BODY'
+cat >"$WORK/count-desc.md" <<'BODY'
 ## Intent
-A touchers count that changes when a predecessor lands.
+A touchers line that must survive a predecessor landing unedited — no count to go stale.
 
 ## Acceptance Criteria
 - The delivered artifact is present.
@@ -660,24 +662,7 @@ A touchers count that changes when a predecessor lands.
 
 ## Delivers
 - `fix/fixture-deliverable.md` — count fixture
-  touchers: `rg -l -F "fix/fixture-deliverable" . -g '!fix/fixture-deliverable.md'` → 1 · owned by: ac-l7xt-fix
-
-## Consumes
-- none
-BODY
-cat >"$WORK/count-desc-new.md" <<'BODY'
-## Intent
-A touchers count that changes when a predecessor lands.
-
-## Acceptance Criteria
-- The delivered artifact is present.
-  Probe: `test -f fix/fixture-deliverable.md` — tier: none
-- The absent artifact is still absent.
-  Probe: `test -f fix/fixture-absent.md` — tier: none
-
-## Delivers
-- `fix/fixture-deliverable.md` — count fixture
-  touchers: `rg -l -F "fix/fixture-deliverable" . -g '!fix/fixture-deliverable.md'` → 2 · owned by: ac-l7xt-fix
+  touchers: `rg -l -F "fix/fixture-deliverable" . -g '!fix/fixture-deliverable.md'` · owned by: ac-l7xt-fix
 
 ## Consumes
 - none
@@ -702,38 +687,30 @@ red-green-siblings: 1 of 2 probe(s) already green
 
 EOF
 : >"$WORK/labels8c-check.log"
-mk_json_c "$WORK/count-desc-old.md" '[{"text":"CLAIM: someone","created_at":"2024-01-01T00:00:00Z"}]' >"$WORK/count8c.json"
+mk_json_c "$WORK/count-desc.md" '[{"text":"CLAIM: someone","created_at":"2024-01-01T00:00:00Z"}]' >"$WORK/count8c.json"
 RUN_OUT=$(env AC2_DRY_RUN=1 AC2_FLIGHT_DIR="$COUNT_RECEIPTS" PATH="$B2:$PATH" \
   AC_FIXTURE_JSON="$WORK/count8c.json" AC_LABEL_LOG="$WORK/labels8c-check.log" \
-  bash "$GATE" ac-l7xt-fix --body-file "$WORK/count-desc-old.md" --root "$R3" --check-only 2>&1)
+  bash "$GATE" ac-l7xt-fix --body-file "$WORK/count-desc.md" --root "$R3" --check-only 2>&1)
 RUN_RC=$?
-[ "$RUN_RC" -eq 1 ] && printf '%s' "$RUN_OUT" | grep -q 'touchers count was re-derived at use' \
-  && ok "8c: check-only re-derives the stale touchers count at the new tree" \
-  || bad "8c: expected a re-derived count refusal, got rc=$RUN_RC: $RUN_OUT"
-printf '%s' "$RUN_OUT" | grep -q "freshness key: tree=$NEW_TREE3;tracked=clean" \
-  && ok "8c: the refusal carries the current tree freshness key" \
-  || bad "8c: current freshness key missing: $RUN_OUT"
+[ "$RUN_RC" -eq 0 ] \
+  && ok "8c: check-only survives the predecessor's new referrer — no stored count, nothing stale" \
+  || bad "8c: expected exit 0 (no count to go stale), got rc=$RUN_RC: $RUN_OUT"
 
 : >"$WORK/labels8c-gate.log"
-mk_json_c "$WORK/count-desc-old.md" '[{"text":"CLAIM: someone","created_at":"2024-01-01T00:00:00Z"}]' >"$WORK/count8c-gate.json"
+mk_json_c "$WORK/count-desc.md" '[{"text":"CLAIM: someone","created_at":"2024-01-01T00:00:00Z"}]' >"$WORK/count8c-gate.json"
 RUN_OUT=$(env AC2_DRY_RUN=1 AC2_FLIGHT_DIR="$COUNT_RECEIPTS" PATH="$B2:$PATH" \
   AC_FIXTURE_JSON="$WORK/count8c-gate.json" AC_LABEL_LOG="$WORK/labels8c-gate.log" \
-  bash "$GATE" ac-l7xt-fix --body-file "$WORK/count-desc-old.md" --root "$R3" 2>&1)
+  bash "$GATE" ac-l7xt-fix --body-file "$WORK/count-desc.md" --root "$R3" 2>&1)
 RUN_RC=$?
-[ "$RUN_RC" -eq 1 ] && printf '%s' "$RUN_OUT" | grep -q 'STAMP re-derived' \
-  && printf '%s' "$RUN_OUT" | grep -q 'STALE-STAMP' \
-  && ok "8c: claim-time gate re-derives instead of replaying the old receipt" \
-  || bad "8c: expected a freshness-key re-derivation refusal, got rc=$RUN_RC: $RUN_OUT"
-
-: >"$WORK/labels8c-pass.log"
-mk_json_c "$WORK/count-desc-new.md" '[{"text":"CLAIM: someone","created_at":"2024-01-03T00:00:00Z"}]' >"$WORK/count8c-pass.json"
-RUN_OUT=$(env AC2_DRY_RUN=1 AC2_FLIGHT_DIR="$COUNT_RECEIPTS" PATH="$B2:$PATH" \
-  AC_FIXTURE_JSON="$WORK/count8c-pass.json" AC_LABEL_LOG="$WORK/labels8c-pass.log" \
-  bash "$GATE" ac-l7xt-fix --body-file "$WORK/count-desc-new.md" --root "$R3" 2>&1)
-RUN_RC=$?
-[ "$RUN_RC" -eq 0 ] && grep -q "freshness-key: tree=$NEW_TREE3;tracked=clean" "$COUNT_RECEIPTS/ac-l7xt-fix.flight-receipt" \
-  && ok "8c: the re-derived count lets the next claim fly and records the new key" \
-  || bad "8c: expected a fresh green claim, got rc=$RUN_RC: $RUN_OUT"
+[ "$RUN_RC" -eq 0 ] && printf '%s' "$RUN_OUT" | grep -q 'STAMP re-derived' \
+  && ok "8c: claim-time gate re-derives on the new freshness key and still clears (STALE-STAMP never fires)" \
+  || bad "8c: expected a re-derived, cleared claim, got rc=$RUN_RC: $RUN_OUT"
+grep -q 'remove ac-l7xt-fix refined' "$WORK/labels8c-gate.log" \
+  && bad "8c: the stamp gate downgraded refined over a predecessor's new referrer alone: $(cat "$WORK/labels8c-gate.log")" \
+  || ok "8c: refined was never downgraded — the predecessor's new referrer is not staleness"
+grep -q "freshness-key: tree=$NEW_TREE3;tracked=clean" "$COUNT_RECEIPTS/ac-l7xt-fix.flight-receipt" \
+  && ok "8c: the cleared claim's receipt records the new tree's freshness key" \
+  || bad "8c: receipt does not carry the new freshness key"
 
 # ---------------------------------------------------------------------------------------
 echo "flight-check.test: case 9 — a refused resolved-blocker show is NOT-GATED, never a fabricated status"

@@ -345,20 +345,33 @@ Guard updateFood against zero-row updates.
 
 ## Delivers
 - `lib/db/foods.ts` — updateFood row-count guard
-  touchers: `rg -l -F "db/foods" lib -g "!lib/db/foods.ts"` → 1 · owned by: bd-api-caller
+  touchers: `rg -l -F "db/foods" lib -g "!lib/db/foods.ts"` · owned by: bd-api-caller
 
 ## Consumes
 - none
 '
-T_STALE=${T_OK/→ 1 · owned by/→ 3 · owned by}
+T_ZERO='## Intent
+Guard updateFood against zero-row updates.
+
+## Acceptance Criteria
+- The guard lands.
+  Probe: `grep -q count lib/db/foods.ts && true` — tier: none
+
+## Delivers
+- `lib/db/foods.ts` — updateFood row-count guard
+  touchers: `rg -l -F "no-such-string-xyz" lib -g "!lib/db/foods.ts"` · owned by: bd-api-caller
+
+## Consumes
+- none
+'
 T_MALFORMED=${T_OK/ · owned by: bd-api-caller/}
 T_LONELY=${T_NONE/lib\/db\/foods.ts\` — updateFood row-count guard/lib\/lonely.ts\` — lonely constant}
 T_NEW=${T_NONE/lib\/db\/foods.ts\` — updateFood row-count guard/lib\/new-module.ts\` — a file that does not exist yet}
 tmp=$(mktemp)
-jq --arg none "$T_NONE" --arg ok "$T_OK" --arg stale "$T_STALE" --arg mal "$T_MALFORMED" --arg lonely "$T_LONELY" --arg new "$T_NEW" '. + [
+jq --arg none "$T_NONE" --arg ok "$T_OK" --arg zero "$T_ZERO" --arg mal "$T_MALFORMED" --arg lonely "$T_LONELY" --arg new "$T_NEW" '. + [
   {id:"bd-t-none",   issue_type:"task", labels:["origin:ac-triage"], description:$none,   comments:[]},
   {id:"bd-t-ok",     issue_type:"task", labels:["origin:ac-triage"], description:$ok,     comments:[]},
-  {id:"bd-t-stale",  issue_type:"task", labels:["origin:ac-triage","refined"], description:$stale, comments:[]},
+  {id:"bd-t-zero",   issue_type:"task", labels:["origin:ac-triage","refined"], description:$zero, comments:[]},
   {id:"bd-t-mal",    issue_type:"task", labels:["origin:ac-triage"], description:$mal,    comments:[]},
   {id:"bd-t-lonely", issue_type:"task", labels:["origin:ac-triage"], description:$lonely, comments:[]},
   {id:"bd-t-new",    issue_type:"task", labels:["origin:ac-triage"], description:$new,    comments:[]}
@@ -376,18 +389,18 @@ fi
 : >"$BR_LOG"
 OUT=$(PATH="$MOCK:$PATH" bash "$STAMP" bd-t-ok 2>&1); RC=$?
 if [ "$RC" -eq 0 ] && [ "$(stamped_count bd-t-ok)" -eq 1 ]; then
-  pass "Case 13: a touchers line whose command reproduces its count STAMPS"
+  pass "Case 13: a touchers line whose command reproduces something STAMPS (no stored count)"
 else
   fail "Case 13: expected rc 0 + one stamp, rc=$RC. Output: $OUT / log: $(cat "$BR_LOG")"
 fi
 
 : >"$BR_LOG"
-OUT=$(PATH="$MOCK:$PATH" bash "$STAMP" bd-t-stale 2>&1); RC=$?
-if [ "$RC" -eq 1 ] && echo "$OUT" | grep -q "declare → 3 but the command reproduces 1" \
-   && [ "$(stripped_count bd-t-stale)" -eq 1 ] && [ "$(stamped_count bd-t-stale)" -eq 0 ]; then
-  pass "Case 14: a STALE touchers count is refused with both numbers, and a held stamp is DOWNGRADED"
+OUT=$(PATH="$MOCK:$PATH" bash "$STAMP" bd-t-zero 2>&1); RC=$?
+if [ "$RC" -eq 1 ] && echo "$OUT" | grep -q "reproduces ZERO referrers" \
+   && [ "$(stripped_count bd-t-zero)" -eq 1 ] && [ "$(stamped_count bd-t-zero)" -eq 0 ]; then
+  pass "Case 14: a touchers command reproducing ZERO referrers is refused, and a held stamp is DOWNGRADED"
 else
-  fail "Case 14: expected rc 1 + stale refusal + downgrade, rc=$RC. Output: $OUT / log: $(cat "$BR_LOG")"
+  fail "Case 14: expected rc 1 + zero-referrer refusal + downgrade, rc=$RC. Output: $OUT / log: $(cat "$BR_LOG")"
 fi
 
 : >"$BR_LOG"
@@ -469,12 +482,12 @@ Guard updateFood against zero-row updates.
 
 ## Delivers
 - `lib/db/foods.ts` — updateFood row-count guard
-  touchers: `rg -l -F "db/foods" lib -g "!lib/db/foods.ts"` → 1 · owned by: bd-api-caller | out-of-scope: lib/api.ts is the caller and ships in this bead
+  touchers: `rg -l -F "db/foods" lib -g "!lib/db/foods.ts"` · owned by: bd-api-caller | out-of-scope: lib/api.ts is the caller and ships in this bead
 
 ## Consumes
 - none
 '
-# Case 20: a STALE touchers line in an EARLIER bullet must not answer for the real bullet.
+# Case 20: an EARLIER bullet's own touchers line must not answer for a LATER bullet's path.
 B_CLAUSE_FIRST='## Intent
 Guard updateFood against zero-row updates.
 
@@ -484,9 +497,9 @@ Guard updateFood against zero-row updates.
 
 ## Delivers
 - scope note: the consumer set is tracked by the line beneath
-  touchers: `rg -l -F "db/foods" lib -g "!lib/db/foods.ts"` → 9 · owned by: bd-scope-note | out-of-scope: lib/db/foods.ts is delivered by the bullet beneath
+  touchers: `rg -l -F "db/foods" lib -g "!lib/db/foods.ts"` · owned by: bd-scope-note | out-of-scope: lib/db/foods.ts is delivered by the bullet beneath
 - `lib/db/foods.ts` — updateFood row-count guard
-  touchers: `rg -l -F "db/foods" lib -g "!lib/db/foods.ts"` → 1 · owned by: bd-api-caller
+  touchers: `rg -l -F "db/foods" lib -g "!lib/db/foods.ts"` · owned by: bd-api-caller
 
 ## Consumes
 - none
@@ -501,9 +514,9 @@ Guard updateFood against zero-row updates.
 
 ## Delivers
 - caller-inventory note
-  touchers: `rg -l -F "db/foods" lib -g "!lib/db/foods.ts"` → 1 · owned by: bd-api-caller
+  touchers: `rg -l -F "db/foods" lib -g "!lib/db/foods.ts"` · owned by: bd-api-caller
 - `lib/db/foods.ts` — updateFood row-count guard
-  touchers: `rg -l -F "db/foods" lib -g "!lib/db/foods.ts"` → 1 · owned by: bd-api-caller
+  touchers: `rg -l -F "db/foods" lib -g "!lib/db/foods.ts"` · owned by: bd-api-caller
 
 ## Consumes
 - none
@@ -528,7 +541,7 @@ OUT=$(PATH="$MOCK:$PATH" bash "$STAMP" bd-b-first 2>&1); RC=$?
 if [ "$RC" -eq 0 ] && [ "$(stamped_count bd-b-first)" -eq 1 ]; then
   pass "Case 20: a clause mention in an EARLIER bullet binds nothing — the real bullet's own line answers, and it is correct"
 else
-  fail "Case 20: expected rc 0 + stamp (the earlier stale line must not answer for the later bullet), rc=$RC. Output: $OUT"
+  fail "Case 20: expected rc 0 + stamp (the earlier bullet's line must not answer for the later bullet), rc=$RC. Output: $OUT"
 fi
 
 : >"$BR_LOG"

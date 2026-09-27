@@ -431,12 +431,12 @@ if [ "$CURRENT_TREE" != "no-git" ] && ! git diff --quiet --ignore-submodules HEA
 fi
 # The freshness key is derived from the tree, not read from an environment.  A receipt may
 # skip a second flight-check only while it describes this same tracked tree; a predecessor
-# commit or a tracked sibling edit must force the touchers count to be re-derived.
+# commit or a tracked sibling edit must force the touchers command to be re-run.
 STAMP_FRESHNESS_KEY="tree=$CURRENT_TREE;tracked=$TRACKED_TREE_STATE"
 
 # touchers_check calls touchers.sh derive for every git-tracked Delivers path.  Run that
-# read-only derivation in --check-only as well: refly must be able to re-ask a mutable
-# touchers count without invoking the mutating refined-stamp gate.
+# read-only derivation in --check-only as well: refly must be able to re-run a live touchers
+# command without invoking the mutating refined-stamp gate.
 touchers_check_readonly() (
   [ -f "$TOUCHERS_TOOL" ] || { echo "NOT-GATED: touchers tool not found at '$TOUCHERS_TOOL'"; return 2; }
   . "$TOUCHERS_TOOL" 2>/dev/null || return 2
@@ -448,11 +448,11 @@ if [ "$CHECK_ONLY" -eq 1 ] && [ -z "$FAIL_CLASS" ] \
   TOUCHERS_OUT=$(touchers_check_readonly 2>&1); TOUCHERS_RC=$?
   if [ "$TOUCHERS_RC" -eq 2 ]; then
     printf '%s\n' "$TOUCHERS_OUT" >&2
-    echo "NOT-GATED: the touchers count could not be re-derived; refusing rather than replaying a cached verdict" >&2
+    echo "NOT-GATED: the touchers command could not be verified runnable; refusing rather than replaying a cached verdict" >&2
     exit 2
   elif [ "$TOUCHERS_RC" -ne 0 ]; then
     TOUCHERS_WHY=$(printf '%s\n' "$TOUCHERS_OUT" | grep -m1 'touchers: REFUSED' | sed 's/^touchers: REFUSED[^—]*— //')
-    premise_failed STALE-STAMP "the touchers count was re-derived at use and no longer reproduces (freshness key: $STAMP_FRESHNESS_KEY) — ${TOUCHERS_WHY:-the declared count is stale}."
+    premise_failed STALE-STAMP "the touchers command was re-run live at use and no longer finds what it owns (freshness key: $STAMP_FRESHNESS_KEY) — ${TOUCHERS_WHY:-the declared command is stale}."
   fi
 fi
 
@@ -493,7 +493,7 @@ if [ -z "$FAIL_CLASS" ] && [ "$CHECK_ONLY" -eq 0 ]; then
       echo "flight-check[$BEAD] STAMP skipped — re-run within this claim (receipt $LAST_AT ≥ claim $CLAIM_TS; freshness $STAMP_FRESHNESS_KEY); gated at claim, never implies fresh"
     else
       [ -n "$LAST_FRESHNESS" ] && [ "$LAST_FRESHNESS" != "$STAMP_FRESHNESS_KEY" ] \
-        && echo "flight-check[$BEAD] STAMP re-derived — freshness key changed ($LAST_FRESHNESS → $STAMP_FRESHNESS_KEY); the touchers count is never replayed from the old receipt"
+        && echo "flight-check[$BEAD] STAMP re-derived — freshness key changed ($LAST_FRESHNESS → $STAMP_FRESHNESS_KEY); the touchers command is never replayed from the old receipt"
       STAMP_OUT=$(bash "$STAMP_GATE" "$BEAD" </dev/null 2>&1); STAMP_RC=$?
       if [ "$STAMP_RC" -eq 2 ]; then
         printf '%s\n' "$STAMP_OUT" >&2

@@ -73,9 +73,9 @@ has yet to create keeps the guarded form `test -x <path> && bash <path>`, honest
     same way. The no-probe refusal names epics explicitly (a probe-less epic is refused like any other bead); parity holds both ways.
 - **`## Planned layer` rows wire the same edges, cross-epic.** A `consumes` row becomes a `blocks` edge to the named bead from every new bead whose `## Delivers` shares the row's scanned path (`planned-layer.sh scan <plan>` names the match), read back the same way; a `supersedes` BEAD row closes that bead (reason: `superseded by <epic>`); a `supersedes` PLAN row stamps `superseded_by: <this plan>` on that plan and joins this compile's own retirement walk (§ below).
 - **One path per `## Delivers` bullet, and every delivered path that git ALREADY TRACKS owes a
-      touchers line.** `skills/_tools/touchers.sh derive <path>` prints `<stem> <N> <command>`;
-      write it beneath the bullet as ``touchers: `<command>` → <N> · owned by: <sibling bead>``
-      — else `out-of-scope: <why>`.
+      touchers line.** `skills/_tools/touchers.sh derive <path>` prints `<stem> <command>`, no
+      stored count; write it beneath the bullet as ``touchers: `<command>` · owned by: <sibling
+      bead>`` — else `out-of-scope: <why>`.
 5b. **Emit the closeout bead** — D3: every plan-derived epic gets one even with no one-shots
     (keyed off `beadified:` absent); emit the closeout bead per `references/bead-schema.md` § Closeout (D8 shape, edges + readback, one-shot refusal D4, `Detect:` lift D7).
 6. **Create the beads** per the schema's Header fields (an epic off `<Name> — <what it implements>` is REFUSED) — bodies go `-d "$(cat <file>)"` (`br create` REJECTS `-f` with a title); bead text stays dcg-safe.

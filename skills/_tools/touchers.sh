@@ -31,14 +31,16 @@
 #   bash <path>/touchers.sh derive <rel-path>
 #   bash <path>/touchers.sh check  <desc-file> [label]
 #
-# `derive <rel-path>` prints one TAB-separated line `<stem>\t<N>\t<command>`, where the
-# command is the gate's own rg shape written to run from the repo root — paste it into the
-# bead. A path git does not track prints `new` (a new artifact owes nothing).
+# `derive <rel-path>` prints one TAB-separated line `<stem>\t<command>`, where the command is
+# the gate's own rg shape written to run from the repo root — paste it into the bead. A path
+# git does not track prints `new` (a new artifact owes nothing). The command is re-run LIVE at
+# every check, never a remembered count: a bead's `touchers:` line names WHO owns keeping its
+# referrers current, not a number that goes stale the moment any other bead lands.
 #
 # Exit codes (assurance-declarations § NOT-GATED):
-#   0  touchers: OK        — nothing owed, or every owed line present and reproducing
-#   1  touchers: REFUSED   — a content verdict (missing, malformed, stale, or multi-path bullet)
-#   2  touchers: NOT-GATED — the count was never derived (no rg, no repo); nothing is claimed
+#   0  touchers: OK        — nothing owed, or every owed line present and its command runs clean
+#   1  touchers: REFUSED   — a content verdict (missing, malformed, zero-referrer, or multi-path bullet)
+#   2  touchers: NOT-GATED — the command was never verified runnable (no rg, no repo); nothing is claimed
 #
 # Deliberately NO `set -u` / `set -e` / `pipefail` at top level: this file is SOURCED into
 # stamp-refined.sh, and shell options set here would leak into every caller.
@@ -112,11 +114,11 @@ _touchers_tracked() {
 }
 
 # touchers_derive <rel-path>
-#   -> `<stem>\t<N>\t<command>`  (path is git-tracked and was measured)
-#   -> `new`                     (path is not tracked yet — nothing owed)
-#   -> exit 2                    (rg absent or broken; the count is UNKNOWN, never zero)
+#   -> `<stem>\t<command>`  (path is git-tracked; the command is verified runnable)
+#   -> `new`                (path is not tracked yet — nothing owed)
+#   -> exit 2               (rg absent or broken; runnability is UNKNOWN, never assumed clean)
 touchers_derive() {
-  local rel="${1:-}" root stem cmd out rc n
+  local rel="${1:-}" root stem cmd rc
   rel="${rel#./}"
   if [ -z "$rel" ]; then
     printf 'touchers: NOT-GATED derive needs a repo-relative path\n' >&2
@@ -133,23 +135,22 @@ touchers_derive() {
   fi
   stem=$(_touchers_stem "$rel")
   cmd=$(_touchers_command "$rel" "$stem")
-  # rg exits 0 (matches) or 1 (none). Anything else — 127 absent, 2 bad invocation — means
-  # the count was never derived; reading that as "zero references" would let a missing tool
-  # wave a bead through, so it is a refusal, not a zero.
-  out=$( (cd "$root" && bash -c "$cmd") 2>/dev/null ); rc=$?
+  # rg exits 0 (matches) or 1 (none) — both are a verified-runnable command. Anything else —
+  # 127 absent, 2 bad invocation — means the command was never verified; reading that as fine
+  # would let a missing tool wave a bead through, so it is a refusal, never a silent pass.
+  (cd "$root" && bash -c "$cmd") >/dev/null 2>&1; rc=$?
   if [ "$rc" -gt 1 ]; then
-    printf 'touchers: NOT-GATED rg exited %s deriving touchers for `%s` (absent or broken), so the reference count is unknown; refusing rather than reading it as zero.\n' "$rc" "$rel" >&2
+    printf 'touchers: NOT-GATED rg exited %s deriving touchers for `%s` (absent or broken); refusing rather than reading it as clean.\n' "$rc" "$rel" >&2
     return 2
   fi
-  n=$(printf '%s\n' "$out" | grep -c .)
-  printf '%s\t%s\t%s\n' "$stem" "$n" "$cmd"
+  printf '%s\t%s\n' "$stem" "$cmd"
 }
 
 # touchers_check <description-file> [<label-for-messages>]
 # The whole leg over one bead description. One verdict, one greppable token.
 touchers_check() {
   local file="${1:-}" label="${2:-}" root dl numbered maxb b block paths existing count
-  local rel dout stem refs tline tcmd tn actual
+  local rel dout stem cmd refs tline tcmd actual
   [ -n "$label" ] || label="${file:-description}"
 
   if [ -z "$file" ] || [ ! -f "$file" ]; then
@@ -201,34 +202,39 @@ touchers_check() {
     rel="$existing"
 
     dout=$(touchers_derive "$rel") || {
-      printf 'touchers: NOT-GATED %s — the reference count for `%s` could not be derived; nothing was checked.\n' "$label" "$rel" >&2
+      printf 'touchers: NOT-GATED %s — the touchers command for `%s` could not be verified runnable; nothing was checked.\n' "$label" "$rel" >&2
       return 2
     }
     [ "$dout" != "new" ] || continue
     stem=$(printf '%s' "$dout" | cut -f1)
-    refs=$(printf '%s' "$dout" | cut -f2)
+    cmd=$(printf '%s' "$dout" | cut -f2-)
+    refs=$( (cd "$root" && bash -c "$cmd" 2>/dev/null) | grep -c . )
     [ "${refs:-0}" -gt 0 ] || continue           # nothing references it
 
     # The line belongs to THIS bullet: the first `touchers:` line inside this block.
     tline=$(printf '%s\n' "$block" | grep -m1 '^[[:space:]]*touchers:')
     if [ -z "$tline" ]; then
-      printf 'touchers: REFUSED %s — [unowned-touchers] `%s` exists and is referenced by %s file(s) (rg -l -F "%s"), but its ## Delivers entry carries no touchers: line. Add beneath the bullet: touchers: `<command>` → <N> · owned by: <bead ids> | out-of-scope: <reason>.\n' \
+      printf 'touchers: REFUSED %s — [unowned-touchers] `%s` exists and is referenced by %s file(s) (rg -l -F "%s"), but its ## Delivers entry carries no touchers: line. Add beneath the bullet: touchers: `<command>` · owned by: <bead ids> | out-of-scope: <reason>.\n' \
         "$label" "$rel" "$refs" "$stem" >&2
       return 1
     fi
 
     tcmd=$(printf '%s' "$tline" | sed -n 's/.*touchers:[[:space:]]*`\([^`]*\)`.*/\1/p'); tcmd=${tcmd//\\|/|}
-    tn=$(printf '%s' "$tline" | grep -oE '→[[:space:]]*[0-9]+' | head -1 | grep -oE '[0-9]+')
-    if [ -z "$tcmd" ] || [ -z "$tn" ] || ! printf '%s' "$tline" | grep -qE 'owned by:|out-of-scope:'; then
-      printf 'touchers: REFUSED %s — [unowned-touchers] the touchers line for `%s` is malformed; expected: touchers: `<command>` → <N> · owned by: … | out-of-scope: ….\n' \
+    if [ -z "$tcmd" ] || ! printf '%s' "$tline" | grep -qE 'owned by:|out-of-scope:'; then
+      printf 'touchers: REFUSED %s — [unowned-touchers] the touchers line for `%s` is malformed; expected: touchers: `<command>` · owned by: … | out-of-scope: ….\n' \
         "$label" "$rel" >&2
       return 1
     fi
 
+    # No stored count survives to compare against — the command IS the check, re-run live
+    # every time (canon: this bead, ac-ftfz.6). What still refuses is a command that no
+    # longer finds ANYTHING: a rotted or mistyped command is indistinguishable from an
+    # honest zero unless it is run, and "owned by" a command that owns nothing is the same
+    # defect a stale count used to catch, reached a different way.
     actual=$( (cd "$root" && bash -c "$tcmd" 2>/dev/null) | grep -c . )
-    if [ "$actual" -ne "$tn" ]; then
-      printf 'touchers: REFUSED %s — [unowned-touchers] touchers for `%s` declare → %s but the command reproduces %s now; a stale toucher list is the defect this gate exists for. Re-derive, then re-stamp.\n' \
-        "$label" "$rel" "$tn" "$actual" >&2
+    if [ "${actual:-0}" -eq 0 ]; then
+      printf 'touchers: REFUSED %s — [unowned-touchers] the touchers command for `%s` reproduces ZERO referrers now; a command that owns nothing is the defect this gate exists for. Re-derive, then re-stamp.\n' \
+        "$label" "$rel" >&2
       return 1
     fi
   done

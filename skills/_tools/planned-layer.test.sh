@@ -142,7 +142,7 @@ write_board \
   "$(mk_bead bd-ref task open 'Referrer target, no touchers line' '- D1 `lib/widget.js`')" \
   "$(mk_bead bd-ref2 task open 'Referrer target, WITH a touchers line' \
      '- D1 `lib/gizmo.js`
-  touchers: `rg -l -F "lib/gizmo" .` → 1 · owned by: bd-x')"
+  touchers: `rg -l -F "lib/gizmo" .` · owned by: bd-x')"
 
 mkdir -p subject
 cat > subject/ref.js <<'EOF'

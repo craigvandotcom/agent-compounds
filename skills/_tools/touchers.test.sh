@@ -48,14 +48,14 @@ CMD_REFONE="rg -l -F \"touchers/ref-one\" $FIXDIR_REL -g \"!$REFONE\""
 write_desc() { printf '%s' "$2" >"$WORK/$1"; printf '%s' "$WORK/$1"; }
 run_check() { OUT=$(bash "$TOOL" check "$1" "${2:-fx}" 2>&1); RC=$?; }
 
-# --- Case 1: a well-formed line whose command reproduces its count -> OK ----------------
+# --- Case 1: a well-formed line whose command reproduces something -> OK ---------------
 D=$(write_desc ok.md "## Delivers
 - \`$TARGET\` — the fixture artifact
-  touchers: \`$CMD_TARGET\` → 2 · owned by: bd-fixture-refs
+  touchers: \`$CMD_TARGET\` · owned by: bd-fixture-refs
 ")
 run_check "$D" ok
 if [ "$RC" -eq 0 ] && echo "$OUT" | grep -q "touchers: OK"; then
-  pass "Case 1: a touchers line whose command reproduces its count is accepted (touchers: OK, exit 0)"
+  pass "Case 1: a touchers line whose command reproduces its referrers is accepted (touchers: OK, exit 0)"
 else
   fail "Case 1: expected exit 0 + 'touchers: OK', got $RC. Output: $OUT"
 fi
@@ -72,18 +72,19 @@ else
   fail "Case 2: expected exit 1 + unowned-touchers, got $RC. Output: $OUT"
 fi
 
-# --- Case 3: a STALE count -> REFUSED, naming both numbers ------------------------------
-# The list being stale WHEN USED is the defect this gate exists for, so a count that no
-# longer reproduces is refused exactly like a missing line.
-D=$(write_desc stale.md "## Delivers
+# --- Case 3: a command that reproduces ZERO referrers -> REFUSED -----------------------
+# No stored count survives to go stale — the command IS the check, re-run live every time.
+# What still refuses is a command that owns nothing: rotted or mistyped, indistinguishable
+# from an honest zero unless it actually runs.
+D=$(write_desc zero.md "## Delivers
 - \`$TARGET\` — the fixture artifact
-  touchers: \`$CMD_TARGET\` → 7 · owned by: bd-fixture-refs
+  touchers: \`rg -l -F \"no-such-string-xyz\" $FIXDIR_REL\` · owned by: bd-fixture-refs
 ")
-run_check "$D" stale
-if [ "$RC" -eq 1 ] && echo "$OUT" | grep -q "declare → 7 but the command reproduces 2"; then
-  pass "Case 3: a stale touchers count is REFUSED, naming the declared and the reproduced count"
+run_check "$D" zero
+if [ "$RC" -eq 1 ] && echo "$OUT" | grep -q "reproduces ZERO referrers"; then
+  pass "Case 3: a touchers command that reproduces zero referrers is REFUSED, naming the zero"
 else
-  fail "Case 3: expected exit 1 naming both counts, got $RC. Output: $OUT"
+  fail "Case 3: expected exit 1 naming zero referrers, got $RC. Output: $OUT"
 fi
 
 # --- Case 4: a path that appears ONLY inside a touchers disposition owes NOTHING --------
@@ -92,7 +93,7 @@ fi
 # grew a phantom obligation that no bullet could ever satisfy.
 D=$(write_desc phantom.md "## Delivers
 - \`$TARGET\` — the fixture artifact
-  touchers: \`$CMD_TARGET\` → 2 · owned by: bd-fixture-refs (which also owns $REFONE)
+  touchers: \`$CMD_TARGET\` · owned by: bd-fixture-refs (which also owns $REFONE)
 ")
 run_check "$D" phantom
 if [ "$RC" -eq 0 ] && echo "$OUT" | grep -q "touchers: OK"; then
@@ -106,7 +107,7 @@ fi
 # the FIRST line's count, so the second went silently unchecked. Refuse the shape instead.
 D=$(write_desc multi.md "## Delivers
 - \`$TARGET\` and \`$REFONE\` — two artifacts under one bullet
-  touchers: \`$CMD_TARGET\` → 2 · owned by: bd-fixture-refs
+  touchers: \`$CMD_TARGET\` · owned by: bd-fixture-refs
 ")
 run_check "$D" multi
 if [ "$RC" -eq 1 ] && echo "$OUT" | grep -q "one path per Delivers bullet"; then
@@ -126,19 +127,18 @@ else
   fail "Case 6: expected exit 0 for a new artifact, got $RC. Output: $OUT"
 fi
 
-# --- Case 7: derive prints the stem, the count, and a command that reproduces it --------
+# --- Case 7: derive prints the stem and a verified-runnable command, NO stored count ----
 DER=$(bash "$TOOL" derive "$TARGET" 2>&1); RC=$?
 D_STEM=$(printf '%s' "$DER" | cut -f1)
-D_N=$(printf '%s' "$DER" | cut -f2)
-D_CMD=$(printf '%s' "$DER" | cut -f3-)
-D_REPRO=$(bash -c "$D_CMD" 2>/dev/null | grep -c .)
+D_CMD=$(printf '%s' "$DER" | cut -f2-)
 D_HITS=$(bash -c "$D_CMD" 2>/dev/null)
-if [ "$RC" -eq 0 ] && [ "$D_STEM" = "touchers/tchr-target" ] && [ "${D_N:-0}" -ge 2 ] \
-   && [ "$D_REPRO" = "$D_N" ] \
+D_N=$(printf '%s\n' "$D_HITS" | grep -c .)
+if [ "$RC" -eq 0 ] && [ "$D_STEM" = "touchers/tchr-target" ] && [ "$(printf '%s' "$DER" | awk -F'\t' '{print NF}')" -eq 2 ] \
+   && [ "${D_N:-0}" -ge 2 ] \
    && printf '%s\n' "$D_HITS" | grep -q "$REFONE" && printf '%s\n' "$D_HITS" | grep -q "$REFTWO"; then
-  pass "Case 7: derive on an existing referenced path prints stem/N/command, and the command reproduces N ($D_N, including both fixture referrers)"
+  pass "Case 7: derive on an existing referenced path prints stem+command with NO stored count (2 tab-fields), and the command finds both fixture referrers live ($D_N)"
 else
-  fail "Case 7: expected a self-reproducing derivation, rc=$RC stem='$D_STEM' n='$D_N' reproduced='$D_REPRO'. Output: $DER"
+  fail "Case 7: expected a count-free 2-field derivation, rc=$RC stem='$D_STEM'. Output: $DER"
 fi
 
 # --- Case 8: derive on a path that does not exist prints `new` --------------------------
@@ -155,7 +155,7 @@ fi
 # passes this description — which is exactly the silent hole.
 D=$(write_desc second.md "## Delivers
 - \`$TARGET\` — the fixture artifact
-  touchers: \`$CMD_TARGET\` → 2 · owned by: bd-fixture-refs
+  touchers: \`$CMD_TARGET\` · owned by: bd-fixture-refs
 - \`$REFONE\` — a second delivered file, referenced by its sibling
 ")
 run_check "$D" second
@@ -170,9 +170,9 @@ fi
 # Case 9 would be satisfied by a checker that refuses every multi-bullet Delivers.
 D=$(write_desc secondok.md "## Delivers
 - \`$TARGET\` — the fixture artifact
-  touchers: \`$CMD_TARGET\` → 2 · owned by: bd-fixture-refs
+  touchers: \`$CMD_TARGET\` · owned by: bd-fixture-refs
 - \`$REFONE\` — a second delivered file, referenced by its sibling
-  touchers: \`$CMD_REFONE\` → 1 · out-of-scope: ref-two is a fixture and is rewritten wholesale
+  touchers: \`$CMD_REFONE\` · out-of-scope: ref-two is a fixture and is rewritten wholesale
 ")
 run_check "$D" secondok
 if [ "$RC" -eq 0 ] && echo "$OUT" | grep -q "touchers: OK"; then
@@ -189,7 +189,7 @@ NORG="$WORK/norg"; mkdir -p "$NORG"
 printf '#!/usr/bin/env bash\nexit 127\n' >"$NORG/rg"; chmod +x "$NORG/rg"
 D=$(write_desc notgated.md "## Delivers
 - \`$TARGET\` — the fixture artifact
-  touchers: \`$CMD_TARGET\` → 2 · owned by: bd-fixture-refs
+  touchers: \`$CMD_TARGET\` · owned by: bd-fixture-refs
 ")
 OUT=$(PATH="$NORG:$PATH" bash "$TOOL" check "$D" notgated 2>&1); RC=$?
 if [ "$RC" -eq 2 ] && echo "$OUT" | grep -q "NOT-GATED" && echo "$OUT" | grep -q "rg exited 127"; then
@@ -201,7 +201,7 @@ fi
 # --- Case 11: a malformed line (no owned-by / out-of-scope) -> REFUSED ------------------
 D=$(write_desc malformed.md "## Delivers
 - \`$TARGET\` — the fixture artifact
-  touchers: \`$CMD_TARGET\` → 2
+  touchers: \`$CMD_TARGET\`
 ")
 run_check "$D" malformed
 if [ "$RC" -eq 1 ] && echo "$OUT" | grep -q "malformed"; then

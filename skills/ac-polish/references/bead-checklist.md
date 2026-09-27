@@ -53,10 +53,10 @@ is the reader doing its job; reaching for a finding to justify the round is not.
   Hand-listed scopes carried a measured **16.2% repair rate** from consumers nobody found.
 - Name the grep that derived it. Does every consumer it returns appear in the bead, or is
   its absence stated as deliberate? Write it as the contract's line beneath the `## Delivers`
-  bullet — ``touchers: `<command>` → <N> · owned by: … | out-of-scope: …`` — because
-  `stamp-refined.sh` re-runs that command and refuses a missing or stale one
-  (beads-standards `bead-create-contract.md` § Touchers). Command shapes per question:
-  `ac-polish/references/seams-checklist.md`.
+  bullet — ``touchers: `<command>` · owned by: … | out-of-scope: …`` — because
+  `stamp-refined.sh` re-runs that command LIVE and refuses a missing one or one that now
+  finds nothing (beads-standards `bead-create-contract.md` § Touchers; no count is stored to
+  go stale). Command shapes per question: `ac-polish/references/seams-checklist.md`.
 - Evaluate every bead against the prod-write predicate in
   `skills/beads-standards/reference/bead-conventions.md` § The prod-write gate predicate; cite
   that section, do not restate it. When the predicate does not apply, write the exact line
