@@ -302,6 +302,32 @@ def labels_of(value):
     return []
 
 
+# --- the meta-header line a bead's canonical FILE FORM carries ---------------------------
+
+_META_HEADER_RE = re.compile(
+    r"^type:\s*(?P<type>[A-Za-z_-]+)\b.*?\blabels:\s*(?P<labels>[^\n]*?)\s*(?:·\s*base:.*)?$",
+    re.MULTILINE,
+)
+
+
+def parse_meta_header(text):
+    """The `type: <t> · priority: <p> · (parent: ...·)? labels: <csv|none>( · base: ...)?`
+    line a bead's canonical FILE FORM carries — `bead-artifact.py export`'s own block header
+    and `bead-schema.md`'s own "Example bead" (explicitly `sed`-extractable as a standalone
+    description body) both spell it identically, one order of fields, `labels:` last before
+    an optional `base:`. Searched only in the file's own leading slice (a title/header line,
+    never a coincidental match buried in prose further down). Returns `(issue_type,
+    labels-list)`, or `(None, None)` when no such line is present — a bare description body
+    with no header carries no recoverable type/labels and the caller must skip those legs,
+    never guess one."""
+    m = _META_HEADER_RE.search((text or "")[:600])
+    if not m:
+        return None, None
+    labels_raw = m.group("labels").strip()
+    labels = [] if labels_raw.lower() == "none" else labels_of(labels_raw)
+    return m.group("type").strip(), labels
+
+
 # ---------------------------------------------------------------------------
 # Plain-text extractors over a `description` body. Take plain text, never a bead
 # object, so a PLAN's own `## Deliverables` section can call the same extractor a
@@ -1074,11 +1100,23 @@ def _decision_blocks_count(bead_id):
 def cmd_check(target):
     """`bead.py check <id|file>` — every rule above, one refusing command. Prints OK /
     REFUSED / NOT-GATED lines and returns the process exit code: 0 clean, 1 refused (each
-    named), 2 NOT-GATED (never read as a pass)."""
+    named), 2 NOT-GATED (never read as a pass).
+
+    File mode runs every CONTENT rule id mode runs — touchers, Consumes, Delivers symlink
+    safety, and (whenever the file carries a `parse_meta_header` line) origin,
+    refined-vs-human-gate and task/feature NO-DELIVERS/UNVERIFIABLE-DELIVERS too. Only the
+    legs that genuinely need the BOARD stay skipped for a file target: sensitive-prod (its
+    own DECISION-blocks count is a dependency-edge lookup against a real bead id, which a
+    file path is not) always, and the label/type-scoped legs when the file carries no
+    `parse_meta_header` line at all. Every skip is named on one info line — never silent."""
     root = _git_root() or os.getcwd()
     refused = []
     not_gated = []
     info = []
+    skipped = []
+
+    meta_issue_type = None
+    meta_labels = None
 
     if os.path.isfile(target):
         try:
@@ -1087,7 +1125,8 @@ def cmd_check(target):
         except OSError as exc:
             print(f"bead.py check: NOT-GATED {target} — cannot read file: {exc}", file=sys.stderr)
             return 2
-        labels = []
+        meta_issue_type, meta_labels = parse_meta_header(desc)
+        labels = meta_labels or []
         canon = None
         bead_id = target
     else:
@@ -1099,7 +1138,14 @@ def cmd_check(target):
         labels = canon.get("labels") or []
         bead_id = canon.get("id") or target
 
-    human_gate = "human-gate" in labels
+    # A real bead ALWAYS carries a (possibly empty) label list; a file only does when its
+    # own `parse_meta_header` line is present. "Known empty" and "unknown" are different
+    # things — only the latter is a skip.
+    labels_known = canon is not None or meta_labels is not None
+    issue_type_known = canon is not None or meta_issue_type is not None
+    issue_type = canon.get("issue_type") if canon is not None else meta_issue_type
+
+    human_gate = labels_known and "human-gate" in labels
 
     p_refused, p_not_gated, p_info = probe_red_violations(probes(desc), human_gate)
     refused += p_refused
@@ -1119,22 +1165,28 @@ def cmd_check(target):
 
     refused += delivers_symlink_violations(delivers(desc), root)
 
-    if canon is not None:
+    if labels_known:
         ov = origin_violation(labels)
         if ov:
             refused.append(ov)
         rhv = refined_human_gate_violation(labels)
         if rhv:
             refused.append(rhv)
+    else:
+        skipped.append("origin/refined-human-gate (no labels available — file input carries no meta-header line)")
 
+    if issue_type_known:
         # A human-gate bead is exempt (decision/action for a human, routinely typed
         # `task`, never expected to carry an artifact) — the same exemption the probe
         # rule already carries above.
         if not human_gate:
-            tfd = task_feature_delivers_violation(canon.get("issue_type"), desc)
+            tfd = task_feature_delivers_violation(issue_type, desc)
             if tfd:
                 refused.append(tfd)
+    else:
+        skipped.append("task/feature NO-DELIVERS/UNVERIFIABLE-DELIVERS (issue_type unknown — file input carries no meta-header line)")
 
+    if canon is not None:
         dbc = _decision_blocks_count(bead_id)
         if dbc is None:
             not_gated.append("sensitive-prod: could not re-read dependency titles to count DECISION blocks edges")
@@ -1145,7 +1197,10 @@ def cmd_check(target):
             elif s_rc not in (0, 1):
                 not_gated.append(f"sensitive-prod: {s_msg}")
     else:
-        info.append("origin/refined-human-gate/sensitive-prod: skipped — file input carries no labels")
+        skipped.append("sensitive-prod (file mode cannot resolve this bead's DECISION-blocks count off the board)")
+
+    if skipped:
+        info.append("file mode skipped: " + "; ".join(skipped))
 
     for m in info:
         print(f"bead.py check: {m}")

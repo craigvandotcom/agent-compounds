@@ -772,6 +772,83 @@ check(cli_banned.returncode == 1 and "run-all-proofs" in cli_banned.stderr,
       (cli_banned.returncode, cli_banned.stderr))
 os.unlink(_body_banned)
 
+# --- parse_meta_header — the FILE FORM header bead-artifact.py export writes and ---------
+# --- bead-schema.md's own "Example bead" carries verbatim -------------------------------
+
+EXPORT_HEADER = ("# ac-x1 — a title\n"
+                  "type: task · priority: 2 · labels: origin:ac-beadify,unrefined · base: abcd1234ef567890\n"
+                  "\n## Intent\nsomething.\n")
+check(bead.parse_meta_header(EXPORT_HEADER) == ("task", ["origin:ac-beadify", "unrefined"]),
+      "parse_meta_header: bead-artifact.py export's own header shape (type · priority · labels · base)",
+      bead.parse_meta_header(EXPORT_HEADER))
+
+SCHEMA_HEADER = ("title: ac-x: a title\n"
+                 "type: task · priority: 1 · parent: `ac-epic` · labels: none\n"
+                 "\n## Intent\nsomething.\n")
+check(bead.parse_meta_header(SCHEMA_HEADER) == ("task", []),
+      "parse_meta_header: bead-schema.md's own Example-bead header shape (type · priority · parent · labels)",
+      bead.parse_meta_header(SCHEMA_HEADER))
+
+check(bead.parse_meta_header("## Intent\nno header here at all.\n") == (None, None),
+      "parse_meta_header: a bare description with no header line returns (None, None), never a guess")
+
+# --- cmd_check CLI, file mode WITH a meta header — origin/refined-human-gate and --------
+# --- task/feature NO-DELIVERS now run for a file (the bug: they were always skipped) ----
+
+_fd4, _body_meta_no_origin = _tf.mkstemp(suffix=".md")
+with os.fdopen(_fd4, "w") as _fh:
+    _fh.write("# ac-x2 — a title\ntype: task · priority: 2 · labels: none · base: 0000000000000000\n"
+              "\n## Intent\nsomething.\n\n## Acceptance Criteria\n- x.\n  Probe: `test -f /nope.xyz`\n"
+              "\n## Delivers\n- lib/parser.sh\n")
+cli_meta_no_origin = _run_check([_body_meta_no_origin])
+check(cli_meta_no_origin.returncode == 1 and "no origin:" in cli_meta_no_origin.stderr,
+      "cmd_check CLI: file mode WITH a meta header runs origin_violation (the labels leg — "
+      "previously skipped unconditionally for any file target)",
+      (cli_meta_no_origin.returncode, cli_meta_no_origin.stderr))
+os.unlink(_body_meta_no_origin)
+
+_fd5, _body_meta_no_delivers = _tf.mkstemp(suffix=".md")
+with os.fdopen(_fd5, "w") as _fh:
+    _fh.write("# ac-x3 — a title\ntype: task · priority: 2 · labels: origin:ac-beadify · base: 0000000000000000\n"
+              "\n## Intent\nsomething.\n\n## Acceptance Criteria\n- x.\n  Probe: `test -f /nope.xyz`\n")
+cli_meta_no_delivers = _run_check([_body_meta_no_delivers])
+check(cli_meta_no_delivers.returncode == 1 and "NO-DELIVERS" in cli_meta_no_delivers.stderr,
+      "cmd_check CLI: file mode WITH a meta header runs task_feature_delivers_violation "
+      "(the Delivers leg — previously skipped unconditionally for any file target)",
+      (cli_meta_no_delivers.returncode, cli_meta_no_delivers.stderr))
+os.unlink(_body_meta_no_delivers)
+
+_fd6, _body_meta_clean = _tf.mkstemp(suffix=".md")
+with os.fdopen(_fd6, "w") as _fh:
+    _fh.write("# ac-x4 — a title\ntype: task · priority: 2 · labels: origin:ac-beadify · base: 0000000000000000\n"
+              "\n## Intent\nsomething.\n\n## Acceptance Criteria\n- x.\n  Probe: `test -f /nope.xyz`\n"
+              "\n## Delivers\n- lib/parser.sh\n")
+cli_meta_clean = _run_check([_body_meta_clean])
+check(cli_meta_clean.returncode == 0,
+      "cmd_check CLI: file mode WITH a full meta header (origin present, Delivers present) "
+      "passes clean on those legs",
+      (cli_meta_clean.returncode, cli_meta_clean.stdout, cli_meta_clean.stderr))
+check("file mode skipped: sensitive-prod" in cli_meta_clean.stdout,
+      "cmd_check CLI: file mode names sensitive-prod as skipped on one line even WITH a "
+      "meta header — its own DECISION-blocks count is a board-only dependency-edge lookup",
+      cli_meta_clean.stdout)
+os.unlink(_body_meta_clean)
+
+_fd7, _body_no_meta = _tf.mkstemp(suffix=".md")
+with os.fdopen(_fd7, "w") as _fh:
+    _fh.write("## Acceptance Criteria\n- x.\n  Probe: `test -f /nope.xyz`\n")
+cli_no_meta = _run_check([_body_no_meta])
+check(cli_no_meta.returncode == 0,
+      "cmd_check CLI: file mode with NO meta header still passes clean (origin/Delivers "
+      "legs are skipped, never guessed at)",
+      (cli_no_meta.returncode, cli_no_meta.stdout, cli_no_meta.stderr))
+check("file mode skipped: origin/refined-human-gate" in cli_no_meta.stdout
+      and "task/feature NO-DELIVERS" in cli_no_meta.stdout
+      and "sensitive-prod" in cli_no_meta.stdout,
+      "cmd_check CLI: file mode with no meta header names ALL three skipped legs on one line",
+      cli_no_meta.stdout)
+os.unlink(_body_no_meta)
+
 print("---")
 print(f"PASS={PASS} FAIL={FAIL}")
 sys.exit(0 if FAIL == 0 else 1)
