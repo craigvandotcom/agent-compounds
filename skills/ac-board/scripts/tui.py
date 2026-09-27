@@ -190,7 +190,7 @@ def on_you_row(mv, w, now, c, plan_mtime):
         glyph, badge = GLYPH.get(rung, "»"), ""
         text = {"pool": lambda: plural(mv.get("pool", 0), "proposal"),
                 "refine-bead": lambda: plural(mv.get("n_unrefined", 0), "bead"),
-                "implement": lambda: plural(mv.get("n_ready", 0), "ready bead"),
+                "implement": lambda: plural(mv.get("n_pick", 0), "ready bead"),
                 "reclaim": lambda: plural(len(mv.get("bead_ids") or []), "bead"),
                 "red-pr": lambda: "red PR"}.get(rung, lambda: mv.get("subject", ""))()
     head = " ".join(x for x in (glyph, mv.get("route"), text) if x)

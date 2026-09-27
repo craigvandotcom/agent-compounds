@@ -97,6 +97,13 @@ def build(T, ROOT, COMPACT):
     if ok:
         try: ready_ids = {r["id"] for r in rows_of(raw)}
         except (ValueError, KeyError, TypeError) as e: failed.append(f"br_call ready: {e}")
+    # `ready` is br's view; the swarm takes only what pick.sh would pick (no device, premise-failed,
+    # held or gated bead) — IDLE and the implement rung count that, so NEXT never sends a swarm to a dry pool.
+    n_pick = None
+    raw, ok = read("pick", "pick.sh --count")
+    if ok:
+        try: n_pick = int(raw.strip())
+        except ValueError: failed.append(f"pick.sh --count: not a count: {raw.strip()[:30]!r}")
 
     # The jsonl is the only source of edges, holders and closure dates.
     recs = jsonl = None
@@ -216,9 +223,12 @@ def build(T, ROOT, COMPACT):
             return "UNKNOWN", "? unknown — agent roster unreadable", [f"{n_ready} ready", f"{n_ip} in progress"]
         if held:
             return "RUNNING", "✅ RUNNING — agents are building", [f"{len(held)} working", f"{n_ready} ready"] + you
-        if n_ready:
-            return "IDLE", "🥵 IDLE — work waiting, no agent on it", [f"{n_ready} ready"] + you
-        rest = ([f"{n_unref} unrefined"] if n_unref else  # the lead cause only
+        if n_ready and n_pick is None:
+            return "UNKNOWN", "? unknown — the pick count failed", [f"{n_ready} ready"]
+        if n_pick:
+            return "IDLE", "🥵 IDLE — work waiting, no agent on it", [f"{n_pick} pickable"] + you
+        rest = ([f"{n_ready} ready, none pickable"] if n_ready else  # the lead cause only
+                [f"{n_unref} unrefined"] if n_unref else
                 [f"{n_blocked} blocked"] if n_blocked else [f"{n_ip} unclaimed"] if n_ip else [])
         if n_gates: return "STUCK", "⛔ STUCK — waiting on you", [plural(n_gates, "gate")] + rest
         if live: return "STUCK", "⛔ STUCK — nothing can move", rest
@@ -364,9 +374,13 @@ def build(T, ROOT, COMPACT):
                       "subject": f"reclaim {plural(len(unclaimed_ids), 'unclaimed bead')}",
                       "detail": ", ".join(unclaimed_ids[:3]), "route": "/ac-tidy"}))
         if v_line.startswith("🥵"):
-            m.append(((rank("implement"),), {"rung": "implement", "n_ready": n_ready,
-                      "subject": plural(n_ready, "ready bead"), "detail": "no agent taking them",
+            m.append(((rank("implement"),), {"rung": "implement", "n_pick": n_pick,
+                      "subject": plural(n_pick, "ready bead"), "detail": "no agent taking them",
                       "route": "/ac-implement"}))
+        elif n_ready and n_pick == 0:  # the implement slot, but no swarm can take them
+            m.append(((rank("implement"),), {"rung": "implement", "n_pick": 0,
+                      "subject": f"{n_ready} ready, none pickable", "detail": "device · premise-failed · held",
+                      "route": "/ac-human"}))
         def parent_epic(bid):
             return next((rec(d["depends_on_id"]).get("title") for d in rec(bid).get("dependencies") or []
                          if d.get("type") == "parent-child" and rec(d["depends_on_id"]).get("issue_type") == "epic"), None)

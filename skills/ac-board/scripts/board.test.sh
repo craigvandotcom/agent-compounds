@@ -14,10 +14,12 @@ W=$(mktemp -d); trap 'rm -rf "$W"' EXIT
 # put <dir> <read> <rc> <stdout> — one read's result files
 put() { printf '%s' "$4" >"$1/$2.out"; : >"$1/$2.err"; echo "$3" >"$1/$2.rc"; }
 
-# fixture <name> <br-list-json> <br-ready-json> <jsonl> <roster> — a reads dir + project root
+# fixture <name> <br-list-json> <br-ready-json> <jsonl> <roster> [pick-count] — a reads dir + project root
+# The pick count defaults to the refined beads in the ready json: every one of them pickable.
 fixture() {
   local d="$W/$1"; mkdir -p "$d/reads" "$d/repo/.beads"
   put "$d/reads" beads 0 "$2"; put "$d/reads" ready 0 "$3"
+  put "$d/reads" pick 0 "${6:-$(grep -o '"refined"' <<<"$3" | wc -l)}"
   printf '%s\n' "$4" >"$d/repo/.beads/issues.jsonl"
   put "$d/reads" roster 0 "$(printf '#mail\tup\n%s' "$5")"
   put "$d/reads" docket 0 "docket-health: 1 open human-gate · 0 reason-less · plan-gap: 0 · gate-incomplete: 0"
@@ -88,6 +90,16 @@ check starved "NEXT names the ready work"      '^1\. 1 ready bead$'
 check starved "and routes to implement"        '^   → /ac-implement$'
 fixture idlelive "[$READY]" "[$READY]" "$READY" "$LIVE"
 check idlelive "a live agent holding nothing is idle" '^🥵 IDLE'
+
+# Ready but none pickable (device, PREMISE-FAILED, held): not IDLE, and no swarm is sent.
+fixture blind "[$READY]" "[$READY]" "$READY" "" 0
+check blind "not idle when the pick pool is dry" '^⛔ STUCK — nothing can move$'
+check blind "NEXT names the ready-but-unpickable" "^1\. 1 ready, none pickable$"
+check blind "and routes it to a human"         "^   → /ac-human$"
+check blind "never routes to implement"          '/ac-implement' absent
+fixture pickfail "[$READY]" "[$READY]" "$READY" ""
+put "$W/pickfail/reads" pick 2 ""; echo "NOT-GATED: br ready failed" >"$W/pickfail/reads/pick.err"
+check pickfail "a failed pick count is unknown"  '^\? unknown — the pick count failed$'
 
 # EMPTY: nothing open at all.
 fixture empty '[]' '[]' '' ""

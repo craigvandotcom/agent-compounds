@@ -88,6 +88,7 @@ if [ "$COMPACT" = 0 ]; then
 fi
 job triage  5 "'$SKILLS/ac-triage/scripts/triage-gate.sh' --status"
 job roster 15 "python3 '$SKILLS/_tools/agent-roster.py'"   # compact too: the verdict needs live agents
+job pick   15 "bash '$SKILLS/ac-implement/scripts/pick.sh' --count"   # the verdict counts what a swarm would take
 wait
 
 if [ -n "${AC_BOARD_CACHE:-}" ]; then  # keep fresh network answers; a failure is never cached
