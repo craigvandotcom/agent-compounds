@@ -1,10 +1,11 @@
 # approval-brief.md — the provisional and final shapes ac-plan renders
 
 `ac-plan/SKILL.md`'s provisional-approval step and its final-approval step both render a shape
-from this one file — one producer, two shapes, never a separate text for either gate.
-`ac-human/references/action-loop.md`'s 🟡 Plan tap renders whichever shape a plan is at when it
-shows the plan for review. OUT: the `AskUserQuestion` wiring itself (a separate bead); this
-file is only what each brief contains and where each line comes from.
+from this one file — the one producer, two shapes, never a separate text for either gate.
+`ac-human/references/action-loop.md`'s 🟡 Plan tap never renders either shape itself: it offers
+"Continue planning?" and hands the plan back to `/ac-plan`, which renders whichever shape the
+plan's own keys select. OUT: the `AskUserQuestion` wiring itself (a separate bead); this file
+is only what each brief contains and where each line comes from.
 
 **If a brief does not fit one screen, the plan is too big — never the brief too short.** A
 brief that needs scrolling to show what approval commits to has already lost the human's
