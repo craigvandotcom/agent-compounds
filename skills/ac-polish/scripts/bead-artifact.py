@@ -28,9 +28,13 @@ A human-gate bead never carries `refined` (a ruled exemption) and the sweep skip
 never miscounting it as a refusal. Any OTHER sweep refusal now fails the whole writeback
 (non-zero exit) — a refusal inside the sweep is the gate working, not a silent pass.
 
-Export certifies through `skills/_tools/bead.py check` before a bead is written into the
-artifact — the one refusing command for every measurable bead rule. Fail-closed: bead.py
-missing, unrunnable, or crashing is NOT-GATED, never read as a pass.
+Export runs `skills/_tools/bead.py check` on every id — the one refusing command for every
+measurable bead rule — but polish is the repair lane: a REFUSED verdict no longer blocks the
+export. The bead is written anyway, and its refusal lines land as `<!-- CHECK: ... -->`
+comments in the block's header, ignored by writeback and never landed into the description
+(ac-m9y4.8 gated the whole set; a repair lane cannot be refused into the one tool that repairs
+it). Fail-closed still holds for a check that could not RUN: bead.py missing, unrunnable, or
+crashing is NOT-GATED and aborts the whole export, writing nothing.
 
 The dry run walks the same branches as the write and withholds only the `br` call. A dry run
 that skips a branch cannot gate it.
@@ -69,6 +73,11 @@ import bead  # noqa: E402
 BEAD_PY = os.path.join(_TOOLS_DIR, "bead.py")
 
 DELIM = re.compile(r"<!-- BEAD:([^ ]+) -->\n(.*?)\n<!-- /BEAD:\1 -->", re.S)
+
+# A `bead.py check` REFUSED verdict lands in the block's header as one or more of these —
+# never in the description, and never counted toward `base:` (computed from the live bead,
+# not the artifact). `parse()` strips them on the way back in.
+CHECK_LINE = re.compile(r"^<!--\s*CHECK:.*-->\s*$")
 
 # `## Consumes` is one `- <blocker-id> -> <artifact>` per line or the single word `none`
 # (bead-schema.md), and every line pairs with a dependency edge. The unicode arrow is
@@ -197,15 +206,23 @@ def cmd_export(args):
         code, msg = certify(bead_id)
         if code == 2:
             die(2, f"NOT-GATED — bead.py could not certify {bead_id}: {msg}")
-        if code == 1:
-            failed.append((bead_id, f"bead.py check refused — {msg}"))
-            continue
+        # A REFUSED (code 1) verdict is NOT a reason to withhold the bead — polish is the
+        # repair lane, and the beads `bead.py check` refuses are exactly the ones a repair
+        # round must be able to take. Record the refusal in the block header (never the
+        # description, never `base:`) and write the bead anyway; only NOT-GATED (above)
+        # still aborts the whole export.
         labels = ",".join(d.get("labels") or []) or "none"
-        blocks += [
+        header = [
             f"<!-- BEAD:{bead_id} -->",
             f"# {bead_id} — {d.get('title', '')}",
             f"type: {d.get('issue_type')} · priority: {d.get('priority')} · labels: {labels}"
             f" · base: {base_digest(d)}",
+        ]
+        if code == 1:
+            print(f"bead-artifact: CHECK REFUSED {bead_id} — {msg}", file=sys.stderr)
+            header.append("<!-- CHECK: REFUSED -->")
+            header += [f"<!-- CHECK: {line} -->" for line in (msg or "").splitlines() or [""]]
+        blocks += header + [
             "",
             (d.get("description") or "").rstrip(),
             "",
@@ -239,7 +256,14 @@ def parse(path):
                    "the artifact is malformed and nothing was written.")
         head = lines[0][2:]
         title = head.split(" — ", 1)[1] if " — " in head else head
-        desc = "\n".join(lines[2:]).strip() + "\n"
+        rest = lines[2:]
+        # A REFUSED export leaves `<!-- CHECK: ... -->` lines directly after the meta line
+        # (header area, before the blank line + description) — writeback ignores them; they
+        # must never land in the description it writes back.
+        i = 0
+        while i < len(rest) and CHECK_LINE.match(rest[i]):
+            i += 1
+        desc = "\n".join(rest[i:]).strip() + "\n"
         out.append((bead_id, title, desc))
     if not out:
         die(2, f"NOT-GATED — no BEAD blocks found in {path}")

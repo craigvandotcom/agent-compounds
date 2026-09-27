@@ -8,7 +8,7 @@ what bead mode binds, and it is a MANDATORY load for a bead run.
 | knob | bead mode |
 | --- | --- |
 | **TARGET** | the epic id |
-| **ARTIFACT** | the epic plus its OPEN children, exported to one file by `scripts/bead-artifact.py export --ids <epic>,<open children>` — export certifies each id through `bead.py check` before writing it into the artifact. Never a closed bead: a closed description is the record of what shipped, and export REFUSES a closed id (see § Scope) |
+| **ARTIFACT** | the epic plus its OPEN children, exported to one file by `scripts/bead-artifact.py export --ids <epic>,<open children>` — export runs `bead.py check` on each id; a REFUSED verdict still exports, as `CHECK:` lines (polish is the repair lane) — only NOT-GATED aborts. Never a closed bead: a closed description is the record of what shipped, and export REFUSES a closed id (see § Scope) |
 | **CHECKLIST** | `references/bead-checklist.md` |
 | **VALIDATE** | `skills/_tools/element4-check.sh` over every bead in the artifact (the AC-bullet probe-coverage leg) PLUS `python3 skills/_tools/bead.py check <description-file>` per bead — touchers freshness, Consumes validity, Delivers symlink safety, origin/refined-vs-human-gate, sensitive-prod; either RED blocks the round from recording |
 | **READERS** | ONE `coordinator` per round — it applies its own edits and must fix a VALIDATE RED itself, so it needs judgment tier AND the Edit tool; `references/reader-prompt.md` verbatim |

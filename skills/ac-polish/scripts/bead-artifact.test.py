@@ -23,6 +23,7 @@ stamp-refined.sh, whose writes are the other gate's to make.
 
 Exit 0 = all cases pass.
 """
+import argparse
 import importlib.util
 import json
 import os
@@ -350,22 +351,77 @@ if r.returncode == 1 and "unresolved Consumes placeholder" in r.stderr \
 else:
     fail("export placeholder", f"rc={r.returncode}\n{r.stdout}{r.stderr}")
 
-# The exporter certifies through bead.py check before it writes: a bead whose Consumes names
-# an artifact that is absent from the tree and unpromised by its blocker's own Delivers is a
-# bead.py REFUSED, and the exporter must refuse the id too — before export-open ever proved
-# the CLEAN path (ac-t1 above already exercises the OK leg of the same certify() call).
+# Polish is the repair lane: a `bead.py check` REFUSED (a bead whose Consumes names an
+# artifact absent from the tree and unpromised by its blocker's own Delivers) must still be
+# EXPORTED — those are exactly the beads a repair round has to take (ac-m9y4.8 gated the
+# whole set; that refused the repair lane out of its own tool). The refusal lands as
+# `<!-- CHECK: ... -->` header comments, never in the description (ac-t1 above already
+# exercises the OK leg of the same certify() call, with no CHECK lines at all).
 BADCONSUMES = bead("ac-t10", "tenth", [])
 BADCONSUMES["description"] = "## Consumes\n- ac-t1 -> `nonexistent/path/that/does/not/exist.md`\n"
 write(os.path.join(FIX, "ac-t10.json"), json.dumps(BADCONSUMES))
 OUTDIR4 = os.path.join(W, "export-certify-refused")
 r = subprocess.run([sys.executable, SCRIPT, "export", "--out", OUTDIR4, "--ids", "ac-t10"],
                    capture_output=True, text=True, cwd=W, env=ENV)
-if r.returncode == 1 and "bead.py check refused" in (r.stdout + r.stderr) \
-        and not os.path.exists(os.path.join(OUTDIR4, "artifact.md")):
-    ok("export: bead.py check REFUSED (an unresolvable Consumes artifact) refuses that id, "
-       "no artifact written")
+ARTIFACT4_PATH = os.path.join(OUTDIR4, "artifact.md")
+artifact4 = read(ARTIFACT4_PATH) if os.path.exists(ARTIFACT4_PATH) else ""
+if r.returncode == 0 and "CHECK REFUSED ac-t10" in (r.stdout + r.stderr) \
+        and "<!-- CHECK: REFUSED -->" in artifact4 \
+        and "<!-- CHECK: bead.py check: REFUSED ac-t10" in artifact4 \
+        and "<!-- BEAD:ac-t10 -->" in artifact4:
+    ok("export: bead.py check REFUSED still exports the bead, with CHECK lines recording "
+       "the refusal in the block header")
 else:
-    fail("export certify refused", f"rc={r.returncode}\n{r.stdout}{r.stderr}")
+    fail("export certify refused -> CHECK lines",
+         f"rc={r.returncode}\n{r.stdout}{r.stderr}\n{artifact4[:500]}")
+if "## Consumes" in artifact4 and "<!-- CHECK:" not in artifact4.split("## Consumes", 1)[1]:
+    ok("export: the CHECK lines sit in the header, never inside the description body")
+else:
+    fail("CHECK lines leaked into description", artifact4[:500])
+
+# NOT-GATED (bead.py missing/crashing) is the ONLY check outcome that still aborts export
+# whole — writing nothing, even for the first (otherwise clean) id in the set. Exercised
+# in-process (BEAD_PY is deliberately not env-overridable) with the board stub wired the
+# same way the subprocess tests use it.
+_CWD_BEFORE, _ENV_BEFORE = os.getcwd(), dict(os.environ)
+os.chdir(W)
+os.environ["PATH"] = BIN + os.pathsep + _ENV_BEFORE.get("PATH", "")
+os.environ["BR_LOG"] = LOG
+os.environ["BR_FIXTURES"] = FIX
+write(LOG, "")
+_BEAD_PY_BEFORE = ba.BEAD_PY
+ba.BEAD_PY = os.path.join(W, "no-such-bead.py")
+OUTDIR_NG = os.path.join(W, "export-not-gated")
+try:
+    ba.cmd_export(argparse.Namespace(out=OUTDIR_NG, ids="ac-t1"))
+    fail("export NOT-GATED", "cmd_export returned instead of exiting 2")
+except SystemExit as exc:
+    if exc.code == 2 and not os.path.exists(os.path.join(OUTDIR_NG, "artifact.md")):
+        ok("export: NOT-GATED (bead.py unusable) still aborts the whole export, writing "
+           "nothing — the one refusal a repair lane cannot take")
+    else:
+        fail("export NOT-GATED", f"code={exc.code}")
+finally:
+    ba.BEAD_PY = _BEAD_PY_BEFORE
+    os.chdir(_CWD_BEFORE)
+    os.environ.clear()
+    os.environ.update(_ENV_BEFORE)
+
+# writeback round-trip: a REFUSED bead's CHECK lines must be stripped on the way back in —
+# they must never land in the description br update writes.
+ART10 = os.path.join(W, "artifact-refused-roundtrip.md")
+write(ART10, artifact4)
+rc, out, log = run_writeback("--apply", artifact=ART10)
+upd10 = [ln for ln in log if ln.startswith("update ac-t10 ")]
+if rc == 0 and upd10 and "WROTE ac-t10" in out:
+    ok("writeback: a REFUSED-export artifact still writes back cleanly (--apply exits 0)")
+else:
+    fail("writeback refused roundtrip rc", f"rc={rc}\n{out}\nlog={log}")
+desc10 = ba.parse(ART10)[0][2]
+if "<!-- CHECK:" not in desc10 and "REFUSED" not in desc10:
+    ok("writeback: parse() strips the CHECK lines — none reach the description it writes back")
+else:
+    fail("CHECK lines reached parsed description", desc10)
 
 # certify(): fail-closed when bead.py is missing or crashes (ac-m9y4.8) — neither is ever
 # read as a pass. Direct in-process calls: both legs return before ever touching a board.
