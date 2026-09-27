@@ -18,7 +18,7 @@ commit it "on their behalf".
 **Branch rule:** Agents never create, switch, delete, merge into, or rebase onto another
 branch. Finishing or integrating the current branch's own upstream is allowed
 (`pull --rebase`, `rebase --continue|--skip|--abort`). If the branch has no upstream yet,
-skip the pull and publish it with `git push -u origin HEAD`.
+skip the pull and publish it with `push.sh --branch <name>` (skills/ac-pipeline/scripts/push.sh).
 
 ---
 
@@ -115,14 +115,11 @@ printf '%s\n' 'app/(auth)/login/page.tsx' 'app/(protected)/app/page.tsx' \
 git commit -m "..." --pathspec-from-file=/tmp/pathspec-$$.txt
 rm -f /tmp/pathspec-$$.txt
 
-# 3. Push (commit = push under trunk-direct)
-if [ -n "$UPSTREAM" ]; then
-  git push --no-verify origin HEAD
-else
-  git push -u origin HEAD
-fi
-git rev-parse HEAD
-git ls-remote origin "refs/heads/$BRANCH"   # must match
+# 3. Push — commit often; push only through the push layer, never a bare `git push`.
+#    push.sh owns the fetch+merge, the repo's whole-tree checks, the push, and the
+#    post-push quality-gate dispatch (skills/ac-pipeline/scripts/push.sh) — first publish
+#    of a new branch goes through it the same way.
+bash skills/ac-pipeline/scripts/push.sh --branch "$BRANCH"
 ```
 
 ---
@@ -168,10 +165,10 @@ Cheapest first — stop at the first that applies. **Never an unscoped `git stas
    if git rev-parse --verify --quiet '@{upstream}' >/dev/null; then
      git fetch origin
      if [ "$(git rev-parse HEAD)" = "$(git rev-parse '@{upstream}')" ]; then
-       git push --no-verify origin HEAD
+       bash skills/ac-pipeline/scripts/push.sh --branch "$(git symbolic-ref --short HEAD)"
      fi
    else
-     git push -u origin HEAD
+     bash skills/ac-pipeline/scripts/push.sh --branch "$(git symbolic-ref --short HEAD)"
    fi
    ```
 
@@ -181,10 +178,10 @@ Cheapest first — stop at the first that applies. **Never an unscoped `git stas
      git fetch origin
      BEHIND=$(git rev-list --count "HEAD..@{upstream}")
      if [ "$BEHIND" = "0" ]; then
-       git push --no-verify origin HEAD
+       bash skills/ac-pipeline/scripts/push.sh --branch "$(git symbolic-ref --short HEAD)"
      fi
    else
-     git push -u origin HEAD
+     bash skills/ac-pipeline/scripts/push.sh --branch "$(git symbolic-ref --short HEAD)"
    fi
    # Unstaged foreign files do NOT block a fast-forward push of YOUR commit.
    ```
@@ -196,9 +193,9 @@ Cheapest first — stop at the first that applies. **Never an unscoped `git stas
    git reset HEAD -- path/that/is/foreign
    if git rev-parse --verify --quiet '@{upstream}' >/dev/null; then
      git merge '@{upstream}'
-     git push --no-verify origin HEAD
+     bash skills/ac-pipeline/scripts/push.sh --branch "$(git symbolic-ref --short HEAD)"
    else
-     git push -u origin HEAD
+     bash skills/ac-pipeline/scripts/push.sh --branch "$(git symbolic-ref --short HEAD)"
    fi
    ```
 
@@ -256,8 +253,11 @@ this path).
 ## Rules
 
 - Pathspec-limited commits for every trunk-direct agent commit (H7d).
-- `--no-verify` on push is deliberate (pre-push full-tree build false-positives on
-  foreign WIP); real verification is the per-commit gate + post-push CI.
+- Commit often with fast, scoped checks; push only through the push layer
+  (`skills/ac-pipeline/scripts/push.sh`) — never a bare `git push`. The push layer runs the
+  repo's own whole-tree checks before it pushes, so `--no-verify` is retired: there is no
+  false-positive to dodge when the check that runs is scoped to the tree actually being
+  pushed, not a neighbour's uncommitted WIP.
 - Never force-push `main`.
 - `--force-with-lease` on a NON-main working branch (e.g. a pre-PR wave-branch push) is the sanctioned exception — branch-scoped only, never `main`.
 - Never an unscoped stash (a bare `git stash` with no pathspec). Never `git add -A`.

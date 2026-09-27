@@ -63,6 +63,6 @@ if [ -f "/tmp/loop-retro-${RUN_ID}.md" ]; then
   cp "/tmp/loop-retro-${RUN_ID}.md" "$DEST/loop-retro-${RUN_ID}.md"
   git add "$DEST/loop-retro-${RUN_ID}.md"
   git commit -m "ac-land: preserve raw friction carrier — RUN ${RUN_ID}" -- "$DEST/loop-retro-${RUN_ID}.md"
-  git push origin "HEAD:$TRUNK" || { git pull --rebase && git push origin "HEAD:$TRUNK"; }
+  bash skills/ac-pipeline/scripts/push.sh --branch "$TRUNK"
 fi
 ```

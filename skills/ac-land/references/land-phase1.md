@@ -100,12 +100,13 @@ Co-Authored-By: Claude <noreply@anthropic.com>"
 Only commit if there are uncommitted changes (cleanup, format fixes, etc.).
 
 ```bash
-git pull --rebase
-git push
+bash skills/ac-pipeline/scripts/push.sh
 git status   # Must show "up to date with origin"
 ```
 
-**If push fails:** Resolve and retry. Do not proceed until pushed.
+**If push.sh refuses:** it names the failure (dirty tree, a whole-tree check, a merge
+conflict, or a rejected push) and NEXT: fix-forward. Resolve what it names and re-run;
+never a bare `git push`. Do not proceed until pushed.
 
 **No full-suite CI fire here.** ac-land's job here is done once `main` is pushed and up to date:
 no CI dispatch, nothing to wait on.

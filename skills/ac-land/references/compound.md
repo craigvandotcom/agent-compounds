@@ -174,7 +174,7 @@ git commit -m "skill-hotfix: compound learnings + applied N system upgrades from
 Co-Authored-By: Claude <noreply@anthropic.com>"
 # Routine / no-upgrade case (compound + reflect saves only, no hatch apply):
 #   git commit -m "chore: compound learnings from bead-work session ..."
-git push
+bash skills/ac-pipeline/scripts/push.sh
 ```
 
 Advisory (not mandated): you MAY commit the Apply-Approved-Upgrades edits SEPARATELY from

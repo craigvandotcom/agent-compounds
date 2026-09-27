@@ -66,21 +66,12 @@ fails the entire gate ~10 min in; auto-fixing locally makes that impossible.
 If checks fail, revert the breaking fix and note it as non-auto-fixable.
 
 Then commit the round's fixes **directly to the run's branch** (trunk-direct — no hygiene branch;
-small, revert-friendly, pathspec-limited commits) and **push immediately** (commit = push;
-there is no branch holding the work safe in the interim):
+small, revert-friendly, pathspec-limited commits), then push — commit often, push only
+through the push layer, never a bare `git push`:
 
 ```bash
-if git rev-parse --verify --quiet '@{upstream}' >/dev/null; then
-  git pull --rebase
-fi
 git commit -m "chore(hygiene): round {CURRENT_ROUND} — {short summary}" -- <specific files>
-if git rev-parse --verify --quiet '@{upstream}' >/dev/null; then
-  git push --no-verify origin HEAD
-else
-  git push -u origin HEAD
-fi
-git rev-parse HEAD
-git ls-remote origin "refs/heads/$(git branch --show-current)"   # confirm the SHAs match after every push
+bash skills/ac-pipeline/scripts/push.sh --branch "$(git branch --show-current)"
 ```
 
 > **Pathspec commits, never `git add -A`.** Use the `git commit -- <files>` form limited to the
@@ -89,14 +80,12 @@ git ls-remote origin "refs/heads/$(git branch --show-current)"   # confirm the S
 > your hygiene commit and misattributes it (`ac-implement` Phase 0 H7d). New (untracked)
 > files need `git add <file>` first, then the pathspec commit of exactly that path.
 
-> **Commit WITHOUT `--no-verify`; push WITH it.** The pre-commit hook runs `lint-staged`
-> (prettier `--write` + eslint `--fix`) on your staged files and re-stages them — the cheap
-> auto-format net that stops formatting-class CI failures; never bypass it on a commit.
-> `--no-verify` is for the **push** only — under trunk-direct the heavy pre-push `pnpm build`
-> reads the whole working tree and another session's uncommitted WIP can false-positive it
-> (swallowing the push), so real verification for state you don't own comes from the round gate
-> above plus post-push CI. **Race handling:** if `git push` collides, `git pull --rebase` and
-> re-push — never force-push over another session's committed work.
+> **`push.sh` owns the fetch, the merge, and the push.** It refuses a dirty tracked tree
+> (naming the file), brings origin in with a merge — never a rebase, so an existing commit
+> never changes identity — runs this repo's own whole-tree checks, and only then pushes. There
+> is no `--no-verify` to reach for: the check that runs is scoped to the tree just committed,
+> not a neighbour's uncommitted WIP. A refusal names the failure; fix what it names and re-run
+> — never a blind retry, never a force-push over another session's committed work.
 
 **Defer remaining findings (DO NOT ask user per-round):**
 
