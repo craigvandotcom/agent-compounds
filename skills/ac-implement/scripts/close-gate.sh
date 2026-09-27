@@ -347,7 +347,7 @@ cascade_holds() {
   local lines line blocker bnode bstatus bclose detail="" full
   CONSUMES_CLOSED=0; CONSUMES_DISPO=0
   lines=$(awk '/^## /{ inb = ($0 ~ "^## Consumes([[:space:]]|$)") ? 1 : 0; next }
-                inb { print }' "$BODY" | sed 's/^[[:space:]]*-[[:space:]]*//' | grep -v '^[[:space:]]*$')
+                inb { print }' "$BODY" | sed 's/^[[:space:]]*-[[:space:]]*//; s/→/->/g' | grep -v '^[[:space:]]*$')
   if [ -z "$lines" ]; then
     CONSUMES_CLOSED=1; CONSUMES_DISPO=1; return 0
   fi

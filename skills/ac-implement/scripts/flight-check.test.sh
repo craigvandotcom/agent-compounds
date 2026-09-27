@@ -168,6 +168,14 @@ run "$WORK/bodies/consumes-home-absent.md" HOME="$WORK/home"
   && ok "CONSUMES still refuses an absent ~/ path, named where it was looked for" \
   || bad "CONSUMES(home-absent): expected refusal naming the expanded path, got rc=$RUN_RC: $RUN_OUT"
 
+# 2a''' A Consumes line written with `→` is the same premise as `->`: its open blocker refuses.
+printf '## Acceptance Criteria\n- Something.\n  Probe: `test -e ./nope.md` — tier: none\n\n## Consumes\n- ac-parent-epic → the scaffold\n' \
+  >"$WORK/bodies/consumes-arrow.md"
+run "$WORK/bodies/consumes-arrow.md"
+[ "$RUN_RC" -eq 1 ] && printf '%s' "$RUN_OUT" | grep -q "blocker 'ac-parent-epic' is 'open'" \
+  && ok "CONSUMES reads a → line and refuses its open blocker" \
+  || bad "CONSUMES(arrow): expected open-blocker refusal, got rc=$RUN_RC: $RUN_OUT"
+
 # A parent-child citation is containment, not a closure premise. The schema forbids the
 # citation, but flight-check must not deadlock a legacy/malformed child if one survives.
 cat >"$WORK/bodies/consumes-parent.md" <<'BODY'

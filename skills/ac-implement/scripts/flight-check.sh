@@ -216,7 +216,7 @@ consumed_paths() {
   done
 }
 
-CONSUMES=$(section "Consumes" | sed 's/^[[:space:]]*-[[:space:]]*//' | grep -v '^[[:space:]]*$')
+CONSUMES=$(section "Consumes" | sed 's/^[[:space:]]*-[[:space:]]*//; s/→/->/g' | grep -v '^[[:space:]]*$')
 CONSUME_LINES=0
 BEAD_PARENT=""
 BEAD_PARENT_READ=0
