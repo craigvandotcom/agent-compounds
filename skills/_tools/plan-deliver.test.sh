@@ -261,7 +261,7 @@ printf 'test: ignored-path refusal\n\nnothing should land.\n' >"$W/a3-msg.txt"
 HEAD_BEFORE=$(cd "$G" && git rev-parse HEAD)
 BRANCH_NOW=$(cd "$G" && git branch --show-current)
 ( cd "$G" && bash "$COMMIT" --identity test-worker --message-file "$W/a3-msg.txt" \
-    --path ignored/plan.md --no-push --branch "$BRANCH_NOW" >/dev/null 2>&1 )
+    --path ignored/plan.md --branch "$BRANCH_NOW" >/dev/null 2>&1 )
 COMMIT_RC=$?
 HEAD_AFTER=$(cd "$G" && git rev-parse HEAD)
 if [ "$COMMIT_RC" -ne 0 ] && [ "$HEAD_BEFORE" = "$HEAD_AFTER" ]; then

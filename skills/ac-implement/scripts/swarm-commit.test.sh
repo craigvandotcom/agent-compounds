@@ -52,35 +52,35 @@ new_repo() {
 
 # --- 1. refusal: no identity ---------------------------------------------------------------
 R="$(new_repo no-identity)"
-out="$(cd "$R" && "$LANE" --message-file msg.txt --path mine.txt --no-push 2>&1)"; rc=$?
+out="$(cd "$R" && "$LANE" --message-file msg.txt --path mine.txt 2>&1)"; rc=$?
 if [ "$rc" -eq 3 ] && printf '%s' "$out" | grep -q 'REFUSED \[no-identity\]'; then
   pass "refuses without an explicit identity, naming no-identity"
 else fail "no-identity: rc=$rc out=$out"; fi
 
 # The ambient AGENT_NAME must NOT satisfy it — that static fallback is the measured scar.
-out="$(cd "$R" && AGENT_NAME=FoggyCreek "$LANE" --message-file msg.txt --path mine.txt --no-push 2>&1)"; rc=$?
+out="$(cd "$R" && AGENT_NAME=FoggyCreek "$LANE" --message-file msg.txt --path mine.txt 2>&1)"; rc=$?
 if [ "$rc" -eq 3 ] && printf '%s' "$out" | grep -q 'REFUSED \[no-identity\]'; then
   pass "an ambient AGENT_NAME does not count as identity"
 else fail "ambient AGENT_NAME accepted as identity: rc=$rc out=$out"; fi
 
 # --- 2. refusal: inline message ------------------------------------------------------------
-out="$(cd "$R" && "$LANE" --identity t -m "inline body" --path mine.txt --no-push 2>&1)"; rc=$?
+out="$(cd "$R" && "$LANE" --identity t -m "inline body" --path mine.txt 2>&1)"; rc=$?
 if [ "$rc" -eq 3 ] && printf '%s' "$out" | grep -q 'REFUSED \[inline-message\]'; then
   pass "refuses an inline -m message, naming inline-message"
 else fail "inline-message: rc=$rc out=$out"; fi
 
 # --- 3. refusal: unscoped pathspec ---------------------------------------------------------
 for bad in "." ":/" "mine.*"; do
-  out="$(cd "$R" && "$LANE" --identity t --message-file msg.txt --path "$bad" --no-push 2>&1)"; rc=$?
+  out="$(cd "$R" && "$LANE" --identity t --message-file msg.txt --path "$bad" 2>&1)"; rc=$?
   if [ "$rc" -eq 3 ] && printf '%s' "$out" | grep -q 'REFUSED \[unscoped-pathspec\]'; then
     pass "refuses unscoped path '$bad', naming unscoped-pathspec"
   else fail "unscoped-pathspec '$bad': rc=$rc out=$out"; fi
 done
-out="$(cd "$R" && "$LANE" --identity t --message-file msg.txt --no-push 2>&1)"; rc=$?
+out="$(cd "$R" && "$LANE" --identity t --message-file msg.txt 2>&1)"; rc=$?
 if [ "$rc" -eq 3 ] && printf '%s' "$out" | grep -q 'REFUSED \[unscoped-pathspec\]'; then
   pass "refuses with no --path at all, naming unscoped-pathspec"
 else fail "no-path: rc=$rc out=$out"; fi
-out="$(cd "$R" && "$LANE" --identity t --message-file msg.txt -A --no-push 2>&1)"; rc=$?
+out="$(cd "$R" && "$LANE" --identity t --message-file msg.txt -A 2>&1)"; rc=$?
 if [ "$rc" -eq 3 ] && printf '%s' "$out" | grep -q 'REFUSED \[unscoped-pathspec\]'; then
   pass "refuses a whole-tree flag, naming unscoped-pathspec"
 else fail "whole-tree flag: rc=$rc out=$out"; fi
@@ -103,7 +103,7 @@ git -C "$R" commit -qm seed-routes
 printf 'route v2\n' >"$R/app/foods/[id]/page.tsx"
 printf 'sib v2\n'   >"$R/app/foods/d/page.tsx"
 
-out="$(cd "$R" && "$LANE" --identity t --message-file msg.txt --path "app/foods/[id]/page.tsx" --no-push 2>&1)"; rc=$?
+out="$(cd "$R" && "$LANE" --identity t --message-file msg.txt --path "app/foods/[id]/page.tsx" 2>&1)"; rc=$?
 if [ "$rc" -eq 0 ]; then
   pass "accepts a literal bracket path that exists as a regular file"
 else fail "bracket path refused: rc=$rc out=$out"; fi
@@ -115,13 +115,13 @@ if [ "$(git -C "$R" show "HEAD:app/foods/d/page.tsx" 2>/dev/null)" = "sib v1" ];
 else fail "sibling swept in by glob expansion: '$(git -C "$R" show "HEAD:app/foods/d/page.tsx" 2>&1)'"; fi
 
 # A genuine glob is still refused: brackets alone buy nothing, EXISTENCE is the whole test.
-out="$(cd "$R" && "$LANE" --identity t --message-file msg.txt --path "app/foods/[xy].tsx" --no-push 2>&1)"; rc=$?
+out="$(cd "$R" && "$LANE" --identity t --message-file msg.txt --path "app/foods/[xy].tsx" 2>&1)"; rc=$?
 if [ "$rc" -eq 3 ] && printf '%s' "$out" | grep -q 'REFUSED \[unscoped-pathspec\]'; then
   pass "a bracket pattern matching nothing on disk is still refused as unscoped-pathspec"
 else fail "nonexistent bracket pattern accepted: rc=$rc out=$out"; fi
 
 # --- 4. refusal: missing / empty message file ----------------------------------------------
-out="$(cd "$R" && "$LANE" --identity t --message-file nope.txt --path mine.txt --no-push 2>&1)"; rc=$?
+out="$(cd "$R" && "$LANE" --identity t --message-file nope.txt --path mine.txt 2>&1)"; rc=$?
 if [ "$rc" -eq 3 ] && printf '%s' "$out" | grep -q 'REFUSED \[no-message-file\]'; then
   pass "refuses a missing message file, naming no-message-file"
 else fail "no-message-file: rc=$rc out=$out"; fi
@@ -129,7 +129,7 @@ else fail "no-message-file: rc=$rc out=$out"; fi
 # --- 5. refusal: running outside the lock --------------------------------------------------
 # --_locked is the in-lane phase. Invoked directly, no lock is held, and the lane must
 # detect that by PROBING the lock rather than trusting the flag it was handed.
-out="$(cd "$R" && "$LANE" --_locked --identity t --message-file msg.txt --path mine.txt --no-push 2>&1)"; rc=$?
+out="$(cd "$R" && "$LANE" --_locked --identity t --message-file msg.txt --path mine.txt 2>&1)"; rc=$?
 if [ "$rc" -eq 3 ] && printf '%s' "$out" | grep -q 'REFUSED \[outside-lock\]'; then
   pass "refuses a commit taken outside the lock, naming outside-lock"
 else fail "outside-lock: rc=$rc out=$out"; fi
@@ -137,7 +137,7 @@ else fail "outside-lock: rc=$rc out=$out"; fi
 # --- 5b. refusal: placeholder subject/body (fcc88b3 shipped subject "test" / body "body") --
 PR="$(new_repo placeholder)"
 printf 'test\n\nbody\n' >"$PR/placeholder.txt"
-out="$(cd "$PR" && "$LANE" --identity t --message-file placeholder.txt --path mine.txt --no-push 2>&1)"; rc=$?
+out="$(cd "$PR" && "$LANE" --identity t --message-file placeholder.txt --path mine.txt 2>&1)"; rc=$?
 if [ "$rc" -eq 3 ] && printf '%s' "$out" | grep -q 'REFUSED \[placeholder-message\]'; then
   pass "placeholder subject refused (fcc88b3's 'test' / 'body' shape), naming placeholder-message"
 else fail "placeholder-message: rc=$rc out=$out"; fi
@@ -145,7 +145,7 @@ else fail "placeholder-message: rc=$rc out=$out"; fi
 # --- 5c. a short commit of a type outside the usual set is NOT a placeholder ---------------
 PR2="$(new_repo reviewtype)"
 printf 'review(ac-4y7l): batch3 findings\n\nfiled.\n' >"$PR2/review.txt"
-out="$(cd "$PR2" && "$LANE" --identity t --message-file review.txt --path mine.txt --no-push 2>&1)"; rc=$?
+out="$(cd "$PR2" && "$LANE" --identity t --message-file review.txt --path mine.txt 2>&1)"; rc=$?
 if [ "$rc" -eq 0 ]; then
   pass "a short review(scope): subject with a thin body is accepted — any lowercase type prefix is conventional"
 else
@@ -156,7 +156,7 @@ fi
 # the assertion covers a real commit attempt, not just a skipped refusal.
 PR2="$(new_repo placeholder-short-conventional)"
 printf 'fix: bug\n' >"$PR2/short-conventional.txt"
-out="$(cd "$PR2" && "$LANE" --identity t --message-file short-conventional.txt --path mine.txt --no-push 2>&1)"; rc=$?
+out="$(cd "$PR2" && "$LANE" --identity t --message-file short-conventional.txt --path mine.txt 2>&1)"; rc=$?
 if [ "$rc" -eq 0 ]; then
   pass "a short conventional subject is never flagged as a placeholder"
 else fail "short-conventional falsely refused as placeholder: rc=$rc out=$out"; fi
@@ -164,17 +164,18 @@ else fail "short-conventional falsely refused as placeholder: rc=$rc out=$out"; 
 # An unconventional subject with a real explanatory body is never flagged either.
 PR3="$(new_repo placeholder-real-body)"
 printf 'lane docs update\n\nnames the actual failure this commit prevents in enough words\n' >"$PR3/real-body.txt"
-out="$(cd "$PR3" && "$LANE" --identity t --message-file real-body.txt --path mine.txt --no-push 2>&1)"; rc=$?
+out="$(cd "$PR3" && "$LANE" --identity t --message-file real-body.txt --path mine.txt 2>&1)"; rc=$?
 if [ "$rc" -eq 0 ]; then
   pass "an unconventional subject with a real explanatory body is never flagged as a placeholder"
 else fail "real-body falsely refused as placeholder: rc=$rc out=$out"; fi
 
-# --- 6. happy path: commits, scopes, pushes ------------------------------------------------
+# --- 6. happy path: commits and scopes, and never touches the remote -----------------------
 R="$(new_repo happy)"
 printf 'sib v2\n' >"$R/sib.txt"
 git -C "$R" add -- sib.txt                       # a concurrent session's staged work
+before_remote="$(git -C "$R" rev-parse origin/main)"
 out="$(cd "$R" && "$LANE" --identity NightlyOne --message-file msg.txt --path mine.txt 2>&1)"; rc=$?
-if [ "$rc" -eq 0 ]; then pass "commits and pushes through the lane"
+if [ "$rc" -eq 0 ]; then pass "commits through the lane"
 else fail "happy path: rc=$rc out=$out"; fi
 if [ "$(git -C "$R" show HEAD:mine.txt)" = "mine v2" ]; then
   pass "the commit carries our file"
@@ -182,9 +183,9 @@ else fail "commit missing our bytes: $(git -C "$R" show HEAD:mine.txt)"; fi
 if [ "$(git -C "$R" show HEAD:sib.txt)" = "sib v1" ]; then
   pass "the pathspec is on the COMMIT — a sibling's staged file is not published"
 else fail "sibling's staged file was swept into the commit"; fi
-if [ "$(git -C "$R" rev-parse HEAD)" = "$(git -C "$R" rev-parse origin/main)" ]; then
-  pass "the push landed on the remote"
-else fail "push did not land"; fi
+if [ "$(git -C "$R" rev-parse origin/main)" = "$before_remote" ]; then
+  pass "the lane never touches the remote — commit only, the publish step is a separate layer"
+else fail "the remote moved — this lane must never push"; fi
 if git -C "$R" log -1 --format=%B | grep -q "don't truncate me"; then
   pass "an apostrophe in the message file survives intact (-F, never inline -m)"
 else fail "message body truncated: $(git -C "$R" log -1 --format=%B)"; fi
@@ -200,7 +201,7 @@ printf 'mine LINTED\n' > mine.txt
 exit 0
 HOOK
 chmod +x "$R/.git/hooks/pre-commit"
-out="$(cd "$R" && "$LANE" --identity NightlyOne --message-file msg.txt --path mine.txt --no-push 2>&1)"; rc=$?
+out="$(cd "$R" && "$LANE" --identity NightlyOne --message-file msg.txt --path mine.txt 2>&1)"; rc=$?
 if [ "$rc" -eq 0 ] && [ "$(git -C "$R" show HEAD:mine.txt)" = "mine LINTED" ]; then
   pass "post-lint-staged bytes are re-added — the commit carries what lint produced"
 else fail "lint-staged repair: rc=$rc committed='$(git -C "$R" show HEAD:mine.txt)' out=$out"; fi
@@ -211,31 +212,22 @@ else fail "worktree still diverges after repair: $(git -C "$R" status --porcelai
 # --- 8. foreign branch ----------------------------------------------------------------------
 R="$(new_repo foreign-branch)"
 git -C "$R" checkout -q -b someone-elses-branch
-out="$(cd "$R" && "$LANE" --identity t --message-file msg.txt --path mine.txt --no-push 2>&1)"; rc=$?
+out="$(cd "$R" && "$LANE" --identity t --message-file msg.txt --path mine.txt 2>&1)"; rc=$?
 if [ "$rc" -eq 9 ] && printf '%s' "$out" | grep -q 'foreign-branch'; then
   pass "stops on a foreign branch (exit 9) without committing"
 else fail "foreign-branch: rc=$rc out=$out"; fi
 
-# --- 9. push rejected is not fatal -----------------------------------------------------------
-R="$(new_repo push-rejected)"
-out="$(cd "$R" && "$LANE" --identity t --message-file msg.txt --path mine.txt --remote no-such-remote 2>&1)"; rc=$?
-if [ "$rc" -eq 10 ] && printf '%s' "$out" | grep -q 'PUSH_REJECTED'; then
-  pass "a rejected push exits 10 and says so — the commit is still local"
-else fail "push-rejected: rc=$rc out=$out"; fi
-if [ "$(git -C "$R" show HEAD:mine.txt)" = "mine v2" ]; then
-  pass "the local commit survives a rejected push"
-else fail "commit lost on push rejection"; fi
-
-# --- 10. a rejected commit never reaches the push --------------------------------------------
+# --- 10. a rejected commit never lands, and the remote (this lane never touches it anyway)
+# stays put -------------------------------------------------------------------------------
 R="$(new_repo commit-rejected)"
 mkdir -p "$R/.git/hooks"
 printf '#!/bin/sh\necho "guard: foreign reservation" >&2\nexit 1\n' >"$R/.git/hooks/pre-commit"
 chmod +x "$R/.git/hooks/pre-commit"
-before="$(git -C "$R" rev-parse origin/main)"
+before_head="$(git -C "$R" rev-parse HEAD)"
 out="$(cd "$R" && "$LANE" --identity t --message-file msg.txt --path mine.txt 2>&1)"; rc=$?
-if [ "$rc" -eq 5 ] && [ "$(git -C "$R" rev-parse origin/main)" = "$before" ]; then
-  pass "a guard-rejected commit exits 5 and NOTHING is pushed"
-else fail "commit-rejected fell through: rc=$rc remote-moved out=$out"; fi
+if [ "$rc" -eq 5 ] && [ "$(git -C "$R" rev-parse HEAD)" = "$before_head" ]; then
+  pass "a guard-rejected commit exits 5 and NOTHING landed locally"
+else fail "commit-rejected fell through: rc=$rc head-moved out=$out"; fi
 
 # --- 11. NON-WORKER writer: no worker context at all -----------------------------------------
 # A scheduled job invokes the lane directly. No AGENT_NAME, no reservation, no swarm run id,
@@ -262,7 +254,7 @@ HOLDER=$!
 sleep 1
 out="$(cd "$R" && env -i PATH="$PATH" HOME="$HOME" TMPDIR="${TMPDIR:-/tmp}" \
         "$LANE" --identity second-non-worker-job --message-file msg.txt --path mine.txt \
-        --timeout 1 --no-push 2>&1)"; rc=$?
+        --timeout 1 2>&1)"; rc=$?
 if [ "$rc" -eq 4 ] && printf '%s' "$out" | grep -q 'LANE-BUSY'; then
   pass "non-worker second process holding the lane makes the next writer wait, then refuse (exit 4)"
 else fail "lane-busy: rc=$rc out=$out"; fi
@@ -271,7 +263,7 @@ if [ "$(git -C "$R" rev-parse HEAD)" = "$(git -C "$R" rev-parse origin/main)" ];
 else fail "a busy lane committed anyway"; fi
 wait "$HOLDER" 2>/dev/null
 # and the lane is takeable again once the holder is gone
-out="$(cd "$R" && "$LANE" --identity third-job --message-file msg.txt --path mine.txt --no-push 2>&1)"; rc=$?
+out="$(cd "$R" && "$LANE" --identity third-job --message-file msg.txt --path mine.txt 2>&1)"; rc=$?
 if [ "$rc" -eq 0 ]; then pass "the lane is released and takeable again"
 else fail "lane not released: rc=$rc out=$out"; fi
 
@@ -290,7 +282,7 @@ if git -C "$R" worktree add -q -b wtbranch "$WT" >/dev/null 2>&1; then
   printf 'wt v2\n' >"$WT/mine.txt"
   printf 'fix: commit through the worktree lane\n\nverifies the linked worktree case\n' >"$WT/msg.txt"
   out="$(cd "$WT" && "$LANE" --identity wt-job --message-file msg.txt --path mine.txt \
-          --branch wtbranch --no-push 2>&1)"; rc=$?
+          --branch wtbranch 2>&1)"; rc=$?
   if [ "$rc" -eq 0 ]; then pass "the lane works where .git is a FILE"
   else fail "worktree lane: rc=$rc out=$out"; fi
   if [ -e "$R/.git/ac-swarm-commit.lock" ]; then
@@ -331,7 +323,7 @@ cat >"$R/.beads/issues.jsonl" <<'JSONL'
 {"id":"bd-refused-demo","title":"PREMISE-FAILED: demo bead refused at claim","status":"open","issue_type":"task","updated_at":"2026-09-07T07:00:00Z","comments":[{"created_at":"2026-09-07T07:00:00Z","text":"Premise failure: RED — no RED is recorded per the bead's named probes"}]}
 JSONL
 printf 'feat(bd-refused-demo): ship the work anyway\n' >"$R/msg.txt"
-out="$(cd "$R" && AC2_FLIGHT_DIR="$COMMON/ac-flight" "$LANE" --identity t --message-file msg.txt --path mine.txt --no-push 2>&1)"; rc=$?
+out="$(cd "$R" && AC2_FLIGHT_DIR="$COMMON/ac-flight" "$LANE" --identity t --message-file msg.txt --path mine.txt 2>&1)"; rc=$?
 if [ "$rc" -eq 3 ] && printf '%s' "$out" | grep -q 'REFUSED \[no-claim-receipt\]'; then
   pass "refuses a subject naming a claim-refused bead with no fresh receipt, naming no-claim-receipt"
 else fail "no-claim-receipt red: rc=$rc out=$out"; fi
@@ -344,8 +336,10 @@ R="$(new_repo no-claim-receipt-green)"
 COMMON="$(git -C "$R" rev-parse --git-common-dir)"
 case "$COMMON" in /*) ;; *) COMMON="$(cd "$R" && cd "$COMMON" && pwd)" ;; esac
 mkdir -p "$R/.beads" "$COMMON/ac-flight"
+# assignee "t" — this fixture's whole point is a worker who RE-CLAIMED after the refusal;
+# the unclaimed leg (case 23 below) reads this same field, so it must reflect that re-claim.
 cat >"$R/.beads/issues.jsonl" <<'JSONL'
-{"id":"ac-reclaimed-demo","title":"PREMISE-FAILED: demo bead refused at claim","status":"open","issue_type":"task","updated_at":"2026-09-07T07:00:00Z","comments":[{"created_at":"2026-09-07T07:00:00Z","text":"Premise failure: RED — no RED is recorded per the bead's named probes"}]}
+{"id":"ac-reclaimed-demo","title":"PREMISE-FAILED: demo bead refused at claim","status":"in_progress","issue_type":"task","assignee":"t","updated_at":"2026-09-07T07:00:00Z","comments":[{"created_at":"2026-09-07T07:00:00Z","text":"Premise failure: RED — no RED is recorded per the bead's named probes"}]}
 JSONL
 # the worker re-claimed and banked a fresh RED AFTER the refusal
 cat >"$COMMON/ac-flight/ac-reclaimed-demo.flight-receipt" <<'RECEIPT'
@@ -359,15 +353,73 @@ red-exit: 1
 red-green-siblings: 0 of 1 probe(s) already green
 RECEIPT
 printf 'feat(ac-reclaimed-demo): re-claimed, fresh RED banked\n' >"$R/msg.txt"
-out="$(cd "$R" && AC2_FLIGHT_DIR="$COMMON/ac-flight" "$LANE" --identity t --message-file msg.txt --path mine.txt --no-push 2>&1)"; rc=$?
+out="$(cd "$R" && AC2_FLIGHT_DIR="$COMMON/ac-flight" "$LANE" --identity t --message-file msg.txt --path mine.txt 2>&1)"; rc=$?
 if [ "$rc" -eq 0 ]; then
   pass "accepts a subject naming a claim-refused bead when a receipt postdates the refusal"
 else fail "no-claim-receipt green: rc=$rc out=$out"; fi
 
+# --- 23. unclaimed: a subject naming a bead this identity does not hold the claim on ---------
+R="$(new_repo unclaimed)"
+mkdir -p "$R/.beads"
+cat >"$R/.beads/issues.jsonl" <<'JSONL'
+{"id":"ac-unclaimed-demo","title":"some work","status":"in_progress","issue_type":"task","assignee":"SomeoneElse","description":"## Delivers\n- mine.txt\n"}
+JSONL
+printf 'fix(ac-unclaimed-demo): should be refused\n\nthis identity never claimed it\n' >"$R/msg.txt"
+out="$(cd "$R" && "$LANE" --identity t --message-file msg.txt --path mine.txt 2>&1)"; rc=$?
+if [ "$rc" -eq 3 ] && printf '%s' "$out" | grep -q 'REFUSED \[unclaimed\]'; then
+  pass "refuses a commit for a bead this identity does not hold the claim on, naming unclaimed"
+else fail "unclaimed: rc=$rc out=$out"; fi
+if [ "$(git -C "$R" rev-parse HEAD)" = "$(git -C "$R" rev-parse origin/main)" ]; then
+  pass "unclaimed: the refused commit never landed"
+else fail "unclaimed: the commit landed anyway"; fi
+
+# --- 24. outside-scope: a named path is not in the bead's own ## Delivers scope --------------
+# delivers-paths.sh's extract_paths (the SAME pattern diff-closure.sh reads a bead's scope
+# through) requires a multi-segment path — a bare repo-root file like "mine.txt" never
+# matches it, so this fixture's Delivers entry names a real multi-segment path.
+R="$(new_repo outside-scope)"
+mkdir -p "$R/lib"
+printf 'owned v1\n' >"$R/lib/owned.txt"
+git -C "$R" add -- lib/owned.txt
+git -C "$R" commit -qm "seed lib/owned.txt"
+git -C "$R" push -q origin main
+printf 'owned v2\n' >"$R/lib/owned.txt"
+mkdir -p "$R/.beads"
+cat >"$R/.beads/issues.jsonl" <<'JSONL'
+{"id":"ac-scoped-demo","title":"some work","status":"in_progress","issue_type":"task","assignee":"t","description":"## Delivers\n- lib/owned.txt\n"}
+JSONL
+printf 'fix(ac-scoped-demo): touches an undeclared file\n\nsib.txt is not in this bead'"'"'s Delivers\n' >"$R/msg.txt"
+out="$(cd "$R" && "$LANE" --identity t --message-file msg.txt --path sib.txt 2>&1)"; rc=$?
+if [ "$rc" -eq 3 ] && printf '%s' "$out" | grep -q 'REFUSED \[outside-scope\]'; then
+  pass "refuses a path outside the bead's own ## Delivers scope, naming outside-scope"
+else fail "outside-scope: rc=$rc out=$out"; fi
+if [ "$(git -C "$R" rev-parse HEAD)" = "$(git -C "$R" rev-parse origin/main)" ]; then
+  pass "outside-scope: the refused commit never landed"
+else fail "outside-scope: the commit landed anyway"; fi
+
+# --- 25. in-scope: the same claimed bead accepts its OWN declared path -----------------------
+out="$(cd "$R" && "$LANE" --identity t --message-file msg.txt --path lib/owned.txt 2>&1)"; rc=$?
+if [ "$rc" -eq 0 ]; then
+  pass "a claimed bead's own declared Delivers path is accepted, never falsely refused"
+else fail "in-scope: rc=$rc out=$out"; fi
+
+# --- 26. [no-bead] marker exempts a subject outright, even one that names a claimed-by-another
+# bead — the coordinator's own ledger-flush commit is never any one bead's. ------------------
+R="$(new_repo no-bead-marker)"
+mkdir -p "$R/.beads"
+cat >"$R/.beads/issues.jsonl" <<'JSONL'
+{"id":"ac-someone-elses","title":"some work","status":"in_progress","issue_type":"task","assignee":"Other","description":"## Delivers\n- mine.txt\n"}
+JSONL
+printf 'chore(beads): flush ac-someone-elses ledger [no-bead]\n' >"$R/msg.txt"
+out="$(cd "$R" && "$LANE" --identity t --message-file msg.txt --path mine.txt 2>&1)"; rc=$?
+if [ "$rc" -eq 0 ]; then
+  pass "the [no-bead] marker exempts the subject outright — never checked against any bead"
+else fail "no-bead-marker: rc=$rc out=$out"; fi
+
 # --- 17. no-claim-receipt NOT-CHECKED: no board -> the gate reports the skip, never a pass ----
 R="$(new_repo no-claim-receipt-noboard)"
 printf 'feat(ac-whatever): no board here\n' >"$R/msg.txt"
-out="$(cd "$R" && "$LANE" --identity t --message-file msg.txt --path mine.txt --no-push 2>&1)"; rc=$?
+out="$(cd "$R" && "$LANE" --identity t --message-file msg.txt --path mine.txt 2>&1)"; rc=$?
 if [ "$rc" -eq 0 ] && printf '%s' "$out" | grep -q 'no-claim-receipt NOT-CHECKED'; then
   pass "with no board the gate reports NOT-CHECKED and never implies clean"
 else fail "no-claim-receipt no-board: rc=$rc out=$out"; fi
@@ -393,7 +445,7 @@ git -C "$R" reset -q --hard HEAD~1
 printf '%s\n' '{"id":"bd-ledger-demo","title":"demo","status":"open","note":"local write"}' >"$R/.beads/issues.jsonl"
 printf 'chore(beads): ledger write from a stale checkout\n' >"$R/msg.txt"
 before="$(git -C "$R" rev-parse HEAD)"
-out="$(cd "$R" && "$LANE" --identity t --message-file msg.txt --path .beads/issues.jsonl --no-push 2>&1)"; rc=$?
+out="$(cd "$R" && "$LANE" --identity t --message-file msg.txt --path .beads/issues.jsonl 2>&1)"; rc=$?
 if [ "$rc" -eq 3 ] && printf '%s' "$out" | grep -q 'REFUSED \[ledger-behind-upstream\]'; then
   pass "refuses a ledger commit whose upstream is ahead, naming ledger-behind-upstream"
 else fail "ledger-behind-upstream: rc=$rc out=$out"; fi
@@ -410,7 +462,7 @@ git -C "$R" commit -qm "seed ledger"
 git -C "$R" remote remove origin
 printf '%s\n' '{"id":"bd-demo","title":"demo","status":"open","note":"local write"}' >"$R/.beads/issues.jsonl"
 printf 'chore(beads): ledger write, no upstream\n' >"$R/msg.txt"
-out="$(cd "$R" && "$LANE" --identity t --message-file msg.txt --path .beads/issues.jsonl --no-push 2>&1)"; rc=$?
+out="$(cd "$R" && "$LANE" --identity t --message-file msg.txt --path .beads/issues.jsonl 2>&1)"; rc=$?
 if [ "$rc" -eq 0 ] && printf '%s' "$out" | grep -q 'ledger-behind-upstream NOT-CHECKED'; then
   pass "with no upstream configured the gate reports NOT-CHECKED and never implies clean"
 else fail "ledger no-upstream: rc=$rc out=$out"; fi
@@ -427,7 +479,7 @@ printf 'lane: original subject message-file-rewrite\n\noriginal body\n' >"$R/msg
 flock -w 10 "$LOCKFILE" sleep 6 &
 HOLDER=$!
 sleep 1
-(cd "$R" && "$LANE" --identity t --message-file msg.txt --path mine.txt --no-push >"$R/lane.out" 2>&1) &
+(cd "$R" && "$LANE" --identity t --message-file msg.txt --path mine.txt >"$R/lane.out" 2>&1) &
 LANE_PID=$!
 sleep 1
 printf 'lane: REWRITTEN subject — must not land\n\nrewritten body\n' >"$R/msg.txt"
@@ -468,7 +520,7 @@ for evasion in "./.beads/issues.jsonl" ".beads//issues.jsonl" ".beads" ".beads/.
   printf '%s\n' '{"id":"bd-ledger-evasion","title":"demo","status":"open","note":"local write"}' >"$R/.beads/issues.jsonl"
   printf 'chore(beads): ledger write from a stale checkout via %s\n' "$evasion" >"$R/msg.txt"
   before="$(git -C "$R" rev-parse HEAD)"
-  out="$(cd "$R" && "$LANE" --identity t --message-file msg.txt --path "$evasion" --no-push 2>&1)"; rc=$?
+  out="$(cd "$R" && "$LANE" --identity t --message-file msg.txt --path "$evasion" 2>&1)"; rc=$?
   if [ "$rc" -eq 3 ] && printf '%s' "$out" | grep -q 'REFUSED \[ledger-behind-upstream\]'; then
     pass "ledger-evasion: spelling '$evasion' trips ledger-behind-upstream, not a silent commit"
   else fail "ledger-evasion '$evasion': rc=$rc out=$out"; fi
@@ -482,7 +534,7 @@ done
 # refused as an unscoped pathspec (the directory spelling of the tree root, not of the
 # ledger dir). The assertion pins BOTH the refusal AND which rule fired.
 R="$(new_repo ledger-dot-path)"
-out="$(cd "$R" && "$LANE" --identity t --message-file msg.txt --path "." --no-push 2>&1)"; rc=$?
+out="$(cd "$R" && "$LANE" --identity t --message-file msg.txt --path "." 2>&1)"; rc=$?
 if [ "$rc" -eq 3 ] && printf '%s' "$out" | grep -q 'REFUSED \[unscoped-pathspec\]'; then
   pass "the directory spelling '.' stays refused as unscoped-pathspec"
 else fail "directory spelling '.': rc=$rc out=$out"; fi

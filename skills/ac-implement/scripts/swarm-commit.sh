@@ -14,6 +14,12 @@
 # flock. So this lane is repo-global: every writer takes it, workers and scheduled jobs
 # alike, and the lane requires no worker context whatsoever (see --identity below).
 #
+# COMMIT ONLY, NEVER THE TREE'S PUBLISH STEP (ac-ftfz.9): this lane used to hold its lock
+# across a network call, so gate-wait dominated a whole run's work time, and a rejected
+# remote update surfaced two layers away from its cause. The whole-tree publish step is a
+# separate, later, once-per-batch layer (`ac-pipeline/scripts/push.sh`) — this lane only
+# ever commits locally, fast, and hands the tree off clean for that later step.
+#
 # ASSURANCE (skills/ac-pipeline/references/assurance-declarations.md § The four fields):
 #   PROBE:      skills/ac-implement/scripts/swarm-commit.test.sh — RED/GREEN over every
 #               refusal rule, the lock, the scoping, the lint-staged repair and the
@@ -21,9 +27,8 @@
 #   SCHEDULE:   on every commit taken through the lane; and on every CI run via
 #               scripts/run-all-proofs.sh (registry-lint `proofs` job)
 #   MODE:       blocking
-#   ON-FAILURE: closed — a refusal exits non-zero BEFORE the commit, and a rejected commit
-#               can never reach the push. Silence is never success here: every refusal
-#               names the rule it broke.
+#   ON-FAILURE: closed — a refusal exits non-zero BEFORE the commit. Silence is never
+#               success here: every refusal names the rule it broke.
 #
 # THE RULES IT ENFORCES (each refusal prints `REFUSED [<rule>]`):
 #   outside-lock       the commit ran without holding the repo-global lane
@@ -36,6 +41,14 @@
 #                      flight receipt dated after that refusal is on record — the refusal→
 #                      rework rule lives only in worker seed text, so a worker that ignores
 #                      it ships a diff whose premise-verification loop is void
+#   unclaimed          the subject names a bead the committing identity does not hold the
+#                      claim on, read fresh off the board — never a staged commit for a
+#                      claim another writer holds
+#   outside-scope      a named path is not inside that bead's own `## Delivers` scope — the
+#                      bead's own declaration is the boundary, never a hand-audited guess.
+#                      A bead whose Delivers names no path is unscoped and is not checked; a
+#                      subject with no bead token, or the coordinator's own `[no-bead]`
+#                      ledger-flush marker, is unchecked outright.
 #   ledger-behind-upstream  the pathspec includes .beads/issues.jsonl and the tracking ref
 #                      is AHEAD of HEAD on it — refused BEFORE the commit exists, with the
 #                      exact remedy printed (no upstream configured is NOT-CHECKED, never
@@ -43,14 +56,14 @@
 #                      fetched)
 #
 # EXIT CODES
-#   0  committed (and pushed unless --no-push)      3  refusal — a rule above fired
+#   0  committed                                    3  refusal — a rule above fired
 #   2  usage                                        4  lane busy — lock not acquired
-#   5  commit rejected by a hook/guard (NOTHING was pushed)
-#   9  foreign branch — stop, touch nothing        10  commit is local; push was rejected
+#   5  commit rejected by a hook/guard               6  NOT-GATED — the claim or scope
+#   9  foreign branch — stop, touch nothing             could not be verified either way
 #
 # USAGE
 #   swarm-commit.sh --identity <name> --message-file <file> --path <p> [--path <p>...]
-#                   [--branch main] [--remote origin] [--timeout 600] [--no-push]
+#                   [--branch main] [--remote origin] [--timeout 600]
 #
 set -uo pipefail
 
@@ -61,16 +74,17 @@ MSGFILE=""
 BRANCH="main"
 REMOTE="origin"
 TIMEOUT=600
-PUSH=1
 PATHS=()
 
 refuse() { rule="$1"; shift; echo "REFUSED [$rule]: $*" >&2; exit 3; }
 usage()  { echo "usage: $0 --identity <name> --message-file <f> --path <p> [--path <p>...]" >&2; exit 2; }
+not_gated() { echo "NOT-GATED [$1]: $2" >&2; exit 6; }
 
 # The ONE br_call invocation shape (ac-heyt.3). The witness read below is
 # informational; a refusal names itself on stderr instead of yielding a bare hash.
 # shellcheck source=br-call.sh
-. "$(cd "$(dirname "${BASH_SOURCE[0]}")/../../_tools" 2>/dev/null && pwd)/br-call.sh" 2>/dev/null || true
+TOOLS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../_tools" 2>/dev/null && pwd)"
+. "$TOOLS_DIR/br-call.sh" 2>/dev/null || true
 
 while [ $# -gt 0 ]; do
   case "$1" in
@@ -81,11 +95,10 @@ while [ $# -gt 0 ]; do
     --branch)        BRANCH="${2:-}"; shift 2 ;;
     --remote)        REMOTE="${2:-}"; shift 2 ;;
     --timeout)       TIMEOUT="${2:-}"; shift 2 ;;
-    --no-push)       PUSH=0; shift ;;
     -m|--message)
       # An inline body is the measured truncation scar: an apostrophe in the message
-      # closes the shell quote, the commit lands truncated and the push is skipped at
-      # exit 0 — you believe you shipped and nothing landed.
+      # closes the shell quote and the commit lands truncated at exit 0 — you believe
+      # you shipped and nothing landed.
       refuse inline-message "-m/--message is not accepted; write the body to a file and pass --message-file" ;;
     -a|-A|--all)
       refuse unscoped-pathspec "$1 sweeps the shared index; name every path with --path" ;;
@@ -275,6 +288,56 @@ elif [ -n "$SUBJECT" ]; then
 fi
 
 # ---------------------------------------------------------------------------------------
+# LEG — unclaimed / outside-scope (ac-ftfz.9). The right bead, the right files, real
+# identity: a commit whose subject names bead X is refused unless THIS identity currently
+# holds X's claim, and every named path lies inside X's own `## Delivers` scope — the
+# SAME path-extraction pattern diff-closure.sh already uses (delivers-paths.sh's
+# extract_paths; the touchers: line excluded), never a second, divergent definition.
+# `## Territory` is deliberately not read here (a fallback scope source owned elsewhere);
+# a bead whose Delivers names no path is unscoped and is not checked at all. Exemptions:
+# the coordinator's own `[no-bead]` ledger-flush marker and a subject naming no bead token
+# pass outright; a row that cannot be parsed is NOT-GATED, never a silent pass — the claim
+# and scope could not be verified either way.
+# ---------------------------------------------------------------------------------------
+DP_HOME="$TOOLS_DIR/delivers-paths.sh"
+if [ -n "$SUBJECT" ]; then
+  case "$SUBJECT" in
+    *"[no-bead]"*) : ;;  # the coordinator's own ledger-flush commit — never any one bead's
+    *)
+      if [ -f "$BOARD" ] && command -v jq >/dev/null 2>&1; then
+        for tok in $(printf '%s\n' "$SUBJECT" | grep -oE '[A-Za-z]+-[A-Za-z0-9][A-Za-z0-9._-]*' | sort -u); do
+          row=$(jq -c --arg id "$tok" 'select(.id == $id)' "$BOARD" 2>/dev/null | head -1)
+          [ -n "$row" ] || continue
+
+          assignee=$(printf '%s' "$row" | jq -r '.assignee // ""' 2>/dev/null) \
+            || not_gated unclaimed "subject names '$tok' but its board row's assignee could not be read — the claim cannot be verified"
+          if [ "$assignee" != "$IDENTITY" ]; then
+            refuse unclaimed "subject names '$tok', currently claimed by '${assignee:-nobody}', not '$IDENTITY' — this identity does not hold that claim"
+          fi
+
+          desc=$(printf '%s' "$row" | jq -r '.description // ""' 2>/dev/null) \
+            || not_gated outside-scope "subject names '$tok' but its board row's description could not be read — scope cannot be verified"
+          [ -f "$DP_HOME" ] || not_gated outside-scope "delivers-paths.sh missing at '$DP_HOME' — scope cannot be derived for '$tok'"
+          # shellcheck source=delivers-paths.sh
+          . "$DP_HOME"
+          scope_list=$(printf '%s\n' "$desc" \
+            | awk '/^## Delivers/{on=1; next} /^## /{on=0} on' \
+            | grep -v '^[[:space:]]*touchers:' \
+            | extract_paths || true)
+          [ -n "$scope_list" ] || continue   # unscoped bead — no path declared, not checked
+
+          for p in "${PATHS[@]}"; do
+            pn="${p#./}"
+            printf '%s\n' "$scope_list" | grep -qxF "$pn" \
+              || refuse outside-scope "path '$p' is not in '$tok''s own ## Delivers scope — own it in this change, or split the commit"
+          done
+        done
+      fi
+      ;;
+  esac
+fi
+
+# ---------------------------------------------------------------------------------------
 # LEG — ledger-behind-upstream. .beads/issues.jsonl is a DERIVED file whose one-committer
 # rule is prose only: two checkouts exporting overlapping content wedge the ledger, and
 # nothing in the commit lane notices. A commit whose pathspec includes the ledger is
@@ -338,12 +401,10 @@ if [ "$LEDGER_IN_PATHS" -eq 1 ]; then
   fi
 fi
 
-git add -- "${PATHS[@]}" || { echo "swarm-commit: git add failed; nothing committed, nothing pushed" >&2; exit 5; }
+git add -- "${PATHS[@]}" || { echo "swarm-commit: git add failed; nothing committed" >&2; exit 5; }
 
 if ! git commit -F "$MSGFILE" -- "${PATHS[@]}"; then
-  # A rejected commit MUST NOT fall through to a push: the push would report
-  # "Everything up-to-date" and exit 0, and the writer would believe it shipped.
-  echo "swarm-commit: commit REJECTED (hook or guard); nothing was pushed" >&2
+  echo "swarm-commit: commit REJECTED (hook or guard); nothing was committed" >&2
   exit 5
 fi
 
@@ -361,18 +422,10 @@ if [ -n "$DIVERGED" ]; then
   # --no-verify on the AMEND only: the hook already ran and produced these exact bytes;
   # re-running it here would rewrite and diverge again, forever. Pathspec still scopes it.
   git commit --amend --no-edit --no-verify -- "${PATHS[@]}" >/dev/null \
-    || { echo "swarm-commit: amend REJECTED; nothing was pushed" >&2; exit 5; }
+    || { echo "swarm-commit: amend REJECTED" >&2; exit 5; }
   STILL="$(git diff --name-only HEAD -- "${PATHS[@]}")"
-  [ -z "$STILL" ] || { echo "REFUSED [lint-staged-unstable]: worktree still diverges after one repair pass; nothing was pushed" >&2; exit 5; }
+  [ -z "$STILL" ] || { echo "REFUSED [lint-staged-unstable]: worktree still diverges after one repair pass; nothing was committed" >&2; exit 5; }
 fi
 
 echo "swarm-commit: committed $(git rev-parse --short HEAD) as $IDENTITY"
-
-[ "$PUSH" -eq 1 ] || exit 0
-
-if ! git push "$REMOTE" "$BRANCH"; then
-  # Not fatal and never repaired here: NEVER pull, rebase, stash or reset in the lane.
-  echo "PUSH_REJECTED — the commit is safe in local $BRANCH; the orchestrator reconciles" >&2
-  exit 10
-fi
 exit 0
