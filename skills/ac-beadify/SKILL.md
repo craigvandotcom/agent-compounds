@@ -101,4 +101,4 @@ The guard lives HERE — the only place its condition still holds.
 
 ## Hand-off
 
-End with `Next: /ac-polish bead <epic>` and stop.
+Run `ac-polish bead <epic>` in this session — bead mode reports its verdict token here, printing no `Next:` line of its own; then ask **"Start implement now? yes / no"** — yes runs `/ac-implement <epic>` in this session, no stops with `Next: /ac-implement <epic>`.
