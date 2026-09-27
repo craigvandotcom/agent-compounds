@@ -47,6 +47,34 @@ touchers_check() { printf 'touchers: OK test stub\n'; return 0; }
 EOF
 chmod +x "$WORK/e4-pass.sh"
 
+# The ONE-BEAD CHECK GATE (bead.py check <id>, run before every stamp): every case ABOVE
+# this comment exists to prove one of stamp-refined's OWN legs, not bead.py's — a real
+# bead.py check would re-run every probe for real (RED-at-HEAD) and refuse a self-referential
+# `bash skills/_tools/stamp-refined.test.sh` probe as already-GREEN, which is this file's own
+# placeholder shape, not a defect under test here. Every `run_stamp` call is therefore
+# stubbed PASS for this gate by default; the gate's own three verdicts (OK / REFUSED /
+# NOT-GATED-or-timeout) get their own cases below, each pointed at its own stub.
+cat >"$WORK/bead-check-pass.py" <<'EOF'
+import sys
+print("bead.py check: OK stub")
+sys.exit(0)
+EOF
+cat >"$WORK/bead-check-refuse.py" <<'EOF'
+import sys
+print(f"bead.py check: REFUSED {sys.argv[-1]} — test-forced content refusal", file=sys.stderr)
+sys.exit(1)
+EOF
+cat >"$WORK/bead-check-notgated.py" <<'EOF'
+import sys
+print(f"bead.py check: NOT-GATED {sys.argv[-1]} — test-forced cannot-check", file=sys.stderr)
+sys.exit(2)
+EOF
+cat >"$WORK/bead-check-hang.py" <<'EOF'
+import sys, time
+time.sleep(30)
+sys.exit(0)
+EOF
+
 BASE='## Intent
 Guard a local parser.
 
@@ -143,7 +171,15 @@ jq -n \
   {id:"bd-bug-prose", issue_type:"bug", title:"bug outside Delivers scope", labels:["origin:test"],
    description:$prose, dependencies:[], comments:[{text:$receipt}]},
   {id:"bd-human-gate", issue_type:"task", title:"human-gate co-present", labels:["origin:test","human-gate"],
-   description:$humangate, dependencies:[], comments:[{text:$receipt}]}
+   description:$humangate, dependencies:[], comments:[{text:$receipt}]},
+  {id:"bd-beadcheck-refuse", issue_type:"task", title:"bead.py check refuses, never stamped", labels:["origin:test"],
+   description:$base, dependencies:[], comments:[{text:$receipt}]},
+  {id:"bd-beadcheck-refuse-stale", issue_type:"task", title:"bead.py check refuses a stale refined stamp", labels:["origin:test","refined"],
+   description:$base, dependencies:[], comments:[{text:$receipt}]},
+  {id:"bd-beadcheck-notgated", issue_type:"task", title:"bead.py check cannot be run", labels:["origin:test"],
+   description:$base, dependencies:[], comments:[{text:$receipt}]},
+  {id:"bd-beadcheck-timeout", issue_type:"task", title:"bead.py check hangs past its timeout", labels:["origin:test"],
+   description:$base, dependencies:[], comments:[{text:$receipt}]}
 ]' >"$BOARD"
 
 PASSES=0
@@ -153,6 +189,8 @@ fail() { echo "  FAIL: $1"; FAILURES=$((FAILURES + 1)); }
 run_stamp() {
   : >"$BR_LOG"
   STAMP_OUT=$(PATH="$MOCK:$PATH" ELEMENT4_CHECK="$WORK/e4-pass.sh" TOUCHERS_TOOL="$WORK/touchers-pass.sh" \
+    BEAD_PY_CHECK_TOOL="${BEAD_PY_CHECK_TOOL_OVERRIDE:-$WORK/bead-check-pass.py}" \
+    BEAD_PY_CHECK_TIMEOUT="${BEAD_PY_CHECK_TIMEOUT_OVERRIDE:-600}" \
     bash "$STAMP" "$1" 2>&1)
   STAMP_RC=$?
 }
@@ -257,6 +295,54 @@ if [ "$STAMP_RC" -eq 1 ] && printf '%s\n' "$STAMP_OUT" | grep -q "human-gate" \
 else
   fail "human-gate co-present" "rc=$STAMP_RC: $STAMP_OUT / log: $(cat "$BR_LOG")"
 fi
+
+# --- the ONE-BEAD CHECK GATE (bead.py check <id>, ac-m9y4 Vision/D4) -------------------
+# `refined` must imply a clean `bead.py check` — every leg above already passes for these
+# fixtures (fixpoint receipt included), so only the new gate's own three verdicts differ.
+
+BEAD_PY_CHECK_TOOL_OVERRIDE="$WORK/bead-check-refuse.py"
+run_stamp bd-beadcheck-refuse
+if [ "$STAMP_RC" -eq 1 ] && printf '%s\n' "$STAMP_OUT" | grep -q "bead.py check refused" \
+    && [ "$(label_count add bd-beadcheck-refuse refined)" -eq 0 ]; then
+  pass "a bead.py check REFUSED verdict is never stamped refined"
+else
+  fail "bead.py check refused (fresh)" "rc=$STAMP_RC: $STAMP_OUT / log: $(cat "$BR_LOG")"
+fi
+
+run_stamp bd-beadcheck-refuse-stale
+if [ "$STAMP_RC" -eq 1 ] && printf '%s\n' "$STAMP_OUT" | grep -q "bead.py check refused" \
+    && [ "$(label_count add bd-beadcheck-refuse-stale refined)" -eq 0 ] \
+    && [ "$(label_count remove bd-beadcheck-refuse-stale refined)" -eq 1 ] \
+    && [ "$(label_count add bd-beadcheck-refuse-stale unrefined)" -eq 1 ]; then
+  pass "a bead.py check REFUSED verdict strips an existing stale refined stamp (downgraded)"
+else
+  fail "bead.py check refused (stale refined)" "rc=$STAMP_RC: $STAMP_OUT / log: $(cat "$BR_LOG")"
+fi
+unset BEAD_PY_CHECK_TOOL_OVERRIDE
+
+BEAD_PY_CHECK_TOOL_OVERRIDE="$WORK/bead-check-notgated.py"
+run_stamp bd-beadcheck-notgated
+if [ "$STAMP_RC" -eq 2 ] && printf '%s\n' "$STAMP_OUT" | grep -q "NOT-GATED or timed out" \
+    && [ "$(label_count add bd-beadcheck-notgated refined)" -eq 0 ] \
+    && [ "$(label_count remove bd-beadcheck-notgated refined)" -eq 0 ] \
+    && [ "$(label_count add bd-beadcheck-notgated unrefined)" -eq 0 ]; then
+  pass "a bead.py check NOT-GATED verdict (exit 2) mutates nothing — never a pass, never a downgrade"
+else
+  fail "bead.py check NOT-GATED" "rc=$STAMP_RC: $STAMP_OUT / log: $(cat "$BR_LOG")"
+fi
+unset BEAD_PY_CHECK_TOOL_OVERRIDE
+
+BEAD_PY_CHECK_TOOL_OVERRIDE="$WORK/bead-check-hang.py"
+BEAD_PY_CHECK_TIMEOUT_OVERRIDE=1
+run_stamp bd-beadcheck-timeout
+if [ "$STAMP_RC" -eq 2 ] && printf '%s\n' "$STAMP_OUT" | grep -q "NOT-GATED or timed out" \
+    && [ "$(label_count add bd-beadcheck-timeout refined)" -eq 0 ] \
+    && [ "$(label_count remove bd-beadcheck-timeout refined)" -eq 0 ]; then
+  pass "a bead.py check that hangs past its timeout mutates nothing (exit 2, never a pass)"
+else
+  fail "bead.py check timeout" "rc=$STAMP_RC: $STAMP_OUT / log: $(cat "$BR_LOG")"
+fi
+unset BEAD_PY_CHECK_TOOL_OVERRIDE BEAD_PY_CHECK_TIMEOUT_OVERRIDE
 
 echo
 if [ "$FAILURES" -eq 0 ]; then

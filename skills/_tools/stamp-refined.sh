@@ -37,6 +37,15 @@ PROD_WRITE_TRIPWIRE_TOOL="${PROD_WRITE_TRIPWIRE_TOOL:-$_STAMP_REFINED_DIR/prod-w
 # or a Delivers path list by its own hand — both now run through bead.py's own functions,
 # called in-process via python3, the single home the rest of the registry already reads through.
 BEAD_PY_TOOL="${BEAD_PY_TOOL:-$_STAMP_REFINED_DIR/bead.py}"
+# A SEPARATE override from BEAD_PY_TOOL above: that path is also read IN-PROCESS for
+# `_decision_blocks_count`/`extract_paths` further down, and a test stubbing the CHECK gate
+# alone (below) must not also swap out those two, unrelated, in-process reads. Defaults to
+# the same file — one home in production; only a test ever tells them apart.
+BEAD_PY_CHECK_TOOL="${BEAD_PY_CHECK_TOOL:-$BEAD_PY_TOOL}"
+# Bounds the OUTER `timeout` wrapping `bead.py check` below (bead.py's own per-probe
+# run_probe is separately bounded; this is the whole-check ceiling). A test shortens it to
+# exercise the NOT-GATED-on-timeout path without an actual 600s wait.
+BEAD_PY_CHECK_TIMEOUT="${BEAD_PY_CHECK_TIMEOUT:-600}"
 
 # 0 when a probe still runs something after text and existence clauses are removed.
 # grep, rg, and `test -e|-f|-x` are not a run. `test -x p && bash p` leaves `bash p`.
@@ -422,6 +431,43 @@ print("\n".join(bead.extract_paths(sys.stdin.read())))
   elif [ "$trc" -ne 0 ]; then
     printf '%s\n' "$tout" >&2
     echo "stamp_refined: REFUSED $id — touchers could not be derived; refusing rather than guessing. No label written." >&2
+    return 2
+  fi
+
+  # ONE-BEAD CHECK GATE (ac-m9y4 Vision/D4): "one automatic check that runs whenever a card
+  # is polished, marked ready, or picked up" — `refined` must imply a clean `bead.py check`,
+  # never a stamp bead.py would itself refuse (measured: ac-tv83.14 held `refined` while
+  # `bead.py check ac-tv83.14` refused it). Runs the ID form, never a re-derivation of any
+  # rule bead.py already owns — every leg above this one stays exactly as it was; this is an
+  # ADDITIONAL, final gate, not a replacement for any of them. From the bead's own repo
+  # root, so bead.py's Consumes/Delivers path resolution and probe execution both run
+  # relative to the same tree bead.py's `_git_root()` would resolve on its own — never
+  # wherever this script's caller happened to be cwd'd. `timeout` wraps the WHOLE call:
+  # bead.py's own `run_probe` already bounds each individual probe, but a wedged `br show`
+  # or a hung `touchers.sh`/`prod-write-tripwire.sh` subprocess inside bead.py's own check
+  # must not hang this stamp forever either. REFUSED (rc 1) downgrades an existing stamp,
+  # same as every other content leg; NOT-GATED (rc 2) or a timeout (rc 124) mutates
+  # NOTHING — a cannot-check result is never read as a pass.
+  local bpc_root bpc_out bpc_rc
+  # Rooted at THIS SCRIPT's own location (_STAMP_REFINED_DIR), never BEAD_PY_CHECK_TOOL's —
+  # a test overriding BEAD_PY_CHECK_TOOL to a stub under a scratch dir must not make repo-root
+  # resolution fail; the bead's own repo is wherever stamp-refined.sh itself was reached from
+  # (its symlinked location inside the consuming app, same resolution _STAMP_REFINED_DIR
+  # already did at load time).
+  bpc_root=$(cd "$_STAMP_REFINED_DIR" 2>/dev/null && git rev-parse --show-toplevel 2>/dev/null)
+  if [ -z "$bpc_root" ]; then
+    echo "stamp_refined: REFUSED $id — could not resolve the bead's own repo root to run bead.py check; refusing rather than guessing. No label written." >&2
+    return 2
+  fi
+  bpc_out=$(cd "$bpc_root" && timeout "$BEAD_PY_CHECK_TIMEOUT" python3 "$BEAD_PY_CHECK_TOOL" check "$id" 2>&1); bpc_rc=$?
+  if [ "$bpc_rc" -eq 1 ]; then
+    printf '%s\n' "$bpc_out" >&2
+    echo "stamp_refined: REFUSED $id — bead.py check refused (above); no label written." >&2
+    _downgrade "$id" "bead.py check refused" || return $?
+    return 1
+  elif [ "$bpc_rc" -ne 0 ]; then
+    printf '%s\n' "$bpc_out" >&2
+    echo "stamp_refined: REFUSED $id — bead.py check could not be run (exit $bpc_rc: NOT-GATED or timed out); refusing rather than guessing. No label written." >&2
     return 2
   fi
 

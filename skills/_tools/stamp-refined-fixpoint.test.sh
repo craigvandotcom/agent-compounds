@@ -27,6 +27,19 @@ fail() { echo "  FAIL: $1"; FAILURES=$((FAILURES + 1)); }
 
 WORK=$(mktemp -d); trap 'rm -rf "$WORK"' EXIT
 
+# The ONE-BEAD CHECK GATE (bead.py check <id>, ac-m9y4 Vision/D4) is a NEW, separate leg —
+# every case in this file exists to prove the fixpoint-receipt gate, not bead.py's own rules
+# (a real bead.py check would re-run every probe for real and refuse several of these
+# fixtures' probes as already-GREEN, which is a fixture-shape artifact, not a defect under
+# test here). Stubbed PASS globally, once, for every `bash "$STAMP" ...` call below — the
+# gate's own three verdicts get their own coverage in stamp-refined.test.sh.
+cat >"$WORK/bead-check-pass.py" <<'EOF'
+import sys
+print("bead.py check: OK stub")
+sys.exit(0)
+EOF
+export BEAD_PY_CHECK_TOOL="$WORK/bead-check-pass.py"
+
 # Every case runs INSIDE a fixture repo, so the TOUCHERS LEG (2026-09-03) derives from a tree
 # the harness controls. The older fixtures' Delivers paths do not exist here, so they are new
 # artifacts and owe nothing — those cases keep their meaning unchanged. Cases 12–16 build on:
