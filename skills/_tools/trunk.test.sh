@@ -105,6 +105,42 @@ printf '%s' "$ERR" | grep -q 'tried origin/HEAD, origin/main, origin/master' \
   && ok 'failure names every resolution source it tried' \
   || bad "failure did not name its tried sources: $ERR"
 
+# ---------------------------------------------------------------------------------------
+printf '%s\n' 'trunk.test: case 4 — a declared ac2.trunk outranks a main origin/HEAD'
+# ---------------------------------------------------------------------------------------
+# The easy-mode shape: the remote's default branch is main, work lands on dev, and the
+# checkout says so with `git config ac2.trunk dev`.  origin/HEAD is left INTACT and is
+# first shown to answer main, so the dev result can only come from the declaration.
+REMOTE_DECL="$WORK/remote-declared.git"
+SEED_DECL="$WORK/seed-declared"
+CLONE_DECL="$WORK/clone-declared"
+git init --bare -q "$REMOTE_DECL"
+git --git-dir="$REMOTE_DECL" symbolic-ref HEAD refs/heads/main
+make_seed "$SEED_DECL" "$REMOTE_DECL" main
+git -C "$SEED_DECL" push -q origin HEAD:refs/heads/dev
+git clone -q "$REMOTE_DECL" "$CLONE_DECL" 2>/dev/null
+run_trunk "$CLONE_DECL"
+[ "$RC" -eq 0 ] && [ "$OUT" = main ] \
+  && ok 'undeclared, the same clone resolves main from origin/HEAD' \
+  || bad "expected exit 0 and main before declaring, got rc=$RC out='$OUT' err='$ERR'"
+git -C "$CLONE_DECL" config ac2.trunk dev
+run_trunk "$CLONE_DECL"
+[ "$RC" -eq 0 ] && [ "$OUT" = dev ] \
+  && ok 'ac2.trunk dev wins over origin/HEAD -> origin/main' \
+  || bad "expected exit 0 and dev, got rc=$RC out='$OUT' err='$ERR'"
+
+# ---------------------------------------------------------------------------------------
+printf '%s\n' 'trunk.test: case 5 — a declared trunk with no origin ref is refused, not guessed'
+# ---------------------------------------------------------------------------------------
+git -C "$CLONE_DECL" config ac2.trunk renamed-trunk
+run_trunk "$CLONE_DECL"
+[ "$RC" -eq 2 ] && [ -z "$OUT" ] \
+  && ok 'an unresolvable declaration exits 2 instead of falling back to origin/HEAD' \
+  || bad "expected exit 2 and empty stdout, got rc=$RC out='$OUT' err='$ERR'"
+printf '%s' "$ERR" | grep -q "ac2.trunk declares 'renamed-trunk'" \
+  && ok 'the refusal names the declaration it could not resolve' \
+  || bad "refusal did not name the declaration: $ERR"
+
 printf 'trunk.test: %s passed, %s failed\n' "$PASS" "$FAIL"
 [ "$PASS" -gt 0 ] || exit 1
 [ "$FAIL" -eq 0 ]

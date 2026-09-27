@@ -8,9 +8,18 @@
 #   MODE:       blocking
 #   ON-FAILURE: closed
 #
-# The remote's symbolic HEAD is authoritative.  If a clone has lost that record, repair it
-# from the remote; if the repair cannot reach the remote, fall back to the first local
-# origin/main or origin/master tracking ref and say why the fallback was used.
+# A checkout's DECLARED trunk wins: `git config ac2.trunk`, the repo-local key the commit
+# lane's foreign-branch guard reads on the agnostic-version line.  The remote's default
+# branch is a hosting setting, not a statement of where work lands: easy-mode's
+# origin/HEAD is main while its trunk is dev, so origin/HEAD only answers for a checkout
+# that declares nothing.  A declaration is verified, never trusted: a declared name with
+# no origin/<name> tracking ref is refused (exit 2), not replaced by origin/HEAD, because
+# that fallback is exactly the guess the declaration exists to prevent.
+#
+# Undeclared: the remote's symbolic HEAD is authoritative.  If a clone has lost that
+# record, repair it from the remote; if the repair cannot reach the remote, fall back to
+# the first local origin/main or origin/master tracking ref and say why the fallback was
+# used.
 set -uo pipefail
 
 ROOT=$(git rev-parse --show-toplevel 2>/dev/null) || {
@@ -41,6 +50,16 @@ read_tracking_fallback() {
   done
   return 1
 }
+
+declared=$(git config --get ac2.trunk 2>/dev/null) || declared=""
+if [ -n "$declared" ]; then
+  if git show-ref --verify --quiet "refs/remotes/origin/$declared"; then
+    printf '%s\n' "$declared"
+    exit 0
+  fi
+  echo "trunk.sh: git config ac2.trunk declares '$declared', but origin/$declared does not exist; fetch it or correct the declaration" >&2
+  exit 2
+fi
 
 trunk=$(read_origin_head) || trunk=""
 
