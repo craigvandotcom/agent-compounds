@@ -451,6 +451,18 @@ def delivers(text, heading="Delivers"):
     return out
 
 
+# --- blocking_ids — the dependency_type axis, read once here (ac-m9y4.8) --------------
+
+
+def blocking_ids(canon):
+    """The ids a bead is BLOCKED BY — every dependency edge whose axis is `blocks`.
+    `parent-child` (an epic's own child edge) and `related` are never blockers; this is
+    the one home for that select so a caller (bead-artifact.py's `blocking_deps`) never
+    re-derives `dependency_type` by hand."""
+    return [d.get("id") for d in (canon.get("dependencies") or [])
+            if d.get("dependency_type") == "blocks"]
+
+
 # --- is_open / gate_kind — the two predicates every other reader re-derives -----------
 
 

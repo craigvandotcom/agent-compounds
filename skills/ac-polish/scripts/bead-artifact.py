@@ -24,6 +24,13 @@ What writeback --apply DOES do is run the RESTAMP SWEEP after landing the bodies
 implementable bead in the artifact is re-gated through `stamp-refined.sh` (the sole writer),
 so a conforming stamp is refreshed under today's contract and a stale one is stripped by the
 gate's own downgrade leg. "Restamped on sight, never grandfathered" is a mechanism, not prose.
+A human-gate bead never carries `refined` (a ruled exemption) and the sweep skips it outright,
+never miscounting it as a refusal. Any OTHER sweep refusal now fails the whole writeback
+(non-zero exit) — a refusal inside the sweep is the gate working, not a silent pass.
+
+Export certifies through `skills/_tools/bead.py check` before a bead is written into the
+artifact — the one refusing command for every measurable bead rule. Fail-closed: bead.py
+missing, unrunnable, or crashing is NOT-GATED, never read as a pass.
 
 The dry run walks the same branches as the write and withholds only the `br` call. A dry run
 that skips a branch cannot gate it.
@@ -51,6 +58,15 @@ LIFECYCLE_LABELS = {"refined", "unrefined"}
 # whose skills are the registry or a symlinked copy of it. Deliberately NOT
 # env-overridable: an environment-controlled path reaching subprocess is taint.
 STAMP_REFINED = str(__import__("pathlib").Path(__file__).resolve().parents[2] / "_tools" / "stamp-refined.sh")
+
+# The one bead reader (ac-m9y4.8): the dependency-edge axis (`blocking_deps` below) and the
+# certify-before-write gate (`certify` below) both route through skills/_tools/bead.py rather
+# than a second copy of either rule. Same resolution construction as STAMP_REFINED above.
+_TOOLS_DIR = os.path.dirname(STAMP_REFINED)
+sys.path.insert(0, _TOOLS_DIR)
+import bead  # noqa: E402
+
+BEAD_PY = os.path.join(_TOOLS_DIR, "bead.py")
 
 DELIM = re.compile(r"<!-- BEAD:([^ ]+) -->\n(.*?)\n<!-- /BEAD:\1 -->", re.S)
 
@@ -129,6 +145,31 @@ def show(bead_id):
     return d.get("issue", d), None
 
 
+def certify(bead_id):
+    """Run `bead.py check <id>` before a write lands (ac-m9y4.8) — the one refusing command
+    for every measurable bead rule. Fail-closed: bead.py missing, unrunnable, or crashing is
+    NOT-GATED (2), never read as a pass; a content refusal is 1. Returns (code, message) —
+    `message` is None on a clean 0."""
+    if not os.path.isfile(BEAD_PY):
+        return 2, f"bead.py not found at {BEAD_PY!r} — nothing was certified"
+    try:
+        r = subprocess.run(
+            [sys.executable, BEAD_PY, "check", bead_id],
+            capture_output=True, text=True, timeout=60,
+        )
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        return 2, f"bead.py check crashed: {exc}"
+    out = (r.stdout or "") + (r.stderr or "")
+    # An uncaught exception in bead.py exits 1 by Python's own default — the SAME code a
+    # legitimate content REFUSED carries. The traceback signature is the only thing that
+    # tells the two apart, so a crash is never silently read as a content refusal.
+    if r.returncode not in (0, 1, 2) or "Traceback (most recent call last)" in out:
+        return 2, f"bead.py check crashed (exit {r.returncode}): {out.strip()[:300]}"
+    if r.returncode != 0:
+        return r.returncode, out.strip()[:300]
+    return 0, None
+
+
 def cmd_export(args):
     require_board()
     ids = [i.strip() for i in args.ids.split(",") if i.strip()]
@@ -152,6 +193,12 @@ def cmd_export(args):
             failed.append((bead_id, "unresolved Consumes placeholder "
                                     f"{', '.join(repr(p) for p in placeholders)} — resolve it "
                                     "to a real bead id before export"))
+            continue
+        code, msg = certify(bead_id)
+        if code == 2:
+            die(2, f"NOT-GATED — bead.py could not certify {bead_id}: {msg}")
+        if code == 1:
+            failed.append((bead_id, f"bead.py check refused — {msg}"))
             continue
         labels = ",".join(d.get("labels") or []) or "none"
         blocks += [
@@ -266,21 +313,24 @@ def sync_edges(plan, dry, failed):
 
 def blocking_deps(live):
     """The ids this bead is BLOCKED BY. `parent-child` is not a blocker and never a Consumes
-    line, so counting it would report every child's own epic as an unpaired edge."""
-    return [d.get("id") for d in (live.get("dependencies") or [])
-            if d.get("dependency_type") == "blocks"]
+    line, so counting it would report every child's own epic as an unpaired edge. Delegates
+    the axis select to bead.py (ac-m9y4.8) — the one home for it."""
+    return bead.blocking_ids(live)
 
 
 def restamp_sweep(bead_ids):
     """Re-gate every implementable bead through stamp-refined.sh (the sole writer).
 
     Decisions are skipped: element 4 exempts them and a receipt records polish,
-    not implement-readiness. Epics are NOT skipped: an epic's `refined` means what it
+    not implement-readiness. A human-gate bead is skipped too — it never carries
+    `refined` (a ruled exemption), so running it through the gate would only ever
+    miscount as a refusal. Epics are NOT skipped: an epic's `refined` means what it
     means on a child (D4) — a probe-less epic is DOWNGRADED by the gate's own downgrade
     leg and returns to the refine lane. Outcomes: STAMPED (conforming), DOWNGRADED
     (stale stamp stripped by the gate's own downgrade leg), or a routed-around refusal
-    (rc 2). The sweep never fails the writeback: a downgrade is the gate working,
-    not an error.
+    (rc 2). A downgrade is the gate working, not an error — but a REFUSAL is the gate
+    failing, and the caller must not read it as a clean writeback: this returns the
+    refused count for `cmd_writeback` to exit non-zero on.
     """
     targets = []
     for bead_id in bead_ids:
@@ -290,10 +340,14 @@ def restamp_sweep(bead_ids):
             continue
         if live.get("issue_type") == "decision":
             continue
+        if "human-gate" in (live.get("labels") or []):
+            print(f"bead-artifact: RESTAMP SKIP {bead_id} — human-gate never carries "
+                  f"refined (a ruled exemption)")
+            continue
         targets.append(bead_id)
     if not targets:
         print("bead-artifact: RESTAMP SWEEP — no implementable beads to re-gate.")
-        return
+        return 0
     print(f"bead-artifact: RESTAMP SWEEP — re-gating {len(targets)} implementable "
           f"bead(s) through stamp-refined.sh:")
     stamped = downgraded = refused = 0
@@ -312,6 +366,7 @@ def restamp_sweep(bead_ids):
             print(f"  REFUSED    {bead_id} — {first.strip()[:160]}")
     print(f"bead-artifact: RESTAMP RESULT — {stamped} stamped, {downgraded} downgraded, "
           f"{refused} refused.")
+    return refused
 
 
 def cmd_writeback(args):
@@ -415,7 +470,8 @@ def cmd_writeback(args):
         sweepable = 0
         for bead_id, _, _ in beads:
             live, err = show(bead_id)
-            if live is not None and live.get("issue_type") != "decision":
+            if live is not None and live.get("issue_type") != "decision" \
+                    and "human-gate" not in (live.get("labels") or []):
                 sweepable += 1
         print(f"bead-artifact: DRY  RESTAMP SWEEP would re-gate {sweepable} implementable "
               f"bead(s) through stamp-refined.sh after --apply.")
@@ -423,7 +479,11 @@ def cmd_writeback(args):
         tail = " — pass --apply to write."
         count = len(beads)
     else:
-        restamp_sweep([bead_id for bead_id, _, _ in beads])
+        refused = restamp_sweep([bead_id for bead_id, _, _ in beads])
+        if refused:
+            die(1, f"REFUSED — the restamp sweep refused {refused} bead(s). The bodies and "
+                   "edges landed above; re-gating did not. See RESTAMP RESULT above, fix the "
+                   "cause, and re-run stamp-refined.sh on the named id(s).")
         verb = "WRITEBACK COMPLETE —"
         tail = ", 0 failures."
         count = len(beads)

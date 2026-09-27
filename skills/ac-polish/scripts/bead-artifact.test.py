@@ -152,6 +152,10 @@ else:
 
 # --- 3. end to end over a stubbed `br` --------------------------------------------------------
 W = tempfile.mkdtemp(prefix="bead-artifact-")
+# A real (if empty) git repo: certify() shells to bead.py check, which shells to touchers.sh,
+# which refuses NOT-GATED outside a git repo. `git init` here is the one accommodation the
+# sandbox needs to exercise the certify gate for real — it never touches the actual board.
+subprocess.run(["git", "init", "-q"], cwd=W, check=True)
 BIN, FIX = os.path.join(W, "bin"), os.path.join(W, "fixtures")
 os.makedirs(BIN); os.makedirs(FIX)
 LOG = os.path.join(W, "br.log")
@@ -345,6 +349,61 @@ if r.returncode == 1 and "unresolved Consumes placeholder" in r.stderr \
     ok("export: an unresolved Consumes placeholder is refused and no artifact is written")
 else:
     fail("export placeholder", f"rc={r.returncode}\n{r.stdout}{r.stderr}")
+
+# The exporter certifies through bead.py check before it writes: a bead whose Consumes names
+# an artifact that is absent from the tree and unpromised by its blocker's own Delivers is a
+# bead.py REFUSED, and the exporter must refuse the id too — before export-open ever proved
+# the CLEAN path (ac-t1 above already exercises the OK leg of the same certify() call).
+BADCONSUMES = bead("ac-t10", "tenth", [])
+BADCONSUMES["description"] = "## Consumes\n- ac-t1 -> `nonexistent/path/that/does/not/exist.md`\n"
+write(os.path.join(FIX, "ac-t10.json"), json.dumps(BADCONSUMES))
+OUTDIR4 = os.path.join(W, "export-certify-refused")
+r = subprocess.run([sys.executable, SCRIPT, "export", "--out", OUTDIR4, "--ids", "ac-t10"],
+                   capture_output=True, text=True, cwd=W, env=ENV)
+if r.returncode == 1 and "bead.py check refused" in (r.stdout + r.stderr) \
+        and not os.path.exists(os.path.join(OUTDIR4, "artifact.md")):
+    ok("export: bead.py check REFUSED (an unresolvable Consumes artifact) refuses that id, "
+       "no artifact written")
+else:
+    fail("export certify refused", f"rc={r.returncode}\n{r.stdout}{r.stderr}")
+
+# certify(): fail-closed when bead.py is missing or crashes (ac-m9y4.8) — neither is ever
+# read as a pass. Direct in-process calls: both legs return before ever touching a board.
+_REAL_BEAD_PY = ba.BEAD_PY
+ba.BEAD_PY = os.path.join(W, "no-such-bead.py")
+code, msg = ba.certify("ac-t1")
+ba.BEAD_PY = _REAL_BEAD_PY
+if code == 2 and "not found" in (msg or ""):
+    ok("certify: bead.py missing -> fail-closed NOT-GATED (2), never a silent pass")
+else:
+    fail("certify missing", f"code={code} msg={msg}")
+
+CRASHER = os.path.join(W, "crasher.py")
+write(CRASHER, "raise RuntimeError('boom')\n")
+ba.BEAD_PY = CRASHER
+code, msg = ba.certify("ac-t1")
+ba.BEAD_PY = _REAL_BEAD_PY
+if code == 2 and "crash" in (msg or "").lower():
+    ok("certify: bead.py crashing -> fail-closed NOT-GATED (2), never read as a content refusal")
+else:
+    fail("certify crash", f"code={code} msg={msg}")
+
+# The restamp sweep skips a human-gate bead outright — it never carries `refined` (a ruled
+# exemption), so running it through stamp-refined.sh would only ever miscount as a refusal now
+# that a sweep refusal fails the whole writeback. Typed `task` (not `decision`) so it would
+# otherwise be a sweep TARGET; the skip must come from the label, not the decision exemption.
+HUMANGATE = bead("ac-t8", "eighth", [])
+HUMANGATE["issue_type"] = "task"
+HUMANGATE["labels"] = ["origin:ac-beadify", "human-gate"]
+write(os.path.join(FIX, "ac-t8.json"), json.dumps(HUMANGATE))
+ART8 = os.path.join(W, "artifact-humangate.md")
+write(ART8, block("ac-t8", "eighth", "- none", b=ba.base_digest(HUMANGATE)))
+rc, out, log = run_writeback("--apply", artifact=ART8)
+if rc == 0 and "RESTAMP SKIP ac-t8" in out and "human-gate" in out and "WRITEBACK COMPLETE" in out:
+    ok("restamp sweep: a human-gate bead is skipped (never sent to stamp-refined.sh) and the "
+       "writeback still exits 0")
+else:
+    fail("restamp human-gate skip", f"rc={rc}\n{out}")
 
 # a dep add that fails is a WRITEBACK failure: a Consumes line whose edge does not exist is a lie
 FAILSTUB = STUB.replace('if [ "$1 $2" = "list --json" ]',
