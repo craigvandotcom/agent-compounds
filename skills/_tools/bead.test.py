@@ -216,6 +216,48 @@ check(canon4 is None and err4 is not None,
       "from_br_json: an empty array (id did not resolve) refuses", (canon4, err4))
 
 # =====================================================================================
+# parent_child_children / is_child_of — the epic <-> child parent-child edge, read from
+# each side (ac-m9y4.9): the PARENT's own `dependents` list (a `br show <epic>` payload)
+# and the CHILD's own `dependencies` list (routed through from_br_json, never a second
+# normalisation of it).
+# =====================================================================================
+
+EPIC_SHOW = {
+    "id": "ep-1",
+    "dependents": [
+        {"id": "ep-1.a", "dependency_type": "parent-child"},
+        {"id": "ac-blocked", "dependency_type": "blocks"},
+    ],
+}
+kids, kerr = bead.parent_child_children(EPIC_SHOW)
+check(kerr is None and kids == ["ep-1.a"],
+      "parent_child_children: only the parent-child dependents count", (kids, kerr))
+
+kids_arr, kerr_arr = bead.parent_child_children([EPIC_SHOW])
+check(kerr_arr is None and kids_arr == ["ep-1.a"],
+      "parent_child_children: array-of-one unwraps like from_br_json", (kids_arr, kerr_arr))
+
+kids_none, kerr_none = bead.parent_child_children({"id": "ep-2"})
+check(kerr_none is None and kids_none == [],
+      "parent_child_children: no dependents -> empty list, not an error", (kids_none, kerr_none))
+
+kids_err, kerr_err = bead.parent_child_children(ERROR_ENVELOPE)
+check(kids_err is None and kerr_err is not None and "br-read-failed" in kerr_err,
+      "parent_child_children: an error envelope refuses", (kids_err, kerr_err))
+
+is_child, cerr = bead.is_child_of(BR_JSON_WITH_DEP, "ac-m9y4")
+check(cerr is None and is_child is True,
+      "is_child_of: a forward parent-child dependency naming the epic -> True", (is_child, cerr))
+
+not_child, ncerr = bead.is_child_of(BR_JSON_WITH_DEP, "some-other-epic")
+check(ncerr is None and not_child is False,
+      "is_child_of: naming a different epic -> False", (not_child, ncerr))
+
+is_child_err, cerr_err = bead.is_child_of(ERROR_ENVELOPE, "ac-m9y4")
+check(is_child_err is None and cerr_err is not None,
+      "is_child_of: an error envelope refuses", (is_child_err, cerr_err))
+
+# =====================================================================================
 # from_jsonl_row — shaped after a real `.beads/issues.jsonl` row, with dependencies
 # carrying `type`/`depends_on_id` (the normalisation the plan names)
 # =====================================================================================
@@ -288,6 +330,184 @@ check(bead.gate_kind(c_md["title"]) == "DECISION",
 MD_FIELD = "Title: HUMAN: approve the release\n\nGate-reason: authorization\n"
 c_md2 = bead.from_markdown(MD_FIELD)
 check(c_md2["title"] == "HUMAN: approve the release", "from_markdown: 'Title:' field form")
+
+# =====================================================================================
+# `bead.py check` (ac-m9y4.2) — one refusing command over every rule a script can
+# MEASURE. Each leg below is a fixture per shape the plan's D2 list names.
+# =====================================================================================
+
+import subprocess as _sp
+import tempfile as _tf
+
+# --- probe_shape_violation: the refused-probe-shape list ---------------------------
+
+check(bead.probe_shape_violation('grep -c "TODO" file.py') is not None,
+      "probe_shape_violation: bare grep -c always exits 0 on any match — banned")
+check(bead.probe_shape_violation('test $(grep -o TODO file.py | wc -l) -eq 3') is None,
+      "probe_shape_violation: grep WITHOUT -c, counted via wc -l, is NOT banned")
+check(bead.probe_shape_violation('pnpm exec vitest run') is not None,
+      "probe_shape_violation: bare pnpm exec vitest run (whole suite) is banned")
+check(bead.probe_shape_violation('pnpm exec vitest run src/x.test.ts') is None,
+      "probe_shape_violation: pnpm exec vitest run scoped to a file is NOT banned")
+check(bead.probe_shape_violation('bash scripts/run-all-proofs.sh') is not None,
+      "probe_shape_violation: run-all-proofs.sh is banned (the whole-suite CI script)")
+check(bead.probe_shape_violation('supabase db push --linked') is not None,
+      "probe_shape_violation: a direct supabase invocation is banned")
+check(bead.probe_shape_violation('pnpm db:reset') is not None,
+      "probe_shape_violation: db:reset is banned (destructive)")
+check(bead.probe_shape_violation('pnpm db:verify') is not None,
+      "probe_shape_violation: db:verify is banned (whole-environment)")
+check(bead.probe_shape_violation('echo done') is not None,
+      "probe_shape_violation: an echo-only probe can never fail — banned")
+check(bead.probe_shape_violation('echo a && echo b') is not None,
+      "probe_shape_violation: every clause being echo is still echo-only")
+check(bead.probe_shape_violation('test -f x.py && echo ok') is None,
+      "probe_shape_violation: a real test clause beside an echo is NOT echo-only")
+check(bead.probe_shape_violation('! grep -q "banned" x.py') is None,
+      "probe_shape_violation: a negated grep (asserts absence) still runs something — not banned")
+check(bead.probe_shape_violation('bash skills/_tools/x.test.sh') is None,
+      "probe_shape_violation: an ordinary scoped test file is clean")
+
+# --- probe_red_violations: RED-at-HEAD, the human-gate exemption, NOT-EXECUTED ------
+
+r_exempt = bead.probe_red_violations(["true"], True)
+check(r_exempt == ([], [], r_exempt[2]) and any("skipped" in m for m in r_exempt[2]),
+      "probe_red_violations: a human-gate bead is exempt from the probe rule entirely", r_exempt)
+
+r_allgreen = bead.probe_red_violations(["true"], False)
+check(any("RED" in m and "already GREEN" in m for m in r_allgreen[0]),
+      "probe_red_violations: a probe that is already green at HEAD is refused", r_allgreen)
+
+r_sibling = bead.probe_red_violations(["false", "true"], False)
+check(r_sibling[0] == [],
+      "probe_red_violations: at least one red executable probe among siblings is clean", r_sibling)
+
+r_notexec = bead.probe_red_violations(["zzz-nonexistent-cmd-abc123 --flag"], False)
+check(r_notexec[0] == [] and any("NOT-EXECUTED" in m for m in r_notexec[2]),
+      "probe_red_violations: an unresolvable interpreter goes on the NOT-EXECUTED list, "
+      "never a silent skip and never forced into a refusal", r_notexec)
+
+# --- consumes_violations: on-disk existence, or promised by the blocker's Delivers -----
+
+_ctmp = _tf.mkdtemp()
+with open(os.path.join(_ctmp, "existing.py"), "w") as _fh:
+    _fh.write("x = 1\n")
+
+cons_ok = [{"raw": "- a -> existing.py", "blocker": "ac-a", "artifact": "existing.py", "placeholder": False}]
+check(bead.consumes_violations(cons_ok, _ctmp) == ([], []),
+      "consumes_violations: an artifact already on disk needs no blocker check")
+
+cons_missing = [{"raw": "- a -> missing.py", "blocker": "ac-a", "artifact": "missing.py", "placeholder": False}]
+check(bead.consumes_violations(cons_missing, _ctmp,
+      resolve_blocker=lambda bid: ({"description": "## Delivers\n- missing.py\n"}, None)) == ([], []),
+      "consumes_violations: an absent artifact PROMISED by the blocker's own Delivers passes")
+
+r_notpromised = bead.consumes_violations(cons_missing, _ctmp,
+    resolve_blocker=lambda bid: ({"description": "## Delivers\n- something-else.py\n"}, None))
+check(len(r_notpromised[0]) == 1 and "missing.py" in r_notpromised[0][0],
+      "consumes_violations: an absent artifact NOT promised by the blocker is refused", r_notpromised)
+
+r_blockererr = bead.consumes_violations(cons_missing, _ctmp,
+    resolve_blocker=lambda bid: (None, "br show exited 1: no such issue"))
+check(r_blockererr[0] == [] and len(r_blockererr[1]) == 1,
+      "consumes_violations: a blocker that cannot be read is NOT-GATED, never a silent pass", r_blockererr)
+
+cons_placeholder = [{"raw": "- ac-vague -> <the artifact ac-other promises>",
+                      "blocker": "ac-vague", "artifact": "<the artifact ac-other promises>",
+                      "placeholder": True}]
+r_ph = bead.consumes_violations(cons_placeholder, _ctmp)
+check(len(r_ph[0]) == 1 and "placeholder" in r_ph[0][0],
+      "consumes_violations: an unfilled <placeholder> artifact is always refused", r_ph)
+
+# --- delivers_symlink_violations: a symlink resolving outside the repo root ------------
+
+_droot = _tf.mkdtemp()
+_doutside = _tf.mkdtemp()
+with open(os.path.join(_doutside, "shared.sh"), "w") as _fh:
+    _fh.write("#!/bin/sh\n")
+with open(os.path.join(_droot, "local.sh"), "w") as _fh:
+    _fh.write("#!/bin/sh\n")
+os.symlink(os.path.join(_doutside, "shared.sh"), os.path.join(_droot, "linked.sh"))
+
+check(len(bead.delivers_symlink_violations([{"paths": ["linked.sh"]}], _droot)) == 1,
+      "delivers_symlink_violations: a symlink resolving outside the repo root is refused")
+check(bead.delivers_symlink_violations([{"paths": ["local.sh"]}], _droot) == [],
+      "delivers_symlink_violations: an ordinary tracked (non-symlink) file is clean")
+check(bead.delivers_symlink_violations(
+      [{"paths": ["~/mission/software/example-app/AGENTS.md"]}], _droot) == [],
+      "delivers_symlink_violations: a declared cross-repo ~/ path is exempt")
+
+# --- origin_violation / refined_human_gate_violation — label rules ---------------------
+
+check(bead.origin_violation(["origin:ac-beadify", "refined"]) is None,
+      "origin_violation: exactly one origin: label is clean")
+check(bead.origin_violation(["refined"]) is not None,
+      "origin_violation: zero origin: labels is refused")
+check(bead.origin_violation(["origin:ac-a", "origin:ac-b"]) is not None,
+      "origin_violation: two origin: labels is refused — exactly one is required")
+
+check(bead.refined_human_gate_violation(["refined", "human-gate"]) is not None,
+      "refined_human_gate_violation: refined beside human-gate is refused")
+check(bead.refined_human_gate_violation(["refined"]) is None,
+      "refined_human_gate_violation: refined alone is clean")
+check(bead.refined_human_gate_violation(["human-gate"]) is None,
+      "refined_human_gate_violation: human-gate alone (not yet refined) is clean")
+
+# --- sensitive_prod_check: derived by calling prod-write-tripwire.sh, live ------------
+
+SIGNAL_DESC = "## Intent\nBackfill: one-off data-fix for prod rows in the users table.\n"
+s_signal = bead.sensitive_prod_check(SIGNAL_DESC, [], 0, "ac-test")
+check(s_signal[0] == 1,
+      "sensitive_prod_check: a prod-write signal with no recorded verdict is refused", s_signal)
+
+s_gated = bead.sensitive_prod_check(SIGNAL_DESC, ["sensitive-prod"], 1, "ac-test")
+check(s_gated[0] == 0,
+      "sensitive_prod_check: sensitive-prod label + a DECISION blocks edge clears the tripwire", s_gated)
+
+CLEAN_DESC = "## Intent\nRename a helper function.\n"
+s_clean = bead.sensitive_prod_check(CLEAN_DESC, [], 0, "ac-test")
+check(s_clean[0] == 0, "sensitive_prod_check: no signal at all passes clean", s_clean)
+
+# --- cmd_check (the CLI): end-to-end, each exit class -----------------------------------
+
+BEAD_PY = os.path.join(HERE, "bead.py")
+
+
+def _run_check(args, **kw):
+    return _sp.run([sys.executable, BEAD_PY, "check", *args],
+                    capture_output=True, text=True, timeout=60, cwd=HERE, **kw)
+
+
+cli_missing = _run_check(["/nonexistent/bead-body.md"])
+check(cli_missing.returncode == 2,
+      "cmd_check CLI: an unreadable input is NOT-GATED (exit 2), never a pass", cli_missing.stderr)
+
+_fd1, _body_ok = _tf.mkstemp(suffix=".md")
+with os.fdopen(_fd1, "w") as _fh:
+    _fh.write("## Acceptance Criteria\n- something.\n  Probe: `test -f /definitely/not/here.xyz`\n")
+cli_ok = _run_check([_body_ok])
+check(cli_ok.returncode == 0,
+      "cmd_check CLI: a clean body with one currently-red probe passes",
+      (cli_ok.returncode, cli_ok.stdout, cli_ok.stderr))
+os.unlink(_body_ok)
+
+_fd2, _body_green = _tf.mkstemp(suffix=".md")
+with os.fdopen(_fd2, "w") as _fh:
+    _fh.write("## Acceptance Criteria\n- something.\n  Probe: `true`\n")
+cli_green = _run_check([_body_green])
+check(cli_green.returncode == 1 and "REFUSED" in cli_green.stderr,
+      "cmd_check CLI: a probe already green at HEAD is refused by name (exit 1)",
+      (cli_green.returncode, cli_green.stderr))
+os.unlink(_body_green)
+
+_fd3, _body_banned = _tf.mkstemp(suffix=".md")
+with os.fdopen(_fd3, "w") as _fh:
+    _fh.write("## Acceptance Criteria\n- something.\n  Probe: `bash scripts/run-all-proofs.sh`\n")
+cli_banned = _run_check([_body_banned])
+check(cli_banned.returncode == 1 and "run-all-proofs" in cli_banned.stderr,
+      "cmd_check CLI: a banned whole-suite probe shape is refused by name, never executed",
+      (cli_banned.returncode, cli_banned.stderr))
+os.unlink(_body_banned)
 
 print("---")
 print(f"PASS={PASS} FAIL={FAIL}")
