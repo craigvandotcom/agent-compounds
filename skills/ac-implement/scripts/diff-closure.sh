@@ -35,7 +35,7 @@
 #                trunk resolver when the branch tracks nothing.
 #   --bead       read the bead's own scope and `touchers:` command(s) via the br show read.
 #                Scope oracle, in order: an explicit --territory/--scope below; else the
-#                bead's own `## Delivers` paths (skills/_tools/delivers-paths.sh, touchers:
+#                bead's own `## Delivers` paths (bead.py's plain-text extractor, touchers:
 #                lines excluded — the same paths close-gate's UNCOMMITTED leg reads); else
 #                unscoped (today's behaviour for a bead with no Delivers paths).
 #   --declared   a file of touchers commands, one per line (what --bead would have found)
@@ -54,11 +54,47 @@ die2() { printf 'diff-closure: NOT-GATED %s\n' "$*" >&2; echo "NEXT: handback" >
 # shellcheck source=br-call.sh
 BR_CALL="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../_tools" 2>/dev/null && pwd)/br-call.sh"
 . "$BR_CALL" 2>/dev/null || die2 "br-call.sh helper missing at '$BR_CALL' — no br read can be verified"
-# The Delivers-path extraction pattern has ONE home (skills/_tools/delivers-paths.sh) — a
-# `--bead` scope reads a bead's own `## Delivers` paths through it, never a second copy of
-# the pattern (canon: beads-standards/reference/bead-create-contract.md § Touchers).
-DP_HOME="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../_tools" 2>/dev/null && pwd)/delivers-paths.sh"
-. "$DP_HOME" 2>/dev/null || die2 "delivers-paths.sh helper missing at '$DP_HOME' — the Delivers-path extraction pattern cannot be resolved"
+# bead.py is the one bead reader every tool parses cards through (ac-m9y4.10): a `--bead`
+# scope reads a bead's own `## Delivers` paths through its plain-text `extract_paths()`,
+# never a second hand-rolled copy of the pattern (canon:
+# beads-standards/reference/bead-create-contract.md § Touchers).
+TOOLS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../_tools" 2>/dev/null && pwd)"
+BEAD_PY_HOME="$TOOLS_DIR/bead.py"
+[ -f "$BEAD_PY_HOME" ] || die2 "bead.py missing at '$BEAD_PY_HOME' — the Delivers-path extraction pattern cannot be resolved"
+command -v python3 >/dev/null 2>&1 || die2 "python3 not on PATH — bead.py cannot be run"
+
+# extract_paths [body] (else stdin) -> sorted unique path tokens, via bead.py's plain-text
+# extractor. `BEAD_MODULE_PATH` is the same test-only override bead-capture-guard.py's own
+# `_load_bead_module()` uses: a nonexistent path drives the crash-path fixture without
+# ever touching the real file in a shared checkout.
+extract_paths() {
+  local input
+  if [ "$#" -gt 0 ]; then input="$1"; else input="$(cat)"; fi
+  printf '%s' "$input" | BEAD_PY_PATH="$BEAD_PY_HOME" python3 -c '
+import importlib.util, os, sys
+
+
+def _load_bead():
+    override = os.environ.get("BEAD_MODULE_PATH")
+    path = override or os.environ["BEAD_PY_PATH"]
+    spec = importlib.util.spec_from_file_location("bead", path)
+    if spec is None or spec.loader is None:
+        raise ImportError(f"cannot load bead.py at {path!r}")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+try:
+    bead = _load_bead()
+    text = sys.stdin.read()
+    for p in bead.extract_paths(text):
+        print(p)
+except Exception as e:
+    print(f"NOT-GATED: bead.py unavailable or crashed: {e}", file=sys.stderr)
+    sys.exit(2)
+'
+}
 SELF_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
 TRUNK="$SELF_DIR/../../_tools/trunk.sh"
 
@@ -119,14 +155,23 @@ fi
 
 # A bead's own `## Delivers` paths ARE its scope oracle — the same paths `touchers.sh` and
 # close-gate's UNCOMMITTED leg already read, through the one shared extraction pattern
-# (delivers-paths.sh). An explicit --territory/--scope still wins outright, so a caller can
-# inspect a deliberate subset without editing the declaration. A bead with no Delivers paths
-# and no explicit --territory/--scope stays unscoped (today's behaviour, unchanged).
+# (bead.py's plain-text extractor). An explicit --territory/--scope still wins outright, so
+# a caller can inspect a deliberate subset without editing the declaration. A bead with no
+# Delivers paths and no explicit --territory/--scope stays unscoped (today's behaviour,
+# unchanged). The extraction failing (a crashing bead.py) is NOT-GATED, never a silent
+# unscoped fall-through — `if !` so `set -e` does not abort before die2 can report it.
+# `extract_paths` runs as its OWN final command over an already-computed string, never
+# piped straight from awk/grep: under `pipefail`, a truly empty ## Delivers body makes
+# `grep -v` itself exit 1 (nothing to select is not an error, but pipefail cannot tell
+# the two apart) — chained into the pipe, that reads as "bead.py crashed" when it never
+# ran. `|| true` on the filter alone keeps ITS benign non-match off this leg's verdict.
 if [ "$SCOPE" -eq 0 ] && [ -n "$BEAD" ]; then
-  DELIVERS_LIST=$(printf '%s\n' "$BEAD_DESC" \
+  DELIVERS_SECTION=$(printf '%s\n' "$BEAD_DESC" \
     | awk '/^## Delivers/{on=1; next} /^## /{on=0} on' \
-    | grep -v '^[[:space:]]*touchers:' \
-    | extract_paths || true)
+    | grep -v '^[[:space:]]*touchers:' || true)
+  if ! DELIVERS_LIST=$(extract_paths "$DELIVERS_SECTION"); then
+    die2 "bead.py failed extracting Delivers paths for bead $BEAD"
+  fi
   if [ -n "$DELIVERS_LIST" ]; then
     SCOPE=1
     while IFS= read -r path; do

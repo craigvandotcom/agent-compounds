@@ -80,6 +80,40 @@ refuse() { rule="$1"; shift; echo "REFUSED [$rule]: $*" >&2; echo "NEXT: repair 
 usage()  { echo "usage: $0 --identity <name> --message-file <f> --path <p> [--path <p>...]" >&2; echo "NEXT: handback" >&2; exit 2; }
 not_gated() { echo "NOT-GATED [$1]: $2" >&2; echo "NEXT: handback" >&2; exit 6; }
 
+# extract_paths [body] (else stdin) -> sorted unique path tokens, via bead.py's plain-text
+# extractor (ac-m9y4.10) — the one bead reader every tool parses cards through, never a
+# second hand-rolled copy of the pattern. `BEAD_MODULE_PATH` is the same test-only override
+# bead-capture-guard.py's own `_load_bead_module()` uses: a nonexistent path drives the
+# crash-path fixture without ever touching the real file in a shared checkout.
+extract_paths() {
+  local input
+  if [ "$#" -gt 0 ]; then input="$1"; else input="$(cat)"; fi
+  printf '%s' "$input" | BEAD_PY_PATH="${BEAD_PY_HOME:-}" python3 -c '
+import importlib.util, os, sys
+
+
+def _load_bead():
+    override = os.environ.get("BEAD_MODULE_PATH")
+    path = override or os.environ["BEAD_PY_PATH"]
+    spec = importlib.util.spec_from_file_location("bead", path)
+    if spec is None or spec.loader is None:
+        raise ImportError(f"cannot load bead.py at {path!r}")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+try:
+    bead = _load_bead()
+    text = sys.stdin.read()
+    for p in bead.extract_paths(text):
+        print(p)
+except Exception as e:
+    print(f"NOT-GATED: bead.py unavailable or crashed: {e}", file=sys.stderr)
+    sys.exit(2)
+'
+}
+
 # The ONE br_call invocation shape (ac-heyt.3). The witness read below is
 # informational; a refusal names itself on stderr instead of yielding a bare hash.
 # shellcheck source=br-call.sh
@@ -291,7 +325,7 @@ fi
 # LEG — unclaimed / outside-scope (ac-ftfz.9). The right bead, the right files, real
 # identity: a commit whose subject names bead X is refused unless THIS identity currently
 # holds X's claim, and every named path lies inside X's own `## Delivers` scope — the
-# SAME path-extraction pattern diff-closure.sh already uses (delivers-paths.sh's
+# SAME path-extraction pattern diff-closure.sh already uses (bead.py's plain-text
 # extract_paths; the touchers: line excluded), never a second, divergent definition.
 # `## Territory` is deliberately not read here (a fallback scope source owned elsewhere);
 # a bead whose Delivers names no path is unscoped and is not checked at all. Exemptions:
@@ -299,12 +333,14 @@ fi
 # pass outright; a row that cannot be parsed is NOT-GATED, never a silent pass — the claim
 # and scope could not be verified either way.
 # ---------------------------------------------------------------------------------------
-DP_HOME="$TOOLS_DIR/delivers-paths.sh"
+BEAD_PY_HOME="$TOOLS_DIR/bead.py"
 if [ -n "$SUBJECT" ]; then
   case "$SUBJECT" in
     *"[no-bead]"*) : ;;  # the coordinator's own ledger-flush commit — never any one bead's
     *)
       if [ -f "$BOARD" ] && command -v jq >/dev/null 2>&1; then
+        [ -f "$BEAD_PY_HOME" ] || not_gated outside-scope "bead.py missing at '$BEAD_PY_HOME' — scope cannot be derived"
+        command -v python3 >/dev/null 2>&1 || not_gated outside-scope "python3 not on PATH — bead.py cannot be run"
         for tok in $(printf '%s\n' "$SUBJECT" | grep -oE '[A-Za-z]+-[A-Za-z0-9][A-Za-z0-9._-]*' | sort -u); do
           row=$(jq -c --arg id "$tok" 'select(.id == $id)' "$BOARD" 2>/dev/null | head -1)
           [ -n "$row" ] || continue
@@ -317,13 +353,18 @@ if [ -n "$SUBJECT" ]; then
 
           desc=$(printf '%s' "$row" | jq -r '.description // ""' 2>/dev/null) \
             || not_gated outside-scope "subject names '$tok' but its board row's description could not be read — scope cannot be verified"
-          [ -f "$DP_HOME" ] || not_gated outside-scope "delivers-paths.sh missing at '$DP_HOME' — scope cannot be derived for '$tok'"
-          # shellcheck source=delivers-paths.sh
-          . "$DP_HOME"
-          scope_list=$(printf '%s\n' "$desc" \
+          # extract_paths runs as its OWN final command over an already-computed string,
+          # never piped straight from awk/grep: under `pipefail`, a truly empty ## Delivers
+          # body makes `grep -v` itself exit 1 (nothing to select is not an error, but
+          # pipefail cannot tell the two apart) — chained into the pipe, that reads as
+          # "bead.py crashed" when it never ran. The filter's own `|| true` keeps its
+          # benign non-match off this leg's verdict.
+          delivers_section=$(printf '%s\n' "$desc" \
             | awk '/^## Delivers/{on=1; next} /^## /{on=0} on' \
-            | grep -v '^[[:space:]]*touchers:' \
-            | extract_paths || true)
+            | grep -v '^[[:space:]]*touchers:' || true)
+          scope_list=$(extract_paths "$delivers_section"); ep_rc=$?
+          [ "$ep_rc" -eq 0 ] \
+            || not_gated outside-scope "bead.py failed extracting Delivers paths for '$tok' (exit $ep_rc)"
           [ -n "$scope_list" ] || continue   # unscoped bead — no path declared, not checked
 
           for p in "${PATHS[@]}"; do
