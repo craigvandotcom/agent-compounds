@@ -15,6 +15,7 @@ STAMP="$HERE/stamp-refined.sh"
 GATE="$ROOT/skills/ac-implement/scripts/close-gate.sh"
 EVIDENCE="$ROOT/skills/ac-pipeline/scripts/close-evidence-check.sh"
 BR_CALL="$HERE/br-call.sh"
+BEAD_PY="$HERE/bead.py"
 
 passed=0
 failed=0
@@ -172,6 +173,7 @@ EPIC="$WORK/epic"
 mkdir -p "$EPIC/skills/ac-pipeline/scripts" "$EPIC/skills/_tools" "$EPIC/.flight" "$EPIC/.br"
 cp "$EVIDENCE" "$EPIC/skills/ac-pipeline/scripts/close-evidence-check.sh"
 cp "$BR_CALL" "$EPIC/skills/_tools/br-call.sh"
+cp "$BEAD_PY" "$EPIC/skills/_tools/bead.py"
 chmod +x "$EPIC/skills/ac-pipeline/scripts/close-evidence-check.sh"
 cat >"$EPIC/body.md" <<'EOF'
 ## Acceptance Criteria

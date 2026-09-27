@@ -18,6 +18,7 @@ GATE="$AC_ROOT/skills/ac-implement/scripts/close-gate.sh"
 COMMIT="$AC_ROOT/skills/ac-implement/scripts/swarm-commit.sh"
 EVIDENCE_SRC="$AC_ROOT/skills/ac-pipeline/scripts/close-evidence-check.sh"
 BR_CALL_SRC="$AC_ROOT/skills/_tools/br-call.sh"
+BEAD_PY_SRC="$AC_ROOT/skills/_tools/bead.py"
 CASES=0
 FAILURES=0
 
@@ -198,6 +199,7 @@ R="$W/a1"
 mkdir -p "$R/skills/ac-pipeline/scripts" "$R/skills/_tools" "$R/_plans/_done" "$W/a1-flight" "$W/a1-br"
 cp "$EVIDENCE_SRC" "$R/skills/ac-pipeline/scripts/close-evidence-check.sh"
 cp "$BR_CALL_SRC" "$R/skills/_tools/br-call.sh"
+cp "$BEAD_PY_SRC" "$R/skills/_tools/bead.py"
 chmod +x "$R/skills/ac-pipeline/scripts/close-evidence-check.sh"
 printf '_plans/\n' >"$R/.gitignore"
 cat >"$W/a1-body.md" <<'BODY'
