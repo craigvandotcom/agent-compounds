@@ -222,6 +222,22 @@ expect "$RC" 2 "unknown mode -> exit 2"
 expect_contains "$OUT" "NOT-GATED" "unknown mode -> NOT-GATED"
 
 # =========================================================================================
+# F — NOT-GATED: a crashing bead.py (ac-m9y4.9). BEAD_MODULE_PATH pointing nowhere drives
+# the crash-path fixture without ever touching the real bead.py in this shared checkout
+# (the same seam bead-capture-guard.py's own `_load_bead_module()` test already uses).
+# =========================================================================================
+
+write_board "$(mk_bead bd-crash task open 'Bead needing extraction' '- D1 `lib/crash.js`')"
+
+OUT=$(BEAD_MODULE_PATH="$W/no-such-bead.py" bash "$SCRIPT" list 2>&1); RC=$?
+expect "$RC" 2 "crashing bead.py -> list exit 2"
+expect_contains "$OUT" "NOT-GATED" "crashing bead.py -> list NOT-GATED"
+
+OUT=$(BEAD_MODULE_PATH="$W/no-such-bead.py" bash "$SCRIPT" scan p-subject.md 2>&1); RC=$?
+expect "$RC" 2 "crashing bead.py -> scan exit 2"
+expect_contains "$OUT" "NOT-GATED" "crashing bead.py -> scan NOT-GATED"
+
+# =========================================================================================
 
 printf 'planned-layer.test: %d passed, %d failed\n' "$PASS" "$FAIL"
 [ "$FAIL" -eq 0 ]

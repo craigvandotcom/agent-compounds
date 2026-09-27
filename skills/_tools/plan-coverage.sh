@@ -32,26 +32,55 @@ PLAN="${1:-}"; EPIC="${2:-}"
 [ -n "$EPIC" ] && [ -r "$PLAN" ] \
   || { echo "NOT-GATED: usage: plan-coverage.sh <plan.md> <epic-id>"; exit 2; }
 
+_TOOLS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" 2>/dev/null && pwd)"
+[ -f "$_TOOLS_DIR/bead.py" ] \
+  || { echo "NOT-GATED: bead.py missing at $_TOOLS_DIR/bead.py — the epic's children cannot be resolved"; exit 2; }
+
 SHOW=$(br_call show "$EPIC" --json) || { echo "NOT-GATED: br show refused for $EPIC"; exit 2; }
 LIST=$(br_call list --all --limit 0 --json) || { echo "NOT-GATED: br list refused"; exit 2; }
 
-printf '%s' "$LIST" | PLAN="$PLAN" EPIC="$EPIC" SHOW="$SHOW" python3 -c '
-import json, os, re, sys
+# bead.py is the one bead reader (ac-m9y4.1): the epic's own parent-child children are
+# read through its `parent_child_children` (ac-m9y4.9), never a second inline edge select.
+# `BEAD_MODULE_PATH` is the same test-only override bead-capture-guard.py's own
+# `_load_bead_module()` uses: a nonexistent path drives the crash-path fixture without
+# ever touching the real file in a shared checkout.
+printf '%s' "$LIST" | PLAN="$PLAN" EPIC="$EPIC" SHOW="$SHOW" TOOLS_DIR="$_TOOLS_DIR" python3 -c '
+import importlib.util, json, os, re, sys
 norm = lambda s: " ".join(s.split())
 rows = lambda v: v if isinstance(v, list) else v.get("issues", [])
-show = json.loads(os.environ["SHOW"]); show = show[0] if isinstance(show, list) else show
 epic = os.environ["EPIC"]
-ids = {d["id"] for d in show.get("dependents") or [] if d.get("dependency_type") == "parent-child"}
-if not ids:
-    print(f"NOT-GATED: {epic} has no parent-child children"); sys.exit(2)
-text = norm(" ".join(i.get("description") or "" for i in rows(json.load(sys.stdin)) if i["id"] in ids))
-plan = open(os.environ["PLAN"]).read()
-lines = [norm(l) for l in re.findall(r"Done when:(.*?)(?=\n\s*\n|\n\s*[-*] |\n#|\Z)", plan, re.S)]
-if not lines:
-    print("REFUSED no-done-when: the plan carries no Done when: line"); sys.exit(1)
-gaps = [l for l in lines if l not in text]
-for g in gaps:
-    print(f"COVERAGE GAP: {g}")
-if gaps: sys.exit(1)
-print(f"COVERED {len(lines)}")
+
+def _load_bead():
+    override = os.environ.get("BEAD_MODULE_PATH")
+    path = override or os.path.join(os.environ["TOOLS_DIR"], "bead.py")
+    spec = importlib.util.spec_from_file_location("bead", path)
+    if spec is None or spec.loader is None:
+        raise ImportError(f"cannot load bead.py at {path!r}")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+try:
+    bead = _load_bead()
+    show = json.loads(os.environ["SHOW"])
+    ids, err = bead.parent_child_children(show)
+    if err:
+        print(f"NOT-GATED: {epic} — {err}"); sys.exit(2)
+    ids = set(ids)
+    if not ids:
+        print(f"NOT-GATED: {epic} has no parent-child children"); sys.exit(2)
+    text = norm(" ".join(i.get("description") or "" for i in rows(json.load(sys.stdin)) if i["id"] in ids))
+    plan = open(os.environ["PLAN"]).read()
+    lines = [norm(l) for l in re.findall(r"Done when:(.*?)(?=\n\s*\n|\n\s*[-*] |\n#|\Z)", plan, re.S)]
+    if not lines:
+        print("REFUSED no-done-when: the plan carries no Done when: line"); sys.exit(1)
+    gaps = [l for l in lines if l not in text]
+    for g in gaps:
+        print(f"COVERAGE GAP: {g}")
+    if gaps: sys.exit(1)
+    print(f"COVERED {len(lines)}")
+except SystemExit:
+    raise
+except Exception as e:
+    print(f"NOT-GATED: bead.py unavailable or crashed: {e}"); sys.exit(2)
 '

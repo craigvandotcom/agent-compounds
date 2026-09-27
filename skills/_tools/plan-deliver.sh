@@ -56,6 +56,69 @@ EPIC=$(grep -m1 '^beadified:' "$PLAN" | sed 's/^beadified:[[:space:]]*//' | awk 
 
 command -v jq >/dev/null 2>&1 \
   || { echo "NOT-GATED: jq unavailable — the br list payload cannot be parsed"; exit 2; }
+command -v python3 >/dev/null 2>&1 \
+  || { echo "NOT-GATED: python3 unavailable — bead.py cannot be run"; exit 2; }
+
+# bead.py is the one bead reader (ac-m9y4.1): the parent-child edge below reads through
+# its forward (child-side) `dependencies` normalisation (`is_child_of`), never a second
+# inline jq copy of that edge. A missing/crashing bead.py refuses NOT-GATED here, at load
+# time, never a silent undercount.
+_TOOLS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" 2>/dev/null && pwd)"
+[ -f "$_TOOLS_DIR/bead.py" ] \
+  || { echo "NOT-GATED: bead.py missing at $_TOOLS_DIR/bead.py — the parent-child edge cannot be resolved"; exit 2; }
+
+# The program lives in its own file, never a heredoc attached to `python3 -`: a heredoc
+# IS the command's stdin, so a JSON payload piped in on the same command would starve
+# `sys.stdin.read()` of everything but EOF — the payload travels via a temp FILE argument
+# instead. `BEAD_MODULE_PATH` is the same test-only override bead-capture-guard.py's own
+# `_load_bead_module()` uses: a nonexistent path drives the crash-path fixture without
+# ever touching the real file in a shared checkout.
+_IS_CHILD_PY="$(mktemp)"
+trap 'rm -f "$_IS_CHILD_PY"' EXIT
+cat > "$_IS_CHILD_PY" <<'PY'
+import importlib.util, json, os, sys
+
+
+def _load_bead():
+    override = os.environ.get("BEAD_MODULE_PATH")
+    path = override or os.environ["BEAD_PY_PATH"]
+    spec = importlib.util.spec_from_file_location("bead", path)
+    if spec is None or spec.loader is None:
+        raise ImportError(f"cannot load bead.py at {path!r}")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def main():
+    bead = _load_bead()
+    with open(sys.argv[1], "r") as f:
+        data = json.load(f)
+    is_child, err = bead.is_child_of(data, os.environ["EPIC_ID"])
+    if err:
+        print(f"NOT-GATED: {err}", file=sys.stderr)
+        return 2
+    print("yes" if is_child else "no")
+    return 0
+
+
+if __name__ == "__main__":
+    try:
+        sys.exit(main())
+    except Exception as e:
+        print(f"NOT-GATED: bead.py unavailable or crashed: {e}", file=sys.stderr)
+        sys.exit(2)
+PY
+
+# <show-json-text> -> "yes"/"no" on stdout; exit 2 NOT-GATED on a missing/crashing bead.py
+# or an unreadable payload.
+_pd_is_child() {
+  local json_text="$1" tf rc
+  tf=$(mktemp) && printf '%s' "$json_text" > "$tf" || return 2
+  BEAD_PY_PATH="$_TOOLS_DIR/bead.py" EPIC_ID="$EPIC" python3 "$_IS_CHILD_PY" "$tf"; rc=$?
+  rm -f "$tf"
+  return $rc
+}
 
 # The child set is the union close-gate's epic pick reads: dotted ids (<epic>.<n>) plus
 # parent-child edges. br list rows carry no edge detail, so dotted membership is decided
@@ -81,10 +144,10 @@ while IFS= read -r cid; do
     *)
       deps=$(br_call show "$cid" --json) \
         || { echo "NOT-GATED: br show refused for $cid — an unreadable candidate is never counted absent"; exit 2; }
-      if printf '%s' "$deps" | jq -e --arg e "$EPIC" \
-        'if type == "array" then .[0] else . end
-         | (.dependencies // []) | map(select(.dependency_type == "parent-child" and .id == $e)) | length > 0' \
-         >/dev/null 2>&1; then
+      is_child=$(_pd_is_child "$deps"); rc=$?
+      [ "$rc" -eq 0 ] \
+        || { echo "NOT-GATED: bead.py failed resolving the parent-child edge for $cid"; exit 2; }
+      if [ "$is_child" = "yes" ]; then
         OPEN_COUNT=$((OPEN_COUNT + 1))
       fi ;;
   esac

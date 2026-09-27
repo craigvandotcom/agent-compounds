@@ -73,10 +73,66 @@ set -u
 
 die_notgated() { printf 'NOT-GATED: %s\n' "$*"; exit 2; }
 
-# The Delivers-path extraction pattern has ONE home (skills/_tools/delivers-paths.sh).
-_DP_HOME="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/delivers-paths.sh"
-[ -f "$_DP_HOME" ] || die_notgated "delivers-paths.sh missing at $_DP_HOME — the extraction pattern cannot be resolved"
-. "$_DP_HOME"
+# bead.py is the one bead reader (ac-m9y4.1): a plan's own ## Deliverables reads through
+# the SAME plain-text extractor a bead's ## Delivers uses, never a second hand-rolled
+# copy of the pattern. Existence is checked lazily inside `_extract_paths_via_bead`, only
+# where extraction is actually needed (mode_approve) — ready/check never touch it.
+_BEAD_PY_HOME="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/bead.py"
+
+# The program lives in its own file, never a heredoc attached to `python3 -`: a heredoc
+# IS the command's stdin, so a text argument piped in on the same command would starve
+# `sys.stdin.read()` of everything but EOF (the lesson needs-device-gate.sh's own
+# write_device_paths_py already paid for) — the text travels via a temp FILE argument
+# instead. `BEAD_MODULE_PATH` is the same test-only override bead-capture-guard.py's own
+# `_load_bead_module()` uses: a nonexistent path drives the crash-path fixture without
+# ever touching the real file in a shared checkout.
+_write_bead_extract_py() {
+  cat > "$1" <<'PY'
+import importlib.util, os, sys
+
+
+def _load_bead():
+    override = os.environ.get("BEAD_MODULE_PATH")
+    path = override or os.environ["BEAD_PY_PATH"]
+    spec = importlib.util.spec_from_file_location("bead", path)
+    if spec is None or spec.loader is None:
+        raise ImportError(f"cannot load bead.py at {path!r}")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def main():
+    bead = _load_bead()
+    with open(sys.argv[1], "r") as f:
+        text = f.read()
+    for p in bead.extract_paths(text):
+        print(p)
+    return 0
+
+
+if __name__ == "__main__":
+    try:
+        sys.exit(main())
+    except Exception as e:
+        print(f"NOT-GATED: bead.py unavailable or crashed: {e}", file=sys.stderr)
+        sys.exit(2)
+PY
+}
+
+# text -> one path per line via bead.py's plain-text extractor. Fail-closed: a missing
+# or crashing bead.py refuses (exit 2), never a silent empty extraction.
+_extract_paths_via_bead() {
+  local text="$1" tf py rc
+  [ -f "$_BEAD_PY_HOME" ] || return 2
+  command -v python3 >/dev/null 2>&1 || return 2
+  tf=$(mktemp) && printf '%s' "$text" > "$tf" || return 2
+  py=$(mktemp) || { rm -f "$tf"; return 2; }
+  _write_bead_extract_py "$py"
+  BEAD_PY_PATH="$_BEAD_PY_HOME" python3 "$py" "$tf"; rc=$?
+  rm -f "$tf" "$py"
+  return $rc
+}
 
 # planned-layer.sh check <plan> — the promised-work overlap check approve calls on its
 # write path (mode_approve). Resolved by path, never sourced: it is its own process with
@@ -331,8 +387,9 @@ mode_approve() {
     printf 'REFUSED no-done-when %s: every deliverable needs a non-empty Done when observable\n' "$missing_done_when"
     exit 1
   fi
-  local paths incomplete="" p
-  paths=$(printf '%s\n' "$deliv_body" | extract_paths)
+  local paths incomplete="" p paths_rc
+  paths=$(_extract_paths_via_bead "$deliv_body"); paths_rc=$?
+  [ "$paths_rc" -eq 0 ] || die_notgated "bead.py failed deriving Deliverables paths for $plan"
   while IFS= read -r p; do
     [ -n "$p" ] || continue
     p="${p#./}"

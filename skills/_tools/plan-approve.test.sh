@@ -700,6 +700,20 @@ expect "$([ "$BEFORE_KEYS" = "$AFTER_KEYS" ] && echo same)" "same" "approved_* k
 expect "$(grep -c '^polish_rounds: 2$' "$W/pf.md")" 1 "polish-fixpoint still stamps its own keys on the same file"
 rm -rf "$STATE"
 
+# --- bead.py fail-closed: a missing/crashing reader refuses NOT-GATED (ac-m9y4.9) -------
+
+# 41 — BEAD_MODULE_PATH pointing nowhere drives the crash-path fixture without ever
+# touching the real bead.py in this shared checkout (the same seam bead-capture-guard.py's
+# own `_load_bead_module()` test already uses).
+mk_plan "$W/badbead.md" "- D1 x" "$SETTLED_CARD" "a"
+OUT=$(BEAD_MODULE_PATH="$W/no-such-bead.py" "$SCRIPT" approve "$W/badbead.md" "Alex" 2>&1); RC=$?
+expect "$RC" 2 "crashing bead.py (BEAD_MODULE_PATH override) -> approve exit 2"
+expect_seen=$(printf '%s' "$OUT" | grep -c 'NOT-GATED')
+[ "$expect_seen" -ge 1 ] && printf '  PASS  %s\n' "crashing bead.py -> NOT-GATED" \
+  || { printf '  FAIL  %s\n' "crashing bead.py -> NOT-GATED"; FAILURES=$((FAILURES + 1)); }
+CASES=$((CASES + 1))
+expect "$(grep -c '^status: draft$' "$W/badbead.md")" 1 "crashing bead.py leaves the plan unstamped"
+
 rm -rf "$W"
 printf 'plan-approve.test: %s cases, %s failures\n' "$CASES" "$FAILURES"
 [ "$FAILURES" -eq 0 ]
