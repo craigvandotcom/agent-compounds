@@ -309,6 +309,31 @@ else
   fail "Case 14: $STEM_FAILS stem mismatch(es) above"
 fi
 
+# --- Case 15: derive's command widens to a BARE-NAME caller (ac-db1y) -------------------
+# A stem-only search (`scripts/close-gate`) misses a caller that cites the script by bare
+# filename alone (`close-gate.sh`) — measured 2026-09-26: worker.md, refly.sh and
+# flight-check.sh all cite touchers.sh's own subjects this way and the old derive command
+# found none of them. A throwaway git fixture, never the live registry, so the referrer set
+# is fixed at fixture-build time.
+BARE_FIX="$WORK/bare-name-fixture"
+mkdir -p "$BARE_FIX/scripts"
+git -C "$BARE_FIX" init -q
+printf 'export function run() {}\n' >"$BARE_FIX/scripts/close-gate.sh"
+git -C "$BARE_FIX" add scripts/close-gate.sh
+# Never spells the stem path "scripts/close-gate" — only the bare filename, same as a
+# worker.md prose citation.
+printf 'run close-gate.sh from the loop\n' >"$BARE_FIX/bare-referrer.md"
+DER=$(cd "$BARE_FIX" && bash "$TOOL" derive "scripts/close-gate.sh" 2>&1); RC=$?
+D_CMD=$(printf '%s' "$DER" | cut -f2-)
+D_HITS=$(cd "$BARE_FIX" && bash -c "$D_CMD" 2>/dev/null)
+STEM_ONLY_HITS=$(cd "$BARE_FIX" && rg -l -F "scripts/close-gate" . -g '!scripts/close-gate.sh' 2>/dev/null)
+if [ "$RC" -eq 0 ] && printf '%s\n' "$D_HITS" | grep -q "bare-referrer.md" \
+   && ! printf '%s\n' "$STEM_ONLY_HITS" | grep -q "bare-referrer.md"; then
+  pass "Case 15: derive's command widens to a bare-name caller — a referrer naming only 'close-gate.sh' is counted, though a stem-only search would have missed it"
+else
+  fail "Case 15: expected the bare-name referrer counted by derive but missed by a stem-only search, rc=$RC. derive cmd: $D_CMD / hits: $D_HITS / stem-only hits: $STEM_ONLY_HITS"
+fi
+
 echo
 if [ "$FAILURES" -eq 0 ]; then
   echo "All touchers fixture tests passed."

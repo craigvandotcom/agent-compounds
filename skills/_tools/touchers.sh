@@ -100,10 +100,22 @@ _touchers_stem() {
   '
 }
 
+# The stem alone misses a caller that names the script by BARE FILENAME rather than its
+# stem path — `close-gate.sh` in prose, or `$HERE/close-gate.sh` / a runtime-built path whose
+# static text still carries the plain filename (measured 2026-09-26: worker.md, refly.sh and
+# flight-check.sh all cite touchers.sh's own subjects this way and derive missed every one).
+# The extension survives here — the stem drops it, so the two patterns are never redundant.
+_touchers_basename() {
+  printf '%s' "$1" | awk -F/ '{print $NF}'
+}
+
 # The command a bead pastes: the gate's shape, rooted at `.` so it runs from the repo root.
+# Two -F alternatives, never one: the stem catches a path-shaped reference, the basename
+# catches a bare-filename or built-path one — a caller matching EITHER is a real referrer.
 _touchers_command() {
-  local _tc_q="'"
-  printf 'rg -l -F "%s" . -g %s!%s%s %s' "$2" "$_tc_q" "$1" "$_tc_q" "$(_touchers_globs)"
+  local _tc_q="'" base
+  base=$(_touchers_basename "$1")
+  printf 'rg -l -F -e "%s" -e "%s" . -g %s!%s%s %s' "$2" "$base" "$_tc_q" "$1" "$_tc_q" "$(_touchers_globs)"
 }
 
 # Existence is a GIT fact, not a disk fact: a path on disk but untracked is a NEW artifact
