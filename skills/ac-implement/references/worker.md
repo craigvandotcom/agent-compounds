@@ -182,14 +182,10 @@ closes `fixed:`) and names an artifact from this bead's own `## Delivers` — th
 cross-references it and refuses otherwise. The disposition verbs are §4b's route: attempted
 while you still hold the claim, never after flight-check has unclaimed you.
 
-- **exit 0** — every leg held and the close was READ BACK as landed.
+- **exit 0** — every leg held and the close was READ BACK as landed. Go to §1.
 - **exit non-zero** — do what its `NEXT:` line says. `repair` → retain the claim, fix what the
   leg names, re-run; never close around it. `handback` → §9 with this exact refusal; never
-  post a WORKER receipt and never pick again.
-
-Only after exit 0, post the worker receipt (body through a file) and go to §1:
-
-    f=$(mktemp) && printf 'WORKER: model=%s actor=%s tree=%s\n' "<model>" "$ACTOR" "$(git rev-parse --short HEAD)" > "$f" && RUST_LOG=error br comments add <id> -f "$f"
+  pick again.
 
 ## 8 — EPIC, the terminal pick
 
@@ -216,7 +212,7 @@ show <id> --json` back and require `status: open` plus an empty `assignee`; a fa
 mismatch is UNKNOWN, so retain the reservations and fail loudly. Only then release this bead's
 Delivers-path reservations with the plain `release_file_reservations` tool, re-read
 `resource://file_reservations/{project_key}?active_only=true` and verify no `$ACTOR`
-reservation overlaps that scope. Post NO `WORKER` receipt, do not pick again, and return the
+reservation overlaps that scope. Do not pick again, and return the
 bead id plus the exact refusal. A `repair` refusal stays in its own repair branch, claim held.
 **Not a batch boundary — that is the coordinator's**: release any remaining reservations and
 return closed / blocked / premise-failed ids, your unverified tiers with the tool's verbatim

@@ -28,8 +28,8 @@ the code itself states (a type, a documented invariant, a test's premise).
   [unowned-callers]` names a caller outside the scope that no touchers line declared. The
   reader cannot fix it (out of scope by rule), so it must not half-fix it: REVERT the edit that
   moved the symbol and report the caller list as a seams candidate.
-  The oracle's own scope is the bead's `## Delivers` paths (falling back to a `## Territory`
-  section only when Delivers names none), diffed against `HEAD` — never the branch's whole
+  The oracle's own scope is the bead's `## Delivers` paths — a bead that names none stays
+  unscoped, today's behaviour, unchanged — diffed against `HEAD` — never the branch's whole
   history — so a sibling's already-committed WIP in the same shared checkout cannot seed a
   symbol this round's close depends on.
 

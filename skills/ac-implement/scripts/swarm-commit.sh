@@ -327,8 +327,7 @@ fi
 # holds X's claim, and every named path lies inside X's own `## Delivers` scope — the
 # SAME path-extraction pattern diff-closure.sh already uses (bead.py's plain-text
 # extract_paths; the touchers: line excluded), never a second, divergent definition.
-# `## Territory` is deliberately not read here (a fallback scope source owned elsewhere);
-# a bead whose Delivers names no path is unscoped and is not checked at all. Exemptions:
+# A bead whose Delivers names no path is unscoped and is not checked at all. Exemptions:
 # the coordinator's own `[no-bead]` ledger-flush marker and a subject naming no bead token
 # pass outright; a row that cannot be parsed is NOT-GATED, never a silent pass — the claim
 # and scope could not be verified either way.

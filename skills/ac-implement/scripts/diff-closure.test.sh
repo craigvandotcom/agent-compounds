@@ -267,18 +267,18 @@ out=$(BR_STUB_JSON="$W/bead-delivers-2.json" PATH="$BINDIR:$PATH" "$SCRIPT" --be
   && ok "--bead Delivers scope refuses an undeclared caller outside scope (base defaults to HEAD)" \
   || fail "bead-delivers refused" "rc=$rc $out"
 
-# --- 13b. a bead with an empty ## Delivers still falls back to ## Territory (today's behaviour) -
+# --- 13b. a bead with an empty ## Delivers stays UNSCOPED (today's behaviour, unchanged) -----
 R18="$W/r18"; mkdir -p "$R18/lib"; git -C "$R18" init -q
 printf 'export function fallbackSymbol() { return 1 }\n' > "$R18/lib/source.ts"
 printf 'import { fallbackSymbol } from "./source"\nexport const call = fallbackSymbol()\n' > "$R18/lib/caller.ts"
 git -C "$R18" add -A >/dev/null; git -C "$R18" -c user.name=t -c user.email=t@t -c commit.gpgsign=false commit -q -m fallback-base >/dev/null
 printf 'export function fallbackSymbol() { return 2 }\n' > "$R18/lib/source.ts"
 
-jq -n '[{description: "## Delivers\nnone\n## Territory\n- lib/source.ts\n"}]' > "$W/bead-delivers-3.json"
+jq -n '[{description: "## Delivers\nnone\n"}]' > "$W/bead-delivers-3.json"
 out=$(BR_STUB_JSON="$W/bead-delivers-3.json" PATH="$BINDIR:$PATH" "$SCRIPT" --bead bd-delivers-3 -C "$R18" 2>&1); rc=$?
 [ "$rc" = 1 ] && printf '%s' "$out" | grep -q 'fallbackSymbol  <- lib/caller.ts' \
-  && ok "an empty ## Delivers falls back to ## Territory scope, unchanged from today" \
-  || fail "delivers-empty territory-fallback" "rc=$rc $out"
+  && ok "an empty ## Delivers stays unscoped, not checked at all, unchanged from today" \
+  || fail "delivers-empty stays-unscoped" "rc=$rc $out"
 
 # --- 13. spawns nothing; assurance declared ---------------------------------------------------
 if grep -nE '(^|[^[:alnum:]_-])(claude|codex|droid)[[:space:]]|subagent' "$SCRIPT" >/dev/null; then fail "script invokes an agent"; else ok "diff-closure spawns nothing"; fi

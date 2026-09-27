@@ -11,7 +11,7 @@
 #           evidence resolving against its own row when closed_at is on/after the
 #           rule-6 cutover, and is never re-judged before it; an empty board is
 #           NOT-GATED (exit 2); a missing board skips (exit 77). (Rules 4 "status
-#           outside the canon set" and 5 "malformed WORKER: receipt" were cut,
+#           outside the canon set" and 5 "malformed worker-identity receipt" were cut,
 #           2026-09-24 — see lint/checks/35-board-integrity.py's module docstring.)
 #
 # ASSURANCE
@@ -91,12 +91,12 @@ rc=$(run_check "$WORK/status-cut")
 [ "$rc" -eq 0 ] && ok "an off-canon status is GREEN now that rule 4 is cut" \
   || bad "status-cut: rc=$rc out=$(cat "$OUT")"
 
-# --- GREEN: a malformed WORKER: comment is no longer judged (rule 5 cut, 2026-09-24 —
-# --- nothing reads a WORKER: field) --------------------------------------------------
-WORKER_BAD='{"id":"ac-workerbad","status":"open","created_at":"2026-08-25T10:00:00Z","labels":["origin:manual"],"title":"bad worker stamp","comments":[{"id":1,"issue_id":"ac-workerbad","author":"x","text":"WORKER: model=foo session=bar skill@version=abc duration=1m","created_at":"2026-09-23T10:01:00Z"}]}'
+# --- GREEN: a malformed structured-stamp comment is no longer judged (rule 5 cut,
+# --- 2026-09-24 — nothing reads a worker-identity field) -----------------------------
+WORKER_BAD='{"id":"ac-workerbad","status":"open","created_at":"2026-08-25T10:00:00Z","labels":["origin:manual"],"title":"bad worker stamp","comments":[{"id":1,"issue_id":"ac-workerbad","author":"x","text":"STAMP: model=foo session=bar skill@version=abc duration=1m","created_at":"2026-09-23T10:01:00Z"}]}'
 board "$WORK/worker-cut" "$OPEN_TAGGED" "$WORKER_BAD"
 rc=$(run_check "$WORK/worker-cut")
-[ "$rc" -eq 0 ] && ok "a malformed WORKER: comment is GREEN now that rule 5 is cut" \
+[ "$rc" -eq 0 ] && ok "a malformed structured-stamp comment is GREEN now that rule 5 is cut" \
   || bad "worker-cut: rc=$rc out=$(cat "$OUT")"
 
 # =====================================================================

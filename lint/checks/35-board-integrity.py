@@ -12,9 +12,9 @@
 """35-board-integrity — the board stays well-formed, origin-tagged and receipt-honest.
 
 Five FAIL rules (1, 2, 3, 6, 7 — rules 4 "status outside the canon set" and 5 "malformed
-WORKER: receipt" were cut, 2026-09-24: `br` validates status on write, so only a
-hand-edited JSONL broke rule 4, and nothing reads a `WORKER:` field, so rule 5 guarded a
-shape nobody consumes), all scanning the WHOLE board on every run (no staged-vs-HEAD
+worker-identity receipt" were cut, 2026-09-24: `br` validates status on write, so only a
+hand-edited JSONL broke rule 4, and the worker-identity stamp itself is retired, so rule 5
+guarded a shape nobody writes anymore), all scanning the WHOLE board on every run (no staged-vs-HEAD
 diff — the board is adopter-local and gitignored, so there is nothing to diff against):
 
   1. a line that is not JSON.
