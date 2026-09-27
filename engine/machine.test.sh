@@ -184,7 +184,15 @@ check_lit '~/z' '$HOME/z' 'tilde-slash'
 
 # No operand: exit 2 naming the flag, and PROMPTLY — before this bead the parse loop
 # span forever on `shift 2` with one argument left (rc 124 under timeout).
-out="$(timeout 3 "$MACHINE" --lit 2>&1)"; rc=$?
+# macOS has no `timeout` (coreutils calls it gtimeout); perl's alarm is the fallback.
+if command -v timeout >/dev/null 2>&1; then to=timeout
+elif command -v gtimeout >/dev/null 2>&1; then to=gtimeout
+else to=""; fi
+if [ -n "$to" ]; then
+  out="$("$to" 3 "$MACHINE" --lit 2>&1)"; rc=$?
+else
+  out="$(perl -e 'alarm shift; exec @ARGV' 3 "$MACHINE" --lit 2>&1)"; rc=$?
+fi
 if [ "$rc" = 2 ] && printf '%s' "$out" | grep -q -- '--lit'; then
   ok "lit: no operand -> 2 naming the flag"
 else

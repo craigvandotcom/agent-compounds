@@ -7,8 +7,9 @@
 # the primary agent that invoked it. Any mix is valid.
 #
 #   PROBE: render into a TEMP home via `sync.sh --root --opencode-home <dir>` (as
-#          opencode-dispatcher.test.sh does), then compare each stance's model line
-#          with the live config. No real opencode home is touched.
+#          opencode-dispatcher.test.sh does), with a fixture org root and HOME, then
+#          compare each stance's model line with the live config. No real opencode
+#          home, org root or user home is touched.
 #
 # ASSURANCE
 #   PROBE:    bash scripts/opencode-agent-models.test.sh
@@ -28,8 +29,13 @@ bad() { echo "  FAIL  $1"; fails=$((fails + 1)); }
 command -v jq >/dev/null 2>&1 || { echo "HARNESS FAIL: jq not on PATH"; exit 1; }
 
 WORK="$(mktemp -d)"; trap 'rm -rf "$WORK"' EXIT
-mkdir -p "$WORK/home"
-bash "$SYNC" --root --opencode-home "$WORK/home" >/dev/null 2>&1
+mkdir -p "$WORK/home" "$WORK/org" "$WORK/userhome"
+# A real --root pass writes the org root and the machine homes, so it runs against a
+# fixture org root (machine.json via AC_MACHINE_FILE) and a throwaway HOME — never the
+# machine running the proof. AC_SYNC_NO_STANCE_PROBE keeps it from spawning sessions.
+printf '{"org_root": "%s"}\n' "$WORK/org" > "$WORK/machine.json"
+AC_MACHINE_FILE="$WORK/machine.json" HOME="$WORK/userhome" AC_SYNC_NO_STANCE_PROBE=1 \
+  bash "$SYNC" --root --opencode-home "$WORK/home" >/dev/null 2>&1
 
 CFG="$ROOT/harnesses.json"
 [ -f "$ROOT/harnesses.local.json" ] && CFG_JSON="$(jq -s '.[0] * .[1]' "$CFG" "$ROOT/harnesses.local.json")" || CFG_JSON="$(cat "$CFG")"

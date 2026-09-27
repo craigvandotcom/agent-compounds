@@ -192,7 +192,10 @@ Two rules that survive from the old body template because the four sections carr
 - **`## Delivers` + `## Consumes`** — `## Delivers` names the promised artifacts (and, for a
   referenced path, its `touchers:` line — `bead-create-contract.md` § Touchers); `## Consumes`
   is one `<blocker-id> → <artifact>` per line or the literal `none`, and every Consumes line
-  pairs with a dependency edge.
+  pairs with a dependency edge. Both ends obey ONE grammar — one bare path first, an optional
+  trailing `(gloss)`, no label prefix, no second artifact, no prose, no placeholder:
+  `ac-beadify/references/bead-schema.md` § The citation rule, checked by
+  `skills/_tools/citation-grammar.sh`.
 
 ## Binding vs advisory (the present-tree rule)
 

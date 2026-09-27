@@ -46,6 +46,11 @@ is the reader doing its job; reaching for a finding to justify the round is not.
 
 ## 3. consumer-verification
 
+- Is every `## Delivers` entry and `## Consumes` citation ONE bare path, first thing — no
+  label prefix, no second artifact, no trailing prose, no placeholder
+  (`ac-beadify/references/bead-schema.md` § The citation rule)? A dependent cites Delivers
+  verbatim, so a compound entry is class (c) at its source. VALIDATE's citation leg names the
+  class; move the prose to `## Intent` and split a second artifact onto its own line.
 - A `## Delivers` bullet naming a GIT-TRACKED, REFERENCED path with no `touchers:` line is
   class (c) — the `refined` stamp cannot survive `stamp-refined.sh`'s touchers leg, so the
   bead is unimplementable as a refined bead. Add the line; never decline it as a format gap.

@@ -59,13 +59,50 @@ br create "<verb-first title>" -t <type> -p <0-4> \
 |---|---|
 | `## Intent` | Why + rationale + context + boundary (what is explicitly OUT) + gotchas. Symbol and file names are welcome as hints; **line numbers are banned** — a `file:line` anchor decays before the claim and nothing cheap tells you it has. **The header is per type:** `bug` → `## Steps to Reproduce` (a bug's intent IS its repro), `epic` → `## Success Criteria` (an epic's intent IS what done looks like), everything else → `## Intent`. Same content, same four sections — `br lint` (v0.2.16) compiles those two per-type headers in and cannot be configured, so the schema meets it by naming, never by a fifth section. |
 | `## Acceptance Criteria` | 3–7 falsifiable behavioural ACs, EACH naming its executable probe and tier (see below). Observable outcomes only. The header phrase is load-bearing for `br lint`: its matcher is case-insensitive and tolerates trailing text, but both words must appear. |
-| `## Delivers` | The named artifacts this bead promises — the exact strings a dependent's `## Consumes` will cite. Paths, script names, receipts. **One path per bullet** (one `touchers:` line cannot own two), and a delivered path that git ALREADY TRACKS owes that line beneath its bullet: trigger, shape and rationale in `beads-standards/reference/bead-create-contract.md` § Touchers — derive it with `skills/_tools/touchers.sh derive <path>`, never by hand. **Path-shaped Delivers is REQUIRED for `task`/`feature`/`epic` beads**: every bullet must carry a path-shaped token (`name.ext`) — a dotted child bead id (`<epic-id>.3`) is not one, and an epic's paths must exist at close — because close-evidence-check cross-references the close reason against exactly those tokens. A prose-only Delivers line is refused at compile — ac-beadify's refusal step applies this schema to every bead before creation, and a prose-only Delivers is a schema violation — because one that slips through makes every close of that bead unverified forever (`UNVERIFIABLE-DELIVERS`; audit the backlog with `skills/ac-pipeline/scripts/close-evidence-check.sh --list-unverifiable`). |
-| `## Consumes` | One `<blocker-id> -> <artifact>` per line, or the single word `none`. Every line needs a matching dependency edge and every edge a matching line (parity is graded). |
+| `## Delivers` | The named artifacts this bead promises — the exact strings a dependent's `## Consumes` will cite. **One bare path per bullet, and the bullet STARTS with it** — grammar in § The citation rule (one `touchers:` line cannot own two), and a delivered path that git ALREADY TRACKS owes that line beneath its bullet: trigger, shape and rationale in `beads-standards/reference/bead-create-contract.md` § Touchers — derive it with `skills/_tools/touchers.sh derive <path>`, never by hand. **Path-shaped Delivers is REQUIRED for `task`/`feature`/`epic` beads**: every bullet must carry a path-shaped token (`name.ext`) — a dotted child bead id (`<epic-id>.3`) is not one, and an epic's paths must exist at close — because close-evidence-check cross-references the close reason against exactly those tokens. A prose-only Delivers line is refused at compile — ac-beadify's refusal step applies this schema to every bead before creation, and a prose-only Delivers is a schema violation — because one that slips through makes every close of that bead unverified forever (`UNVERIFIABLE-DELIVERS`; audit the backlog with `skills/ac-pipeline/scripts/close-evidence-check.sh --list-unverifiable`). |
+| `## Consumes` | One `<blocker-id> -> <artifact>` per line, or the single word `none`. **`<artifact>` is ONE bare path, first thing after the arrow** — § The citation rule. Every line needs a matching dependency edge and every edge a matching line (parity is graded). |
 
 A compiled epic's AC is the plan's silver bullet verbatim. Every child AC quotes its plan
 "Done when:" verbatim and adds only the probe. A deliverable split across several beads has
 each child quote the parent line and add its own slice's values. "a test named X passes"
 is not an AC — it names a test, not a behaviour.
+
+### The citation rule
+
+A `## Delivers` entry and the artifact half of a `## Consumes` line are one grammar, because a
+dependent cites the Delivers entry VERBATIM — a compound Delivers line reproduces itself as a
+compound Consumes line in every bead that consumes it:
+
+    ## Delivers                        ## Consumes
+    - <one path> [(gloss)]             - <blocker-id> -> <one path> [(gloss)]
+
+One bare path, first thing on the entry. A gloss is allowed only as ONE trailing `(...)`
+that names no second path. `- none` is the explicit empty section at either end.
+
+    GOOD  - skills/_tools/touchers.sh
+    GOOD  - skills/ac-polish/scripts/bead-artifact.py (the base_digest() function)
+    BAD   - gate: skills/_tools/touchers.sh                                  LABEL-PREFIX
+    BAD   - skills/_tools/touchers.sh and skills/_tools/touchers.test.sh     TWO-ARTIFACTS
+    BAD   - skills/_tools/touchers.sh (sources skills/_tools/delivers-paths.sh) TWO-ARTIFACTS
+    BAD   - skills/_tools/touchers.sh — the gate every stamp runs             PROSE
+    BAD   - skills/<name>/SKILL.md                                            PLACEHOLDER
+    BAD   - `skills/_tools/touchers.sh`                                       NOT-BARE
+
+Why it is canon and not taste: a citation is an ARGUMENT to a gate, not a sentence.
+flight-check tests the cited artifact with `-e`, close-evidence-check cross-references
+Delivers tokens against the close reason, and touchers.sh derives one count per bullet — a
+label, a second path or a placeholder is either tested as though it were the artifact or
+tests nothing at all. A premise that cannot be named as a path is not a citation — put it
+in `## Intent`, or make it an AC with a probe. Two artifacts are two lines.
+
+A wrapped entry is folded before it is read, so a second artifact cannot hide past a line
+break. The `touchers:` line beneath a Delivers bullet is structure, not part of the entry.
+
+The one checker: `skills/_tools/citation-grammar.sh check <description-file>` (or
+`artifact <export>` over a bead-artifact export). Bead-mode polish runs it every round
+(`ac-polish/workflows/bead.md` VALIDATE). Measured 2026-09-27 (bd-1tq1, easy-mode): four
+polish rounds converged on Delivers bullets with trailing prose while VALIDATE read only
+element 4 and touchers, and only that app's pre-commit lint caught it.
 
 Nothing else. There is no Scope, Proof, Notes or Discussion section — that content is either
 `## Intent` or it is not durable.
@@ -184,11 +221,11 @@ from a git hook — a hook cannot see a DB-only close.
   Probe: `grep -q 'close-gate.sh' skills/ac-implement/SKILL.md` — tier: none
 
 ## Delivers
-- gate: skills/ac-implement/scripts/close-gate.sh
+- skills/ac-implement/scripts/close-gate.sh
   touchers: `rg -l -F "scripts/close-gate" . -g '!skills/ac-implement/scripts/close-gate.sh' -g '!node_modules/**' -g '!.beads/**' -g '!_plans/**' -g '!_backlog/**' -g '!_docs/**' -g '!docs/**' -g '!memory/**' -g '!CHANGELOG*'` → 4 · owned by: ac-qn7h.2
-- harness: skills/ac-implement/scripts/close-gate.test.sh
+- skills/ac-implement/scripts/close-gate.test.sh
   touchers: `rg -l -F "scripts/close-gate.test" . -g '!skills/ac-implement/scripts/close-gate.test.sh' -g '!node_modules/**' -g '!.beads/**' -g '!_plans/**' -g '!_backlog/**' -g '!_docs/**' -g '!docs/**' -g '!memory/**' -g '!CHANGELOG*'` → 1 · owned by: ac-qn7h.2
-- wiring: the close step of skills/ac-implement/SKILL.md invokes the gate
+- skills/ac-implement/SKILL.md (the close step invokes the gate)
   touchers: `rg -l -F "ac-implement/SKILL" . -g '!skills/ac-implement/SKILL.md' -g '!node_modules/**' -g '!.beads/**' -g '!_plans/**' -g '!_backlog/**' -g '!_docs/**' -g '!docs/**' -g '!memory/**' -g '!CHANGELOG*'` → 2 · out-of-scope: the referrers cite the skill by path, not the close step this bead edits
 
 ## Consumes

@@ -32,6 +32,8 @@
 #   inline-message     -m/--message instead of a message FILE
 #   no-message-file    --message-file missing, unreadable or empty
 #   foreign-branch     the checkout is not on the branch this commit was written for
+#   no-trunk           no --branch and the shared resolver (skills/_tools/trunk.sh) could
+#                      not name the trunk — the lane refuses rather than assume `main`
 #   no-claim-receipt   the subject names a bead whose claim flight-check REFUSED and no
 #                      flight receipt dated after that refusal is on record — the refusal→
 #                      rework rule lives only in worker seed text, so a worker that ignores
@@ -50,7 +52,11 @@
 #
 # USAGE
 #   swarm-commit.sh --identity <name> --message-file <file> --path <p> [--path <p>...]
-#                   [--branch main] [--remote origin] [--timeout 600] [--no-push]
+#                   [--branch <trunk>] [--remote origin] [--timeout 600] [--no-push]
+#
+#   --branch defaults to the trunk skills/_tools/trunk.sh resolves: a declared
+#   `git config ac2.trunk`, else origin/HEAD. A bare `main` constant refused every
+#   ledger commit on a checkout whose trunk is dev (easy-mode, 2026-09-12 and 2026-09-27).
 #
 set -uo pipefail
 
@@ -58,7 +64,7 @@ ORIG=("$@")
 LOCKED=0
 IDENTITY="${AC2_COMMIT_IDENTITY:-}"   # explicit lane channel ONLY — never AGENT_NAME
 MSGFILE=""
-BRANCH="main"
+BRANCH=""            # resolved inside the lane: --branch, else trunk.sh
 REMOTE="origin"
 TIMEOUT=600
 PUSH=1
@@ -220,6 +226,16 @@ export AGENT_NAME="$IDENTITY" BR_AGENT_NAME="$IDENTITY"
 # the file the writer named. The guard's reading and git's reading must be the SAME reading,
 # or the lane admits one path and commits another.
 export GIT_LITERAL_PATHSPECS=1
+
+# TRUNK RESOLUTION. BRANCH is the EXPECTED branch: the guard below compares HEAD against it.
+# Resolving it from HEAD would make that comparison HEAD = HEAD and retire the guard, so it
+# comes from the caller or from the ONE shared resolver, never from where the checkout stands.
+if [ -z "$BRANCH" ]; then
+  TRUNK_TOOL="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../_tools" 2>/dev/null && pwd)/trunk.sh"
+  [ -f "$TRUNK_TOOL" ] || refuse no-trunk "no --branch and the trunk resolver is missing at '$TRUNK_TOOL'"
+  BRANCH="$(bash "$TRUNK_TOOL")" || BRANCH=""
+  [ -n "$BRANCH" ] || refuse no-trunk "no --branch and trunk.sh could not resolve the trunk (its reason is above); pass --branch or declare it with \`git config ac2.trunk <branch>\`"
+fi
 
 CUR="$(git rev-parse --abbrev-ref HEAD 2>/dev/null)"
 [ "$CUR" = "$BRANCH" ] || { echo "REFUSED [foreign-branch]: HEAD is on '$CUR', this commit was written for '$BRANCH'; stop and touch nothing" >&2; exit 9; }

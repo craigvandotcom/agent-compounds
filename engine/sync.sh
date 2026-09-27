@@ -39,6 +39,9 @@
 #   ./harness-sync.sh --report            # render _reports/factory-matrix.html
 #                                         # (read-only: targets x packages x harnesses)
 #   Options: -n/--dry-run · --check (dry-run; exit 1 if anything would change) · --no-prune
+#            --no-app-hooks (leave every target's .claude/settings.json#hooks alone — for a
+#            machine whose hooks are already wired at user scope, where the app block
+#            would double-fire them)
 #            --verify-antigravity (sensor: did Antigravity actually LOAD what we wrote?)
 
 set -euo pipefail
@@ -50,7 +53,7 @@ set -euo pipefail
 ENGINE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 AC_ROOT="$(cd "$ENGINE_DIR/.." && pwd)"
 
-DRY=0; CHECK=0; PRUNE=1; DO_ROOT=0; DO_ALL=0; VERIFY_AGY=0; REPORT=0; OPENCODE_HOME_OVERRIDE=""; PRINT_OPENCODE_EDIT_PERM=0; PRINT_OPENCODE_TASK_PERM=0; PRINT_OPENCODE_TOOLS=""; RECLAIM_RETIRED_DIR=""; TARGETS=()
+DRY=0; CHECK=0; PRUNE=1; DO_ROOT=0; DO_ALL=0; VERIFY_AGY=0; REPORT=0; NO_APP_HOOKS=0; OPENCODE_HOME_OVERRIDE=""; PRINT_OPENCODE_EDIT_PERM=0; PRINT_OPENCODE_TASK_PERM=0; PRINT_OPENCODE_TOOLS=""; RECLAIM_RETIRED_DIR=""; TARGETS=()
 while [ $# -gt 0 ]; do
   case "$1" in
     --verify-antigravity) VERIFY_AGY=1; shift ;;
@@ -75,6 +78,7 @@ while [ $# -gt 0 ]; do
     -n|--dry-run) DRY=1; shift ;;
     --check)     DRY=1; CHECK=1; shift ;;
     --no-prune)  PRUNE=0; shift ;;
+    --no-app-hooks) NO_APP_HOOKS=1; shift ;;
     -*)          echo "unknown option: $1" >&2; exit 2 ;;
     *)           TARGETS+=("$1"); shift ;;
   esac
@@ -111,20 +115,40 @@ expand_tilde() { case "$1" in "~"|"~/"*) echo "${HOME}${1#\~}" ;; *) echo "$1" ;
 # below for the memory-lint path; ac-9ahd generalized it and deleted the `repos_root`
 # key, which hard-failed the engine on any layout but one specific machine's and was the
 # root cause of the rendered-path 404s in every deploy target.
-ORG_ROOT="$(cd "$AC_ROOT/../../.." && pwd)"
+#
+# machine.json wins when it exists: `machine.sh --org-root` is the one reader of this
+# machine's facts, and the third-parent rule is only right for the two layouts above. On a
+# flat layout (<home>/code/agent-compounds) the third parent is /Users, and a --root pass
+# tried to deploy into /Users/.claude. The derivation is kept ONLY for a machine with no
+# machine.json (exit 4); a machine.json that is present but wrong (exit 2) stops the run.
+ORG_ROOT_SOURCE=machine.json
+mrc=0
+ORG_ROOT="$("$ENGINE_DIR/machine.sh" --org-root 2>/dev/null)" || mrc=$?
+if [ "$mrc" = 4 ]; then
+  ORG_ROOT="$(cd "$AC_ROOT/../../.." && pwd)"
+  ORG_ROOT_SOURCE=derived
+elif [ "$mrc" != 0 ]; then
+  "$ENGINE_DIR/machine.sh" --org-root >/dev/null || true
+  echo "error: machine.json is present but invalid — fix it or remove it" >&2
+  exit 2
+fi
 
 # The machine-global floor: doctrine every harness loads into EVERY session on this
 # machine, regardless of which of the three repos (infrastructure/mission/personal) it
 # is working in. Tracked once in infrastructure/harness-config/claude/, never generated
 # here — the harness projections below (Claude symlink, opencode/grok/pi static reads)
 # all read it through floor_body() so there is exactly one copy to edit. A missing or
-# empty floor fails the whole sync loudly rather than rendering every harness's context
-# down to nothing silently.
+# empty floor SKIPS each floor-carrying step with a loud WARN rather than rendering a
+# harness's context down to nothing. It used to `exit 1` from inside floor_body, which
+# aborted the run midway through sync_root, after the claude layer and several homes had
+# already been written — a partial sync, on every machine without the infrastructure repo.
 FLOOR="$ORG_ROOT/infrastructure/harness-config/claude/CLAUDE.md"
-floor_body() {
-  [ -s "$FLOOR" ] || { echo "ERROR: floor missing: $FLOOR" >&2; exit 1; }
-  cat "$FLOOR"
+floor_ok() { # <step> — 0 when the floor is present; otherwise WARN naming the skipped step
+  [ -s "$FLOOR" ] && return 0
+  echo "  WARN: floor missing: $FLOOR — $1 skipped" >&2
+  return 1
 }
+floor_body() { cat "$FLOOR"; }
 
 LAYOUT="$AC_ROOT/harness.config.json"
 [ -f "$LAYOUT" ] || { echo "error: $LAYOUT missing" >&2; exit 2; }
@@ -539,12 +563,37 @@ HOOKS_MANIFEST="$ENGINE_DIR/hooks.wiring.json"
 # layout the rendered UserPromptSubmit entry pointed at a file that does not exist and
 # the recall hook 404'd on EVERY prompt in EVERY deploy target (measured: 7 targets,
 # 31 drift failures, ac-vh7k's baseline receipt). Keep the $HOME prefix unexpanded.
-HOOKS_PATH_LIT='$HOME'"${AC_ROOT#$HOME}/hooks"
+HOOKS_PATH_LIT="$("$ENGINE_DIR/machine.sh" --lit "$AC_ROOT/hooks")"
 # Same treatment for the infrastructure repo: {INFRA} in the wiring manifest. Those
 # commands used to spell the Mac's monorepo path inline, so every rendered guard and
 # logger pointed at a file that does not exist off that machine — the PostToolUse
 # activity logger failed on EVERY tool call here until this landed.
-INFRA_PATH_LIT='$HOME'"${ORG_ROOT#$HOME}/infrastructure"
+# Both literals go through `machine.sh --lit`, not `'$HOME'"${ORG_ROOT#$HOME}"`: that
+# prefix-strip is a no-op when the path is NOT under $HOME, and produced
+# `$HOME/Users/infrastructure/...` from a derived /Users root.
+INFRA_PATH_LIT="$("$ENGINE_DIR/machine.sh" --lit "$ORG_ROOT/infrastructure")"
+
+# {INFRA} entries whose script does not exist on THIS machine are DROPPED from every
+# render. The infrastructure repo is the adopter's own and optional; rendering a hook at
+# a missing script does not degrade, it fails — the activity logger failed as a
+# PostToolUse hook on every Bash call in a consumer app on a machine without it. The
+# list holds the raw `{INFRA}/<rel>` tokens, matched before substitution (infra_ok).
+MISSING_INFRA="$(
+  if [ -f "$HOOKS_MANIFEST" ]; then
+    jq -r '[.wiring[].command | tostring | scan("\\{INFRA\\}/[^ \"\\\\]+")] | unique[]' \
+      "$HOOKS_MANIFEST" \
+    | while IFS= read -r tok; do
+        [ -e "$ORG_ROOT/infrastructure/${tok#\{INFRA\}/}" ] || printf '%s\n' "$tok"
+      done
+  fi | jq -R . | jq -s -c .
+)"
+if [ "$MISSING_INFRA" != "[]" ]; then
+  INFRA_SKIP_NOTE="$(printf '%s' "$MISSING_INFRA" | jq -r 'join(", ")')"
+fi
+infra_note() { # <label> — once per render that dropped entries
+  [ -n "${INFRA_SKIP_NOTE:-}" ] && echo "  NOTE: $1: {INFRA} hook(s) skipped, script absent under $ORG_ROOT/infrastructure: $INFRA_SKIP_NOTE"
+  return 0
+}
 
 # ONE definition of the placeholder substitution, shared by both renderers below.
 # It lived twice — build_hooks_obj and the opencode wiring render — and the copies
@@ -554,15 +603,19 @@ INFRA_PATH_LIT='$HOME'"${ORG_ROOT#$HOME}/infrastructure"
 SUBST_JQ='def subst: (if type == "object" then .[$h] else . end)
       | gsub("\\{HOOKS\\}"; $hooks)
       | gsub("\\{INFRA\\}"; $infra)
-      | gsub("\\{HOME\\}"; "$HOME");'
+      | gsub("\\{HOME\\}"; "$HOME");
+    def infra_ok: [.command | tostring | scan("\\{INFRA\\}/[^ \"\\\\]+")]
+      | all(. as $t | ($missing | index($t)) == null);'
 
 # build_hooks_obj <harness> <scope> — manifest -> harness's hooks object for one
 # placement scope (machine|org|app; entries default to org). The scope field on each
 # wiring entry is the single source of hook placement (plan: hooks-scopes-grok Phase 3).
 build_hooks_obj() {
-  jq --arg h "$1" --arg s "$2" --arg hooks "$HOOKS_PATH_LIT" --arg infra "$INFRA_PATH_LIT" "$SUBST_JQ"'
+  jq --arg h "$1" --arg s "$2" --arg hooks "$HOOKS_PATH_LIT" --arg infra "$INFRA_PATH_LIT" \
+     --argjson missing "$MISSING_INFRA" "$SUBST_JQ"'
     reduce (.wiring[]
-            | select((.harnesses | index($h)) and ((.scope // ["org"]) | index($s)))) as $e ({};
+            | select((.harnesses | index($h)) and ((.scope // ["org"]) | index($s)))
+            | select(infra_ok)) as $e ({};
       .[$e.event] += [
         (if $e.matcher then {matcher: $e.matcher} else {} end)
         + {hooks: [({type: "command", command: ($e.command | subst)}
@@ -576,6 +629,7 @@ render_hooks_root() {
 
   if [ "$EN_CLAUDE" = "true" ] && [ -f "$settings" ]; then
     echo "  -- claude hooks (.claude/settings.json#hooks)"
+    infra_note "claude hooks"
     obj="$(build_hooks_obj claude org)"
     # assignment form (not inline in the call) so a jq failure trips `set -e`
     # instead of silently writing empty content over the real settings file.
@@ -620,6 +674,8 @@ render_hooks_root() {
 # clobbered.
 render_context_claude_global() {
   echo "  -- claude machine-global floor (~/.claude/CLAUDE.md -> symlink to \$FLOOR)"
+  # A link to a missing floor would be a dangling ~/.claude/CLAUDE.md.
+  floor_ok "claude machine-global floor" || return 0
   local dest="$HOME/.claude/CLAUDE.md"
   if [ -f "$dest" ] && [ ! -L "$dest" ]; then
     if head -1 "$dest" 2>/dev/null | grep -q "$STAMP"; then
@@ -644,11 +700,27 @@ render_context_claude_global() {
 # canon; every other key (env, skillListingBudgetFraction, …) is preserved
 # untouched. A malformed target file fails THIS target loudly and the run
 # continues (guard_public posture) — never write over a file we cannot parse.
+#
+# Two cases leave the file alone. --no-app-hooks: the machine wires these hooks at user
+# scope already, so an app block fires each twice. A public target whose settings.json
+# is TRACKED: the block is machine-specific ($HOME-relative paths into this machine's
+# checkouts) and would be a diff in someone's published repo — the guard_public posture,
+# applied to the one harness file a public repo deliberately keeps tracked.
 render_hooks_app() {
   local base="$1" settings obj content
   settings="$base/.claude/settings.json"
   [ -f "$HOOKS_MANIFEST" ] || { echo "  WARN: $HOOKS_MANIFEST missing — app hooks skipped"; return 0; }
+  if [ "$NO_APP_HOOKS" = 1 ]; then
+    echo "  -- claude app hooks: skipped (--no-app-hooks)"
+    return 0
+  fi
+  if is_public_target "$base" \
+     && git -C "$base" ls-files --error-unmatch .claude/settings.json >/dev/null 2>&1; then
+    echo "  -- claude app hooks: skipped (public target, .claude/settings.json is tracked)"
+    return 0
+  fi
   echo "  -- claude app hooks (.claude/settings.json#hooks, stamped block)"
+  infra_note "claude app hooks"
   obj="$(build_hooks_obj claude app)"
   if [ -f "$settings" ]; then
     if ! content="$(jq --argjson h "$obj" '.hooks = $h' "$settings" 2>/dev/null)"; then
@@ -721,6 +793,7 @@ render_context_grok() {
   [ "$EN_GROK" = "true" ] || return 0
   [ -d "$GROK_HOME" ] || return 0
   echo "  -- grok global rules ($GROK_HOME/AGENTS.md, generated)"
+  floor_ok "grok global rules" || return 0
   build_machine_global_rules "Other harnesses receive this context via per-prompt hook injection; Grok discards
 hook stdout, so this file carries the same canon statically. It applies when
 working anywhere in the workspace repos."
@@ -739,6 +812,7 @@ render_context_antigravity() {
   [ "$EN_AGY" = "true" ] || return 0
   [ -d "$AGY_HOME" ] || { echo "  WARN: antigravity home $AGY_HOME missing — skipping (antigravity not installed?)"; return 0; }
   echo "  -- antigravity global rules ($AGY_HOME/AGENTS.md, generated)"
+  floor_ok "antigravity global rules" || return 0
   build_machine_global_rules "Antigravity exposes no session-start or pre-prompt hook event, so
 this file carries statically the canon that hook-fed harnesses receive per prompt.
 It applies when working anywhere in the workspace repos."
@@ -879,16 +953,19 @@ render_hooks_opencode() {
   echo "  -- opencode hooks (plugins/ac-hooks.js + ac-hooks.wiring.json, generated)"
 
   local wiring content
-  wiring="$(jq --arg h opencode --arg s machine --arg hooks "$HOOKS_PATH_LIT" --arg infra "$INFRA_PATH_LIT" "$SUBST_JQ"'
+  infra_note "opencode hooks"
+  wiring="$(jq --arg h opencode --arg s machine --arg hooks "$HOOKS_PATH_LIT" --arg infra "$INFRA_PATH_LIT" \
+     --argjson missing "$MISSING_INFRA" "$SUBST_JQ"'
     { _doc: "generated-by: engine/sync.sh from agent-compounds/engine/hooks.wiring.json — do not hand-edit",
       wiring: [ .wiring[]
         | select((.harnesses | index($h)) and ((.scope // ["org"]) | index($s)))
+        | select(infra_ok)
         | { id, event, matcher: (.matcher // null), command: (.command | subst),
             timeout: (.timeout // 10) } ] }' "$HOOKS_MANIFEST")"
 
   # THE RENDER ASSERTS WHAT IT WROTE (ac-heyt.12). Three checks, any mismatch aborts the
   # sync naming it: the wiring parses; its entry count equals the manifest's opencode-
-  # AND-machine entries (both conjuncts — the render's own filter); and every rendered
+  # AND-machine entries whose {INFRA} scripts exist (the render's own filter); and every rendered
   # command path exists on disk after {HOOKS}/{HOME} substitution — the assumption the
   # manifest rests on that nothing else ever asserts.
   if ! printf '%s' "$wiring" | jq -e . >/dev/null 2>&1; then
@@ -896,7 +973,8 @@ render_hooks_opencode() {
     exit 1
   fi
   local expect_count got_count
-  expect_count="$(jq --arg h opencode --arg s machine '[.wiring[] | select((.harnesses | index($h)) and ((.scope // ["org"]) | index($s)))] | length' "$HOOKS_MANIFEST")"
+  expect_count="$(jq --arg h opencode --arg s machine --arg hooks "" --arg infra "" \
+    --argjson missing "$MISSING_INFRA" "$SUBST_JQ"'[.wiring[] | select((.harnesses | index($h)) and ((.scope // ["org"]) | index($s))) | select(infra_ok)] | length' "$HOOKS_MANIFEST")"
   got_count="$(printf '%s' "$wiring" | jq '.wiring | length')"
   if [ "$got_count" != "$expect_count" ]; then
     echo "  FAIL: rendered opencode wiring entry count $got_count != manifest opencode+machine count $expect_count — the render's filter drifted from the manifest" >&2
@@ -1133,6 +1211,7 @@ render_context_opencode() {
   [ "$EN_OPENCODE" = "true" ] || return 0
   [ -d "$OPENCODE_HOME" ] || { echo "  WARN: opencode home $OPENCODE_HOME missing — skipping (opencode not installed?)"; return 0; }
   echo "  -- opencode global rules ($OPENCODE_HOME/AGENTS.md, generated)"
+  floor_ok "opencode global rules" || return 0
   local digest content
   if ! digest="$(python3 "$AC_ROOT/hooks/build_memory_digest.py" "$DOMAIN_REPO" $(resolved_targets))"; then
     echo "  WARN: memory digest generation failed — rendering rules without it"
@@ -1319,12 +1398,37 @@ if [ -n "${AC_TARGETS_LIST:-}" ] && [ ! -f "$AC_TARGETS_LIST" ]; then
   echo "error: AC_TARGETS_LIST='$AC_TARGETS_LIST' is not a file" >&2; exit 2
 fi
 
-is_public_target() { # <basename>
-  [ -f "$TARGETS_LIST" ] || return 1
-  grep -Eq "^[[:space:]]*$1[[:space:]]+public([[:space:]]|#|$)" "$TARGETS_LIST"
+# A target's flags come from TWO rosters: machine.json's targets[] (by path, through
+# `machine.sh --targets`) and the ac-deploy-targets.list line (by basename). A machine
+# that has moved to machine.json but carries no list — or the reverse — must still get
+# its `public` flag honoured: missing it is what let a sync write hooks into the TRACKED
+# settings.json of a public repo. Read once; machine.sh validates the whole file.
+MACHINE_TARGETS=""
+if [ "$ORG_ROOT_SOURCE" = machine.json ]; then
+  MACHINE_TARGETS="$("$ENGINE_DIR/machine.sh" --targets)" \
+    || { echo "error: machine.json targets[] is invalid (see above)" >&2; exit 2; }
+fi
+machine_target_flags() { # <target-base-dir> -> that target's machine.json flags, or nothing
+  local want tpath tflags
+  want="$(cd "$1" 2>/dev/null && pwd -P)" || return 0
+  while IFS=$'\t' read -r tpath tflags; do
+    [ -n "$tpath" ] || continue
+    [ "$(cd "$tpath" 2>/dev/null && pwd -P)" = "$want" ] && { printf '%s\n' "$tflags"; return 0; }
+  done <<<"$MACHINE_TARGETS"
+  return 0
 }
 
-target_packages() { # <basename> -> packages csv on stdout, empty when the line names none
+is_public_target() { # <target-base-dir>
+  machine_target_flags "$1" | tr ' ' '\n' | grep -qx public && return 0
+  [ -f "$TARGETS_LIST" ] || return 1
+  grep -Eq "^[[:space:]]*$(basename "$1")[[:space:]]+public([[:space:]]|#|$)" "$TARGETS_LIST"
+}
+
+target_packages() { # <target-base-dir> -> packages csv on stdout, empty when no roster names any
+  local mp
+  mp="$(machine_target_flags "$1" | tr ' ' '\n' | sed -n 's/^packages=//p' | head -1)"
+  [ -n "$mp" ] && { printf '%s\n' "$mp"; return 0; }
+  set -- "$(basename "$1")"
   [ -f "$TARGETS_LIST" ] || return 0
   # `|| true`: the trailing grep exits 1 when the line carries no packages= column,
   # which is the COMMON case (absent means the full set). Under `set -euo pipefail`
@@ -1405,23 +1509,30 @@ resolve_hooks_dir() { # <repo-root>
 # `.compounds/` is PUBLIC-ONLY. A public tree is published, so its state must never
 # be committable; a private app may track its own, so the line is never written
 # there. The `public` flag is read the way guard_public's caller reads it —
-# is_public_target against the target basename in TARGETS_LIST — because this
-# function gets only the repo path.
+# is_public_target on the repo path.
+#
+# WHERE the line goes: a public repo's .gitignore is published content, and the sync
+# must not leave a diff in a tracked file of someone's public tree. There the lines go
+# to the clone-local `info/exclude` instead — the same effect for this checkout, nothing
+# to commit. A pattern already ignored by ANY rule (global excludes included) is left
+# alone everywhere, so no line is ever duplicated into a second file.
 ensure_scratch_ignored() {
-  local repo="$1" gi="$1/.gitignore"
+  local repo="$1" gi="$1/.gitignore" pat
   git -C "$repo" rev-parse --is-inside-work-tree >/dev/null 2>&1 || return 0
-  if ! grep -qxE '_scratch/?' "$gi" 2>/dev/null; then
-    if [ "$DRY" = 1 ]; then echo "  ignore  _scratch/ -> ${gi/#$HOME/~}"; else
-      printf '_scratch/\n' >> "$gi"; echo "  ignored _scratch/ in ${gi/#$HOME/~}"
+  if is_public_target "$repo"; then
+    gi="$(git -C "$repo" rev-parse --path-format=absolute --git-path info/exclude 2>/dev/null)" || return 0
+    set -- _scratch/ .compounds/
+  else
+    set -- _scratch/
+  fi
+  for pat in "$@"; do
+    git -C "$repo" check-ignore -q "${pat}__ac_probe__" 2>/dev/null && continue
+    if [ "$DRY" = 1 ]; then echo "  ignore  $pat -> ${gi/#$HOME/~}"; else
+      mkdir -p "$(dirname "$gi")"
+      printf '%s\n' "$pat" >> "$gi"; echo "  ignored $pat in ${gi/#$HOME/~}"
     fi
     note_change
-  fi
-  if is_public_target "$(basename "$repo")" && ! grep -qxF '.compounds/' "$gi" 2>/dev/null; then
-    if [ "$DRY" = 1 ]; then echo "  ignore  .compounds/ -> ${gi/#$HOME/~}"; else
-      printf '.compounds/\n' >> "$gi"; echo "  ignored .compounds/ in ${gi/#$HOME/~}"
-    fi
-    note_change
-  fi
+  done
 }
 
 install_lint_hook() { # <repo-root>
@@ -1559,7 +1670,7 @@ sync_target() { # <target-base-dir> ("app" mode: also runs deploy.sh for .claude
   base="$(cd "$base" && pwd)"
   echo "== $base"
 
-  if is_public_target "$(basename "$base")"; then
+  if is_public_target "$base"; then
     echo "  -- public target: verifying harness layer is gitignored"
     if ! guard_public "$base"; then
       echo "  SKIP target (public guard failed, nothing stamped): $base" >&2
@@ -1591,7 +1702,7 @@ sync_target() { # <target-base-dir> ("app" mode: also runs deploy.sh for .claude
 
   if [ "$mode" = "app" ] && [ "$EN_CLAUDE" = "true" ]; then
     local dep_flags="$dep_extra" deploy_status dep_scope="--all" pkgs
-    pkgs="$(target_packages "$(basename "$base")")"
+    pkgs="$(target_packages "$base")"
     # Per-target packages from ac-deploy-targets.list (WS3): a named subset
     # deploys package-filtered skills with whole agents; absent honours the
     # full-set policy by keeping --all.
@@ -1623,11 +1734,41 @@ sync_target() { # <target-base-dir> ("app" mode: also runs deploy.sh for .claude
     mirror_skills "$base/.claude/skills" "$base/$DROID_SKILLS_DIR" "$base"
     gen_droid_droids "$base/.claude/agents" "$base/$DROID_AGENTS_DIR"
   fi
+  sync_opencode_app "$base"
+}
+
+# sync_opencode_app <target-base-dir> — app-scope opencode stances. opencode reads a
+# project's own .opencode/agent/ (or agents/) beside the machine home, and a project's
+# copy was never refreshed: stances were generated only under --root, so an app that
+# carried .opencode/ kept whatever stances were last written by hand. Opt-in by
+# presence — only a target that already HAS .opencode/ gets them; the engine does not
+# create an opencode project for anyone. Singular agent/ is the default; an existing
+# plural agents/ is honoured. A public target must gitignore the dir (guard_public's
+# rule, applied to the one harness dir it does not probe).
+sync_opencode_app() {
+  local base="$1" oc_dir
+  [ "$EN_OPENCODE" = "true" ] && [ -d "$base/.opencode" ] || return 0
+  oc_dir="$base/.opencode/agent"
+  [ ! -d "$oc_dir" ] && [ -d "$base/.opencode/agents" ] && oc_dir="$base/.opencode/agents"
+  if is_public_target "$base" && ! git -C "$base" check-ignore -q "${oc_dir#"$base"/}/__ac_probe__.md"; then
+    echo "  SKIP opencode agents: public target and ${oc_dir#"$base"/}/ is not gitignored" >&2
+    return 0
+  fi
+  echo "  -- opencode agents (${oc_dir#"$base"/}, generated: the 5 stances)"
+  gen_opencode_agents "$base/.claude/agents" "$oc_dir"
 }
 
 sync_root() {
   local base="$ORG_ROOT"
   echo "== root: $base"
+  # A DERIVED root (no machine.json) that this user cannot write is the wrong root — the
+  # third-parent rule on a flat layout lands on /Users. Refuse before deploy.sh writes
+  # anything, rather than failing partway through the machine homes.
+  if [ "$ORG_ROOT_SOURCE" = derived ] && [ ! -w "$base" ]; then
+    echo "  ERROR: org root $base (derived: third parent of $AC_ROOT) is not writable — this layout needs a machine.json naming org_root (copy machine.example.json); root pass skipped" >&2
+    FAILURES=$((FAILURES + 1))
+    return 0
+  fi
 
   if [ "$EN_CLAUDE" = "true" ]; then
     echo "  -- claude layer (deploy.sh: skills symlinks + generated agents)"
@@ -1695,25 +1836,31 @@ sync_root() {
       echo "  -- pi home skills ($PI_HOME/skills)"
       mirror_skills "$base/.claude/skills" "$PI_HOME/skills" "$base"
       echo "  -- pi home floor ($PI_HOME/AGENTS.md, generated)"
-      # Pi has no session-start/hook context-injection surface, so — like grok and
-      # opencode — its context has to travel statically. $FLOOR is the doctrine;
-      # infrastructure/harness-config/pi/agent/PI.md (if present) is Pi's OWN
-      # hand-written section, appended after a separator — it may not exist yet.
-      local pi_own="$ORG_ROOT/infrastructure/harness-config/pi/agent/PI.md" pi_srcs pi_content
-      pi_srcs="infrastructure/harness-config/claude/CLAUDE.md"
-      pi_content="$(floor_body)"
-      if [ -f "$pi_own" ]; then
-        pi_srcs="$pi_srcs, infrastructure/harness-config/pi/agent/PI.md"
-        pi_content="$pi_content
+    fi
+  fi
+  if [ "$EN_PI" = "true" ] && [ -d "$PI_HOME" ] && floor_ok "pi home floor"; then
+    # Pi has no session-start/hook context-injection surface, so — like grok and
+    # opencode — its context has to travel statically. $FLOOR is the doctrine;
+    # infrastructure/harness-config/pi/agent/PI.md (if present) is Pi's OWN
+    # hand-written section, appended after a separator — it may not exist yet.
+    local pi_own="$ORG_ROOT/infrastructure/harness-config/pi/agent/PI.md" pi_srcs pi_content
+    pi_srcs="infrastructure/harness-config/claude/CLAUDE.md"
+    pi_content="$(floor_body)"
+    if [ -f "$pi_own" ]; then
+      pi_srcs="$pi_srcs, infrastructure/harness-config/pi/agent/PI.md"
+      pi_content="$pi_content
 
 ---
 
 $(cat "$pi_own")"
-      fi
-      pi_content="<!-- $STAMP — do not hand-edit (sources: $pi_srcs) -->
+    fi
+    pi_content="<!-- $STAMP — do not hand-edit (sources: $pi_srcs) -->
 
 $pi_content"
-      write_generated "$PI_HOME/AGENTS.md" "$pi_content"
+    write_generated "$PI_HOME/AGENTS.md" "$pi_content"
+  fi
+  if [ "$EN_PI" = "true" ]; then
+    if [ -d "$PI_HOME" ]; then
       echo "  NOTE: pi has no declarative agents/hooks/MCP — skipped by design (see harnesses.json)"
     else
       echo "  WARN: pi home $PI_HOME missing — skipping (set $PI_HOME_ENV or harnesses.local.json)"
@@ -1937,7 +2084,7 @@ done
 # so once per invocation, not once per target — per-target runs timed out the
 # projection-regeneration check at target 2 of ~10). Visibility only, never blocks;
 # the nightly drift-check run is the enforcement point.
-MEMORY_LINT="$(cd "$AC_ROOT/../../.." && pwd)/infrastructure/scripts/health/memory-lint.py"
+MEMORY_LINT="$ORG_ROOT/infrastructure/scripts/health/memory-lint.py"
 if [ -f "$MEMORY_LINT" ]; then
   echo
   ML_LOG="$(mktemp)"
@@ -1957,9 +2104,10 @@ fi
 
 # --- stance spawn probe. A projected stance is only proven by spawning it; the probe
 # runs when the stances or a harness CLI changed since its last green run, and re-runs
-# while red. Visibility only, never blocks a sync.
+# while red. Visibility only, never blocks a sync. AC_SYNC_NO_STANCE_PROBE=1 is the
+# fixture seam: a proof that syncs a throwaway target must not spawn live sessions.
 STANCE_PROBE="$AC_ROOT/scripts/stance-spawn.test.sh"
-if [ "$DRY" = 0 ] && [ -f "$STANCE_PROBE" ]; then
+if [ "$DRY" = 0 ] && [ -f "$STANCE_PROBE" ] && [ "${AC_SYNC_NO_STANCE_PROBE:-0}" != 1 ]; then
   echo
   bash "$STANCE_PROBE" --if-changed || \
     echo "# WARNING: stance spawn probe red (non-blocking) — a stance cannot spawn or write scratch on a harness above"
@@ -1967,7 +2115,7 @@ fi
 
 echo "Done. changes=$CHANGES$([ "$DRY" = 1 ] && echo ' (dry-run)')"
 if [ "$FAILURES" -gt 0 ]; then
-  echo "ERROR: $FAILURES target(s) failed a sync guard (public-target ignore rules, an unparseable app settings file, or a board that cannot be gated) — see the errors above and re-run" >&2
+  echo "ERROR: $FAILURES target(s) failed a sync guard (public-target ignore rules, an unparseable app settings file, a board that cannot be gated, or an unwritable derived org root) — see the errors above and re-run" >&2
   exit 1
 fi
 if [ "$CHECK" = 1 ] && [ "$CHANGES" -gt 0 ]; then

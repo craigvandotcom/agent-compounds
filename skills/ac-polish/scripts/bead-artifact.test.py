@@ -15,7 +15,8 @@ declared-but-unwired edge only, the unpaired edge is REPORTED and not removed, a
 issues no write at all. Two further fail-closed contracts ride the same stub: a `show --json`
 response that is an ERROR ENVELOPE is a refused read (br-read-failed), never "a bead with no
 labels" — the writeback REFUSES and names it · and the description write goes through
-`--description-file`, passing `--force` ONLY on a shrink and printing the shrink per bead.
+`--description-file` (a flag the stub checks against real `br update --help`, refusing any other),
+landing byte-exact, passing `--force` ONLY on a shrink and printing the shrink per bead.
 `br` is a PATH stub throughout: this harness never touches a board.
 
 Fixtures are typed `decision` so the RESTAMP SWEEP skips them: a proof test must not invoke
@@ -156,7 +157,26 @@ BIN, FIX = os.path.join(W, "bin"), os.path.join(W, "fixtures")
 os.makedirs(BIN); os.makedirs(FIX)
 LOG = os.path.join(W, "br.log")
 
+# `update` is checked against the flags `br update --help` lists (br 0.5.12) and REFUSES any
+# other (rc 2, clap's unknown-argument exit). The stub once accepted everything, so a flag
+# the installed br lacked passed here green — measured 2026-09-27, when a stale br 0.1.14
+# rejected --description-file and writeback REFUSED on a live board. The body file is copied
+# to $BR_LOG.desc.<id> while the call runs (the script unlinks it afterwards) and logged as
+# `<file>`, so the log stays one line per call.
 STUB = """#!/usr/bin/env bash
+if [ "$1" = update ]; then
+  id=$2; shift 2; keep=()
+  while [ $# -gt 0 ]; do
+    case $1 in
+      --description-file) cp "$2" "$BR_LOG.desc.$id"; keep+=("$1" "<file>"); shift 2 ;;
+      -d|--description) printf '%s' "$2" > "$BR_LOG.desc.$id"; keep+=("$1" "<body>"); shift 2 ;;
+      --title) keep+=("$1" "$2"); shift 2 ;;
+      --force) keep+=("$1"); shift ;;
+      *) echo "error: unexpected argument '$1' found" >&2; exit 2 ;;
+    esac
+  done
+  set -- update "$id" "${keep[@]}"
+fi
 { printf '%s' "$1"; for a in "${@:2}"; do printf ' %s' "$a"; done; printf '\\n'; } >> "$BR_LOG"
 if [ "$1 $2" = "list --json" ]; then echo '[]'; exit 0; fi
 if [ "$1 $2" = "show --json" ]; then cat "$BR_FIXTURES/$3.json"; exit 0; fi
@@ -246,7 +266,8 @@ if "WRITEBACK COMPLETE" in out and "RESTAMP SWEEP — no implementable beads" in
     ok("--apply: bodies landed, then the sweep ran (and skipped the decision fixtures)")
 else:
     fail("writeback tail", out)
-if out.index("bead-artifact: EDGES") > out.index("bead-artifact: WROTE") \
+if all(k in out for k in ("bead-artifact: EDGES", "bead-artifact: WROTE", "RESTAMP SWEEP")) \
+        and out.index("bead-artifact: EDGES") > out.index("bead-artifact: WROTE") \
         and out.index("bead-artifact: EDGES") < out.index("RESTAMP SWEEP"):
     ok("--apply: edges land AFTER the bodies and BEFORE the restamp sweep")
 else:
@@ -279,6 +300,42 @@ if rc == 0 and upd and upd[0].endswith("--force") \
     ok("shrink: --force rides the update ONLY when the new body is shorter, and the shrink is printed per bead")
 else:
     fail("shrink force", f"rc={rc}\nupd={upd}\n{out}")
+
+# the description write must be a flag `br update` accepts, and the body must land byte-exact:
+# a body opening with `-` and carrying backticks, angle brackets and `$` is what a shell or an
+# argv-borne body gets wrong.
+desc_file = LOG + ".desc.ac-t3"
+if rc == 0 and upd and upd[0].startswith("update ac-t3 --description-file <file>") and os.path.exists(desc_file):
+    ok("description write: `--description-file`, a flag the stub (= br 0.5.12 update --help) accepts")
+else:
+    fail("description flag", f"rc={rc}\nupd={upd}\n{out}")
+
+TRICKY = bead("ac-t5", "fifth", [])
+ART_T = os.path.join(W, "artifact-tricky.md")
+write(os.path.join(FIX, "ac-t5.json"), json.dumps([TRICKY]))
+write(ART_T, "<!-- BEAD:ac-t5 -->\n# ac-t5 — fifth\ntype: decision · priority: 1 · labels: origin:ac-beadify · "
+             f"base: {ba.base_digest(TRICKY)}\n\n- leading dash `tick` <angle> $HOME\n\n## Consumes\n- none\n\n"
+             "<!-- /BEAD:ac-t5 -->\n")
+rc, out, log = run_writeback("--apply", artifact=ART_T)
+landed = read(LOG + ".desc.ac-t5") if os.path.exists(LOG + ".desc.ac-t5") else ""
+if rc == 0 and landed.startswith("- leading dash `tick` <angle> $HOME\n"):
+    ok("description write: a body opening with `-` and carrying ` < > $ lands byte-exact")
+else:
+    fail("tricky body", f"rc={rc}\nlanded={landed!r}\n{out}")
+
+# the regression itself: a br that lacks the description flag (br 0.1.14 lacked --description-file)
+# refuses it (rc 2), and writeback must REFUSE with the error named — never report WROTE.
+BADFLAG = STUB.replace("--description-file) cp", "--description-file) echo \"error: unexpected argument "
+                       "'--description-file' found\" >&2; exit 2; cp", 1)
+assert BADFLAG != STUB
+write(stub_path, BADFLAG)
+rc, out, log = run_writeback("--apply", artifact=ART3)
+write(stub_path, STUB)
+if rc == 1 and "description write exited 2" in out and "unexpected argument" in out \
+        and "REFUSED" in out and "WROTE ac-t3" not in out:
+    ok("unknown-flag: a description write br rejects (rc 2) is a named FAIL and a REFUSED writeback")
+else:
+    fail("unknown flag", f"rc={rc}\n{out}")
 
 # FRESHNESS: a bead whose live body differs from the export snapshot was edited by someone
 # else in between. The whole set is REFUSED before a single write — never a stale overwrite.

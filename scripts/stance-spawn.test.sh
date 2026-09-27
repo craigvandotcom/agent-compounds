@@ -46,6 +46,17 @@ done
 
 have() { command -v "$1" >/dev/null 2>&1; }
 
+# macOS ships no `timeout` (coreutils installs it as gtimeout), and a missing one made
+# every spawn exit 127 — each stance reported FAIL for that alone, never for its spawn.
+# Last resort is perl's alarm, which exec keeps across into the child (SIGALRM kills it).
+if have timeout; then
+  with_timeout() { timeout "$@"; }
+elif have gtimeout; then
+  with_timeout() { gtimeout "$@"; }
+else
+  with_timeout() { perl -e 'alarm shift; exec @ARGV or die "exec $ARGV[0]: $!\n"' "$@"; }
+fi
+
 fingerprint() {
   {
     cat "$ROOT"/agents/*.md "${BASH_SOURCE[0]}"
@@ -91,10 +102,10 @@ scratch_valid() { # <stance> <file>
 spawn_claude() { # <stance> <file> <log>
   printf "Use the Agent tool with subagent_type '%s' and this exact prompt: '%s' Then report the subagent's reply verbatim and nothing else." \
     "$1" "$(child_prompt "$1" "$2")" \
-    | (cd "$ROOT" && timeout "$SPAWN_TIMEOUT" claude -p --model haiku) >"$3" 2>&1
+    | (cd "$ROOT" && with_timeout "$SPAWN_TIMEOUT" claude -p --model haiku) >"$3" 2>&1
 }
 spawn_opencode() { # <stance> <file> <log>
-  (cd "$ROOT" && timeout "$SPAWN_TIMEOUT" opencode run --agent build \
+  (cd "$ROOT" && with_timeout "$SPAWN_TIMEOUT" opencode run --agent build \
     "Use the task tool to spawn the '$1' subagent with this exact prompt: '$(child_prompt "$1" "$2")' Then report its reply verbatim and nothing else.") >"$3" 2>&1
 }
 

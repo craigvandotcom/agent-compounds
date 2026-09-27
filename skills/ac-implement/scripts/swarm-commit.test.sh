@@ -410,7 +410,9 @@ git -C "$R" commit -qm "seed ledger"
 git -C "$R" remote remove origin
 printf '%s\n' '{"id":"bd-demo","title":"demo","status":"open","note":"local write"}' >"$R/.beads/issues.jsonl"
 printf 'chore(beads): ledger write, no upstream\n' >"$R/msg.txt"
-out="$(cd "$R" && "$LANE" --identity t --message-file msg.txt --path .beads/issues.jsonl --no-push 2>&1)"; rc=$?
+# With origin gone trunk.sh has nothing to resolve (case 24's refusal), so the fixture names
+# its branch; this case is about the ledger leg, not trunk resolution.
+out="$(cd "$R" && "$LANE" --identity t --message-file msg.txt --path .beads/issues.jsonl --branch main --no-push 2>&1)"; rc=$?
 if [ "$rc" -eq 0 ] && printf '%s' "$out" | grep -q 'ledger-behind-upstream NOT-CHECKED'; then
   pass "with no upstream configured the gate reports NOT-CHECKED and never implies clean"
 else fail "ledger no-upstream: rc=$rc out=$out"; fi
@@ -491,6 +493,34 @@ if printf '%s' "$out" | grep -q 'ledger-behind-upstream'; then
 else
   pass "directory spelling '.': cannot dodge into the ledger leg"
 fi
+
+# --- 23. declared trunk: a dev checkout whose origin/HEAD is main commits via ac2.trunk ------
+# The easy-mode shape. The branch comes from skills/_tools/trunk.sh, not a `main` constant:
+# undeclared, the dev checkout is refused as foreign (trunk = origin/HEAD = main); once
+# `git config ac2.trunk dev` is set, the same checkout commits.
+R="$(new_repo declared-trunk)"
+git --git-dir="$R.git" symbolic-ref HEAD refs/heads/main
+git -C "$R" remote set-head origin -a >/dev/null 2>&1
+git -C "$R" checkout -q -b dev
+git -C "$R" push -q origin dev
+out="$(cd "$R" && "$LANE" --identity t --message-file msg.txt --path mine.txt --no-push 2>&1)"; rc=$?
+if [ "$rc" -eq 9 ] && printf '%s' "$out" | grep -q "HEAD is on 'dev', this commit was written for 'main'"; then
+  pass "undeclared: a dev checkout under a main origin/HEAD is refused as foreign-branch"
+else fail "declared-trunk (undeclared leg): rc=$rc out=$out"; fi
+git -C "$R" config ac2.trunk dev
+out="$(cd "$R" && "$LANE" --identity t --message-file msg.txt --path mine.txt --no-push 2>&1)"; rc=$?
+if [ "$rc" -eq 0 ] && [ "$(git -C "$R" show HEAD:mine.txt)" = "mine v2" ]; then
+  pass "declared ac2.trunk dev: the lane commits on dev without --branch"
+else fail "declared-trunk: rc=$rc out=$out"; fi
+
+# --- 24. no-trunk: an unresolvable declaration is refused, never defaulted to main ---------
+R="$(new_repo no-trunk)"
+git -C "$R" config ac2.trunk renamed-trunk
+out="$(cd "$R" && "$LANE" --identity t --message-file msg.txt --path mine.txt --no-push 2>&1)"; rc=$?
+if [ "$rc" -eq 3 ] && printf '%s' "$out" | grep -q 'REFUSED \[no-trunk\]' \
+   && [ "$(git -C "$R" rev-list --count HEAD)" = 1 ]; then
+  pass "an unresolvable ac2.trunk refuses as no-trunk and commits nothing"
+else fail "no-trunk: rc=$rc out=$out"; fi
 
 echo "---"
 echo "swarm-commit.test.sh: $CASES case(s), $FAILURES failure(s)"
