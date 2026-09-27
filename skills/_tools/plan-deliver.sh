@@ -9,6 +9,18 @@
 #   3. the plan is not already stamped (an already-stamped plan is a NOOP, never double-written)
 # On success it writes delivered: <UTC-ISO> into the frontmatter — nothing else.
 #
+# Off-canon receipts (ruled ac-vbu3, 2026-09-27) — a historical record, not a defect to repair:
+#   The NOOP check below is a whole-file `grep '^delivered:'`, so a `delivered:` line sitting in a
+#   plan's BODY reads as delivered to this writer while every frontmatter reader sees the plan as
+#   undelivered, and neither this script nor ac-tidy's scan will ever re-derive or repair it
+#   (tidy-scan.sh walks `_plans/` only, and skips any plan with no `beadified:` key). Two archived
+#   plans are ruled in that state and stay as they are — their prose receipts cite closed epics by
+#   content and rewriting shipped frontmatter would falsify what the archive claims:
+#     _plans/_done/2026-09-05-2318-agent-compounds-v2.md   delivered: in the BODY (line ~419)
+#     _plans/_done/2026-09-21-close-gate-thin-core.md      delivered: in frontmatter, prose form
+#   A `delivered:` is never hand-written into a plan: this script writes it, or a plan records in
+#   prose why it has none. A new plan gets a stamp only from here.
+#
 # Verdict tokens (one greppable line each):
 #   DELIVERED · WOULD-DELIVER (--check) · REFUSED not-beadified · REFUSED children-open N
 #   · NOOP · NOT-GATED
