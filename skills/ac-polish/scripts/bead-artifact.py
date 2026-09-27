@@ -376,7 +376,16 @@ def restamp_sweep(bead_ids):
           f"bead(s) through stamp-refined.sh:")
     stamped = downgraded = refused = 0
     for bead_id in targets:
-        r = subprocess.run(["bash", STAMP_REFINED, bead_id], capture_output=True, text=True)
+        # cwd is EXPLICIT, never left to ambient inheritance: STAMP_REFINED above is a
+        # TOOL path (this file's own location, correct there — it works from any repo
+        # whose skills are the registry or a symlinked copy of it), but the subprocess's
+        # cwd is what stamp-refined.sh's own `bead.py check` gate resolves ITS repo root
+        # from (`git rev-parse --show-toplevel`, no cd of its own). `os.getcwd()` is
+        # this process's own cwd — wherever the CALLER (ac-polish, invoked from inside
+        # the consuming app) actually is — never STAMP_REFINED's directory.
+        r = subprocess.run(
+            ["bash", STAMP_REFINED, bead_id], capture_output=True, text=True, cwd=os.getcwd(),
+        )
         out = (r.stdout or "") + (r.stderr or "")
         if "STAMPED" in out:
             stamped += 1

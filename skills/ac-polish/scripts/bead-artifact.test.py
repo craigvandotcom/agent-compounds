@@ -472,5 +472,48 @@ if rc == 1 and "REFUSED" in out and "dep add ac-t1 exited 1" in out:
 else:
     fail("dep add failure", f"rc={rc}\n{out}")
 
+# --- restamp sweep: cwd is the CALLER's repo, never bead-artifact.py's own (2026-09-27) ---
+# STAMP_REFINED is correctly a TOOL path (this file's own location) — but the subprocess
+# must run with cwd = wherever bead-artifact.py itself was invoked from, so stamp-refined.sh's
+# own `git rev-parse --show-toplevel` (no cd of its own) resolves the CALLER's repo, never
+# this registry's. A throwaway fixture repo — its OWN `git init`, never this file's own tree
+# — proves it: the stub records `pwd` and the recorded path must be the fixture, not HERE or W.
+CROSS_REPO = tempfile.mkdtemp(prefix="bead-artifact-cross-repo-")
+subprocess.run(["git", "init", "-q"], cwd=CROSS_REPO, check=True)
+CROSS_REPO_REAL = os.path.realpath(CROSS_REPO)
+
+CWD_LOG = os.path.join(W, "restamp-cwd.log")
+STAMP_STUB = os.path.join(W, "record-cwd-stamp.sh")
+write(STAMP_STUB, "#!/usr/bin/env bash\npwd >> \"%s\"\necho \"stamp_refined: STAMPED $1 (refine-full)\"\n" % CWD_LOG)
+os.chmod(STAMP_STUB, os.stat(STAMP_STUB).st_mode | stat.S_IEXEC | stat.S_IXGRP | stat.S_IXOTH)
+
+
+def _stub_br_task(args):
+    if args[:2] == ["show", "--json"]:
+        node = {"id": args[2], "issue_type": "task", "labels": ["origin:test"], "status": "open"}
+        return 0, json.dumps([node]), ""
+    return 0, "[]", ""
+
+
+_real_br, _real_stamp = ba.br, ba.STAMP_REFINED
+ba.br, ba.STAMP_REFINED = _stub_br_task, STAMP_STUB
+_orig_cwd = os.getcwd()
+try:
+    os.chdir(CROSS_REPO)
+    cross_refused = ba.restamp_sweep(["ac-cross-repo"])
+finally:
+    os.chdir(_orig_cwd)
+    ba.br, ba.STAMP_REFINED = _real_br, _real_stamp
+
+_recorded = read(CWD_LOG).strip().splitlines() if os.path.exists(CWD_LOG) else []
+_recorded_cwd = os.path.realpath(_recorded[-1]) if _recorded else ""
+if cross_refused == 0 and _recorded_cwd == CROSS_REPO_REAL \
+        and _recorded_cwd != os.path.realpath(HERE) and _recorded_cwd != os.path.realpath(W):
+    ok("restamp sweep: the stamp-refined.sh subprocess runs with cwd = the CALLER's repo "
+       "(a throwaway fixture), never this script's own directory")
+else:
+    fail("restamp sweep cwd", f"refused={cross_refused} recorded={_recorded_cwd!r} "
+                              f"want={CROSS_REPO_REAL!r}")
+
 print("---"); print(f"PASS={PASS} FAIL={FAIL}")
 sys.exit(0 if FAIL == 0 else 1)
