@@ -125,6 +125,24 @@ PROJECT_ROOT="$W/slashed" MCP_AGENT_MAIL_DB="$W/mail.sqlite3" MCP_AGENT_MAIL_URL
   python3 "$ROSTER" >/dev/null 2>"$W/slashed.err" || slashed_rc=$?
 if [ "$slashed_rc" -eq 2 ]; then expect pass "org-prefixed key exits 2"; else expect fail "org-prefixed key exits 2 (got $slashed_rc)"; fi
 
+# ── default DB location: no override finds the server's XDG install, then the legacy one ──
+for layout in .local/share/mcp_agent_mail mcp_agent_mail; do
+  home="$W/home-${layout%%/*}"
+  mkdir -p "$home/$layout" && cp "$W/mail.sqlite3" "$home/$layout/storage.sqlite3"
+  default_out=$(env -u MCP_AGENT_MAIL_DB -u DATABASE_URL -u XDG_DATA_HOME HOME="$home" \
+    PROJECT_ROOT="$W/example-app" MCP_AGENT_MAIL_URL="http://127.0.0.1:1" \
+    python3 "$ROSTER" 2>"$W/default.err")
+  if contains "$default_out" $'CanonicalAgent\t'; then expect pass "no override reads the DB under ~/$layout"; else expect fail "no override reads the DB under ~/$layout: $(<"$W/default.err")"; fi
+done
+empty_rc=0
+env -u MCP_AGENT_MAIL_DB -u DATABASE_URL -u XDG_DATA_HOME HOME="$W/home-empty" PROJECT_ROOT="$W/example-app" \
+  python3 "$ROSTER" >/dev/null 2>"$W/empty.err" || empty_rc=$?
+if [ "$empty_rc" -eq 2 ] && contains "$(<"$W/empty.err")" ".local/share/mcp_agent_mail/storage.sqlite3"; then
+  expect pass "no DB anywhere is NOT-GATED naming the XDG path"
+else
+  expect fail "no DB anywhere is NOT-GATED naming the XDG path (rc $empty_rc): $(<"$W/empty.err")"
+fi
+
 # ── --snapshot DIR ───────────────────────────────────────────────────────────
 snap_dir="$W/snap"
 snap_out=$(PROJECT_ROOT="$W/example-app" \

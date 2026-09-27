@@ -65,7 +65,13 @@ def db_path():
         p = url.split("///", 1)[-1]
         if p.startswith("/") and os.path.isfile(p):
             return p
-    return os.path.expanduser("~/mcp_agent_mail/storage.sqlite3")
+    # The server keeps storage.sqlite3 in its install dir: the XDG data dir today
+    # (~/.local/share/mcp_agent_mail), ~/mcp_agent_mail on older installs. First one
+    # present wins; neither present names the XDG path in the NOT-GATED reason.
+    data_home = os.environ.get("XDG_DATA_HOME") or os.path.expanduser("~/.local/share")
+    candidates = [os.path.join(data_home, "mcp_agent_mail", "storage.sqlite3"),
+                  os.path.expanduser("~/mcp_agent_mail/storage.sqlite3")]
+    return next((c for c in candidates if os.path.isfile(c)), candidates[0])
 
 
 def project_key(root):
