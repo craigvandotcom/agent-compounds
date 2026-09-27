@@ -79,7 +79,7 @@ has yet to create keeps the guarded form `test -x <path> && bash <path>`, honest
 5b. **Emit the closeout bead** — D3: every plan-derived epic gets one even with no one-shots
     (keyed off `beadified:` absent); emit the closeout bead per `references/bead-schema.md` § Closeout (D8 shape, edges + readback, one-shot refusal D4, `Detect:` lift D7).
 6. **Create the beads** per the schema's Header fields (an epic off `<Name> — <what it implements>` is REFUSED) — bodies go `-d "$(cat <file>)"` (`br create` REJECTS `-f` with a title); bead text stays dcg-safe.
-7. **Retire the plan** (§ below).
+7. **Retire the plan** (§ below) — only once `skills/_tools/plan-coverage.sh <plan> <epic>` prints `COVERED`; a `COVERAGE GAP` line is a dropped or reworded deliverable: bead it, then re-run.
 
 ## Plan retirement — the seams chain, and the one case that refuses it
 
