@@ -334,6 +334,26 @@ else
   fail "Case 15: expected the bare-name referrer counted by derive but missed by a stem-only search, rc=$RC. derive cmd: $D_CMD / hits: $D_HITS / stem-only hits: $STEM_ONLY_HITS"
 fi
 
+# --- Case 16: a shared basename gets NO bare-name alternative (ac-dovy) ------------------
+# A basename many tracked files share (SKILL.md, MAINTENANCE.md, README.md in the live
+# registry) identifies no single artifact — adding it as a bare-name alternative would count
+# every unrelated file of that name as a "referrer" (measured 2026-09-27: ~174 for any
+# SKILL.md). Two tracked files sharing one basename prove the alternative is DROPPED here;
+# Case 7 and Case 15 already prove it is kept when the basename is unique.
+SHARED_FIX="$WORK/shared-basename-fixture"
+mkdir -p "$SHARED_FIX/skills/a" "$SHARED_FIX/skills/b"
+git -C "$SHARED_FIX" init -q
+printf 'a\n' >"$SHARED_FIX/skills/a/SKILL.md"
+printf 'b\n' >"$SHARED_FIX/skills/b/SKILL.md"
+git -C "$SHARED_FIX" add skills/a/SKILL.md skills/b/SKILL.md
+DER=$(cd "$SHARED_FIX" && bash "$TOOL" derive "skills/a/SKILL.md" 2>&1); RC=$?
+D_CMD=$(printf '%s' "$DER" | cut -f2-)
+if [ "$RC" -eq 0 ] && ! printf '%s' "$D_CMD" | grep -qF '"SKILL.md"'; then
+  pass "Case 16: derive's command drops the bare-name alternative for a shared basename"
+else
+  fail "Case 16: expected the bare-name alternative omitted for a shared basename, rc=$RC. derive cmd: $D_CMD"
+fi
+
 echo
 if [ "$FAILURES" -eq 0 ]; then
   echo "All touchers fixture tests passed."

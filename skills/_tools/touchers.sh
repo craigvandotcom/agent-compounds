@@ -109,13 +109,28 @@ _touchers_basename() {
   printf '%s' "$1" | awk -F/ '{print $NF}'
 }
 
+# A basename many tracked files share (SKILL.md, MAINTENANCE.md, README.md, …) identifies
+# no single artifact — counting ITS referrers means counting every unrelated file's referrers
+# too (measured 2026-09-27, ac-dovy: ~174 "referrers" for any SKILL.md). The bare-filename
+# alternative is only added when exactly one tracked file carries that basename.
+_touchers_basename_unique() {
+  local root="$1" base="$2" n
+  n=$(git -C "$root" ls-files -- '*' 2>/dev/null | awk -F/ -v b="$base" '$NF == b' | grep -c .)
+  [ "$n" = 1 ]
+}
+
 # The command a bead pastes: the gate's shape, rooted at `.` so it runs from the repo root.
-# Two -F alternatives, never one: the stem catches a path-shaped reference, the basename
-# catches a bare-filename or built-path one — a caller matching EITHER is a real referrer.
+# Two -F alternatives when the basename is unique — the stem catches a path-shaped reference,
+# the basename catches a bare-filename or built-path one; a shared basename keeps the stem-only
+# command, since a bare-filename alternative there would match every file of that name.
 _touchers_command() {
-  local _tc_q="'" base
-  base=$(_touchers_basename "$1")
-  printf 'rg -l -F -e "%s" -e "%s" . -g %s!%s%s %s' "$2" "$base" "$_tc_q" "$1" "$_tc_q" "$(_touchers_globs)"
+  local _tc_q="'" root="$1" rel="$2" stem="$3" base
+  base=$(_touchers_basename "$rel")
+  if _touchers_basename_unique "$root" "$base"; then
+    printf 'rg -l -F -e "%s" -e "%s" . -g %s!%s%s %s' "$stem" "$base" "$_tc_q" "$rel" "$_tc_q" "$(_touchers_globs)"
+  else
+    printf 'rg -l -F -e "%s" . -g %s!%s%s %s' "$stem" "$_tc_q" "$rel" "$_tc_q" "$(_touchers_globs)"
+  fi
 }
 
 # Existence is a GIT fact, not a disk fact: a path on disk but untracked is a NEW artifact
@@ -146,7 +161,7 @@ touchers_derive() {
     return 0
   fi
   stem=$(_touchers_stem "$rel")
-  cmd=$(_touchers_command "$rel" "$stem")
+  cmd=$(_touchers_command "$root" "$rel" "$stem")
   # rg exits 0 (matches) or 1 (none) — both are a verified-runnable command. Anything else —
   # 127 absent, 2 bad invocation — means the command was never verified; reading that as fine
   # would let a missing tool wave a bead through, so it is a refusal, never a silent pass.
