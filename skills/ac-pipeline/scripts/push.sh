@@ -61,8 +61,51 @@ cd "$ROOT" || { echo "NOT-GATED: cannot enter repo root '$ROOT'" >&2; exit 2; }
 
 # --- 1. REFUSE a dirty tree, naming the file --------------------------------------------
 # Untracked files owe nothing to a push gate (the same axis touchers.sh already reads for
-# a Delivers path): only TRACKED, uncommitted changes block it.
-DIRTY=$(git status --porcelain --untracked-files=no 2>/dev/null)
+# a Delivers path): only TRACKED, uncommitted changes block it. `.beads/` is EXEMPT
+# unconditionally — the bead ledger has its OWN committer lane (a conductor, never every
+# session) and is routinely dirty mid-batch; refusing on it deadlocks every push against a
+# normal, expected mid-run state (measured: wiring this script into an app's own pre-push
+# hook refused every push while any session held ledger edits). A repo declares FURTHER
+# live-state exemptions the SAME way a consuming app's own prod-serve dirty gate already
+# might — `PUSH_DIRTY_ALLOW` (space-separated path PREFIXES) — or a
+# `.push-dirty-allow` file at the repo root (one prefix per line; blank lines and `#`
+# comments ignored). Neither widens past ledger/coordination-shaped paths on its own:
+# CODE PATHS are never exempt by this script's own choice, only by what a repo declares.
+DIRTY_ALLOW=".beads/"
+if [ -f .push-dirty-allow ]; then
+  while IFS= read -r _dirty_allow_line; do
+    _dirty_allow_line="${_dirty_allow_line%%#*}"
+    # shellcheck disable=SC2086 # word-splitting trims surrounding whitespace on purpose
+    _dirty_allow_line=$(echo $_dirty_allow_line)
+    [ -n "$_dirty_allow_line" ] && DIRTY_ALLOW="$DIRTY_ALLOW $_dirty_allow_line"
+  done <.push-dirty-allow
+fi
+DIRTY_ALLOW="$DIRTY_ALLOW ${PUSH_DIRTY_ALLOW:-}"
+
+_dirty_path_exempt() {
+  for _prefix in $DIRTY_ALLOW; do
+    case "$1" in
+      "$_prefix"*) return 0 ;;
+    esac
+  done
+  return 1
+}
+
+DIRTY_RAW=$(git status --porcelain --untracked-files=no 2>/dev/null)
+DIRTY=""
+if [ -n "$DIRTY_RAW" ]; then
+  while IFS= read -r _status_line; do
+    [ -n "$_status_line" ] || continue
+    # porcelain v1: two status chars, a space, then the path (a rename's " -> " tail is
+    # part of the same line and is never itself a prefix match target).
+    _status_path="${_status_line:3}"
+    _dirty_path_exempt "$_status_path" || DIRTY="$DIRTY
+$_status_line"
+  done <<DIRTYEOF
+$DIRTY_RAW
+DIRTYEOF
+  DIRTY="${DIRTY#$'\n'}"
+fi
 if [ -n "$DIRTY" ]; then
   echo "REFUSED [dirty-tree]: tracked source is not fully committed — push gates the WHOLE tree, never a partial one. Uncommitted:" >&2
   echo "$DIRTY" | sed 's/^/  /' >&2

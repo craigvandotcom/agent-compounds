@@ -52,6 +52,42 @@ else fail "dirty-tree: rc=$rc out=$out"; fi
 if [ -z "$(git -C "$R" diff)" ]; then :; else :; fi   # working tree left untouched either way
 git -C "$R" checkout -- tracked.txt
 
+# --- 1b. .beads/ is EXEMPT from the dirty-tree refusal (the ledger's own committer lane) --
+R="$(new_repo dirty-beads)"
+mkdir -p "$R/.beads"
+printf '{"id":"seed"}\n' >"$R/.beads/issues.jsonl"
+git -C "$R" add -- .beads/issues.jsonl
+git -C "$R" commit -qm "seed the ledger"
+git -C "$R" push -q origin main
+printf '{"id":"mid-batch-edit"}\n' >>"$R/.beads/issues.jsonl"
+out="$(cd "$R" && "$PUSH" --no-dispatch 2>&1)"; rc=$?
+if [ "$rc" -eq 0 ] && [ "$(git -C "$R" rev-parse origin/main)" = "$(git -C "$R" rev-parse HEAD)" ]; then
+  pass "a dirty tracked .beads/issues.jsonl does NOT refuse the push — the ledger has its own committer lane"
+else fail "dirty-beads-exempt: rc=$rc out=$out"; fi
+
+# --- 1c. a repo-declared extra allow (.push-dirty-allow) exempts ITS prefixes only --------
+R="$(new_repo dirty-declared-allow)"
+mkdir -p "$R/memory"
+printf '# comment (ignored)\nmemory/\n' >"$R/.push-dirty-allow"
+printf 'seed note\n' >"$R/memory/x.md"
+git -C "$R" add -- .push-dirty-allow memory/x.md
+git -C "$R" commit -qm "declare memory/ as live-state"
+git -C "$R" push -q origin main
+printf 'a live edit\n' >>"$R/memory/x.md"
+out="$(cd "$R" && "$PUSH" --no-dispatch 2>&1)"; rc=$?
+if [ "$rc" -eq 0 ] && [ "$(git -C "$R" rev-parse origin/main)" = "$(git -C "$R" rev-parse HEAD)" ]; then
+  pass "a repo's own .push-dirty-allow declaration (memory/) exempts a dirty tracked file under it"
+else fail "dirty-declared-allow: rc=$rc out=$out"; fi
+# The SAME repo's tracked SOURCE file is still refused — a declared prefix exempts only
+# what it names, never code paths.
+printf 'uncommitted source edit\n' >>"$R/tracked.txt"
+out="$(cd "$R" && "$PUSH" --no-dispatch 2>&1)"; rc=$?
+if [ "$rc" -eq 3 ] && printf '%s' "$out" | grep -q 'REFUSED \[dirty-tree\]' \
+   && printf '%s' "$out" | grep -q 'tracked.txt'; then
+  pass "a declared live-state allowlist never exempts a tracked SOURCE file — still refused, naming it"
+else fail "dirty-declared-allow-code-still-refuses: rc=$rc out=$out"; fi
+git -C "$R" checkout -- tracked.txt
+
 # --- 2. origin ahead: merged, never a history-discarding rewrite --------------------------
 R="$(new_repo merge-not-rewrite)"
 CLONE="$WORKDIR/merge-not-rewrite-clone"
