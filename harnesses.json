@@ -4,7 +4,7 @@
     "claude": {
       "enabled": true,
       "agent_models": {
-        "orchestrator": "fable",
+        "orchestrator": "opus",
         "coordinator": "opus",
         "worker": "sonnet"
       },
