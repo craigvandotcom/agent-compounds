@@ -34,7 +34,7 @@ bead() {  # bead <id> <status> <type> <labels-csv> [description] [title]
   bead ac-strip   closed task  "unrefined"
   bead ac-keep    open   task  "unrefined"
   bead ac-bare    open   task  "origin:manual"
-  bead ac-ratif   open   task  "human-ratified"
+  bead ac-legacy  open   task  "retired-lifecycle-marker"
   bead ac-epicb   open   epic  ""                  "Probe: x"
   bead ac-odd     open   task  "refined,zzz-odd"
   bead EPA        open   epic  "refined"           "Probe: x"
@@ -54,10 +54,15 @@ bead() {  # bead <id> <status> <type> <labels-csv> [description] [title]
   bead ac-aact    open   decision "refined" "" "ACTION: rotate the key"
   bead ac-dok     open   decision "refined" "" "DECISION: fine as typed"
   bead ac-dshut   closed task     "refined" "" "DECISION: closed, ignored"
+  bead ac-blk-live   blocked task "refined"
+  bead ac-blk-none   blocked task "refined"
+  bead ac-blk-closed blocked task "refined"
 } | jq -s '.' >"$BOARD"
 jq -c '.[]' "$BOARD" | jq -c 'if .id == "ac-e1" then .dependencies = [{issue_id:"ac-e1",depends_on_id:"EPA",type:"blocks"}]
   elif .id == "ac-e2" then .dependencies = [{issue_id:"ac-e2",depends_on_id:"EPA",type:"blocks"}]
   elif .id == "ac-cc1" then .dependencies = [{issue_id:"ac-cc1",depends_on_id:"EPC",type:"blocks"}]
+  elif .id == "ac-blk-live" then .dependencies = [{issue_id:"ac-blk-live",depends_on_id:"ac-keep",type:"blocks"}]
+  elif .id == "ac-blk-closed" then .dependencies = [{issue_id:"ac-blk-closed",depends_on_id:"ac-strip",type:"blocks"}]
   else . end' >"$R/.beads/issues.jsonl"
 
 printf -- '---\nstatus: complete\n---\n# a\n' >"$R/_backlog/pool/complete.md"
@@ -99,7 +104,7 @@ cell() { printf '%s\n' "$OUT" | awk -F'\t' -v r="$1" -v t="$2" '$1==r && $2==t {
 [ -n "$(cell strip-unrefined ac-strip)" ] && pass "closed + unrefined → strip" || fail "strip missed"
 [ -z "$(cell strip-unrefined ac-keep)" ]  && pass "open + unrefined → no strip" || fail "open stripped"
 [ -n "$(cell add-unrefined ac-bare)" ]    && pass "open, no lifecycle label → add unrefined" || fail "bare missed"
-[ -z "$(cell add-unrefined ac-ratif)" ]   && pass "human-ratified counts as lifecycle → none" || fail "ratified stamped"
+[ -n "$(cell add-unrefined ac-legacy)" ]  && pass "a retired lifecycle-label token no longer counts → add-unrefined" || fail "legacy label counted"
 [ -z "$(cell add-unrefined ac-epicb)" ]   && pass "epic never stamped unrefined" || fail "epic stamped"
 
 [ "$(cell label-review zzz-odd)" = review ] && pass "unnamed label → review, never remove" || fail "zzz-odd: $(cell label-review zzz-odd)"
@@ -118,6 +123,12 @@ cell() { printf '%s\n' "$OUT" | awk -F'\t' -v r="$1" -v t="$2" '$1==r && $2==t {
 [ "$(cell finding-post-merge-tail ac-pm)" = "skip-open ac-owner" ] && pass "post-merge tail an open gate names → skip-open" || fail "pm: $(cell finding-post-merge-tail ac-pm)"
 [ "$(cell finding-epic-idle EPIDLE)" = file ] && pass "open epic, no open children, no Probe → finding" || fail "epic-idle missed"
 [ -z "$(cell finding-epic-idle EPD)" ] && pass "epic with a Probe: line → no finding" || fail "EPD flagged"
+
+# reopen-blocked (ac-m9y4.12): the edge is read through bead.py.
+[ -z "$(cell reopen-blocked ac-blk-live)" ]   && pass "blocked, an open blocks edge → none" || fail "blk-live flagged"
+[ -n "$(cell reopen-blocked ac-blk-none)" ]   && pass "blocked, no blocks edge at all → reopen-blocked" || fail "blk-none missed"
+[ -n "$(cell reopen-blocked ac-blk-closed)" ] && pass "blocked, its only blocker closed → reopen-blocked" || fail "blk-closed missed"
+[ -z "$(cell reopen-blocked ac-keep)" ]       && pass "open (not blocked) → never reopen-blocked" || fail "ac-keep flagged"
 
 [ -z "$(git -C "$R" status --porcelain)" ] && pass "read-only: fixture tree unchanged" || fail "tree changed: $(git -C "$R" status --porcelain)"
 

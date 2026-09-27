@@ -9,6 +9,9 @@
 #                     → review (flag only — the human decides keep or retire)
 #   strip-unrefined   closed bead still labelled unrefined        → label-remove unrefined
 #   add-unrefined     open non-epic bead with no lifecycle label  → label-add unrefined
+#   reopen-blocked    blocked bead, no open `blocks` edge          → reopen (status: open) —
+#                     "a card handed back, or blocked for no reason, gets reopened
+#                     automatically" (the Vision)
 #   label-review      label beads-standards never names           → review (flag only — the
 #                     label vocabulary is open; never remove mechanically)
 #   type-review       open bead whose title prefix contradicts its issue_type (DECISION:/HUMAN:
@@ -43,6 +46,15 @@ import json, os, re, subprocess, sys, time
 beads_path, ROOT, SKILLS = sys.argv[1:4]
 def gated(why): print(f"tidy-scan: ? — {why}"); sys.exit(2)
 
+# The one bead reader (ac-m9y4.1): the lifecycle set and the edge/title-prefix reads
+# below go through it, never a fifth inline re-derivation. Missing or broken shows
+# UNKNOWN (the `?` gate below), never a silent empty scan (the plan's Display rule).
+sys.path.insert(0, os.path.join(SKILLS, "_tools"))
+try:
+    import bead
+except Exception as e:
+    gated(f"bead.py unavailable: {e}")
+
 try:
     data = json.load(open(beads_path))
     beads = data["issues"] if isinstance(data, dict) else data
@@ -59,6 +71,8 @@ rows = []
 row = lambda *c: rows.append(c)
 labels = lambda b: set(b.get("labels") or [])
 is_open = lambda b: b["status"] not in ("closed", "tombstone")
+by_id = {b["id"]: b for b in beads}
+rec_by_id = {r["id"]: r for r in recs if r.get("id")}
 
 def frontmatter(text):
     m = re.match(r"---\n(.*?)\n---", text, re.S)
@@ -109,12 +123,24 @@ for f in sorted(os.listdir(pdir)) if os.path.isdir(pdir) else []:
         row("plan-deliver", rel, "stamp delivered: + move → _plans/_done/", verdict.split(" — ", 1)[-1])
 
 # ── lifecycle labels ─────────────────────────────────────────────────────
-LIFECYCLE = {"unrefined", "refined", "human-gate", "human-ratified"}
+LIFECYCLE = {"unrefined", "refined", "human-gate"}
 for b in beads:
     if b["status"] == "closed" and "unrefined" in labels(b):
         row("strip-unrefined", b["id"], "label-remove unrefined", "closed")
     elif is_open(b) and b.get("issue_type") != "epic" and not labels(b) & LIFECYCLE:
         row("add-unrefined", b["id"], "label-add unrefined", f"{b['status']}, no lifecycle label")
+
+# ── reopen-blocked: a `blocked` bead with no open `blocks` edge ──────────
+# "A card handed back, or blocked for no reason, gets reopened automatically" (Vision).
+# The edge is read through bead.py (ac-m9y4.1): the jsonl row's `type`/`depends_on_id`
+# shape, normalised to `dependency_type`/`id` — one edge reader, not a fifth inline one.
+for b in beads:
+    if b["status"] != "blocked":
+        continue
+    canon, _ = bead.from_jsonl_row(rec_by_id.get(b["id"]) or {"id": b["id"]})
+    blockers = [e["id"] for e in (canon or {}).get("dependencies", []) if e["dependency_type"] == "blocks"]
+    if not any(bid in by_id and is_open(by_id[bid]) for bid in blockers):
+        row("reopen-blocked", b["id"], "reopen → status: open", "blocked, no open blocks edge")
 
 # ── label-review: labels beads-standards never names (flag only) ─────────
 vocab, families = set(), set()
@@ -132,13 +158,17 @@ for l, ids in sorted(unnamed.items()):
     row("label-review", l, "review", f"{len(ids)} open bead(s), e.g. {ids[0]}")
 
 # ── type-review: title prefix contradicts issue_type (flag only) ─────────
+# gate_kind (ac-m9y4.1) is the ONE prefix->kind reader — docket.sh's binary split and
+# lint 19's PREFIX_KIND already agree HUMAN: maps to the decision side; this is the
+# third reader that must too, rather than a fourth hand-rolled regex.
+KIND_TO_TYPE = {"DECISION": "decision", "ACTION": "task"}
 for b in filter(is_open, beads):
     t, title = b.get("issue_type"), b.get("title", "")
-    if (t == "task" and re.match(r"(DECISION|HUMAN)\b", title)) or (t == "decision" and title.startswith("ACTION:")):
+    want = KIND_TO_TYPE.get(bead.gate_kind(title))
+    if want and t and t != want:
         row("type-review", b["id"], "review", f"typed {t}, titled {title.split(':')[0]}:")
 
 # ── step-4 findings, deduped against every bead that names the target ────
-by_id = {b["id"]: b for b in beads}
 rec_type = {r["id"]: r.get("issue_type") for r in recs}
 OWNERS = {"origin:ac-tidy", "pipeline-proposal", "human-gate"}
 def dedupe(kind, key_ids, evidence):
@@ -170,7 +200,7 @@ for b in beads:
     if is_open(b) and "post-merge" in labels(b):
         dedupe("post-merge-tail", [b["id"]], "open, still labelled post-merge")
 
-MECH = ("backlog-archive", "plan-deliver", "plan-move", "strip-unrefined", "add-unrefined")
+MECH = ("backlog-archive", "plan-deliver", "plan-move", "strip-unrefined", "add-unrefined", "reopen-blocked")
 for r in rows: print("\t".join(map(str, r)))
 fnd = [r for r in rows if r[0].startswith("finding-")]
 print(f"# tidy-scan: {sum(r[0] in MECH for r in rows)} mechanical · "

@@ -48,6 +48,7 @@ checkout disagrees; a newer `updated_at` is not newer semantics). Stamp the othe
 | open or `in_progress` bead whose assignee is retired (`retired_at` set in `agents.json` from `python3 "$APP_ROOT/.claude/skills/_tools/agent-roster.py" --snapshot "$(mktemp -d)"`) | `br update <id> --assignee "" --status open` + a comment naming the holder; an assignee absent from `agents.json` is a human — never touch it |
 | label `beads-standards` does not name | correct or remove, report it |
 | open `pipeline-proposal` bead whose target epic is closed | record `DECISION (ac-tidy): moot — target <epic> closed`, then `close-gate.sh <id> --reason "obsolete: moot — target closed"` |
+| `blocked` bead with no open `blocks` edge (tidy-scan.sh's `reopen-blocked` row) | `br update <id> --status open` + a comment naming the reason |
 
 Open `human-gate` and `qa-blocker` beads are untouchable except by the last row. A condition needing a judgment call ("looks done", "probably a duplicate") is not provable: step 4. A `task`-typed proposal skips the ruling path (routed by `issue_type`) and LEG-2 NOT-CHECKs; report that exit as the skip, not a failure.
 
@@ -64,5 +65,4 @@ fails its row above · duplicate or mergeable items · a `post-merge` tail bead 
 
 Commit the exact paths touched, per `ac-pipeline/references/commit-discipline.md`: `AGENT_NAME=FoggyCreek git commit -m "chore(tidy): <what>" -- <paths>`, then push (NIGHTLY: `git push --no-verify origin "HEAD:$TRUNK"`, then verify from the live checkout that `git -C "$APP_ROOT" rev-parse "origin/$TRUNK"` equals HEAD — rejected means degraded, do not retry).
 Slack card via `slack-send --card --status <healthy|degraded>` on the app's ops channel, one line of counts (`drift-skipped:` — § 2b gates skipped on ledger-copy disagreement — plus `post-merge-tail:` (§ 2) and the since-last-run app-board counts `foreign status:` / `off-canon receipts:` / `unrecorded closes:` against D4/D1's canon grammar).
-Before committing, append one line to `.claude/state/tidy-runs.jsonl` at the repo root you commit from (history — never rewrite a line): `{date, mode, machine, counts, scan, applied, match}` — `scan` the tidy-scan mechanical rows, `applied` the step-3 actions taken, `match` whether they are equal. It rides the commit unless the project ignores `.claude/state/`.
-Remove the worktree and prune. Teardown runs on every exit path, abort included.
+Before committing, append one line to `.claude/state/tidy-runs.jsonl` at the repo root you commit from (history — never rewrite a line): `{date, mode, machine, counts, scan, applied, match}` — `scan` the tidy-scan mechanical rows, `applied` the step-3 actions taken, `match` whether they are equal (it rides the commit unless the project ignores `.claude/state/`); then remove the worktree and prune — teardown runs on every exit path, abort included.
