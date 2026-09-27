@@ -95,10 +95,13 @@ Read first, experiment second: shortlist suspects, then spend a capped probe bud
   over a row, state or input the pipeline can never persist asserts nothing; a suite
   that is green, mutation-sensitive and built on an impossible fixture is worthless
   anyway.
-- **Sabotage.** Break the code a test claims to guard (empty the body, flip a boundary,
-  invert a condition — the ONE sabotage most likely to expose a hollow test), run the
-  covering tests, expect red. Still green = the test asserts nothing. That is proof,
-  not opinion.
+- **Sabotage.** For EVERY new or changed test suite in the review range — not one
+  sabotage spread across the whole review — break the code that suite claims to guard
+  (empty the body, flip a boundary, invert a condition: the one mutation most likely to
+  expose a hollow test in THAT suite), run its covering tests, expect red. Still green =
+  the test asserts nothing; file a bead. Then restore the file and run `git status`:
+  the worktree must read clean before you move to the next suite or conclude the
+  review — a dirty tree here means every later finding measures code nobody wrote.
 - **Rerun / shuffle.** A test that flips on identical code is flaky; one that fails
   only under `--sequence.shuffle` is order-dependent.
 - **Cannot-fail and tautology.** No assertions; assertions inside conditionals or catch
