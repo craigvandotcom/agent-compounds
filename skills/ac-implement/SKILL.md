@@ -36,7 +36,7 @@ always the coordinator and never a worker, at every width; a cap bounds a run yo
 claims and the beads' own `## Consumes` / `## Delivers`. A coordinator that starts working
 is a worker that has stopped coordinating.
 
-**Phase 0 — orient.** FIRST register with Agent Mail (`macro_start_session`, canonical project key) and install the pre-commit guard once (workers never do). Then run `bash <scripts>/run-start.sh --run <run-id>` to record the human's starting branch (detached HEAD refuses; an origin-absent branch is announced and retained).
+**Phase 0 — orient.** FIRST register with Agent Mail (`macro_start_session`, canonical project key) and install the pre-commit guard once (workers never do).
 Before stale-claim inspection, run `python3 <scripts>/../../_tools/agent-roster.py --snapshot <run-scoped dir>` from the project root for a fresh full-roster and active-reservation snapshot in the shape `br coordination status` validates, then feed its two printed paths to `br coordination status --json --agents <agents-snapshot> --reservations <reservations-snapshot>`.
 Surface every claim not assessed `fresh` and follow the tool's recommended action. A missing or mismatched snapshot, a claim with no assignee evidence, or a transient read failure is **UNKNOWN**: stop before any worker spawns. Never reclaim by age alone.
 Resolve THIS skill's real path (app skills are symlinks; an app root has no `engine/`) — `<scripts>` is its absolute, symlink-resolved `scripts/` dir — and run `<ac-root>/engine/deploy.sh "$PWD" --agents all --dry-run`; a `generate` line names a stale agent whose frozen tool grants waste the wave, so print the regenerate command and stop.
@@ -66,8 +66,7 @@ Then, and only after it exits 0:
 1. **Batch CI on the committed tree.** The repo-wide gates are authoritative HERE — only here is
    the tree free of half-finished sibling edits. A red is yours: fix a one-commit red through
    claim→gate, file anything larger with a named owner. The run is not over while a red has neither.
-2. **Telemetry.** Report width, wall time, and gate-wait vs work time — the constitution drops
-   the width to 1 if two tuning sessions show no throughput over width 1, and this number decides.
+2. **Telemetry.** Report width, wall time, and gate-wait vs work time.
 3. **Read back the clean state:** 0 claims held by run actors, 0 active reservations for the
    roster. Force-release strays and deregister only yourself (`ac-land/references/teardown.md`).
    An open item in the report is unfinished work, not an exit.
