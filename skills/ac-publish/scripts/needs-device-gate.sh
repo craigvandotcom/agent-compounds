@@ -1,25 +1,26 @@
 #!/usr/bin/env bash
 #
 # needs-device-gate.sh — refuse a publish whose batch touches a surface that already
-# carries an OPEN needs-device bead, or an open needs-device bead from which no paths
+# carries an OPEN device bead, or an open device bead from which no paths
 # can be derived (zero-path, fail-closed).
 #
 # ASSURANCE
 #   PROBE:      bash skills/ac-publish/scripts/needs-device-gate.sh --self-test
 #   SCHEDULE:   every ac-publish, before tagging
 #   MODE:       blocking
-#   ON-FAILURE: closed — refuse is a stop; an unset override is not an override
+#   ON-FAILURE: closed — a refusal is a stop; there is no override
 #
-# Paths come from ## Delivers and AC Probe: commands. Territory is ignored: the ac2
-# schema has no Territory, and a Territory-only read would silent-pass every ac2 bead.
+# Paths come from bead.py's canonical ## Delivers and Probe: extractors — the one
+# reader every bead tool parses cards through (ac-m9y4.1), never a second hand-rolled
+# copy. Territory is ignored: the ac2 schema has no Territory, and a Territory-only
+# read would silent-pass every ac2 bead. bead.py is file-shaped-only (whole-word paths
+# carrying an extension): a bead whose Delivers names only a bare directory derives no
+# paths and falls to the zero-path leg below — fail-closed, never a silent miss.
 #
 # Usage:
 #   needs-device-gate.sh --range <git-rev-range> [--root <app-checkout>]
 #   needs-device-gate.sh --paths-file <file> [--board <br-list-json>]
 #   needs-device-gate.sh --self-test
-#
-# Env:
-#   NEEDS_DEVICE_GATE_OVERRIDE  non-empty reason; logged; the only override
 #
 # Exit 0  GATE PASSED · Exit 1  GATE REFUSED · Exit 2  NOT-GATED
 #
@@ -30,11 +31,17 @@ RANGE="" ROOT="" PATHS_FILE="" BOARD_FILE="" SELF_TEST=0
 
 not_gated() { echo "NOT-GATED: $*" >&2; exit 2; }
 
+TOOLS_DIR="$(cd "$(dirname "$SELF")/../../_tools" 2>/dev/null && pwd)"
+
 # The ONE br_call invocation shape (ac-heyt.3); a refusal below is a NOT-GATED,
 # never empty data. SELF is already absolute, so the helper path is cwd-independent.
 # shellcheck source=br-call.sh
-. "$(cd "$(dirname "$SELF")/../../_tools" 2>/dev/null && pwd)/br-call.sh" 2>/dev/null \
+. "$TOOLS_DIR/br-call.sh" 2>/dev/null \
   || not_gated "br-call.sh helper missing — no br read can be verified"
+
+# Fail-closed rule (Intent): a ship gate exits NOT-GATED when bead.py is missing, not
+# when it merely finds nothing — a missing reader must never silently read as clean.
+[ -f "$TOOLS_DIR/bead.py" ] || not_gated "bead.py missing at '$TOOLS_DIR/bead.py' — Delivers/Probe paths cannot be derived"
 
 while [ $# -gt 0 ]; do
   case "$1" in
@@ -43,32 +50,46 @@ while [ $# -gt 0 ]; do
     --paths-file) PATHS_FILE="${2:-}"; shift 2 ;;
     --board)      BOARD_FILE="${2:-}"; shift 2 ;;
     --self-test)  SELF_TEST=1; shift ;;
-    -h|--help)    sed -n '16,24p' "$SELF"; exit 0 ;;
+    -h|--help)    sed -n '20,25p' "$SELF"; exit 0 ;;
     -*)           not_gated "unknown option '$1'" ;;
     *)            not_gated "unexpected argument '$1'" ;;
   esac
 done
 
-# --- path derivation: ## Delivers body + Probe: `...` commands, never Territory ------
-# A token counts as a path only if it contains `/` (repo-relative). Bare filenames,
-# URLs, bead ids and /dev/null are not surfaces. Dotted first-components (.claude/…)
-# must keep the dot — an optional-dot regex otherwise matches from "claude".
-extract_paths() {
-  local desc="$1" blob
-  blob=$(printf '%s\n' "$desc" | awk '
-    { low = tolower($0) }
-    insec && low ~ /^## / { exit }
-    insec { print; next }
-    low ~ /^##[ \t]*delivers([ \t]|$)/ { insec = 1 }
-  ')
-  blob="${blob}
-$(printf '%s\n' "$desc" | sed -n 's/.*Probe: `\([^`]*\)`.*/\1/p')"
-  printf '%s\n' "$blob" \
-    | grep -oE '(\.[A-Za-z0-9_-]+|[A-Za-z0-9_-]+)(/[][A-Za-z0-9._()-]+)+' \
-    | sed 's|^\./||; s|[[:space:][:punct:]]*$||; s|/$||' \
-    | grep -vE '^(https?://|bd-|dev/null$)' \
-    | grep '/' \
-    | sort -u
+# --- path derivation: bead.py's ## Delivers + Probe: extractors, never Territory ------
+# A token counts as a surface only if it contains `/` (repo-relative) — a bare
+# repo-root filename or a bead id is not a surface, same policy the old hand-rolled
+# reader enforced, now layered over the one canonical extractor instead of a second
+# implementation of it. The program lives in its own file (never a heredoc attached
+# to `python3 -`): a heredoc IS the command's stdin, so piping the bead body in on the
+# same command would starve `sys.stdin.read()` of everything but EOF.
+write_device_paths_py() {
+  cat >"$1" <<'PY'
+import os, sys
+sys.path.insert(0, os.environ["BEAD_TOOL_DIR"])
+import bead
+
+with open(sys.argv[1], "r") as f:
+    desc = f.read()
+paths = set()
+for d in bead.delivers(desc):
+    paths.update(p for p in d["paths"] if p)
+for probe in bead.probes(desc):
+    paths.update(bead.extract_paths(probe))
+for p in sorted(paths):
+    if "/" in p:
+        print(p)
+PY
+}
+
+derive_device_paths() {
+  local desc="$1" descfile rc
+  descfile=$(mktemp "${TMPDIR:-/tmp}/needs-device-desc.XXXXXX") || return 2
+  printf '%s' "$desc" >"$descfile"
+  BEAD_TOOL_DIR="$TOOLS_DIR" python3 "$DEVICE_PATHS_PY" "$descfile"
+  rc=$?
+  rm -f "$descfile"
+  return $rc
 }
 
 # Exact path, or a derived directory prefix of a batch path.
@@ -108,7 +129,9 @@ Camera capture on the minted row.
 ## Consumes
 none
 '
-  # Path-less, bd-wuxx0-shaped: Delivers is prose, no Probe, Territory names a path we MUST ignore.
+  # Path-less, bd-wuxx0-shaped: Delivers is prose, no Probe — refuses on the label alone.
+  # No Territory heading anywhere in this file: the ac2 schema carries none, and D1
+  # retires the name registry-wide (ac-m9y4.16 proves the deleted-name grep empty).
   zeropath_desc='## Intent
 Device confirm on a real phone.
 
@@ -120,15 +143,11 @@ Device confirm on a real phone.
 
 ## Consumes
 none
-
-## Territory
-- features/camera/components/multi-camera-capture.tsx
-- No code changes expected.
 '
 
   write_board() {
     jq -n --arg id "$2" --arg desc "$3" --argjson extra "${4:-[]}" \
-      '{issues: ([{id:$id, status:"open", labels:["needs-device"], description:$desc}] + $extra)}' \
+      '{issues: ([{id:$id, status:"open", labels:["device"], description:$desc}] + $extra)}' \
       >"$work/$1.json"
   }
 
@@ -136,12 +155,7 @@ none
 
   run_case() {
     local name="$1" expect_rc="$2" expect_grep="$3"; shift 3
-    out=$(unset NEEDS_DEVICE_GATE_OVERRIDE
-          if [ -n "${OVERRIDE:-}" ]; then
-            NEEDS_DEVICE_GATE_OVERRIDE="$OVERRIDE" bash "$SELF" "$@"
-          else
-            bash "$SELF" "$@"
-          fi 2>&1) || rc=$?
+    out=$(bash "$SELF" "$@" 2>&1) || rc=$?
     rc=${rc:-0}
     if [ "$rc" -eq "$expect_rc" ] && printf '%s\n' "$out" | grep -qE "$expect_grep"; then
       echo "ok   $name"
@@ -160,13 +174,13 @@ none
 
   write_board zero fx-wuxx0 "$zeropath_desc"
   write_paths 'docs/unrelated.md'
-  run_case "zero-path refuses on the label alone (Territory ignored)" 1 'GATE REFUSED: fx-wuxx0' \
+  run_case "zero-path refuses on the label alone" 1 'GATE REFUSED: fx-wuxx0' \
     --board "$work/zero.json" --paths-file "$work/paths.txt"
   out=$(bash "$SELF" --board "$work/zero.json" --paths-file "$work/paths.txt" 2>&1) || true
   if printf '%s\n' "$out" | grep -q 'zero-path'; then
-    echo "ok   zero-path class named (Territory path ignored)"
+    echo "ok   zero-path class named"
   else
-    echo "FAIL zero-path class named (Territory path ignored)"
+    echo "FAIL zero-path class named"
     printf '%s\n' "$out" | sed 's/^/     /'
     failures=$((failures + 1))
   fi
@@ -175,10 +189,6 @@ none
   write_paths 'README.md' 'docs/unrelated.md'
   run_case "clean batch on a pathed board with no intersection" 0 'GATE PASSED: clean batch' \
     --board "$work/clean.json" --paths-file "$work/paths.txt"
-
-  OVERRIDE='alice: device pass recorded on build 52' \
-    run_case "named override logs and passes" 0 'needs-device override' \
-    --board "$work/zero.json" --paths-file "$work/paths.txt"
 
   run_case "no range and no paths-file is NOT-GATED" 2 'NOT-GATED' \
     --board "$work/ac2.json"
@@ -206,6 +216,10 @@ none
   run_case "dev/null is not a derived path (zero-path)" 1 'zero-path' \
     --board "$work/devnull.json" --paths-file "$work/paths.txt"
 
+  # bead.py's extractor is file-shaped only (a whole-word path carrying an extension):
+  # a Delivers/Probe pair naming only a bare directory derives zero paths and falls to
+  # the zero-path leg — fail-closed (broader refusal), never a silent miss, the
+  # intended trade-off of adopting the one canonical extractor (ac-m9y4.13).
   dir_desc='## Acceptance Criteria
 - Probe: `grep -rq introPrice features/monetization/` — tier: none
 
@@ -214,7 +228,7 @@ none
 '
   write_board dir fx-dir "$dir_desc"
   write_paths 'features/monetization/components/paywall-drawer.tsx' 'README.md'
-  run_case "directory prefix names the intersecting child" 1 'paywall-drawer.tsx' \
+  run_case "a bare-directory Delivers/Probe derives zero paths — fail-closed on the label alone" 1 'zero-path' \
     --board "$work/dir.json" --paths-file "$work/paths.txt"
 
   rm -rf "$work"
@@ -253,8 +267,8 @@ if [ -n "$BOARD_FILE" ]; then
   [ -r "$BOARD_FILE" ] || not_gated "board file '$BOARD_FILE' is missing or unreadable"
   BOARD_JSON=$(cat "$BOARD_FILE")
 else
-  BOARD_JSON=$(br_call list --label needs-device --json) \
-    || not_gated "br list --label needs-device refused — an unreadable board must not read as an empty one"
+  BOARD_JSON=$(br_call list --label device --json) \
+    || not_gated "br list --label device refused — an unreadable board must not read as an empty one"
 fi
 
 ISSUES=$(printf '%s' "$BOARD_JSON" | jq -c '
@@ -267,11 +281,13 @@ fi
 
 FILTERED=$(printf '%s' "$ISSUES" | jq -c '
   [.[] | select((.status // "open") != "closed")
-        | select((.labels // []) | index("needs-device") != null)]
-' 2>/dev/null) || not_gated "could not filter open needs-device beads"
+        | select((.labels // []) | index("device") != null)]
+' 2>/dev/null) || not_gated "could not filter open device beads"
 
 REFUSE_FILE=$(mktemp "${TMPDIR:-/tmp}/needs-device-refuse.XXXXXX") || not_gated "mktemp failed"
-trap 'rm -f "$REFUSE_FILE"' EXIT
+DEVICE_PATHS_PY=$(mktemp "${TMPDIR:-/tmp}/needs-device-paths.XXXXXX.py") || not_gated "mktemp failed"
+trap 'rm -f "$REFUSE_FILE" "$DEVICE_PATHS_PY"' EXIT
+write_device_paths_py "$DEVICE_PATHS_PY"
 
 COUNT=$(printf '%s' "$FILTERED" | jq 'length')
 i=0
@@ -281,9 +297,9 @@ while [ "$i" -lt "$COUNT" ]; do
   desc=$(printf '%s' "$node" | jq -r '.description // ""')
   i=$((i + 1))
   [ -n "$id" ] || continue
-  derived=$(extract_paths "$desc")
+  derived=$(derive_device_paths "$desc") || not_gated "bead.py crashed deriving paths for '$id'"
   if [ -z "$derived" ]; then
-    printf '%s\t%s\n' "$id" "(zero-path — no paths from Delivers or AC probes; refusing on the needs-device label alone)" >>"$REFUSE_FILE"
+    printf '%s\t%s\n' "$id" "(zero-path — no paths from Delivers or AC probes; refusing on the device label alone)" >>"$REFUSE_FILE"
     continue
   fi
   hits=$(intersect_hits "$derived" "$DIFF_PATHS" | sort -u | tr '\n' ' ')
@@ -294,17 +310,6 @@ done
 
 if [ ! -s "$REFUSE_FILE" ]; then
   echo "GATE PASSED: clean batch"
-  exit 0
-fi
-
-OVERRIDE="${NEEDS_DEVICE_GATE_OVERRIDE:-}"
-if [ -n "$OVERRIDE" ]; then
-  echo "needs-device override: $OVERRIDE"
-  echo "would have refused:"
-  while IFS="$(printf '\t')" read -r id reason; do
-    echo "  GATE REFUSED: $id $reason"
-  done <"$REFUSE_FILE"
-  echo "GATE PASSED: overridden"
   exit 0
 fi
 
