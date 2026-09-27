@@ -221,6 +221,39 @@ check(bead.extract_paths("see AGENTS.md for context") == ["AGENTS.md"],
 check(bead.is_cross_repo("~/mission/x") is True and bead.is_cross_repo("lib/x.ts") is False,
       "is_cross_repo: only a ~/-rooted path counts")
 
+# --- extract_paths false tokens (checker recheck 2026-09-27) ----------------------------
+# `foods.status` (a SQL column reference), `0.68` (a measured ratio) and `(bd-x.1` (a
+# paren-wrapped bead id) all read as files before the fix: no `/`, no KNOWN extension, or
+# only path-shaped because a leading `(` kept the bead-id-shape exclusion from firing.
+
+check(bead.extract_paths("the cron that drains rows in `foods.status = 'analyzing'`") == [],
+      "extract_paths: a bare word.word SQL column reference (no `/`, no known extension) "
+      "is not a path")
+check(bead.extract_paths("the live population moved from 0.68 to 0.71") == [],
+      "extract_paths: a purely numeric decimal is never a path, known-extension digits "
+      "included")
+check(bead.extract_paths("blocked on the ruling (bd-x.1)") == [],
+      "extract_paths: a paren-wrapped bead id — the leading `(` no longer defeats the "
+      "bead-id-shape exclusion")
+check(bead.extract_paths("see (lib/a.ts) for the change") == ["lib/a.ts"],
+      "extract_paths: a paren-wrapped REAL path is recovered edge-stripped, not left "
+      "carrying its wrapper")
+check(bead.extract_paths("today's count is 42.") == [],
+      "extract_paths: an integer-with-trailing-period sentence is never a path")
+check(bead.extract_paths("run .husky/pre-push, lib/db/foods.ts and ~/mission/x/y.md") ==
+      sorted([".husky/pre-push", "lib/db/foods.ts", "~/mission/x/y.md"]),
+      "extract_paths: today's accepted shapes (dot-leading, dir/dir/file.ext, cross-repo ~/) "
+      "are unaffected by the extension/numeric/edge-punct rules")
+
+check(bead._looks_like_file_path("foods.status") is False,
+      "_looks_like_file_path: word.word with an unknown extension is rejected")
+check(bead._looks_like_file_path("0.68") is False,
+      "_looks_like_file_path: purely numeric is rejected even though '68' resembles digits")
+check(bead._looks_like_file_path("lib/a.ts") is True,
+      "_looks_like_file_path: a `/`-qualified token is accepted regardless of extension")
+check(bead._looks_like_file_path("AGENTS.md") is True,
+      "_looks_like_file_path: a repo-root token ending in a KNOWN extension is accepted")
+
 # A PLAN's own `## Deliverables` heading uses the SAME extractor (heading= override).
 PLAN_DESC = "## Deliverables\n- skills/_tools/bead.py\n- skills/_tools/bead.test.py\n"
 plan_dl = bead.delivers(PLAN_DESC, heading="Deliverables")

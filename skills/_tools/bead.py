@@ -472,13 +472,73 @@ _DELETED_KIND_RE = re.compile(r"^[ \t]*[-*][ \t]*deleted-([A-Za-z0-9_-]+):")
 _TOUCHERS_LINE_RE = re.compile(r"^[ \t]*touchers:")
 _BULLET_RE = re.compile(r"^[ \t]*[-*][ \t]")
 
+# A raw ARTIFACT_RE match is edge-stripped before it is judged: the char classes above
+# intentionally allow `(`/`)`/`[`/`]` MID-path (a Next.js route group, a `[id]` segment), so
+# they cannot also be excluded from the START/END — prose routinely wraps a citation in a
+# bracket (`see (lib/a.ts)`, `the blocker (bd-x.1)`) and the match spills the wrapper in
+# (checker recheck 2026-09-27: `(bd-x.1` read as a file, the bead-id-shape exclusion below
+# never firing because the leading `(` kept it from matching that shape). Only the OUTER
+# edge is ever stripped, never a bracket the token's own middle legitimately carries.
+_LEADING_PUNCT_RE = re.compile(r"^[(\[{]+")
+_TRAILING_PUNCT_RE = re.compile(r"[)\]}.,;:!?'\"]+$")
+_PURELY_NUMERIC_RE = re.compile(r"^[0-9]+(?:\.[0-9]+)*$")
+
+# Extensions a REPO-ROOT bare token (`word.ext`, no `/`) must end in to be trusted as a
+# file rather than a `word.word` prose shape (`foods.status`, a SQL column reference) — a
+# token carrying a `/` is already directory-qualified by ARTIFACT_RE's own alternation and
+# never needs this list (checked first, below). Drawn from this registry's own tracked
+# extensions plus the wider Next.js/Supabase/Capacitor stack's own tracked set (a consuming
+# app's own repo) — not exhaustive by construction, but a `word.ext` bullet whose extension
+# is missing here is a gap to WIDEN this list for, never a reason to loosen the rule back to
+# "any word.word passes".
+KNOWN_FILE_EXTENSIONS = frozenset({
+    # docs / text / config
+    "md", "mdx", "mdc", "txt", "json", "jsonl", "yml", "yaml", "toml", "xml", "ini",
+    "cfg", "conf", "env", "example", "lock", "lockb", "editorconfig", "gitignore",
+    "gitattributes", "npmrc", "nvmrc", "prettierrc", "prettierignore", "eslintrc",
+    "babelrc", "vercelignore", "ubsignore", "cursorignore", "gitleaksignore", "ignore",
+    "mdcignore", "diff", "patch", "log", "sha", "snap", "resolved", "bak", "capacitor",
+    # code
+    "sh", "bash", "py", "ts", "tsx", "js", "jsx", "mjs", "cjs", "mts", "cts",
+    "sql", "rs", "go", "rb", "java", "kt", "kts", "swift", "m", "mm", "h", "hpp", "c",
+    "cc", "cpp", "vue", "svelte", "graphql", "gql", "proto",
+    # native / build
+    "plist", "entitlements", "xcconfig", "xcscheme", "xcprivacy", "pbxproj",
+    "storyboard", "xib", "podspec", "gemspec", "gradle", "properties", "storekit",
+    # data / assets
+    "csv", "tsv", "psv", "svg", "png", "jpg", "jpeg", "gif", "webp", "ico", "pdf",
+    "docx", "woff", "woff2", "ttf",
+})
+
+
+def _looks_like_file_path(tok):
+    """`tok` (already edge-stripped) is path-shaped enough to trust: it contains a `/`
+    (already directory-qualified by ARTIFACT_RE's own alternation), or its final `.<ext>`
+    is a KNOWN file extension. Never a purely numeric decimal (`0.68`) either way —
+    `_PURELY_NUMERIC_RE` is checked before the extension lookup so a numeric "extension"
+    (`0.68` -> ext `68`) is never accidentally legalised by a future list edit."""
+    if "/" in tok:
+        return True
+    if _PURELY_NUMERIC_RE.match(tok):
+        return False
+    dot = tok.rfind(".")
+    if dot == -1:
+        return False
+    return tok[dot + 1:].lower() in KNOWN_FILE_EXTENSIONS
+
 
 def extract_paths(text):
-    """Whole-word path-shaped tokens in plain text, sorted and deduped."""
+    """Whole-word path-shaped tokens in plain text, sorted and deduped. A path token must
+    contain a `/` or end in a KNOWN file extension, and must never be purely numeric —
+    `foods.status` (a SQL column reference), `0.68` (a measured ratio) and `(bd-x.1` (a
+    paren-wrapped bead id) are prose, never a file (checker recheck 2026-09-27)."""
     out = []
     for m in ARTIFACT_RE.finditer(text or ""):
-        tok = m.group(0)
-        if _BEAD_ID_SHAPE_RE.match(tok):
+        tok = _LEADING_PUNCT_RE.sub("", m.group(0))
+        tok = _TRAILING_PUNCT_RE.sub("", tok)
+        if not tok or _BEAD_ID_SHAPE_RE.match(tok):
+            continue
+        if not _looks_like_file_path(tok):
             continue
         out.append(tok)
     return sorted(set(out))
