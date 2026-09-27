@@ -41,9 +41,31 @@ export FIX AC2_PLANS_DIR="$PLANS"
 AC2_BR_CMD="$W/br"; export AC2_BR_CMD
 cat > "$AC2_BR_CMD" <<'STUB'
 #!/usr/bin/env bash
+# Rejects what the real br rejects, with its exit codes, and answers in its real shapes:
+# a stub that accepts any argv proves nothing about the calls the tool makes.
+bad_arg() { printf "error: unexpected argument '%s' found\n" "$1" >&2; exit 2; }
 case "$1" in
-  list) cat "$FIX/list.json" ;;
-  show) id="$2"; [ -f "$FIX/show-$id.json" ] && cat "$FIX/show-$id.json" || echo '[]' ;;
+  list)
+    shift
+    while [ $# -gt 0 ]; do
+      case "$1" in
+        --all|-a|--json) ;;
+        --limit) [[ "${2-}" =~ ^[0-9]+$ ]] || bad_arg "$1"; shift ;;
+        --status)
+          case "${2-}" in
+            open|in_progress|blocked|deferred|closed) ;;
+            *) printf '{"error":{"code":"INVALID_STATUS","message":"Invalid status: %s"}}\n' "${2-}"; exit 4 ;;
+          esac
+          shift ;;
+        *) bad_arg "$1" ;;
+      esac
+      shift
+    done
+    cat "$FIX/list.json" ;;
+  show)
+    id="${2-}"; shift 2 2>/dev/null || bad_arg show
+    for a in "$@"; do [ "$a" = --json ] || bad_arg "$a"; done
+    [ -f "$FIX/show-$id.json" ] && cat "$FIX/show-$id.json" || echo '[]' ;;
   *) exit 9 ;;
 esac
 STUB
@@ -56,7 +78,7 @@ mk_bead() {  # id type status title [delivers-body]
   jq -n --arg id "$id" --arg t "$itype" --arg s "$status" --arg ti "$title" --arg d "$desc" \
     '{id:$id, title:$ti, description:$d, status:$s, issue_type:$t}'
 }
-write_board() { printf '%s\n' "$@" | jq -s '{issues: .}' > "$FIX/list.json"; }
+write_board() { printf '%s\n' "$@" | jq -s '.' > "$FIX/list.json"; }  # br list --json is a bare array
 write_show()  { printf '%s' "$2" > "$FIX/show-$1.json"; }
 
 VISION_LINE='writes the vision back in plain prose'
@@ -118,7 +140,7 @@ mk_approvable_plan "$PLANS/p-draft.md" '- D1 `lib/shared.js`' 'lib/shared.js'
 
 mk_approvable_plan "$PLANS/p-beadified.md" '- D1 `lib/shared.js`' 'lib/shared.js'
 bash "$PA" approve "$PLANS/p-beadified.md" "Alex" >/dev/null
-sed -i.bak '1a beadified: some-epic' "$PLANS/p-beadified.md"; rm -f "$PLANS/p-beadified.md.bak"
+awk 'NR==1 { print; print "beadified: some-epic"; next } 1' "$PLANS/p-beadified.md" > "$PLANS/p-beadified.md.tmp" && mv "$PLANS/p-beadified.md.tmp" "$PLANS/p-beadified.md"  # portable: BSD sed has no one-line `1a text`
 
 mk_approvable_plan "$PLANS/p-approved.md" '- D1 `lib/shared.js`' 'lib/shared.js'
 bash "$PA" approve "$PLANS/p-approved.md" "Alex" >/dev/null

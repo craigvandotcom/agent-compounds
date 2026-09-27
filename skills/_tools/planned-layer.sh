@@ -119,7 +119,7 @@ _pl_canon_path() {
 
 # One real board read, failing loud rather than reading a dead board as empty.
 _pl_preflight() {
-  br_call list --status all --limit 0 --json >/dev/null || { printf 'NOT-GATED: br list failed — the board could not be read\n' >&2; exit 2; }
+  br_call list --all --limit 0 --json >/dev/null || { printf 'NOT-GATED: br list failed — the board could not be read\n' >&2; exit 2; }
 }
 
 # ---------------------------------------------------------------------------------------
@@ -129,7 +129,7 @@ _pl_preflight() {
 # TSV: id \t title \t comma-separated Delivers paths (empty = unindexed).
 _pl_bead_layer() {
   local json line id title desc body paths
-  json=$(br_call list --status all --limit 0 --json) || { printf 'NOT-GATED: br list failed\n' >&2; return 2; }
+  json=$(br_call list --all --limit 0 --json) || { printf 'NOT-GATED: br list failed\n' >&2; return 2; }
   while IFS= read -r line; do
     [ -n "$line" ] || continue
     id=$(printf '%s' "$line" | jq -r '.id')
@@ -138,7 +138,7 @@ _pl_bead_layer() {
     body=$(printf '%s\n' "$desc" | _pl_section_body "## Delivers")
     paths=$(printf '%s\n' "$body" | _pl_delivers_paths_from_body | tr '\n' ',' | sed 's/,$//')
     printf '%s\t%s\t%s\n' "$id" "$title" "$paths"
-  done < <(printf '%s' "$json" | jq -c '.issues[] | select(.status != "closed" and .issue_type != "epic")')
+  done < <(printf '%s' "$json" | jq -c '(if type == "array" then . else .issues end)[] | select(.status != "closed" and .issue_type != "epic")')
 }
 
 # ---------------------------------------------------------------------------------------
@@ -174,18 +174,18 @@ _pl_epic_children() {
   local epic="$1" show_json list_json edge dotted
   show_json=$(br_call show "$epic" --json) || return 2
   edge=$(printf '%s' "$show_json" | jq -r '.[0].dependents[]? | select(.dependency_type=="parent-child") | .id')
-  list_json=$(br_call list --status all --limit 0 --json) || return 2
-  dotted=$(printf '%s' "$list_json" | jq -r --arg p "$epic." '.issues[] | select(.id | startswith($p)) | .id')
+  list_json=$(br_call list --all --limit 0 --json) || return 2
+  dotted=$(printf '%s' "$list_json" | jq -r --arg p "$epic." '(if type == "array" then . else .issues end)[] | select(.id | startswith($p)) | .id')
   { printf '%s\n' "$edge"; printf '%s\n' "$dotted"; } | grep -v '^$' | sort -u
 }
 
 _pl_epic_subject_paths() {
   local epic="$1" children list_json id desc body paths out=""
   children=$(_pl_epic_children "$epic") || return 2
-  list_json=$(br_call list --status all --limit 0 --json) || return 2
+  list_json=$(br_call list --all --limit 0 --json) || return 2
   while IFS= read -r id; do
     [ -n "$id" ] || continue
-    desc=$(printf '%s' "$list_json" | jq -r --arg id "$id" '.issues[] | select(.id==$id) | .description // empty')
+    desc=$(printf '%s' "$list_json" | jq -r --arg id "$id" '(if type == "array" then . else .issues end)[] | select(.id==$id) | .description // empty')
     [ -n "$desc" ] || continue
     body=$(printf '%s\n' "$desc" | _pl_section_body "## Delivers")
     paths=$(printf '%s\n' "$body" | _pl_delivers_paths_from_body)
