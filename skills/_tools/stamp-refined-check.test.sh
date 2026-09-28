@@ -148,6 +148,63 @@ else
   fail "Case 8: expected exit 2 for a missing file, got $RC. Output: $OUT"
 fi
 
+# --- Case 9: THE VACUOUS --check HOLE (bd-1fse3/bd-qer3r sibling gap, 2026-09-28) — a task
+# bead with NO 'Probe:' line at all used to pass --check (bead.py check carried no zero-probe
+# leg) even though the full stamp's own inline copy of the same rule would refuse it as "no
+# executable Probe: line". --check must refuse it too, for an implementable type. Delivers
+# names a NON-code path (docs/spec.md) so the pre-existing probe-presence leg (a CODE
+# Delivers needs a probe that runs something) stays clean and cannot mask which leg fired.
+NO_PROBE='## Intent
+something.
+
+## Acceptance Criteria
+- x exists, verified by hand.
+
+## Delivers
+- docs/spec.md
+
+## Consumes
+- none
+'
+# The grep target is 'no-probe:' (with the trailing colon — the exact violation-line
+# prefix `cmd_check` writes, `refused.append(f"no-probe: {npv}")`), never the bare
+# 'no-probe' substring: a fixture FILENAME containing that substring (as an earlier
+# revision of this case did: no-probe-decision.md) would false-match on its own path
+# echoed back in an unrelated OK/skip line.
+write_fx zprobeless.md "$NO_PROBE"
+OUT=$(bash "$STAMP" --check "$WORK/zprobeless.md" --type task --labels origin:ac-beadify 2>&1); RC=$?
+if [ "$RC" -eq 1 ] && echo "$OUT" | grep -q 'no-probe:'; then
+  pass "Case 9: a task bead with zero 'Probe:' lines is REFUSED by --check, naming no-probe — the vacuous sibling gap is closed"
+else
+  fail "Case 9: expected exit 1 naming no-probe:, got $RC. Output: $OUT"
+fi
+
+# --- Case 10: the type/label exemption — decision/epic/investigation and human-gate keep
+# today's exemption (bead-schema.md § Required axes): zero 'Probe:' lines never refuses
+# those. A decision-typed bead with the same probe-less body as Case 9 passes the no-probe
+# leg clean (it may still be refused elsewhere, e.g. element4 or origin, but never by
+# no-probe).
+write_fx zprobeless-decision.md "$NO_PROBE"
+OUT=$(bash "$STAMP" --check "$WORK/zprobeless-decision.md" --type decision --labels origin:ac-beadify 2>&1); RC=$?
+if [ "$RC" -eq 0 ] && ! echo "$OUT" | grep -q 'no-probe:'; then
+  pass "Case 10: a decision-typed bead with zero 'Probe:' lines is never refused by no-probe — type exemption preserved"
+else
+  fail "Case 10: a decision-typed bead was refused by no-probe; the type exemption regressed. rc=$RC Output: $OUT"
+fi
+
+# --- Case 11: the human-gate label exemption — a task-typed, human-gate-labelled bead with
+# zero 'Probe:' lines is never refused by no-probe either, regardless of its type.
+# (element4-check does not thread --labels through --check today — out of scope here — so
+# this case only asserts the no-probe leg itself, via bead.py's own meta-header read, not
+# the overall exit code.)
+write_fx zprobeless-human-gate.md "$NO_PROBE"
+OUT=$(bash "$STAMP" --check "$WORK/zprobeless-human-gate.md" --type task --labels origin:ac-beadify,human-gate 2>&1); RC=$?
+if ! echo "$OUT" | grep -q 'no-probe:'; then
+  pass "Case 11: a human-gate-labelled task bead with zero 'Probe:' lines is never refused by no-probe — label exemption preserved"
+else
+  fail "Case 11: a human-gate-labelled bead was refused by no-probe; the label exemption regressed. Output: $OUT"
+fi
+
 echo
 if [ "$FAILURES" -eq 0 ]; then
   echo "stamp-refined-check.test.sh: all cases passed"

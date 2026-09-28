@@ -1153,6 +1153,40 @@ def task_feature_delivers_violation(issue_type, desc):
     return None
 
 
+# --- no-probe: the PROBE axis itself, zero extractable Probe: lines -----------------------
+
+_IMPLEMENTABLE_ISSUE_TYPES = ("task", "bug", "feature")
+
+
+def no_probe_violation(issue_type, human_gate, desc):
+    """The PROBE axis (bead-schema.md § Required axes): a `task`/`bug`/`feature` bead needs
+    at least one extractable `Probe: \\`<command>\\`` line — zero probes certifies nothing a
+    worker can run. Exempt by type (`epic`/`decision`/`investigation`) and by label
+    (`human-gate`, regardless of type) — an epic's own Success Criteria or the recorded
+    human ruling IS the acceptance criterion there, never a command
+    (bead-schema.md's own Probe row). `issue_type` not in the implementable set (including
+    `None`/unknown) is exempt here — the CALLER decides whether "unknown" should instead be
+    a skip (never silently exempt) or fail toward requiring a probe; this function only
+    encodes the type/label rule itself, same division of labour as
+    `task_feature_delivers_violation` above.
+
+    ONE HOME for both readers (checker recheck 2026-09-28, evidence bd-1fse3/bd-qer3r's
+    sibling gap): the full stamp's own inline PROBE-PRESENCE leg (part 1) used a bare
+    `grep -c 'Probe:'` with no type/label exemption at all, while `stamp-refined.sh --check`
+    (VALIDATE's own entry point) ran no zero-probe leg whatsoever — a bead could pass
+    `--check` and still be refused by the full stamp, or (worse) a decision/epic/
+    investigation bead could be wrongly refused by the full stamp's unconditional check.
+    Both readers now call this one function instead of growing their own copy."""
+    if human_gate:
+        return None
+    if issue_type not in _IMPLEMENTABLE_ISSUE_TYPES:
+        return None
+    if probes(desc):
+        return None
+    return ("no executable 'Probe: `<command>`' line; a refined bead must be "
+            "probe-bearing (beads-standards: refined)")
+
+
 # --- sensitive-prod — derived by calling prod-write-tripwire.sh, never a second copy ----
 
 
@@ -1219,8 +1253,10 @@ def cmd_check(target):
 
     File mode runs every CONTENT rule id mode runs — touchers, Consumes, Delivers symlink
     safety, probe-presence (a code Delivers needs a probe that runs something), and
-    (whenever the file carries a `parse_meta_header` line) origin, refined-vs-human-gate
-    and task/feature NO-DELIVERS/UNVERIFIABLE-DELIVERS too. Only the
+    (whenever the file carries a `parse_meta_header` line) origin, refined-vs-human-gate,
+    task/feature NO-DELIVERS/UNVERIFIABLE-DELIVERS and no-probe (a task/bug/feature bead
+    needs at least one extractable Probe: line; epic/decision/investigation and
+    human-gate stay exempt) too. Only the
     legs that genuinely need the BOARD stay skipped for a file target: sensitive-prod (its
     own DECISION-blocks count is a dependency-edge lookup against a real bead id, which a
     file path is not) always, and the label/type-scoped legs when the file carries no
@@ -1303,8 +1339,11 @@ def cmd_check(target):
             tfd = task_feature_delivers_violation(issue_type, desc)
             if tfd:
                 refused.append(tfd)
+        npv = no_probe_violation(issue_type, human_gate, desc)
+        if npv:
+            refused.append(f"no-probe: {npv}")
     else:
-        skipped.append("task/feature NO-DELIVERS/UNVERIFIABLE-DELIVERS (issue_type unknown — file input carries no meta-header line)")
+        skipped.append("task/feature NO-DELIVERS/UNVERIFIABLE-DELIVERS and no-probe (issue_type unknown — file input carries no meta-header line)")
 
     if canon is not None:
         dbc = _decision_blocks_count(bead_id)

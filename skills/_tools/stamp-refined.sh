@@ -214,11 +214,43 @@ stamp_refined() {
 
   # PROBE-PRESENCE LEG, part 1 (2026-08-29): `refined` must certify something a worker
   # can execute. Zero `Probe:` lines is still a refusal — measured 2026-08-29, when 18 of
-  # 22 refined beads carried none and every lean claim died NOT-GATED.
-  local probes
-  probes=$(printf '%s' "$meta" | jq -r '.[0].description // ""' | grep -c 'Probe:')
-  if [ "${probes:-0}" -eq 0 ]; then
-    echo "stamp_refined: REFUSED $id — description carries no executable 'Probe:' line; a refined bead must be probe-bearing (beads-standards: refined). Author the probes, then re-stamp. No label written." >&2
+  # 22 refined beads carried none and every lean claim died NOT-GATED. The VERDICT now
+  # calls bead.py's own `no_probe_violation` (moved 2026-09-28, checker recheck, evidence
+  # bd-1fse3/bd-qer3r: `stamp-refined.sh --check` — VALIDATE's own entry point — ran no
+  # zero-probe leg at all, so a probe-less bead passed `--check` and this inline copy then
+  # refused it; the inline copy also carried no type/label exemption of its own, so it
+  # over-refused a decision/epic/investigation bead relative to bead-schema.md's own Probe
+  # row). ONE home for the rule now, read by this leg, the ONE-BEAD CHECK GATE's own
+  # `bead.py check <id>` below, AND `stamp-refined.sh --check`'s thin wrapper — never a
+  # second derivation to drift from the other two. `human_gate` is passed as the Python
+  # literal `False`: the HUMAN-GATE LEG above already refused any bead carrying that label
+  # before this point is ever reached, so it is a known constant here, not a fresh read.
+  local _npv_issue_type _npv_desc _npv_out _npv_rc
+  _npv_issue_type=$(printf '%s' "$meta" | jq -r '.[0].issue_type // ""' 2>/dev/null)
+  _npv_desc=$(mktemp "${TMPDIR:-/tmp}/stamp-refined-npv.XXXXXX") || {
+    echo "stamp_refined: REFUSED $id — could not write a temp description for the no-probe leg; refusing rather than guessing. No label written." >&2
+    return 2
+  }
+  printf '%s' "$(printf '%s' "$meta" | jq -r '.[0].description // ""')" >"$_npv_desc"
+  _npv_out=$(python3 -c '
+import os, sys
+sys.path.insert(0, os.path.dirname(sys.argv[1]))
+import bead
+with open(sys.argv[2], "r", encoding="utf-8", errors="replace") as fh:
+    desc = fh.read()
+issue_type = sys.argv[3] or None
+v = bead.no_probe_violation(issue_type, False, desc)
+if v:
+    print(v)
+' "$BEAD_PY_TOOL" "$_npv_desc" "$_npv_issue_type" 2>&1); _npv_rc=$?
+  rm -f "$_npv_desc"
+  if [ "$_npv_rc" -ne 0 ]; then
+    printf '%s\n' "$_npv_out" >&2
+    echo "stamp_refined: REFUSED $id — could not run the no-probe leg; refusing rather than guessing. No label written." >&2
+    return 2
+  fi
+  if [ -n "$_npv_out" ]; then
+    echo "stamp_refined: REFUSED $id — $_npv_out. Author the probes, then re-stamp. No label written." >&2
     _downgrade "$id" "no executable Probe: line" || return $?
     return 1
   fi
