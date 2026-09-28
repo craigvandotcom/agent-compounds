@@ -873,6 +873,60 @@ def probe_shape_violation(cmd):
     return None
 
 
+# --- PROBE-PRESENCE: a code Delivers needs a probe that runs something -------------------
+
+_INERT_PROBE_CLAUSE_RE = re.compile(r"^(?:grep|rg)(?:\s|$)")
+_INERT_TEST_EXIST_RE = re.compile(r"^test\s+-[efx](?:\s|$)")
+
+
+def probe_runs_something(cmd):
+    """False once every `&&`/`||`/`;`-joined clause of `cmd` is stripped down to a bare
+    `grep`/`rg` read or a `test -e|-f|-x` existence predicate — the survivor test the
+    PROBE-PRESENCE leg below applies. `test -x p && bash p` still counts: only the first
+    clause is inert; `bash p` survives. Ported from stamp-refined.sh's identical
+    `probe_runs_something` (checker recheck 2026-09-28, evidence org-uv40/org-gv6: VALIDATE
+    — `bead.py check` alone — carried no PROBE-PRESENCE leg at all, passing beads the
+    restamp gate's own copy of it then refused; ONE home now covers both callers, the same
+    precedent as `task_feature_delivers_violation`'s 2026-09-27 move)."""
+    for clause in _split_clauses(cmd):
+        if _INERT_PROBE_CLAUSE_RE.match(clause) or _INERT_TEST_EXIST_RE.match(clause):
+            continue
+        return True
+    return False
+
+
+_CODE_DELIVERS_EXT_RE = re.compile(
+    r"\.(ts|tsx|js|jsx|mjs|cjs|sh|bash|py|go|rs|rb|java|swift|kt)$"
+)
+_DELIVERS_CODE_TOKEN_RE = re.compile(r"[A-Za-z0-9_.][A-Za-z0-9_./-]*\.[A-Za-z0-9]+")
+
+
+def probe_presence_code_violation(desc):
+    """The PROBE-PRESENCE leg itself: when `## Delivers` (its `touchers:` lines excluded)
+    names a code file, at least one `Probe:` line must `probe_runs_something` — a probe
+    that is only grep/rg reads or `test -e/-f/-x` existence predicates leaves nothing to
+    run, and a `refined` stamp on it certifies nothing a worker can execute. Pure content:
+    no board access, so id mode and file mode both carry it alike, never a file-mode skip."""
+    body = section(desc, "Delivers")
+    non_touchers = "\n".join(
+        ln for ln in body.splitlines() if not _TOUCHERS_LINE_RE.match(ln)
+    )
+    code = None
+    for tok in _DELIVERS_CODE_TOKEN_RE.findall(non_touchers):
+        if _CODE_DELIVERS_EXT_RE.search(tok):
+            code = tok
+            break
+    if not code:
+        return None
+    for cmd in probes(desc):
+        if probe_runs_something(cmd):
+            return None
+    return (
+        "nothing left to run once grep, rg and test -e/-f/-x clauses are removed; "
+        f"## Delivers names a code file ('{code}') and no probe runs something"
+    )
+
+
 def probe_red_violations(probe_list, human_gate_exempt, timeout=60):
     """Every named probe RED at HEAD, plus the banned-shape leg — the plan's D2 bullets
     1-2 together, since both read the same probe list. Returns (refused, not_gated, info)
@@ -1164,8 +1218,9 @@ def cmd_check(target):
     named), 2 NOT-GATED (never read as a pass).
 
     File mode runs every CONTENT rule id mode runs — touchers, Consumes, Delivers symlink
-    safety, and (whenever the file carries a `parse_meta_header` line) origin,
-    refined-vs-human-gate and task/feature NO-DELIVERS/UNVERIFIABLE-DELIVERS too. Only the
+    safety, probe-presence (a code Delivers needs a probe that runs something), and
+    (whenever the file carries a `parse_meta_header` line) origin, refined-vs-human-gate
+    and task/feature NO-DELIVERS/UNVERIFIABLE-DELIVERS too. Only the
     legs that genuinely need the BOARD stay skipped for a file target: sensitive-prod (its
     own DECISION-blocks count is a dependency-edge lookup against a real bead id, which a
     file path is not) always, and the label/type-scoped legs when the file carries no
@@ -1212,6 +1267,10 @@ def cmd_check(target):
     refused += p_refused
     not_gated += p_not_gated
     info += p_info
+
+    ppv = probe_presence_code_violation(desc)
+    if ppv:
+        refused.append(f"probe-presence: {ppv}")
 
     t_rc, t_msg = touchers_freshness_check(desc, bead_id)
     if t_rc == 1:

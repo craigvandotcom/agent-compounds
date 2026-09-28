@@ -773,6 +773,53 @@ check(bead.task_feature_delivers_violation("bug", PROSE_DELIVERS_DESC) is None,
       "task_feature_delivers_violation: the leg stays scoped to task/feature; a bug is exempt "
       "even with a prose-only Delivers")
 
+# --- probe_runs_something / probe_presence_code_violation: PROBE-PRESENCE --------------
+# Moved into bead.py FROM stamp-refined.sh's own inline copy (checker recheck 2026-09-28,
+# evidence org-uv40/org-gv6): VALIDATE ran `bead.py check` alone, which lacked this leg
+# entirely, and passed beads the restamp gate's own (now-retired) copy of the SAME rule
+# then refused — one home now, read by both callers.
+
+check(bead.probe_runs_something("grep -q FIXED subject.txt") is False,
+      "probe_runs_something: a bare grep read is inert")
+check(bead.probe_runs_something("rg -q TOKEN doc.md") is False,
+      "probe_runs_something: a bare rg read is inert")
+check(bead.probe_runs_something("test -f subject.txt") is False,
+      "probe_runs_something: a bare test -f existence predicate is inert")
+check(bead.probe_runs_something("test -e a.txt && test -x b.sh") is False,
+      "probe_runs_something: every clause an existence predicate is still inert")
+check(bead.probe_runs_something("test -x p.sh && bash p.sh") is True,
+      "probe_runs_something: the guarded form 'test -x p && bash p' counts — the second "
+      "clause survives")
+check(bead.probe_runs_something("pnpm test lib/parser.test.ts") is True,
+      "probe_runs_something: a real harness invocation counts")
+
+CODE_NO_RUN_DESC = ("## Intent\nsomething.\n\n## Acceptance Criteria\n- x.\n"
+                     "  Probe: `test -f lib/parser.sh`\n\n## Delivers\n- lib/parser.sh\n")
+r_ppv_refused = bead.probe_presence_code_violation(CODE_NO_RUN_DESC)
+check(r_ppv_refused is not None and r_ppv_refused.startswith("nothing left to run"),
+      "probe_presence_code_violation: a code Delivers whose only probe is a bare "
+      "existence/grep read is refused", r_ppv_refused)
+
+CODE_RUNS_DESC = ("## Intent\nsomething.\n\n## Acceptance Criteria\n- x.\n"
+                   "  Probe: `test -x lib/parser.sh && bash lib/parser.sh`\n"
+                   "\n## Delivers\n- lib/parser.sh\n")
+check(bead.probe_presence_code_violation(CODE_RUNS_DESC) is None,
+      "probe_presence_code_violation: a code Delivers with a probe that runs something is clean")
+
+NO_CODE_DESC = ("## Intent\nsomething.\n\n## Acceptance Criteria\n- x.\n"
+                "  Probe: `grep -q TOKEN doc.md`\n\n## Delivers\n- doc.md\n")
+check(bead.probe_presence_code_violation(NO_CODE_DESC) is None,
+      "probe_presence_code_violation: a non-code (prose/doc) Delivers is exempt regardless "
+      "of probe shape")
+
+CODE_TOUCHERS_ONLY_DESC = ("## Intent\nsomething.\n\n## Acceptance Criteria\n- x.\n"
+                            "  Probe: `test -f doc.md`\n\n## Delivers\n"
+                            "- a documented outcome\n"
+                            "  touchers: `rg -l -F \"lib/parser.sh\" .` -> 1 · owned by: bd-fixture\n")
+check(bead.probe_presence_code_violation(CODE_TOUCHERS_ONLY_DESC) is None,
+      "probe_presence_code_violation: a code path mentioned only on a touchers: line "
+      "is excluded — it is not the delivered artifact")
+
 # --- sensitive_prod_check: derived by calling prod-write-tripwire.sh, live ------------
 
 SIGNAL_DESC = "## Intent\nBackfill: one-off data-fix for prod rows in the users table.\n"
@@ -878,12 +925,14 @@ os.unlink(_body_meta_no_delivers)
 _fd6, _body_meta_clean = _tf.mkstemp(suffix=".md")
 with os.fdopen(_fd6, "w") as _fh:
     _fh.write("# ac-x4 — a title\ntype: task · priority: 2 · labels: origin:ac-beadify · base: 0000000000000000\n"
-              "\n## Intent\nsomething.\n\n## Acceptance Criteria\n- x.\n  Probe: `test -f /nope.xyz`\n"
+              "\n## Intent\nsomething.\n\n## Acceptance Criteria\n- x.\n"
+              "  Probe: `test -f /nope.xyz && bash /nope.xyz`\n"
               "\n## Delivers\n- lib/parser.sh\n")
 cli_meta_clean = _run_check([_body_meta_clean])
 check(cli_meta_clean.returncode == 0,
       "cmd_check CLI: file mode WITH a full meta header (origin present, Delivers present) "
-      "passes clean on those legs",
+      "passes clean on those legs — its probe also clears the new probe-presence leg "
+      "('test -f p && bash p', not a bare existence read)",
       (cli_meta_clean.returncode, cli_meta_clean.stdout, cli_meta_clean.stderr))
 check("file mode skipped: sensitive-prod" in cli_meta_clean.stdout,
       "cmd_check CLI: file mode names sensitive-prod as skipped on one line even WITH a "

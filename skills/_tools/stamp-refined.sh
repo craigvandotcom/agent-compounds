@@ -47,40 +47,10 @@ BEAD_PY_CHECK_TOOL="${BEAD_PY_CHECK_TOOL:-$BEAD_PY_TOOL}"
 # exercise the NOT-GATED-on-timeout path without an actual 600s wait.
 BEAD_PY_CHECK_TIMEOUT="${BEAD_PY_CHECK_TIMEOUT:-600}"
 
-# 0 when a probe still runs something after text and existence clauses are removed.
-# grep, rg, and `test -e|-f|-x` are not a run. `test -x p && bash p` leaves `bash p`.
-probe_runs_something() {
-  [ -n "$(printf '%s\n' "$1" | awk '
-    function emit(clause,   t) {
-      t = clause
-      gsub(/^[[:space:]]+|[[:space:]]+$/, "", t)
-      if (t == "") return
-      if (t ~ /^(grep|rg)([[:space:]]|$)/) return
-      if (t ~ /^test[[:space:]]+-[efx]([[:space:]]|$)/) return
-      print t
-    }
-    {
-      s = $0; n = length(s); buf = ""; q = ""
-      i = 1
-      while (i <= n) {
-        c = substr(s, i, 1)
-        if (q != "") {
-          buf = buf c
-          if (c == q) q = ""
-          i++
-          continue
-        }
-        if (c == "\"" || c == "\047") { q = c; buf = buf c; i++; continue }
-        two = substr(s, i, 2)
-        if (two == "&&" || two == "||") { emit(buf); buf = ""; i += 2; continue }
-        if (c == ";") { emit(buf); buf = ""; i++; continue }
-        buf = buf c
-        i++
-      }
-      emit(buf)
-    }
-  ')" ]
-}
+# The "does a probe run something" predicate now lives ONLY in bead.py's own
+# `probe_runs_something` (moved 2026-09-28 — see the PROBE-PRESENCE LEG, part 2 comment
+# below): the ONE-BEAD CHECK GATE's `bead.py check` call carries it, so this script no
+# longer needs its own copy.
 
 stamp_refined() {
   local id="$1" path_label="${2:-${REFINE_PATH:-refine-full}}"
@@ -242,40 +212,53 @@ stamp_refined() {
     return 2
   fi
 
-  # PROBE-PRESENCE LEG (2026-08-29, runs-something 2026-09-22): `refined` must
-  # certify something a worker can execute. Zero `Probe:` lines is still a refusal —
-  # measured 2026-08-29, when 18 of 22 refined beads carried none and every lean claim
-  # died NOT-GATED. Counting lines is not enough when ## Delivers names a code file:
-  # a probe that is only grep, rg, or test -e/-f/-x leaves nothing to run, and the
-  # stamp is refused. One probe that still runs something — `test -x p && bash p`
-  # included — is enough. Per-AC completeness stays the checklist's judgment.
-  local probes _code _runs _pr
+  # PROBE-PRESENCE LEG, part 1 (2026-08-29): `refined` must certify something a worker
+  # can execute. Zero `Probe:` lines is still a refusal — measured 2026-08-29, when 18 of
+  # 22 refined beads carried none and every lean claim died NOT-GATED.
+  local probes
   probes=$(printf '%s' "$meta" | jq -r '.[0].description // ""' | grep -c 'Probe:')
   if [ "${probes:-0}" -eq 0 ]; then
     echo "stamp_refined: REFUSED $id — description carries no executable 'Probe:' line; a refined bead must be probe-bearing (beads-standards: refined). Author the probes, then re-stamp. No label written." >&2
     _downgrade "$id" "no executable Probe: line" || return $?
     return 1
   fi
-  _code=$(printf '%s\n' "$meta" | jq -r '.[0].description // ""' | awk '
-      /^## Delivers/ { on=1; next }
-      /^## / { on=0 }
-      on && $0 !~ /^[[:space:]]*touchers:/ { print }
-    ' | grep -oE '[A-Za-z0-9_.][A-Za-z0-9_./-]*\.[A-Za-z0-9]+' \
-      | grep -E '\.(ts|tsx|js|jsx|mjs|cjs|sh|bash|py|go|rs|rb|java|swift|kt)$' \
-      | head -1 || true)
-  if [ -n "${_code:-}" ]; then
-    _runs=0
-    while IFS= read -r _pr; do
-      [ -n "$_pr" ] || continue
-      if probe_runs_something "$_pr"; then _runs=1; break; fi
-    done <<EOF
-$(printf '%s\n' "$meta" | jq -r '.[0].description // ""' | grep -o 'Probe: `[^`]*`' | sed 's/^Probe: `//; s/`$//' || true)
-EOF
-    if [ "$_runs" -eq 0 ]; then
-      echo "stamp_refined: REFUSED $id — nothing left to run once grep, rg and test -e/-f/-x clauses are removed; ## Delivers names a code file ('$_code') and no probe runs something. The guarded form 'test -x p && bash p' counts. No label written." >&2
-      _downgrade "$id" "nothing left to run" || return $?
-      return 1
-    fi
+
+  # PROBE-PRESENCE LEG, part 2 (runs-something 2026-09-22) — the VERDICT now calls
+  # bead.py's own `probe_presence_code_violation` (moved 2026-09-28, checker recheck,
+  # evidence org-uv40/org-gv6: VALIDATE ran `bead.py check` alone, which carried no
+  # PROBE-PRESENCE leg at all, and passed a bead this script's own inline copy of the SAME
+  # rule then refused — the same precedent as the TASK/FEATURE DELIVERS LEG's 2026-09-27
+  # move above). ONE home for the rule now, read by this leg, the ONE-BEAD CHECK GATE's
+  # own `bead.py check <id>` below, AND `stamp-refined.sh --check`'s thin wrapper — never a
+  # second derivation to drift from the other two. This leg stays at its ORIGINAL position
+  # (before the fixpoint-receipt gate) so a probe-presence refusal is still the FIRST
+  # reason a content-vacuous bead is refused, never masked by a later leg's own message.
+  local _ppv_desc _ppv_out _ppv_rc
+  _ppv_desc=$(mktemp "${TMPDIR:-/tmp}/stamp-refined-ppv.XXXXXX") || {
+    echo "stamp_refined: REFUSED $id — could not write a temp description for the probe-presence leg; refusing rather than guessing. No label written." >&2
+    return 2
+  }
+  printf '%s' "$(printf '%s' "$meta" | jq -r '.[0].description // ""')" >"$_ppv_desc"
+  _ppv_out=$(python3 -c '
+import os, sys
+sys.path.insert(0, os.path.dirname(sys.argv[1]))
+import bead
+with open(sys.argv[2], "r", encoding="utf-8", errors="replace") as fh:
+    desc = fh.read()
+v = bead.probe_presence_code_violation(desc)
+if v:
+    print(v)
+' "$BEAD_PY_TOOL" "$_ppv_desc" 2>&1); _ppv_rc=$?
+  rm -f "$_ppv_desc"
+  if [ "$_ppv_rc" -ne 0 ]; then
+    printf '%s\n' "$_ppv_out" >&2
+    echo "stamp_refined: REFUSED $id — could not run the probe-presence leg; refusing rather than guessing. No label written." >&2
+    return 2
+  fi
+  if [ -n "$_ppv_out" ]; then
+    echo "stamp_refined: REFUSED $id — $_ppv_out. No label written." >&2
+    _downgrade "$id" "nothing left to run" || return $?
+    return 1
   fi
 
   # PROBE-SHAPE LEG (bead-schema.md § The probe rule). A probe runs this bead's own test,
@@ -478,6 +461,97 @@ print(n if n is not None else 0)
   echo "stamp_refined: STAMPED $id ($path_label)"
 }
 
+# stamp_refined_check — the ONE read-only entry point for "would stamp_refined accept this
+# content" (ac-<check-gate>). No board writes, no label changes, never resolves a live id.
+#
+# WHY THIS EXISTS: VALIDATE (ac-polish's bead-mode gate) and the restamp gate used to run
+# DIFFERENT rule sets over the SAME content — VALIDATE called `bead.py check <file>` alone,
+# which (before the PROBE-PRESENCE move above, and before `--type`/`--labels` threading
+# below) skipped several content legs a file target COULD carry, so a bead VALIDATE passed
+# the restamp gate then refused. Measured twice: bd-pz8md/bd-1s800 (2026-09-27, the
+# TASK/FEATURE DELIVERS LEG's move) and org-uv40/org-gv6 (2026-09-28, the PROBE-PRESENCE
+# leg's move, plus three ad hoc scratch scripts a conductor had to hand-write to compensate:
+# runs-leg.sh, check_overlay.py, and an inline Delivers/sensitive-prod/prod-write-tripwire
+# check — evidence this gate needed one real entry point instead of a growing scratch pile).
+#
+# EVERY CONTENT LEG THE STAMP RUNS is `bead.py check`'s own job now (element4-check.sh
+# runs alongside it, the SAME as the restamp's own first leg) — this function is a THIN
+# WRAPPER, never a second copy: `--type`/`--labels` thread through the SAME meta-header
+# line `bead-artifact.py export`'s own block header already carries
+# (`bead.py`'s `parse_meta_header`), prepended to a scratch copy of the file, never a new
+# bead.py flag. Legs that genuinely need a live id (origin-label/human-gate PROSPECTIVE
+# checks beyond a bare label read, ruling-staleness, the fixpoint-receipt rounds>=2 gate,
+# sensitive-prod's DECISION-blocks count, and prod-write-tripwire's same count) cannot run
+# without one and are named on ONE line, never silently — the restamp gate re-checks all of
+# them, on the real id, after writeback.
+#
+# Usage: stamp-refined.sh --check <description-file> [--type <t>] [--labels <csv>]
+# Exit 0 clean · 1 a content leg refused (named) · 2 cannot-check (never a pass).
+stamp_refined_check() {
+  local file="" itype="" labels=""
+  while [ $# -gt 0 ]; do
+    case "$1" in
+      --type)   itype="${2:-}"; shift 2 ;;
+      --labels) labels="${2:-}"; shift 2 ;;
+      -*)       echo "stamp_refined --check: unknown flag '$1'" >&2; return 2 ;;
+      *)        [ -z "$file" ] && file="$1" || { echo "stamp_refined --check: unexpected argument '$1'" >&2; return 2; }; shift ;;
+    esac
+  done
+  [ -n "$file" ] || { echo "stamp_refined --check: usage: stamp-refined.sh --check <description-file> [--type <t>] [--labels <csv>]" >&2; return 2; }
+  [ -r "$file" ] || { echo "stamp_refined --check: NOT-GATED — no readable file at '$file'" >&2; return 2; }
+  if [ ! -x "$ELEMENT4_CHECK" ] && [ ! -f "$ELEMENT4_CHECK" ]; then
+    echo "stamp_refined --check: FATAL — element4-check.sh not found at '$ELEMENT4_CHECK'" >&2; return 2
+  fi
+  if [ ! -f "$BEAD_PY_CHECK_TOOL" ]; then
+    echo "stamp_refined --check: FATAL — bead.py not found at '$BEAD_PY_CHECK_TOOL'" >&2; return 2
+  fi
+
+  local rc=0 e4_out e4_rc
+  if [ -n "$itype" ]; then
+    e4_out=$(bash "$ELEMENT4_CHECK" --file "$file" --type "$itype" 2>&1); e4_rc=$?
+  else
+    e4_out=$(bash "$ELEMENT4_CHECK" --file "$file" 2>&1); e4_rc=$?
+  fi
+  printf '%s\n' "$e4_out"
+  [ "$e4_rc" -ne 0 ] && rc=1
+
+  # Thread --type/--labels into bead.py check the SAME way a real exported block already
+  # does: a leading meta-header line, never a new bead.py CLI flag (least code — one
+  # parser, `parse_meta_header`, for both a real export and this scratch prepend). Both
+  # fields sit on the SAME line by that parser's own contract, so --labels with no --type
+  # cannot form one; a note says so rather than silently dropping --labels.
+  local target=""
+  if [ -n "$itype" ]; then
+    target=$(mktemp "${TMPDIR:-/tmp}/stamp-refined-check.XXXXXX") || {
+      echo "stamp_refined --check: NOT-GATED — cannot create a scratch file to thread --type/--labels" >&2
+      return 2
+    }
+    printf 'type: %s · priority: 0 · labels: %s\n' "$itype" "${labels:-none}" >"$target"
+    cat "$file" >>"$target"
+  else
+    target="$file"
+    if [ -n "$labels" ]; then
+      echo "stamp_refined --check: note — --labels given without --type; bead.py's meta-header needs both on one line, so the label/type-scoped legs are skipped this run (give --type too)" >&2
+    fi
+  fi
+
+  local bpc_out bpc_rc
+  bpc_out=$(python3 "$BEAD_PY_CHECK_TOOL" check "$target" 2>&1); bpc_rc=$?
+  [ "$target" != "$file" ] && rm -f "$target"
+  printf '%s\n' "$bpc_out"
+  case "$bpc_rc" in
+    0) ;;
+    1) rc=1 ;;
+    *) [ "$rc" -eq 0 ] && rc=2 ;;
+  esac
+
+  echo "stamp_refined --check: board-only legs skipped (no live id, never resolved): origin-label/human-gate PROSPECTIVE gate, ruling-staleness, fixpoint-receipt (rounds>=2), sensitive-prod (DECISION-blocks count), prod-write-tripwire (same count) — the restamp gate re-checks every one of these, on the real id, after writeback"
+  if [ "$rc" -eq 0 ]; then
+    echo "stamp_refined --check: OK $file — every content leg the stamp runs is clean"
+  fi
+  return "$rc"
+}
+
 # Executed, or sourced? bash compares BASH_SOURCE[0] to $0. zsh sets $0 to the file in
 # BOTH modes, so it cannot discriminate — read zsh_eval_context, whose last frame is
 # `toplevel` when executed and `file` when sourced.
@@ -490,6 +564,11 @@ else
 fi
 
 if [ "$_STAMP_REFINED_DIRECT" = 1 ]; then
+  if [ "${1:-}" = "--check" ]; then
+    shift
+    stamp_refined_check "$@"
+    exit $?
+  fi
   _rc=0
   for _id in "$@"; do
     stamp_refined "$_id"; _r=$?
