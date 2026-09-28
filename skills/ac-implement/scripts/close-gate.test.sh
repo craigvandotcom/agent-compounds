@@ -271,14 +271,21 @@ RCFILE="$WORKDIR/gate.rc"
 GATE_RC=0
 # Echoes the gate's output; the exit code travels through RCFILE because the caller reads
 # the output in a command substitution, and a subshell cannot hand a variable back.
-gate() { # <root> [extra args...]
-  local root="$1"; shift
+# gate_bin — the same invocation, but against an EXPLICIT gate binary rather than the
+# real $GATE: the seam a test needs when it must defeat close-gate.sh's own-location
+# EVIDENCE_CORE fallback (AC-sibling's private gate-copy fixture), never available when
+# every case just runs the one real script.
+gate_bin() { # <gate-binary> <root> [extra args...]
+  local gatebin="$1" root="$2"; shift 2
   ( cd "$root" && AC2_FLIGHT_DIR="$root/.flight" AC2_TEST_BR_STATE="$root/.br" \
       AC2_TEST_BR_CLOSE_NOOP="${AC2_TEST_BR_CLOSE_NOOP:-0}" \
       AC2_TEST_BR_SHOW_FAIL="${AC2_TEST_BR_SHOW_FAIL:-0}" \
       AC2_TEST_BR_LIST_FAIL="${AC2_TEST_BR_LIST_FAIL:-0}" \
-      bash "$GATE" "$BEAD" --body-file "$root/body.md" --root "$root" "$@" 2>&1
+      bash "$gatebin" "$BEAD" --body-file "$root/body.md" --root "$root" "$@" 2>&1
     echo $? > "$RCFILE" )
+}
+gate() { # <root> [extra args...]
+  gate_bin "$GATE" "$@"
 }
 
 REASON="shipped: the subject now carries FIXED. Delivered: subject.txt, harness.test.sh"
@@ -288,6 +295,49 @@ REASON="shipped: the subject now carries FIXED. Delivered: subject.txt, harness.
 mk_green() {
   local r; r="$(mkcase "$1")"; write_harness "$r"; board "$r" in_progress worker
   fly "$r"; fix_subject "$r"; echo "$r"
+}
+
+# mk_gate_copy — a PRIVATE copy of close-gate.sh plus an EMPTY skills/ac-pipeline/scripts/
+# (no close-evidence-check.sh) at the same relative depth: the seam proof needs a gate whose
+# own-location EVIDENCE_CORE fallback also fails, and the real checkout's evidence core can
+# never be deleted out from under a concurrently-running suite to prove that. Only br-call.sh
+# and bead.py are copied beside it — the gate's own TOOLS_DIR/BR_CALL resolution needs those,
+# but never close-evidence-check.sh, which this fixture deliberately omits everywhere.
+mk_gate_copy() { # <name> -> prints the copied close-gate.sh's path
+  local root="$WORKDIR/$1"
+  mkdir -p "$root/skills/ac-implement/scripts" "$root/skills/ac-pipeline/scripts" "$root/skills/_tools"
+  cp "$GATE" "$root/skills/ac-implement/scripts/close-gate.sh"
+  chmod +x "$root/skills/ac-implement/scripts/close-gate.sh"
+  cp "$BR_CALL_SRC" "$root/skills/_tools/br-call.sh"
+  cp "$BEAD_PY_SRC" "$root/skills/_tools/bead.py"
+  echo "$root/skills/ac-implement/scripts/close-gate.sh"
+}
+
+# mkcase_noskills — the cross-repo fixture: a bare caller repo with a board and .flight/.br
+# dirs but NO skills/ or .agents/skills/ ANYWHERE (measured: this machine's own infrastructure
+# repo, which deploys neither) — close-gate.sh is invoked by absolute path from a repo that never
+# vendored a copy of close-evidence-check.sh, and must still reach the EVIDENCE leg via its
+# own resolved location rather than reading NOT-CHECKED for want of a deploy this caller
+# repo never needed.
+mkcase_noskills() {
+  local root="$WORKDIR/$1"
+  mkdir -p "$root/.flight" "$root/.br"
+  printf 'subject v1\n' >"$root/subject.txt"
+  cat >"$root/body.md" <<'BODY'
+## Acceptance Criteria
+- the subject file exists.
+  Probe: `test -f subject.txt` — tier: none
+- the harness passes.
+  Probe: `test -x harness.test.sh && bash harness.test.sh` — tier: none
+
+## Delivers
+- artifact: subject.txt
+- harness: harness.test.sh
+
+## Consumes
+- none
+BODY
+  echo "$root"
 }
 
 # 2e'' The anti-pattern remedy is GONE: the gate must never tell a prose bead to grow a shell
@@ -1140,20 +1190,41 @@ if [ "$GATE_RC" -eq 1 ] && printf '%s' "$out" | grep -q 'EVIDENCE'; then
   pass "AC6: a reason naming none of the bead's Delivers artifacts is refused, naming EVIDENCE"
 else fail "AC6 refuse: rc=$GATE_RC out=$out"; fi
 
-# SEAM PROOF: the gate must DEPEND on the core, not merely mention it. Remove the core and
-# the gate must go NOT-CHECKED — a gate that sails on without its evidence core has grown a
-# private one, which is exactly what this AC forbids.
+# SEAM PROOF: the gate must DEPEND on the core, not merely mention it. Remove the core
+# EVERYWHERE the gate could ever resolve it from — the fixture's own vendored copy AND
+# the gate's own sibling tree (mk_gate_copy) — and the gate must go NOT-CHECKED. Running
+# against a private gate-copy, never the real $GATE, is what lets this leg still fail
+# closed after the own-location fallback (below) was added: the real checkout's evidence
+# core always exists and this test must not depend on deleting it out from under a
+# concurrently-running suite.
 R="$(mk_green evidence-seam)"
 rm -f "$R/skills/ac-pipeline/scripts/close-evidence-check.sh"
-out="$(gate "$R" --reason "$REASON")"
+GATE_COPY="$(mk_gate_copy evidence-seam-gate-copy)"
+out="$(gate_bin "$GATE_COPY" "$R" --reason "$REASON")"
 GATE_RC=$(cat "$RCFILE")
 if [ "$GATE_RC" -eq 2 ] && printf '%s' "$out" | grep -q 'EVIDENCE'; then
-  pass "AC6: with the evidence core removed the gate goes NOT-CHECKED — it really delegates"
+  pass "AC6: with the evidence core missing from the fixture copy AND the gate's own sibling tree, the gate goes NOT-CHECKED — it really delegates"
 else fail "AC6 seam: rc=$GATE_RC out=$out"; fi
 
 if grep -q 'close-evidence-check' "$GATE"; then
   pass "AC6: the gate calls close-evidence-check by name"
 else fail "AC6: the gate does not reference close-evidence-check"; fi
+
+# ============================================================================================
+# AC-sibling — EVIDENCE_CORE resolves from close-gate.sh's OWN location when the caller repo
+# ships no skills/ or .agents/skills/ at all (measured: this machine's own infrastructure repo).
+# The caller-repo copy is still preferred when present (AC6 above never regresses); its
+# total absence must reach the EVIDENCE leg via the real $GATE's own resolved location,
+# never NOT-CHECKED for want of a deploy this caller repo never needed.
+# ============================================================================================
+R="$(mkcase_noskills no-skills-dir)"
+write_harness "$R"; board "$R" in_progress worker
+fly "$R"; fix_subject "$R"
+out="$(gate "$R" --reason "shipped: the subject now carries FIXED. Delivered: subject.txt, harness.test.sh")"
+GATE_RC=$(cat "$RCFILE")
+if [ "$GATE_RC" -eq 0 ] && printf '%s' "$out" | grep -q 'EVIDENCE ok'; then
+  pass "AC-sibling: a caller repo with NO skills/ or .agents/skills/ dir still reaches the EVIDENCE leg via the gate's own resolved location, not NOT-CHECKED"
+else fail "AC-sibling no-skills: rc=$GATE_RC out=$out"; fi
 
 # ============================================================================================
 # AC 7 — the assurance declaration at birth

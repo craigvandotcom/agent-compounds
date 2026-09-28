@@ -113,9 +113,16 @@ BR="${AC2_BR_CMD:-br}"
 EVIDENCE_CORE="$ROOT/skills/ac-pipeline/scripts/close-evidence-check.sh"
 # Vendored-copy layout: app repos track these scripts under .agents/skills/ (the
 # agent-compounds registry layout puts skills/ at the repo root), so the evidence
-# core may sit one level deeper. Try the canonical path first, then the vendored one.
+# core may sit one level deeper. Try the canonical path first, then the vendored one,
+# then fall back to the script's OWN resolved location — the same seam BR_CALL and
+# TOOLS_DIR already use above. A caller repo with no skills/ or .agents/skills/
+# deployed at all (measured: infrastructure, which carries neither) still reaches
+# close-evidence-check.sh sitting beside close-gate.sh in this very checkout, rather
+# than reading NOT-CHECKED for want of a deployed copy the caller repo never needed.
 [ -f "$EVIDENCE_CORE" ] \
   || EVIDENCE_CORE="$ROOT/.agents/skills/ac-pipeline/scripts/close-evidence-check.sh"
+[ -f "$EVIDENCE_CORE" ] \
+  || EVIDENCE_CORE="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../ac-pipeline/scripts" 2>/dev/null && pwd)/close-evidence-check.sh"
 
 refuse()      { echo "CLOSE-REFUSED: $1 — refusing: $2"; echo "NEXT: repair $1" >&2; exit 1; }
 not_checked() { echo "NOT-CHECKED: $1 — $2" >&2; echo "NEXT: handback" >&2; exit 2; }
