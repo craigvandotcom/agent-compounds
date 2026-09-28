@@ -460,7 +460,7 @@ ARTIFACT_RE = re.compile(
     r"~/[A-Za-z0-9_@.()\[\]-]+(?:/[A-Za-z0-9_@.()\[\]-]+)*"                      # ~/cross-repo path
     r"|\.[A-Za-z0-9_@()\[\]-]+(?:/[A-Za-z0-9_@.()\[\]-]+)+(?:\.[A-Za-z0-9]{1,10})?"  # .hidden/path (ext optional)
     r"|[A-Za-z0-9_@()\[\]-]+(?:/[A-Za-z0-9_@.()\[\]-]+)+\.[A-Za-z0-9]{1,10}"     # dir/dir/file.ext
-    r"|[A-Za-z0-9_@()\[\]-]+\.[A-Za-z0-9]{1,10}"                                 # repo-root file.ext
+    r"|[A-Za-z0-9_@()\[\]-]+(?:\.[A-Za-z0-9_@()\[\]-]+)*\.[A-Za-z0-9]{1,10}"     # repo-root file(.mid)*.ext
     r")(?![\w/-])"
 )
 

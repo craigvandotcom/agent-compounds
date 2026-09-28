@@ -254,6 +254,21 @@ check(bead._looks_like_file_path("lib/a.ts") is True,
 check(bead._looks_like_file_path("AGENTS.md") is True,
       "_looks_like_file_path: a repo-root token ending in a KNOWN extension is accepted")
 
+# --- a bare repo-root MULTI-DOT config file (bd-ut5zw recheck 2026-09-27/28: the extension
+# leg's first cut only ever matched ONE dot for a no-slash token, so `vitest.config.mts`
+# read as `vitest.config` — extension "config", rejected, UNVERIFIABLE-DELIVERS on a bead
+# whose only Delivers bullet was this exact real path) ------------------------------------
+
+check(bead.extract_paths("- fix: vitest.config.mts") == ["vitest.config.mts"],
+      "extract_paths: a bare repo-root file with a MIDDLE dot segment (vitest.config.mts) "
+      "is captured whole, by its final (real) extension — not truncated at the first dot")
+check(bead.extract_paths("see tailwind.config.ts and next.config.mjs") ==
+      sorted(["tailwind.config.ts", "next.config.mjs"]),
+      "extract_paths: other common bare multi-dot config files are captured whole too")
+check(bead._looks_like_file_path("vitest.config.mts") is True,
+      "_looks_like_file_path: the FINAL dot segment is what's checked against the known-"
+      "extension list, never a middle one")
+
 # A PLAN's own `## Deliverables` heading uses the SAME extractor (heading= override).
 PLAN_DESC = "## Deliverables\n- skills/_tools/bead.py\n- skills/_tools/bead.test.py\n"
 plan_dl = bead.delivers(PLAN_DESC, heading="Deliverables")
