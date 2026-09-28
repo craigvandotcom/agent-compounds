@@ -995,6 +995,34 @@ if [ "$(jq -r .status "$R/.br/$BEAD.json")" = "in_progress" ]; then
   pass "AC3p: the NOT-GATED cascade leaves the bead open — no status is fabricated"
 else fail "AC3p: the bead was closed despite the refused list read"; fi
 
+# --- 3q: e-cascade is vacuous over an EMPTY Consumes set — a disposition close with a red
+# probe and NO `## Consumes` blockers (the default `mkcase` fixture: `## Consumes: none`)
+# must be REFUSED, never accepted on a cascade that never verified anything (measured
+# 2026-09-28 on a consuming app's board: bd-1fse3, bd-qer3r).
+R="$(mkcase cascade-empty-consumes)"
+board "$R" in_progress worker
+# subject NEVER fixed: `test -f gone.md`-shaped probe stays red — mkcase's own probes are
+# `test -f subject.txt` (green) and the harness probe; no harness.test.sh is written here,
+# so the harness probe is red at HEAD.
+out="$(gate "$R" --reason "obsolete: TRIAGE — no consumed blocker, claiming settled anyway")"
+GATE_RC=$(cat "$RCFILE")
+if [ "$GATE_RC" -eq 1 ] && ! printf '%s' "$out" | grep -q 'cascade'; then
+  pass "AC3q: a disposition close with a red probe and an EMPTY Consumes set is refused — e-cascade never fires over zero blockers"
+else fail "AC3q: rc=$GATE_RC out=$out"; fi
+if [ "$(jq -r .status "$R/.br/$BEAD.json")" = "in_progress" ]; then
+  pass "AC3q: the refused empty-Consumes disposition close leaves the bead open"
+else fail "AC3q: the bead was closed despite an empty-Consumes cascade with a red probe"; fi
+
+# --- 3r: the e-green leg still works with an EMPTY Consumes set — a disposition close with
+# every probe green (no Consumes blockers at all) lands on e-green, unaffected by 3q's fix.
+R="$(mkcase cascade-empty-consumes-green)"
+write_harness "$R"; board "$R" in_progress worker; fix_subject "$R"
+out="$(gate "$R" --reason "obsolete: TRIAGE — work already landed, no Consumes blockers. Delivered: subject.txt, harness.test.sh")"
+GATE_RC=$(cat "$RCFILE")
+if [ "$GATE_RC" -eq 0 ] && [ "$(jq -r .status "$R/.br/$BEAD.json")" = "closed" ]; then
+  pass "AC3r: a disposition close with every probe green and an EMPTY Consumes set still lands via e-green"
+else fail "AC3r: rc=$GATE_RC out=$out"; fi
+
 # ============================================================================================
 # AC 4 — the UNCOMMITTED leg: a Delivers path the working tree carries but no commit does
 # cannot support a close. Fixtures are real git work trees, so `git status --porcelain` has

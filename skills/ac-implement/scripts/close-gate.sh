@@ -52,7 +52,10 @@
 #   (e-green)   every AC probe exits 0 at HEAD — the work exists; someone else landed it
 #   (e-cascade) every `## Consumes` blocker is CLOSED with a disposition close reason —
 #               the premise is gone by the plan's own closure (close_reason read live
-#               from the board, with flight-check's exact-id/prefix resolution)
+#               from the board, with flight-check's exact-id/prefix resolution).
+#               e-cascade only counts when there is AT LEAST ONE Consumes blocker: over
+#               an empty set ("## Consumes: none") the cascade is vacuously true, so a
+#               bead with no Consumes blockers can only close on e-green — never e-cascade.
 # wontfix: EXCLUDED — "we decided not to build this" is intent, and intent stays human.
 # A disposition close may land even where the temporal pair is unavailable (no receipt,
 # or a receipt whose RED probe is still red); a shipped:/fixed: close may not.
@@ -421,7 +424,13 @@ cascade_holds() {
   lines=$(awk '/^## /{ inb = ($0 ~ "^## Consumes([[:space:]]|$)") ? 1 : 0; next }
                 inb { print }' "$BODY" | sed 's/^[[:space:]]*-[[:space:]]*//; s/→/->/g' | grep -v '^[[:space:]]*$')
   if [ -z "$lines" ]; then
-    CONSUMES_CLOSED=1; CONSUMES_DISPO=1; return 0
+    # No Consumes blockers at all: there is no premise to have gone stale, so this is
+    # never a cascade — CONSUMES_DISPO stays 0. The e-cascade leg is vacuously true over
+    # an empty set otherwise, and a disposition close with a red probe and zero Consumes
+    # would land unverified (measured 2026-09-28 on a consuming app's board: bd-1fse3, bd-qer3r).
+    # CONSUMES_CLOSED=1 still holds — no open blocker exists — so the ordinary e-green
+    # leg (every probe green) remains available, unaffected by this change.
+    CONSUMES_CLOSED=1; CONSUMES_DISPO=0; return 0
   fi
   while IFS= read -r line; do
     [ -n "$line" ] || continue
