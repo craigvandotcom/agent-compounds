@@ -63,6 +63,7 @@ ready "$(bead t-old task 1 2026-01-01 "$R")" \
       "$(bead x-unref task 0 2025-01-01 '["refined","unrefined"]')" \
       "$(bead x-gate task 0 2025-01-01 '["refined","human-gate"]')" \
       "$(bead x-device task 0 2025-01-01 '["refined","device"]')" \
+      "$(bead x-cond task 0 2025-01-01 '["refined","conductor"]')" \
       "$(bead x-dec decision 0 2025-01-01 "$R")" \
       "$(bead x-other task 0 2025-01-01 "$R" someone-else)" \
       "$(bead x-pf task 0 2025-01-01 "$R" '' 'PREMISE-FAILED: STALE-STAMP work')"

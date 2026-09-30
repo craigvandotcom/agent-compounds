@@ -120,6 +120,12 @@ reachable over the network, a device farm, whatever that project actually has) â
 tooling never assumes one. Where a project has no such route, or the work needs a physical
 device, the bead is a `human-gate` instead, never `device`: the card comes to the operator.
 
+### The conductor rule
+
+`conductor` marks a bead that its conductor skill runs in order, never a pool worker: a serial step against a shared
+external system (a deploy, a migration, an environment run). `ac-implement`'s picker never claims it; the skill that
+labels it names its conductor.
+
 ## Creation invocation
 
 ```bash

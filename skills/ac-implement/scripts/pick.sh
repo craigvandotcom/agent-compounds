@@ -44,7 +44,7 @@ rows=$(printf '%s' "$ready" | jq -r --arg me "$ACTOR" '
     | select(.status == "open")
     | select(.issue_type != "decision")
     | select(((.labels // []) | any(. == "epic" or . == "human-gate"
-                or . == "device" or . == "unrefined")) | not)
+                or . == "device" or . == "unrefined" or . == "conductor")) | not)
     | select((.assignee // "") == "" or (.assignee // "") == $me)
     | select((.title | startswith("PREMISE-FAILED:")) | not)
   ]
