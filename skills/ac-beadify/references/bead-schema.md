@@ -34,7 +34,7 @@ commit discipline in `ac-pipeline/references/` (`commit-discipline.md`, `run-led
   lands silently, so read every edge back (`br dep cycles`, then `br show` on both ends).
 - `br create` REJECTS `-f` alongside a title, rc 4 (measured on `br` 0.5.12): `-f` is a
   bulk `## Title` importer, not a body file — creation bodies go `-d "$(cat <file>)"`
-  (`--description-file` is deliberately not adopted). That routes the body through the
+  (`br create --description-file` is deliberately not adopted; a rewrite is § Filing's). That routes the body through the
   shell, so bead prose must stay dcg-safe (no command substitution, no unbalanced
   quoting). The capture guard reads the inline `-d` value, so a file/heredoc body is
   OPAQUE to it and its born-`Probe:` check fails open on exactly this form; the backstop
@@ -52,6 +52,26 @@ br create "<verb-first title>" -t <type> -p <0-4> \
   --labels "origin:ac-beadify,unrefined,<domain labels>" \
   -d "$(cat <file>)"
 ```
+
+## Filing — placeholders and the read-back
+
+A body that cites a bead not yet created carries a `__EPIC__` / `__B<n>__` placeholder.
+**Prefer no second write:** create the epic first (its id is known before any child body is
+written, so `__EPIC__` never needs to exist), then children blocker-first; children of a
+fresh epic are numbered `<epic>.1…` in creation order, so predict each id, resolve, create,
+and REFUSE if `--silent` returns another id. A body that still needs a forward id (a
+touchers `owned by:` sibling, the closeout) is rewritten ONCE with
+`br update <id> --description-file <resolved-file>` — verbatim and quoting-safe, never
+`-d "$(cat …)"`; a resolver helper declares its loop variable `local`.
+
+The filing ends in a gate, REFUSED unless it exits 0:
+`skills/_tools/bead-readback.sh check <epic>=<file> <id>=<file> …` — reads each bead back
+with `br show --json` and fails on a placeholder on the board, a board body that differs
+from its file, or Consumes↔edge parity computed from the BOARD description (never from
+local files). Measured 2026-09-28 (easy-mode bd-wyun): a resolver's non-`local` loop
+variable retargeted every `br update` at B1; `br` persisted exactly what it was sent (no
+`--force` half-length refusal was involved), 10 of 12 bodies kept placeholders, and a
+parity read from the local resolved files printed `parity: OK`.
 
 ## The four sections
 
