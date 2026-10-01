@@ -16,9 +16,9 @@ Apply what is provable. File a bead for what is not. Never guess.
 ## 1. Isolate (NIGHTLY)
 
 Do NOT reconcile in the live checkout. `APP_ROOT=$(git rev-parse --show-toplevel)` is the live
-app checkout. Resolve its trunk with `TRUNK_TOOL="$APP_ROOT/.claude/skills/_tools/trunk.sh"` (fallback `"$APP_ROOT/skills/_tools/trunk.sh"`), then `TRUNK="$(cd "$APP_ROOT" && bash "$TRUNK_TOOL")" || exit 2`; fetch it and create the isolated worktree:
-`git -C "$APP_ROOT" fetch origin "$TRUNK"`; `git -C "$APP_ROOT" worktree add --detach "$WT" "origin/$TRUNK"`; `cd "$WT"`, then
-`export BEADS_DB="$WT/.beads/beads.db"` and `br sync` to rebuild the beads DB from `issues.jsonl` (`br` auto-discovery ignores worktree cwd, bd-6kwqo — the exported var directs every `br` call).
+app checkout. Resolve its trunk with `TRUNK_TOOL="$APP_ROOT/.claude/skills/_tools/trunk.sh"` (fallback `"$APP_ROOT/skills/_tools/trunk.sh"`), then `TRUNK="$(cd "$APP_ROOT" && bash "$TRUNK_TOOL")" || exit 2`; fetch it and create the isolated worktree beside the checkout, never under `/tmp` (the relative skill symlinks break at a different depth):
+`WT="$(dirname "$APP_ROOT")/.ac-tidy-wt-$(basename "$APP_ROOT")-$$"`; `git -C "$APP_ROOT" fetch origin "$TRUNK"`; `git -C "$APP_ROOT" worktree add --detach "$WT" "origin/$TRUNK"`; `cd "$WT"`, then
+`export BEADS_DB="$WT/.beads/beads.db"` and `br sync --import-only --rebuild` (bare `br sync` refuses without a mode) to rebuild the beads DB from `issues.jsonl` (`br` auto-discovery ignores worktree cwd, bd-6kwqo — the exported var directs every `br` call).
 Skill files resolve only through $APP_ROOT/.claude/… (relative symlinks); if the worktree cannot be created, Slack degraded, exit, nothing written.
 
 ## 2. Scan
