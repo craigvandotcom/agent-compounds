@@ -101,7 +101,11 @@ to pass the grep is the vacuous-AC class this pipeline exists to kill.
 If the bead needs a decision only a human can make, do NOT file it — return the fork as a
 PROPOSED-BEAD block to the coordinator (gate reason · options · a recommendation), unclaim, go
 to §1. Never ask and wait. The mid-bead case proposes `plan-gap` when the approved plan did not
-settle the fork; the coordinator files it.
+settle the fork; the coordinator files it. When the fork is a hold the next worker must not
+claim through (a prod-write authorization, or any gate reason), apply board state before
+unclaiming — `bash <scripts>/return-hold.sh <id> --reason <reason> --actor "$ACTOR"`, which
+labels `human-gate`, records `Gate-reason:`, and releases the claim — because a hold that
+lives only in prose is invisible to every eligibility filter.
 
 ## 4b — DISPOSITION — the bead in hand may already be someone else's work
 

@@ -120,6 +120,23 @@ else
   fail "malformed decision count" "rc=$rc: $out"
 fi
 
+# bd-0yu7v shape (bd-l4kp2): a script-driven --execute against prod framed as a
+# one-off data fix. The bead that wrote 74 prod rows carried no gate pair — the
+# current predicate must refuse this shape bare and pass it gated.
+cat >"$WORK/0yu7v-shape.md" <<'EOF'
+## Intent
+Fix the persisted allergen value on the affected canonical row.
+
+## Acceptance Criteria
+- Run scripts/backfill-allergen-vocabulary.ts --execute against the production
+  project ref as a one-off data fix for the affected rows, and record the
+  before/after value.
+EOF
+run_case "bd-0yu7v shape is refused without the gate pair" 1 "REFUSED" \
+  "$WORK/0yu7v-shape.md" "refined" 0
+run_case "bd-0yu7v shape passes with sensitive-prod plus a DECISION edge" 0 "gate pair" \
+  "$WORK/0yu7v-shape.md" "refined,sensitive-prod" 1
+
 echo
 if [ "$FAILURES" -eq 0 ]; then
   echo "$PASSES passed, $FAILURES failed — all prod-write tripwire tests passed."
