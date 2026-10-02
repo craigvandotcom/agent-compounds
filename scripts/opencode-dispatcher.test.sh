@@ -42,11 +42,31 @@ DRIVER="$WORK/drive.mjs"
 
 [ -f "$SYNC" ] || { echo "HARNESS FAIL: missing $SYNC"; exit 1; }
 command -v node >/dev/null 2>&1 || { echo "HARNESS FAIL: node not on PATH — the dispatcher cannot be driven"; exit 77; }
-# The render asserts every rendered command path exists under the literal
-# $HOME/Repos/... install layout (harness-sync render_hooks_opencode). A machine
-# without that layout — CI's /home/runner — cannot render, so the precondition is
-# unavailable there (exit 77 self-skip, counted loudly by run-all-proofs.sh).
-[ -d "$HOME/Repos" ] || { echo "SKIP: no \$HOME/Repos layout — the opencode render asserts \$HOME/Repos hook paths (precondition unavailable)"; exit 77; }
+# ac-vlje.5 + Deliverable 10: the installer reads its machine facts from
+# engine/machine.sh and requires the settings file (exit 4 when absent) — CI has
+# none, so the reader is pointed at a FIXTURE machine.json whose org_root is a
+# fixture org tree this suite builds: a floor file (floor_body fails the sync when
+# it is missing) and every {INFRA} path the manifest's machine-scope opencode
+# wiring spells, as empty executables. Derived from the manifest, never spelled:
+# a new {INFRA} entry brings its own fixture. The render assert checks existence;
+# the gate driven below reads the wiring JSON and never runs the scripts.
+FIXTURE_ORG="$WORK/org"
+FIXTURE_MACHINE="$WORK/machine.json"
+mkdir -p "$FIXTURE_ORG/infrastructure/harness-config/claude"
+printf 'machine-global floor fixture\n' > "$FIXTURE_ORG/infrastructure/harness-config/claude/CLAUDE.md"
+while IFS= read -r cmd; do
+  for tok in $cmd; do
+    case "$tok" in *=*) continue ;; *'{INFRA}'*/*) ;; *) continue ;; esac
+    rel="${tok#\{INFRA\}}"
+    p="$FIXTURE_ORG/infrastructure/${rel#/}"
+    mkdir -p "$(dirname "$p")"
+    printf '#!/bin/sh\n' > "$p"
+  done
+done < <(jq -r '.wiring[]
+  | select((.harnesses | index("opencode")) and ((.scope // ["org"]) | index("machine")))
+  | .command' "$ROOT/engine/hooks.wiring.json")
+printf '{"org_root": "%s"}\n' "$FIXTURE_ORG" > "$FIXTURE_MACHINE"
+export AC_MACHINE_FILE="$FIXTURE_MACHINE"
 
 cat > "$DRIVER" <<'EOF'
 // Drive the rendered plugin's tool-call gate for one wiring state; print RESULT.
@@ -61,9 +81,13 @@ try {
 EOF
 
 # Render into the temp home (the real opencode home is never touched). The home dir
-# must exist first — harness-sync skips a missing opencode home by design.
+# must exist first — harness-sync skips a missing opencode home by design. The exit
+# is CONSUMED (deliverable 10): a failed render is this suite's failure, named loud.
 mkdir -p "$HOME_DIR"
-bash "$SYNC" --root --opencode-home "$HOME_DIR" >/dev/null 2>&1
+if ! out="$(bash "$SYNC" --root --opencode-home "$HOME_DIR" 2>&1)"; then
+  bad "sync --root render failed:"; printf '%s\n' "$out" | tail -10
+  echo "FAILURES: $fails"; exit 1
+fi
 [ -f "$HOME_DIR/ac-hooks.wiring.json" ] || { echo "HARNESS FAIL: render produced no wiring"; exit 1; }
 [ -f "$HOME_DIR/plugins/ac-hooks.js" ] || { echo "HARNESS FAIL: render produced no dispatcher"; exit 1; }
 
