@@ -74,12 +74,18 @@ printf -- '---\nstatus: beadified\nbeadified: EPD\n---\n' >"$R/_plans/deliverabl
 printf -- '---\nstatus: beadified\nbeadified: EPA\n---\n' >"$R/_plans/open-kids.md"
 printf -- '---\nstatus: beadified\nbeadified: EPC\ndelivered: 2026-09-01T00:00:00Z\n---\n' >"$R/_plans/stamped.md"
 printf -- '---\nstatus: draft\n---\n' >"$R/_plans/draft.md"
-printf -- '---\nstatus: draft\n---\n' >"$R/_plans/stale-draft.md"
-touch -d '15 days ago' "$R/_plans/stale-draft.md"
-printf -- '---\nstatus: draft\n---\n' >"$R/_plans/fresh-draft.md"
-touch -d '13 days ago' "$R/_plans/fresh-draft.md"
-printf -- '---\nstatus: approved\n---\n' >"$R/_plans/old-approved.md"
-touch -d '30 days ago' "$R/_plans/old-approved.md"
+# Plan age is its last COMMIT, not its mtime: a NIGHTLY worktree checkout stamps every
+# file "now". Commit each aged plan backdated; the stale draft keeps a fresh mtime.
+aged() {  # aged <file> <status> <age>
+  printf -- '---\nstatus: %s\n---\n' "$2" >"$R/_plans/$1"
+  git -C "$R" add -- "_plans/$1"
+  GIT_COMMITTER_DATE="$(date -d "$3" -R)" git -C "$R" -c user.email=t@t -c user.name=t \
+    commit -qm "$1" --date="$(date -d "$3" -R)" -- "_plans/$1"
+}
+aged stale-draft.md  draft    '15 days ago'
+aged fresh-draft.md  draft    '13 days ago'
+aged old-approved.md approved '30 days ago'
+touch "$R/_plans/stale-draft.md"
 git -C "$R" add -A && git -C "$R" -c user.email=t@t -c user.name=t commit -qm fixture
 
 OUT=$(cd "$R" && "$SCRIPT"); RC=$?
@@ -97,7 +103,7 @@ cell() { printf '%s\n' "$OUT" | awk -F'\t' -v r="$1" -v t="$2" '$1==r && $2==t {
 [ -z "$(cell plan-deliver _plans/open-kids.md)" ]   && pass "plan with open children → none" || fail "open-kids delivered"
 [ -n "$(cell plan-move _plans/stamped.md)" ]        && pass "live plan already delivered: → plan-move" || fail "stamped not moved"
 ! has "_plans/draft.md" && pass "draft plan → none" || fail "draft proposed"
-[ "$(cell draft-stale _plans/stale-draft.md)" = review ] && pass "15-day draft → draft-stale flagged" || fail "stale-draft: $(cell draft-stale _plans/stale-draft.md)"
+[ "$(cell draft-stale _plans/stale-draft.md)" = review ] && pass "draft committed 15d ago, fresh mtime → draft-stale flagged" || fail "stale-draft: $(cell draft-stale _plans/stale-draft.md)"
 [ -z "$(cell draft-stale _plans/fresh-draft.md)" ] && pass "13-day draft → not flagged" || fail "fresh-draft flagged"
 [ -z "$(cell draft-stale _plans/old-approved.md)" ] && pass "30-day approved plan → not flagged" || fail "old-approved flagged"
 

@@ -108,7 +108,11 @@ for f in sorted(os.listdir(pdir)) if os.path.isdir(pdir) else []:
     rel = os.path.relpath(p, ROOT)
     status = fm_key(fm, "status")
     if status in ("draft", "findings"):
-        age_days = (time.time() - os.path.getmtime(p)) / 86400
+        # Last commit time, not mtime: NIGHTLY scans a fresh `git worktree add`, which
+        # stamps every file "now", so an mtime age never reaches 14d there.
+        ct = subprocess.run(["git", "-C", ROOT, "log", "-1", "--format=%ct", "--", rel],
+                            capture_output=True, text=True).stdout.strip()
+        age_days = (time.time() - (int(ct) if ct else os.path.getmtime(p))) / 86400
         if age_days >= 14:
             row("draft-stale", rel, "review", f"status: {status}, {int(age_days)}d untouched")
         continue
