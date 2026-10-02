@@ -28,14 +28,15 @@
 #   relative links ·
 #   unattended-safe (no service restarts, no interactive prompts).
 #
-# Config: harnesses.json (committed, portable) deep-merged with
-# harnesses.local.json (gitignored, machine-specific; template *.example).
+# Config: harnesses.json (committed, portable) with this machine's machine.json
+# deep-merged over it by engine/machine.sh --harnesses — the ONE reader of the
+# gitignored machine settings file (template machine.example.json).
 # Env beats config where documented (PI_CODING_AGENT_DIR).
 #
 # Usage:
 #   ./harness-sync.sh --root              # root repo + machine homes (~/.factory, pi home)
 #   ./harness-sync.sh <app-dir>           # one app target
-#   ./harness-sync.sh --all               # --root + every app in ac-deploy-targets.list
+#   ./harness-sync.sh --all               # --root + every target in machine.json
 #   ./harness-sync.sh --report            # render _reports/factory-matrix.html
 #                                         # (read-only: targets x packages x harnesses)
 #   Options: -n/--dry-run · --check (dry-run; exit 1 if anything would change) · --no-prune
@@ -49,6 +50,13 @@ set -euo pipefail
 # recurring failure here (ac-ys8f).
 ENGINE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 AC_ROOT="$(cd "$ENGINE_DIR/.." && pwd)"
+
+# The machine facts are set by the ONE machine.sh call site below, after the query
+# paths that exit before it — they run with NO machine facts (empty strings: the org
+# roots drop out of is_managed, the manifest drops out of retired_roots), which is
+# the point: a path-scoped query needs no machine to be configured.
+ORG_ROOT=""
+CFG=""
 
 DRY=0; CHECK=0; PRUNE=1; DO_ROOT=0; DO_ALL=0; VERIFY_AGY=0; REPORT=0; OPENCODE_HOME_OVERRIDE=""; PRINT_OPENCODE_EDIT_PERM=0; PRINT_OPENCODE_TASK_PERM=0; PRINT_OPENCODE_TOOLS=""; RECLAIM_RETIRED_DIR=""; TARGETS=()
 while [ $# -gt 0 ]; do
@@ -92,92 +100,12 @@ note_change() { CHANGES=$((CHANGES + 1)); }
 FAILURES=0
 
 # --- manifest -----------------------------------------------------------------
-MANIFEST="$AC_ROOT/harnesses.json"
-LOCAL="$AC_ROOT/harnesses.local.json"
-[ -f "$MANIFEST" ] || { echo "error: $MANIFEST missing" >&2; exit 2; }
-if [ -f "$LOCAL" ]; then
-  CFG="$(jq -s '.[0] * .[1]' "$MANIFEST" "$LOCAL")"
-else
-  CFG="$(cat "$MANIFEST")"
-fi
+# The merged harness config is read from the ONE machine-fact reader (ac-vlje.5):
+# the committed harnesses.json base, with machine.json's harnesses deep-merged over
+# it by machine.sh --harnesses — the base alone (exit 0) when the machine file is
+# absent, because harness settings have a committed default and targets do not.
 cfg() { echo "$CFG" | jq -r "$1"; }
 expand_tilde() { case "$1" in "~"|"~/"*) echo "${HOME}${1#\~}" ;; *) echo "$1" ;; esac; }
-
-# --- layout manifest (ac-9ahd) -------------------------------------------------
-# The engine SELF-LOCATES rather than reading a root key. ORG_ROOT is AC_ROOT's third
-# parent, which is correct in every supported layout — e.g. a repos-collection layout at
-# <collection-root>/<org>/software/agent-compounds -> <collection-root>, or a split-repo
-# layout at <home>/<org>/software/agent-compounds -> <home>. This was already the idiom
-# below for the memory-lint path; ac-9ahd generalized it and deleted the `repos_root`
-# key, which hard-failed the engine on any layout but one specific machine's and was the
-# root cause of the rendered-path 404s in every deploy target.
-ORG_ROOT="$(cd "$AC_ROOT/../../.." && pwd)"
-
-# The machine-global floor: doctrine every harness loads into EVERY session on this
-# machine, regardless of which of the three repos (infrastructure/mission/personal) it
-# is working in. Tracked once in infrastructure/harness-config/claude/, never generated
-# here — the harness projections below (Claude symlink, opencode/grok/pi static reads)
-# all read it through floor_body() so there is exactly one copy to edit. A missing or
-# empty floor fails the whole sync loudly rather than rendering every harness's context
-# down to nothing silently.
-FLOOR="$ORG_ROOT/infrastructure/harness-config/claude/CLAUDE.md"
-floor_body() {
-  [ -s "$FLOOR" ] || { echo "ERROR: floor missing: $FLOOR" >&2; exit 1; }
-  cat "$FLOOR"
-}
-
-LAYOUT="$AC_ROOT/harness.config.json"
-[ -f "$LAYOUT" ] || { echo "error: $LAYOUT missing" >&2; exit 2; }
-lcfg() { jq -r "$1" "$LAYOUT"; }
-
-# The DOMAIN repo is AC_ROOT's second parent (<domain-repo>/software/agent-compounds),
-# which names itself differently per layout — hence derived, never spelled. Its basename
-# is also the scope label the memory digest prints.
-DOMAIN_REPO="$(cd "$AC_ROOT/../.." && pwd)"
-
-# Resolved target dirs from the layout manifest's search globs. build_memory_digest.py
-# takes these on argv rather than a root: it used to glob a hardcoded domain-repo segment
-# that only existed on the Mac, so it collected nothing elsewhere while still exiting 0.
-resolved_targets() {
-  local g d
-  while IFS= read -r g; do
-    [ -n "$g" ] || continue
-    for d in $AC_ROOT/$g; do
-      [ -d "$d/memory/auto" ] && (cd "$d" && pwd)
-    done
-  done < <(lcfg '.targets[]')
-}
-
-# A harness runs here only if the MACHINE enables it (layout manifest) AND its own detail
-# config enables it (harnesses.json). Two questions, two homes: "is this harness installed
-# on this box" is machine fact, "how is it wired" is harness detail. Absent from the layout
-# map means yes, so adding a harness to harnesses.json does not silently disable it.
-harness_on() { # <name> <detail-enabled>
-  local m; m="$(jq -r --arg h "$1" '.harnesses[$h] // true' "$LAYOUT")"
-  if [ "$m" = "false" ] || [ "$2" != "true" ]; then echo false; else echo true; fi
-}
-EN_CLAUDE="$(harness_on claude "$(cfg '.harnesses.claude.enabled')")"
-EN_CODEX="$(harness_on codex "$(cfg '.harnesses.codex.enabled')")"
-EN_DROID="$(harness_on droid "$(cfg '.harnesses.droid.enabled')")"
-EN_PI="$(harness_on pi "$(cfg '.harnesses.pi.enabled')")"
-EN_GROK="$(harness_on grok "$(cfg '.harnesses.grok.enabled // false')")"
-GROK_HOME="$(expand_tilde "$(cfg '.harnesses.grok.home // "~/.grok"')")"
-EN_OPENCODE="$(harness_on opencode "$(cfg '.harnesses.opencode.enabled // false')")"
-OPENCODE_HOME="$(expand_tilde "$(cfg '.harnesses.opencode.home // "~/.config/opencode"')")"
-[ -n "$OPENCODE_HOME_OVERRIDE" ] && OPENCODE_HOME="$OPENCODE_HOME_OVERRIDE"
-CODEX_SKILLS_DIR="$(cfg '.harnesses.codex.skills_mirror_dir')"
-CODEX_AGENTS_DIR="$(cfg '.harnesses.codex.agents_gen_dir')"
-DROID_SKILLS_DIR="$(cfg '.harnesses.droid.skills_mirror_dir')"
-DROID_AGENTS_DIR="$(cfg '.harnesses.droid.agents_gen_dir')"
-DROID_HOME="$(expand_tilde "$(cfg '.harnesses.droid.home')")"
-DROID_FARM_SKILLS="$ORG_ROOT/$(cfg '.harnesses.droid.tracked_farm_skills')"
-DROID_FARM_DROIDS="$ORG_ROOT/$(cfg '.harnesses.droid.tracked_farm_droids')"
-PI_HOME_ENV="$(cfg '.harnesses.pi.home_env')"
-PI_HOME="${!PI_HOME_ENV:-$(expand_tilde "$(cfg '.harnesses.pi.home_default')")}"
-EN_AGY="$(harness_on antigravity "$(cfg '.harnesses.antigravity.enabled // false')")"
-AGY_HOME="$(expand_tilde "$(cfg '.harnesses.antigravity.home // "~/.gemini/antigravity"')")"
-AGY_CONFIG_DIR="$(expand_tilde "$(cfg '.harnesses.antigravity.config_dir // "~/.gemini/config"')")"
-AGY_SKILLS_DIR="$(cfg '.harnesses.antigravity.skills_mirror_dir // ".agents/skills"')"
 
 # --- helpers --------------------------------------------------------------------
 relpath() { python3 -c 'import os,sys; print(os.path.relpath(sys.argv[2], sys.argv[1]))' "$1" "$2"; }
@@ -209,9 +137,9 @@ is_managed() { # <normalized-path> <target-base>
 # deliberate user link. A live link under the same prefix stays foreign.
 # RETIRED_ROOTS (colon-separated) wins, so a test can name a fixture root.
 # Otherwise the merged manifest's retired_roots array — a machine records a canon
-# it migrated off in harnesses.local.json, not in this file (a spelled home path
-# here is the layout bug check 37 exists to catch). The historical Mac canon was
-# ~/Repos/.claude.
+# it migrated off in its own machine settings (the harnesses merge surface), not in
+# this file (a spelled home path here is the layout bug check 37 exists to catch).
+# The historical Mac canon was ~/Repos/.claude.
 retired_roots() {
   local p
   if [ -n "${RETIRED_ROOTS:-}" ]; then
@@ -486,6 +414,92 @@ if [ "$PRINT_OPENCODE_TASK_PERM" = 1 ]; then
   opencode_task_perm "$PRINT_OPENCODE_TOOLS"
   exit 0
 fi
+
+# --- machine facts — ONE machine.sh call site, ahead of sync_root (ac-vlje.5) ------
+# Every machine fact is read through engine/machine.sh: the org root, the merged
+# harness config and the per-machine target roster. Nothing is derived from folder
+# depth any more — the org root and the roster are facts this machine states, and a
+# listed target that does not exist is the reader's exit 2 naming the path. The org
+# home is stamped ahead of the app loop, so a bad target stops the run before either
+# sync_root or the first target is touched. The reader's exit code IS the state:
+# 0 configured, 4 NOT-CONFIGURED (a one-line pointer to machine.example.json),
+# 2 CONFIGURED-BUT-WRONG. The query paths above and --reclaim-retired-dangling exit
+# before this block — they need no machine fact.
+MACHINE_SH="$ENGINE_DIR/machine.sh"
+[ -f "$MACHINE_SH" ] || { echo "error: $MACHINE_SH missing" >&2; exit 2; }
+ORG_ROOT="$("$MACHINE_SH" --org-root)"
+CFG="$("$MACHINE_SH" --harnesses)"
+TARGETS_ROSTER="$("$MACHINE_SH" --targets)"
+
+# The machine-global floor: doctrine every harness loads into EVERY session on this
+# machine, regardless of which of the three repos (infrastructure/mission/personal) it
+# is working in. Tracked once in infrastructure/harness-config/claude/, never generated
+# here — the harness projections below (Claude symlink, opencode/grok/pi static reads)
+# all read it through floor_body() so there is exactly one copy to edit. A missing or
+# empty floor fails the whole sync loudly rather than rendering every harness's context
+# down to nothing silently.
+FLOOR="$ORG_ROOT/infrastructure/harness-config/claude/CLAUDE.md"
+floor_body() {
+  [ -s "$FLOOR" ] || { echo "ERROR: floor missing: $FLOOR" >&2; exit 1; }
+  cat "$FLOOR"
+}
+
+# A harness runs here only if its own detail config enables it (harnesses.json) — the
+# machine-level enable is merged into CFG by machine.sh --harnesses (machine.json's
+# harnesses overrides), so the two questions now have one home. A detail entry absent
+# from the merged config means no, so adding a harness to harnesses.json does not
+# silently enable it everywhere.
+harness_on() { # <name> <detail-enabled>
+  if [ "$2" != "true" ]; then echo false; else echo true; fi
+}
+EN_CLAUDE="$(harness_on claude "$(cfg '.harnesses.claude.enabled')")"
+EN_CODEX="$(harness_on codex "$(cfg '.harnesses.codex.enabled')")"
+EN_DROID="$(harness_on droid "$(cfg '.harnesses.droid.enabled')")"
+EN_PI="$(harness_on pi "$(cfg '.harnesses.pi.enabled')")"
+EN_GROK="$(harness_on grok "$(cfg '.harnesses.grok.enabled // false')")"
+GROK_HOME="$(expand_tilde "$(cfg '.harnesses.grok.home // "~/.grok"')")"
+EN_OPENCODE="$(harness_on opencode "$(cfg '.harnesses.opencode.enabled // false')")"
+OPENCODE_HOME="$(expand_tilde "$(cfg '.harnesses.opencode.home // "~/.config/opencode"')")"
+[ -n "$OPENCODE_HOME_OVERRIDE" ] && OPENCODE_HOME="$OPENCODE_HOME_OVERRIDE"
+CODEX_SKILLS_DIR="$(cfg '.harnesses.codex.skills_mirror_dir')"
+CODEX_AGENTS_DIR="$(cfg '.harnesses.codex.agents_gen_dir')"
+DROID_SKILLS_DIR="$(cfg '.harnesses.droid.skills_mirror_dir')"
+DROID_AGENTS_DIR="$(cfg '.harnesses.droid.agents_gen_dir')"
+DROID_HOME="$(expand_tilde "$(cfg '.harnesses.droid.home')")"
+DROID_FARM_SKILLS="$ORG_ROOT/$(cfg '.harnesses.droid.tracked_farm_skills')"
+DROID_FARM_DROIDS="$ORG_ROOT/$(cfg '.harnesses.droid.tracked_farm_droids')"
+PI_HOME_ENV="$(cfg '.harnesses.pi.home_env')"
+PI_HOME="${!PI_HOME_ENV:-$(expand_tilde "$(cfg '.harnesses.pi.home_default')")}"
+EN_AGY="$(harness_on antigravity "$(cfg '.harnesses.antigravity.enabled // false')")"
+AGY_HOME="$(expand_tilde "$(cfg '.harnesses.antigravity.home // "~/.gemini/antigravity"')")"
+AGY_CONFIG_DIR="$(expand_tilde "$(cfg '.harnesses.antigravity.config_dir // "~/.gemini/config"')")"
+AGY_SKILLS_DIR="$(cfg '.harnesses.antigravity.skills_mirror_dir // ".agents/skills"')"
+
+# The per-machine target roster, keyed by basename. `machine.sh --targets` prints one
+# `<abs-path>\t<flags>` line per target; flags is the retired roster line's grammar —
+# `public` and/or `packages=a,b` — so the port is mechanical. An explicit target path
+# on argv (sync.sh <dir>) bypasses the roster; a --all run IS the roster.
+declare -A TARGET_PATH_BY_NAME=() TARGET_FLAGS_BY_NAME=()
+TARGETS_ROSTER_PATHS=()
+while IFS=$'\t' read -r tpath tflags; do
+  [ -n "$tpath" ] || continue
+  TARGET_PATH_BY_NAME["$(basename "$tpath")"]="$tpath"
+  TARGET_FLAGS_BY_NAME["$(basename "$tpath")"]="${tflags:-}"
+  TARGETS_ROSTER_PATHS+=("$tpath")
+done <<<"$TARGETS_ROSTER"
+
+is_public_target() { # <basename>
+  case " ${TARGET_FLAGS_BY_NAME[$1]:-} " in *" public "*) return 0 ;; esac
+  return 1
+}
+
+target_packages() { # <basename> -> packages csv on stdout, empty when the entry names none
+  local tok
+  for tok in ${TARGET_FLAGS_BY_NAME[$1]:-}; do
+    case "$tok" in packages=*) printf '%s\n' "${tok#packages=}" ;; esac
+  done
+}
+
 gen_opencode_agents() { # <src-agents-dir> <dest-dir>
   local src="$1" dest="$2" f name relsrc tools edit_perm task_perm omodel
   [ -d "$src" ] || { echo "  WARN: agent source missing: $src"; return 0; }
@@ -538,13 +552,16 @@ HOOKS_MANIFEST="$ENGINE_DIR/hooks.wiring.json"
 # than hardcoded — the old constant named the Mac's monorepo path, so on every other
 # layout the rendered UserPromptSubmit entry pointed at a file that does not exist and
 # the recall hook 404'd on EVERY prompt in EVERY deploy target (measured: 7 targets,
-# 31 drift failures, ac-vh7k's baseline receipt). Keep the $HOME prefix unexpanded.
-HOOKS_PATH_LIT='$HOME'"${AC_ROOT#$HOME}/hooks"
+# 31 drift failures, ac-vh7k's baseline receipt). The form comes from machine.sh
+# --lit (ac-vlje.5): the reader's pure $HOME-relative transform, never a file read,
+# so it renders the same on a machine with no settings file — and a path that is NOT
+# under $HOME stays absolute instead of being glued to a $HOME that does not contain it.
+HOOKS_PATH_LIT="$("$MACHINE_SH" --lit "$AC_ROOT/hooks")"
 # Same treatment for the infrastructure repo: {INFRA} in the wiring manifest. Those
 # commands used to spell the Mac's monorepo path inline, so every rendered guard and
 # logger pointed at a file that does not exist off that machine — the PostToolUse
 # activity logger failed on EVERY tool call here until this landed.
-INFRA_PATH_LIT='$HOME'"${ORG_ROOT#$HOME}/infrastructure"
+INFRA_PATH_LIT="$("$MACHINE_SH" --lit "$ORG_ROOT/infrastructure")"
 
 # ONE definition of the placeholder substitution, shared by both renderers below.
 # It lived twice — build_hooks_obj and the opencode wiring render — and the copies
@@ -690,7 +707,7 @@ render_hooks_grok() {
 build_machine_global_rules() {
   local why="$1" dr digest
   dr="$(cat "$AC_ROOT/hooks/delegation-reminder.manual-recall.md")"
-  if ! digest="$(python3 "$AC_ROOT/hooks/build_memory_digest.py" "$DOMAIN_REPO" $(resolved_targets))"; then
+  if ! digest="$(python3 "$AC_ROOT/hooks/build_memory_digest.py")"; then
     echo "  WARN: memory digest generation failed — rendering rules without it"
     digest="*(digest generation failed on last sync — search qmd directly)*"
   fi
@@ -1134,7 +1151,7 @@ render_context_opencode() {
   [ -d "$OPENCODE_HOME" ] || { echo "  WARN: opencode home $OPENCODE_HOME missing — skipping (opencode not installed?)"; return 0; }
   echo "  -- opencode global rules ($OPENCODE_HOME/AGENTS.md, generated)"
   local digest content
-  if ! digest="$(python3 "$AC_ROOT/hooks/build_memory_digest.py" "$DOMAIN_REPO" $(resolved_targets))"; then
+  if ! digest="$(python3 "$AC_ROOT/hooks/build_memory_digest.py")"; then
     echo "  WARN: memory digest generation failed — rendering rules without it"
     digest="*(digest generation failed on last sync — search qmd directly)*"
   fi
@@ -1297,44 +1314,16 @@ ensure_home_link() {
 }
 
 # --- public-target guard ------------------------------------------------------------
-# A `public` flag on a target's ac-deploy-targets.list line means the repo is
-# published: the harness layer must be gitignored so stamped symlinks are never
-# committed (dangling links for external cloners + internal-structure leak).
-# check-ignore is pure pattern matching — probe paths need not exist; they stand
-# in for anything sync_target would create.
-#
-# Line format: `<dir-name> [public] [packages=a,b]`. The optional `packages=`
-# token (WS3) names the deploy packages deploy.sh stamps for that target;
-# ABSENT means every package — the full-set policy (every app gets the entire
-# registry unless a line says otherwise). sync_target honours it by passing
-# `deploy.sh --package <pkgs> --agents all` instead of `--all` (agents are
-# global stances, owned by no package, so they always deploy whole).
-# AC_TARGETS_LIST overrides the default sibling path (same override engine/exceptions.sh
-# honours) — for an adopter whose org root holds the roster under a differently named
-# directory. Unset keeps the documented default.
-TARGETS_LIST="${AC_TARGETS_LIST:-$ORG_ROOT/infrastructure/ac-deploy-targets.list}"
-# An override that names no file is a typo, never "no roster": falling through reads every
-# target as non-public and guard_public never runs.
-if [ -n "${AC_TARGETS_LIST:-}" ] && [ ! -f "$AC_TARGETS_LIST" ]; then
-  echo "error: AC_TARGETS_LIST='$AC_TARGETS_LIST' is not a file" >&2; exit 2
-fi
-
-is_public_target() { # <basename>
-  [ -f "$TARGETS_LIST" ] || return 1
-  grep -Eq "^[[:space:]]*$1[[:space:]]+public([[:space:]]|#|$)" "$TARGETS_LIST"
-}
-
-target_packages() { # <basename> -> packages csv on stdout, empty when the line names none
-  [ -f "$TARGETS_LIST" ] || return 0
-  # `|| true`: the trailing grep exits 1 when the line carries no packages= column,
-  # which is the COMMON case (absent means the full set). Under `set -euo pipefail`
-  # that non-zero propagated out of the pkgs="$(...)" assignment and killed the whole
-  # --all run after the first target. It was masked while TARGETS_LIST resolved to a
-  # path that did not exist, because the guard above returned first.
-  { grep -E "^[[:space:]]*$1([[:space:]#]|$)" "$TARGETS_LIST" | head -1 \
-    | sed -E 's/^[^[:space:]]+//' | tr ' ' '\n' \
-    | grep -E '^packages=' | head -1 | sed 's/^packages=//'; } || true
-}
+# A `public` flag on a target's machine.json entry means the repo is published: the
+# harness layer must be gitignored so stamped symlinks are never committed (dangling
+# links for external cloners + internal-structure leak). check-ignore is pure pattern
+# matching — probe paths need not exist; they stand in for anything sync_target would
+# create. The flag and the optional `packages=` token are read by the roster parsers
+# above (is_public_target / target_packages, over the machine.sh --targets lines);
+# ABSENT packages means every package — the full-set policy (every app gets the
+# entire registry unless the entry says otherwise). sync_target honours it by passing
+# `deploy.sh --package <pkgs> --agents all` instead of `--all` (agents are global
+# stances, owned by no package, so they always deploy whole).
 
 guard_public() { # <target-base-dir> — 0 if every stamped harness path is gitignored
   local base="$1" p
@@ -1405,7 +1394,7 @@ resolve_hooks_dir() { # <repo-root>
 # `.compounds/` is PUBLIC-ONLY. A public tree is published, so its state must never
 # be committable; a private app may track its own, so the line is never written
 # there. The `public` flag is read the way guard_public's caller reads it —
-# is_public_target against the target basename in TARGETS_LIST — because this
+# is_public_target against the target basename in the machine roster — because this
 # function gets only the repo path.
 ensure_scratch_ignored() {
   local repo="$1" gi="$1/.gitignore"
@@ -1592,7 +1581,7 @@ sync_target() { # <target-base-dir> ("app" mode: also runs deploy.sh for .claude
   if [ "$mode" = "app" ] && [ "$EN_CLAUDE" = "true" ]; then
     local dep_flags="$dep_extra" deploy_status dep_scope="--all" pkgs
     pkgs="$(target_packages "$(basename "$base")")"
-    # Per-target packages from ac-deploy-targets.list (WS3): a named subset
+    # Per-target packages from the target's machine.json entry: a named subset
     # deploys package-filtered skills with whole agents; absent honours the
     # full-set policy by keeping --all.
     [ -n "$pkgs" ] && dep_scope="--package $pkgs --agents all"
@@ -1716,7 +1705,7 @@ $pi_content"
       write_generated "$PI_HOME/AGENTS.md" "$pi_content"
       echo "  NOTE: pi has no declarative agents/hooks/MCP — skipped by design (see harnesses.json)"
     else
-      echo "  WARN: pi home $PI_HOME missing — skipping (set $PI_HOME_ENV or harnesses.local.json)"
+      echo "  WARN: pi home $PI_HOME missing — skipping (set $PI_HOME_ENV or the machine's harnesses overrides)"
     fi
   fi
 
@@ -1739,14 +1728,14 @@ $pi_content"
 # harness-sync.sh --report renders _reports/factory-matrix.html (at the end of
 # the run, after any sync work, so the page shows the files as they stand).
 # Zero infrastructure, read-only: the files stay the truth and the page only
-# shows them. Rows = deploy targets from ac-deploy-targets.list; columns = the
+# shows them. Rows = this machine's deploy targets (machine.json, read once at
+# startup); columns = the
 # harness homes sync_target projects into (.claude/skills + generated agents,
 # the .agents/skills codex+pi+antigravity mirror, the .factory/skills droid
 # mirror); the package dimension comes from skills/packages.json plus each
-# line's optional packages= token (absent = every package, the full-set
-# policy). A listed target whose dir is absent on this machine reads `missing`,
-# never a guess; a missing targets list leaves the targets table a notice —
-# the packages section always renders, because the manifest is always here.
+# entry's optional packages= token (absent = every package, the full-set
+# policy). An empty roster leaves the targets table a notice — the packages
+# section always renders, because the manifest is always here.
 report_html_esc() { # stdin -> stdout
   sed -e 's/&/\&amp;/g' -e 's/</\&lt;/g' -e 's/>/\&gt;/g'
 }
@@ -1806,24 +1795,21 @@ report_mirror_cell() { # <mirror-dir> <claude-dir> -> ok | drift (+a -b) | no mi
   if [ "$mextra" = 0 ] && [ "$mmiss" = 0 ]; then printf 'ok'; else printf 'drift (+%s -%s)' "$mextra" "$mmiss"; fi
 }
 
-report_target_row() { # <name> — prints one <tr>
+report_target_row() { # <target-abs-path> — prints one <tr>
   # NOTE: `name` and `base` ride separate `local` commands on purpose — one
   # `local` line expands every word before any binding takes effect, so
-  # `local name="$1" base="$AC_ROOT/../$name"` would read the OUTER (empty)
+  # `local name="$(basename "$1")" base="$1"` would read the OUTER (empty)
   # $name and silently score the parent dir instead of the target.
-  local name="$1" pkgs exp s
-  local base="$AC_ROOT/../$name"
+  local tpath="$1" pkgs exp s
+  local name="$(basename "$tpath")"
+  local base="$tpath"
   local present=0 miss=0 dang=0 status="ok" details=""
-  if [ ! -d "$base" ]; then
-    printf '<tr><td>%s</td><td colspan="6">missing on this machine</td></tr>\n' "$name"
-    return
-  fi
   pkgs="$(target_packages "$name")"
   [ -n "$pkgs" ] || pkgs="all"
   if [ "$pkgs" != "all" ]; then
     IFS=',' read -ra arr <<< "$pkgs"
     for s in "${arr[@]}"; do
-      report_pkg_ok "$s" || { status="unknown-package"; details="line names unknown package '$s'"; }
+      report_pkg_ok "$s" || { status="unknown-package"; details="entry names unknown package '$s'"; }
     done
   fi
   exp="$(report_expected "$([ "$pkgs" = "all" ] && printf '' || printf '%s' "$pkgs")")"
@@ -1866,16 +1852,14 @@ render_report() {
     jq -r 'to_entries[] | select(.key | startswith("_") | not)
       | "<tr><td>\(.key | @html)</td><td>\(.value.blurb // "" | @html)</td><td>\(.value.skills | length)</td><td>\(((.value.requires // []) | join(", ")) | @html)</td></tr>"' \
       "$AC_ROOT/skills/packages.json"
-    printf '</table>\n<h2>targets x harnesses (ac-deploy-targets.list)</h2>\n<table border="1">\n'
+    printf '</table>\n<h2>targets x harnesses (machine.json)</h2>\n<table border="1">\n'
     printf '<tr><th>target</th><th>packages</th><th>claude skills present/expected</th><th>.agents/skills mirror</th><th>.factory/skills mirror</th><th>claude agents</th><th>status</th></tr>\n'
-    if [ -f "$TARGETS_LIST" ]; then
-      while IFS= read -r line; do
-        line="${line%%#*}"; line="$(printf '%s' "$line" | sed -E 's/^[[:space:]]+|[[:space:]]+$//g')"
-        [ -n "$line" ] || continue
-        report_target_row "${line%%[[:space:]]*}"
-      done < "$TARGETS_LIST"
+    if [ "${#TARGETS_ROSTER_PATHS[@]}" -gt 0 ]; then
+      for tpath in "${TARGETS_ROSTER_PATHS[@]}"; do
+        report_target_row "$tpath"
+      done
     else
-      printf '<tr><td colspan="7">targets list absent on this machine (%s) — packages above still render</td></tr>\n' "$TARGETS_LIST"
+      printf '<tr><td colspan="7">no targets in this machine'"'"'s settings file — packages above still render</td></tr>\n'
     fi
     printf '</table>\n</body></html>\n'
   } > "$out"
@@ -1889,71 +1873,27 @@ fi
 
 [ "$DO_ROOT" = 1 ] && sync_root
 
-# The registry's OWN pre-commit — agent-compounds is not a line in the targets
-# list, so a targets-only install would leave every WS1/WS2 commit ungated.
+# The registry's OWN pre-commit — agent-compounds is not a target in the machine's
+# settings file, so a targets-only install would leave every WS1/WS2 commit ungated.
 install_lint_hook "$AC_ROOT"
 install_commit_msg_hook "$AC_ROOT"
 install_precommit_chain "$AC_ROOT"
 ensure_scratch_ignored "$AC_ROOT"
 
 if [ "$DO_ALL" = 1 ]; then
-  [ -f "$TARGETS_LIST" ] || { echo "error: $TARGETS_LIST missing" >&2; exit 2; }
-  # Two sources, INTERSECTED, because they answer different questions: the layout
-  # manifest's `targets` globs say where on this machine to look, and the roster in
-  # ac-deploy-targets.list says which of those are deploy targets (plus their `public`
-  # flag and `packages` column). Intersecting means neither can silently widen the other
-  # — a glob cannot add a target the roster never named, and a roster line cannot reach
-  # outside the declared search path. It also replaces the old hardcoded "$AC_ROOT/../"
-  # assumption that targets are always siblings.
-  CANDIDATES=()
-  while IFS= read -r g; do
-    [ -n "$g" ] || continue
-    for d in $AC_ROOT/$g; do
-      [ -d "$d" ] && CANDIDATES+=("$(cd "$d" && pwd)")
-    done
-  done < <(lcfg '.targets[]')
-  while IFS= read -r line; do
-    line="${line%%#*}"; line="$(printf '%s' "$line" | sed -E 's/^[[:space:]]+|[[:space:]]+$//g')"
-    [ -n "$line" ] || continue
-    name="${line%%[[:space:]]*}"   # first token = dir; rest = flags (e.g. `public`)
-    match=""
-    for c in ${CANDIDATES[@]+"${CANDIDATES[@]}"}; do
-      [ "$(basename "$c")" = "$name" ] && { match="$c"; break; }
-    done
-    if [ -n "$match" ]; then
-      sync_target "$match" app
-    else
-      echo "WARN: target missing on this machine: $name"
-    fi
-  done < "$TARGETS_LIST"
+  # The roster IS the target list (ac-vlje.5): one machine's machine.json states
+  # which sibling projects are deploy targets. The reader already validated every
+  # path — it exists and is a directory — so no missing-target case is reachable
+  # here; a bad entry refused the run before sync_root.
+  for tpath in "${TARGETS_ROSTER_PATHS[@]}"; do
+    sync_target "$tpath" app
+  done
 fi
 
 for t in ${TARGETS[@]+"${TARGETS[@]}"}; do
   [ -d "$t" ] || { echo "error: target dir missing: $t" >&2; exit 2; }
   sync_target "$t" app
 done
-
-# --- memory hygiene (hoisted from deploy.sh: substrate-global + target-invariant,
-# so once per invocation, not once per target — per-target runs timed out the
-# projection-regeneration check at target 2 of ~10). Visibility only, never blocks;
-# the nightly drift-check run is the enforcement point.
-MEMORY_LINT="$(cd "$AC_ROOT/../../.." && pwd)/infrastructure/scripts/health/memory-lint.py"
-if [ -f "$MEMORY_LINT" ]; then
-  echo
-  ML_LOG="$(mktemp)"
-  if ! /usr/bin/python3 "$MEMORY_LINT" --check > "$ML_LOG" 2>&1; then
-    echo "############################################################"
-    echo "# WARNING: memory hygiene drift detected (non-blocking)     #"
-    echo "# nightly drift-check enforces this — see the report there  #"
-    echo "############################################################"
-    tail -5 "$ML_LOG"
-    echo "############################################################"
-  else
-    echo "Memory hygiene: clean"
-    tail -1 "$ML_LOG"
-  fi
-  rm -f "$ML_LOG"
-fi
 
 # --- stance spawn probe. A projected stance is only proven by spawning it; the probe
 # runs when the stances or a harness CLI changed since its last green run, and re-runs

@@ -56,6 +56,14 @@ bad() { echo "  FAIL  $1"; fails=$((fails + 1)); }
 W="$(mktemp -d)"
 trap 'rm -rf "$W"' EXIT
 
+# ac-vlje.5: sync.sh reads its machine facts through engine/machine.sh and requires
+# the settings file (exit 4 when absent) — CI has none, so the reader is pointed at
+# a fixture stating this machine's real org root and no targets: the target under
+# test is passed as an argv path, the roster is never consulted.
+MACHINE_FIXTURE="$W/machine.json"
+printf '{"org_root": "%s"}\n' "$HOME" > "$MACHINE_FIXTURE"
+export AC_MACHINE_FILE="$MACHINE_FIXTURE"
+
 # A consumer "app" repo, standing well outside agent-compounds — a plain
 # .git/hooks (the common case).
 APP="$W/consumer-app"
