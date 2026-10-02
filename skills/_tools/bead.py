@@ -457,10 +457,10 @@ def consumes(text):
 
 ARTIFACT_RE = re.compile(
     r"(?<![\w./-])(?:\./)?(?:"
-    r"~/[A-Za-z0-9_@.()\[\]-]+(?:/[A-Za-z0-9_@.()\[\]-]+)*"                      # ~/cross-repo path
-    r"|\.[A-Za-z0-9_@()\[\]-]+(?:/[A-Za-z0-9_@.()\[\]-]+)+(?:\.[A-Za-z0-9]{1,10})?"  # .hidden/path (ext optional)
-    r"|[A-Za-z0-9_@()\[\]-]+(?:/[A-Za-z0-9_@.()\[\]-]+)+\.[A-Za-z0-9]{1,10}"     # dir/dir/file.ext
-    r"|[A-Za-z0-9_@()\[\]-]+(?:\.[A-Za-z0-9_@()\[\]-]+)*\.[A-Za-z0-9]{1,10}"     # repo-root file(.mid)*.ext
+    r"~/[A-Za-z0-9_@.(){}\[\]-]+(?:/[A-Za-z0-9_@.(){}\[\]-]+)*"                      # ~/cross-repo path
+    r"|\.[A-Za-z0-9_@(){}\[\]-]+(?:/[A-Za-z0-9_@.(){}\[\]-]+)+(?:\.[A-Za-z0-9]{1,10})?"  # .hidden/path (ext optional)
+    r"|[A-Za-z0-9_@(){}\[\]-]+(?:/[A-Za-z0-9_@.(){}\[\]-]+)+\.[A-Za-z0-9]{1,10}"     # dir/dir/file.ext
+    r"|[A-Za-z0-9_@(){}\[\]-]+(?:\.[A-Za-z0-9_@(){}\[\]-]+)*\.[A-Za-z0-9]{1,10}"     # repo-root file(.mid)*.ext
     r")(?![\w/-])"
 )
 
@@ -473,7 +473,8 @@ _TOUCHERS_LINE_RE = re.compile(r"^[ \t]*touchers:")
 _BULLET_RE = re.compile(r"^[ \t]*[-*][ \t]")
 
 # A raw ARTIFACT_RE match is edge-stripped before it is judged: the char classes above
-# intentionally allow `(`/`)`/`[`/`]` MID-path (a Next.js route group, a `[id]` segment), so
+# intentionally allow `(`/`)`/`[`/`]`/`{`/`}` MID-path (a Next.js route group, a `[id]` segment,
+# a `pac solution unpack` `{guid}.xml`), so
 # they cannot also be excluded from the START/END — prose routinely wraps a citation in a
 # bracket (`see (lib/a.ts)`, `the blocker (bd-x.1)`) and the match spills the wrapper in
 # (checker recheck 2026-09-27: `(bd-x.1` read as a file, the bead-id-shape exclusion below

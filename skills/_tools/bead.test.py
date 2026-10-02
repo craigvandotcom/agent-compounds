@@ -238,6 +238,11 @@ check(bead.extract_paths("blocked on the ruling (bd-x.1)") == [],
 check(bead.extract_paths("see (lib/a.ts) for the change") == ["lib/a.ts"],
       "extract_paths: a paren-wrapped REAL path is recovered edge-stripped, not left "
       "carrying its wrapper")
+check(bead.extract_paths("- view: S/SavedQueries/{00000000-0000-0000-00aa-000010003001}.xml")
+      == ["S/SavedQueries/{00000000-0000-0000-00aa-000010003001}.xml"],
+      "extract_paths: a braced pac-unpack filename ({guid}.xml) is one whole path")
+check(bead.extract_paths("see {lib/a.ts} for the change") == ["lib/a.ts"],
+      "extract_paths: an outer brace is still edge-stripped")
 check(bead.extract_paths("today's count is 42.") == [],
       "extract_paths: an integer-with-trailing-period sentence is never a path")
 check(bead.extract_paths("run .husky/pre-push, lib/db/foods.ts and ~/mission/x/y.md") ==
