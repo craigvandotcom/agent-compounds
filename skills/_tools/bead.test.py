@@ -62,7 +62,7 @@ Why this matters.
 - lint.sh
 - .husky/pre-push
 - lib/db/foods.ts
-  touchers: `rg -l -F "db/foods" lib -g "!lib/db/foods.ts"` → 1 · owned by: ac-abcd
+  touchers: `rg -l -F "db/foods" lib -g "!lib/db/foods.ts"` · owned by: ac-abcd
 - deleted-script: bin/old-tool.sh
 - ~/mission/software/example-app/.claude/skills/CORE/SKILL.md
 
