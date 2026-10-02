@@ -2,17 +2,19 @@
 
 ## Why the assertion is two layers (jobs AND steps)
 
-`quality-gate.yml` emits the SAME TWO JOB NAMES for both tiers, so at job level a Tier-1
-`batch-close` run is indistinguishable from a Tier-2 full proof:
+**THE TIER IT GUARDED AGAINST IS RETIRED** (bd-fugib.7's slim proof deleted the
+`batch-close`/Tier-1 leg and its dispatcher; a workflow_dispatch run is now always the full
+leg). The step-level layer stays: it is the layer that REFUSED the runs below, and the
+failure mode it guards — a green conclusion over skipped/never-scheduled steps — is exactly
+what any future step rename, step deletion, or `if:` re-gating would silently create. The
+history stands because it is what the layer was built from, and what a future editor must
+repeat against before touching `.github/required-jobs.txt`.
 
-- **Tier 2 (reason=prove / publish)** — full suite: next build, shadow divergence, db reset,
-  real-Postgres integration.
-- **Tier 1 (reason=batch-close)** — format/lint/tsc/affected-tests only; the heavy steps skip
-  via `inputs.reason != batch-close` on each step.
-
-A Tier-1 run therefore reports the same two job names with `conclusion=success` while never
-building, never running the divergence check, and never touching real Postgres. The job-level
-assertion alone reads it as GATED-OK.
+- **Tier 2 (reason=prove / publish)** — full suite: next build, vitest full suite, db reset,
+  real-Postgres integration. The ONLY leg remaining. Its quality-gate job name carries
+  the ` — Tier 2 full suite` suffix on every dispatch.
+- **Tier 1 (reason=batch-close)** — deleted 2026-10-02 (slim proof). It lived to show why
+  job names alone cannot gate a proof:
 
 ## The reproducing run (Tier-1 that must be refused)
 
@@ -52,14 +54,21 @@ assertion is executed against: a green full proof (34172430677), a required job 
 `failure` refused by name (33369682855), a Tier-1 run whose heavy steps skipped refused by name
 (32980692074), and an empty `REQUIRED` refused.
 
-## The six substantive steps (the REQUIRED_STEPS contract)
+## The adjudicated contract (the REQUIRED_STEPS names, as of the slim proof)
 
-- Unit + integration tests (vitest)
+bd-fugib.8 rewrote the contract to the slim proof's surviving names (bd-fugib.7 renamed the
+vitest step, deleted the TypeScript and Shadow-divergence steps, and retired the tier suffix
+condition — a prove dispatch now ALWAYS carries it):
+
+- Unit + integration tests (vitest, full suite)
 - Build check (next build)
-- TypeScript check (tsc --noEmit)
-- Shadow divergence check
 - Supabase integration tests — real Postgres (workflow_dispatch only)
 - Apply migrations — db reset (workflow_dispatch only)
+
+Job level (two required jobs, exact names incl. the suffix the workflow appends):
+
+- Quality Gate (format · lint · types · build · tests · prompt-drift) — Tier 2 full suite
+- Supabase integration tests (real Postgres · workflow_dispatch only)
 
 Committed in the registry repo at `.github/required-jobs.txt` alongside the job list —
 see the ac-publish executed-jobs assertion.

@@ -39,12 +39,11 @@ tagging your original ref after one ships a commit nothing proved.
 
 ## The one thing this gate adds: required jobs AND steps must have EXECUTED
 
-A run's conclusion is a fact about the RUN, not about any job inside it, and the two diverge.
-A required job
-skipped by an `if:` or never scheduled leaves a green run with nothing behind it (the step
-conclusion is literally `skipped`). And `quality-gate.yml` emits the SAME TWO JOB NAMES for
-both tiers — a Tier-1 run passes job-level while the heavy steps skip; the step layer refuses
-it (evidence + six step names: `references/executed-jobs.md`).
+A run's conclusion is a fact about the RUN, not about any job inside it, and the two diverge:
+a required job skipped by an `if:` or never scheduled leaves a green run with nothing behind
+it (the step conclusion is literally `skipped`). The slim proof (bd-fugib.7) retired the two-tier
+workflow — every `reason=prove` dispatch runs the full leg — but a green run is still not a proof
+until the heavy steps are named as having EXECUTED (`references/executed-jobs.md`).
 
 **So assert per-job AND per-step, by name, against the run you dispatched:**
 
@@ -73,7 +72,7 @@ MISSING_STEPS=$(comm -23 <(printf '%s\n' "$REQUIRED_STEPS" | sort) <(printf '%s\
 
 - **Absent from the job/step list, or `skipped`/`cancelled`/`neutral`** — nothing was measured. `NOT-GATED`.
 - **`REQUIRED`/`REQUIRED_STEPS` empty or unreadable** — ranges over an empty set, the exact green-over-nothing this leg exists to stop. Refuse `NOT-GATED`.
-- **The REQUIRED_STEPS contract names all six substantive steps** — 'Unit + integration tests (vitest)', 'Build check (next build)', 'TypeScript check (tsc --noEmit)', 'Shadow divergence check', 'Supabase integration tests — real Postgres (workflow_dispatch only)', 'Apply migrations — db reset (workflow_dispatch only)'. A Tier-1 run skips the heavy four; the step layer refuses it by name.
+- **The REQUIRED_STEPS contract names the four substantive full-leg steps** — 'Unit + integration tests (vitest, full suite)', 'Build check (next build)', 'Supabase integration tests — real Postgres (workflow_dispatch only)', 'Apply migrations — db reset (workflow_dispatch only)' — and the required JOB names carry the ' — Tier 2 full suite' suffix the workflow appends on every prove dispatch (bd-fugib.8; the exact-name matcher needs the evaluated name, which the TestFlight gate also requires). The tsc check lives in ci.yml's per-push static leg, not the proof; the Shadow divergence check is deleted.
 
 `NOT-GATED` is never a pass and never a FAIL-and-continue: it is a stop. A dormant job reporting green is the gate-audit class (canon: `skills/ac-pipeline/references/` § assurance-declarations) — how a pipeline ships unproven code while every dashboard stays green.
 

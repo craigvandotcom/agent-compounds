@@ -44,7 +44,7 @@ new_repo() {
 # --- 1. refusal: dirty tracked source, naming the file ------------------------------------
 R="$(new_repo dirty-tree)"
 printf 'uncommitted edit\n' >>"$R/tracked.txt"
-out="$(cd "$R" && "$PUSH" --no-dispatch 2>&1)"; rc=$?
+out="$(cd "$R" && "$PUSH" 2>&1)"; rc=$?
 if [ "$rc" -eq 3 ] && printf '%s' "$out" | grep -q 'REFUSED \[dirty-tree\]' \
    && printf '%s' "$out" | grep -q 'tracked.txt'; then
   pass "refuses a dirty tracked file, naming it"
@@ -60,7 +60,7 @@ git -C "$R" add -- .beads/issues.jsonl
 git -C "$R" commit -qm "seed the ledger"
 git -C "$R" push -q origin main
 printf '{"id":"mid-batch-edit"}\n' >>"$R/.beads/issues.jsonl"
-out="$(cd "$R" && "$PUSH" --no-dispatch 2>&1)"; rc=$?
+out="$(cd "$R" && "$PUSH" 2>&1)"; rc=$?
 if [ "$rc" -eq 0 ] && [ "$(git -C "$R" rev-parse origin/main)" = "$(git -C "$R" rev-parse HEAD)" ]; then
   pass "a dirty tracked .beads/issues.jsonl does NOT refuse the push — the ledger has its own committer lane"
 else fail "dirty-beads-exempt: rc=$rc out=$out"; fi
@@ -74,14 +74,14 @@ git -C "$R" add -- .push-dirty-allow memory/x.md
 git -C "$R" commit -qm "declare memory/ as live-state"
 git -C "$R" push -q origin main
 printf 'a live edit\n' >>"$R/memory/x.md"
-out="$(cd "$R" && "$PUSH" --no-dispatch 2>&1)"; rc=$?
+out="$(cd "$R" && "$PUSH" 2>&1)"; rc=$?
 if [ "$rc" -eq 0 ] && [ "$(git -C "$R" rev-parse origin/main)" = "$(git -C "$R" rev-parse HEAD)" ]; then
   pass "a repo's own .push-dirty-allow declaration (memory/) exempts a dirty tracked file under it"
 else fail "dirty-declared-allow: rc=$rc out=$out"; fi
 # The SAME repo's tracked SOURCE file is still refused — a declared prefix exempts only
 # what it names, never code paths.
 printf 'uncommitted source edit\n' >>"$R/tracked.txt"
-out="$(cd "$R" && "$PUSH" --no-dispatch 2>&1)"; rc=$?
+out="$(cd "$R" && "$PUSH" 2>&1)"; rc=$?
 if [ "$rc" -eq 3 ] && printf '%s' "$out" | grep -q 'REFUSED \[dirty-tree\]' \
    && printf '%s' "$out" | grep -q 'tracked.txt'; then
   pass "a declared live-state allowlist never exempts a tracked SOURCE file — still refused, naming it"
@@ -104,7 +104,7 @@ printf 'from this repo\n' >"$R/mine.txt"
 git -C "$R" add -- mine.txt
 git -C "$R" commit -qm "this repo's own commit"
 MINE_SHA="$(git -C "$R" rev-parse HEAD)"
-out="$(cd "$R" && "$PUSH" --no-dispatch 2>&1)"; rc=$?
+out="$(cd "$R" && "$PUSH" 2>&1)"; rc=$?
 if [ "$rc" -eq 0 ] \
    && git -C "$R" cat-file -e "$MINE_SHA" 2>/dev/null \
    && git -C "$R" log --oneline | grep -q "other clone's commit" \
@@ -125,7 +125,7 @@ chmod +x "$R/lint.sh"
 git -C "$R" add -- lint.sh
 git -C "$R" commit -qm "add a red lint.sh"
 BEFORE="$(git -C "$R" rev-parse origin/main)"
-out="$(cd "$R" && "$PUSH" --no-dispatch 2>&1)"; rc=$?
+out="$(cd "$R" && "$PUSH" 2>&1)"; rc=$?
 AFTER="$(git -C "$R" rev-parse origin/main)"
 if [ "$rc" -eq 1 ] && printf '%s' "$out" | grep -q 'REFUSED \[red-check\]' \
    && printf '%s' "$out" | grep -q 'NEXT: fix-forward' && [ "$BEFORE" = "$AFTER" ]; then
@@ -134,8 +134,11 @@ else
   fail "failing-check: rc=$rc before=$BEFORE after=$AFTER out=$out"
 fi
 
-# --- 4. green: pushed, and the quality-gate dispatch is attempted -------------------------
-R="$(new_repo green-dispatch)"
+# --- 4. green: pushed, and NO quality-gate dispatch is attempted (bd-fugib.8) -------------
+# The proof is dispatched exactly once, at publish, by ac-prove — never per push. push.sh
+# must not even look at quality-gate.yml: a fake gh on PATH records every invocation and
+# the case asserts the log is EMPTY (gh untouched proves nothing was dispatched).
+R="$(new_repo green-no-dispatch)"
 mkdir -p "$R/.github/workflows"
 : >"$R/.github/workflows/quality-gate.yml"
 FAKEBIN="$WORKDIR/fakebin"
@@ -144,10 +147,7 @@ GHLOG="$WORKDIR/gh.invocations"
 : >"$GHLOG"
 cat >"$FAKEBIN/gh" <<EOF
 #!/usr/bin/env bash
-echo "\$@" >>"$GHLOG"
-if [ "\$1" = "run" ]; then
-  echo '[{"url":"https://github.com/example/repo/actions/runs/1"}]'
-fi
+echo "\$*" >>"$GHLOG"
 exit 0
 EOF
 chmod +x "$FAKEBIN/gh"
@@ -158,12 +158,12 @@ GREEN_SHA="$(git -C "$R" rev-parse HEAD)"
 out="$(cd "$R" && PATH="$FAKEBIN:$PATH" "$PUSH" 2>&1)"; rc=$?
 if [ "$rc" -eq 0 ] \
    && [ "$(git -C "$R" rev-parse origin/main)" = "$GREEN_SHA" ] \
-   && grep -q "reason=prove" "$GHLOG" \
-   && grep -q "ref=$GREEN_SHA" "$GHLOG" \
-   && printf '%s' "$out" | grep -q 'dispatched the full quality gate'; then
-  pass "green: pushed, and the quality gate is dispatched with reason=prove pinned to the pushed SHA"
+   && printf '%s' "$out" | grep -q 'push.sh: pushed' \
+   && ! printf '%s' "$out" | grep -q 'dispatched' \
+   && [ ! -s "$GHLOG" ] ; then
+  pass "green: pushed, and no quality-gate dispatch is attempted (gh never invoked; the proof is ac-prove's, at publish)"
 else
-  fail "green-dispatch: rc=$rc out=$out ghlog=$(cat "$GHLOG" 2>/dev/null)"
+  fail "green-no-dispatch: rc=$rc out=$out ghlog=$(cat "$GHLOG" 2>/dev/null)"
 fi
 
 echo "---"

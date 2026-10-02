@@ -116,9 +116,9 @@ git commit -m "..." --pathspec-from-file=/tmp/pathspec-$$.txt
 rm -f /tmp/pathspec-$$.txt
 
 # 3. Push — commit often; push only through the push layer, never a bare `git push`.
-#    push.sh owns the fetch+merge, the repo's whole-tree checks, the push, and the
-#    post-push quality-gate dispatch (skills/ac-pipeline/scripts/push.sh) — first publish
-#    of a new branch goes through it the same way.
+#    push.sh owns the fetch+merge, the repo's whole-tree checks, and the push — the full
+#    quality-gate proof is NOT dispatched per push; ac-prove dispatches it exactly once,
+#    at publish (skills/ac-pipeline/scripts/push.sh; bd-fugib.8).
 bash skills/ac-pipeline/scripts/push.sh --branch "$BRANCH"
 ```
 

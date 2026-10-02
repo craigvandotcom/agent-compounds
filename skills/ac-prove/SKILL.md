@@ -84,27 +84,25 @@ session — a paused/backgrounded watcher can silently never resume
 current turn; if the session would need to end before the run completes, that is a reportable
 FAIL/timeout, not a fire-and-forget.
 
-**The full leg** this dispatch runs (Tier 2, `quality-gate.yml` `workflow_dispatch` path) is the
-genuinely expensive, comprehensive proof:
+**The full leg** this dispatch runs (`quality-gate.yml` `workflow_dispatch` path, the only
+leg since the slim proof — bd-fugib.7) is the genuinely expensive, comprehensive proof:
 
-- vitest — unit + integration
+- vitest — the full unit + integration suite (`pnpm test:all`)
 - real-Postgres, from-scratch migrations (`supabase db reset`)
 - Supabase integration tests against that fresh local stack
-- the shadow divergence check (full-suite vs. affected-only blind-spot detector)
 - `next build`
-- whole-repo static checks (format, lint, type-check, design/token lints, prompt-drift)
-- the size-limit bundle-size budget (its own bead, bd-pwt44.11 — lands alongside this rung)
+- the prompt-drift guards (revision drift + bump isolation)
 
-This is the only place all of that runs together; nothing short of `reason=prove` (or
-`loop-close`/`publish`) exercises the from-scratch-migration + Supabase-integration legs.
+This is the only place all of that runs together; nothing short of `reason=prove`
+(or `publish`) exercises the from-scratch-migration + Supabase-integration legs.
 
 ---
 
 ## Step 3 — Green Gate (critical — read this before trusting any receipt)
 
-The divergence step that writes the receipt runs `if: !cancelled()` — it appends a line **on a
-RED run too**, and the line carries **no pass/fail field of its own**. A receipt existing is
-proof the run *reached* that step, not proof it was green.
+The proof-receipt step (`Proof receipt (bd-fugib.5)`) runs `if: !cancelled()` — it appends a
+line **on a RED run too**, and the line carries **no pass/fail field of its own**. A receipt
+existing is proof the run *reached* that step, not proof it was green.
 
 **`ac-prove` MUST separately confirm the dispatched run's conclusion:**
 
