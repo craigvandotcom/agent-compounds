@@ -13,7 +13,7 @@
 #              machine's facts — never a second parser of the same file.
 #   EDITORIAL  Judgement, and the only hand-maintained input: the org-only skills that
 #              operate the factory and have no job inside an app repo. They live in
-#              harness.config.json under `exceptions.org_only_skills`.
+#              harnesses.json under `exceptions.org_only_skills` (ac-vlje.12).
 #
 # Keeping them apart is the point. A derived fact written down by hand becomes a second
 # copy that drifts from the thing it describes; a judgement call derived by a script
@@ -31,7 +31,7 @@ set -euo pipefail
 
 ENGINE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 AC_ROOT="$(cd "$ENGINE_DIR/.." && pwd)"
-LAYOUT="$AC_ROOT/harness.config.json"
+LAYOUT="$AC_ROOT/harnesses.json"
 # The one reader of this machine's facts (`machine.json`, via AC_MACHINE_FILE). This
 # script parses that file NOT AT ALL: a second parser is a second copy, and the two drift.
 MACHINE_SH="$ENGINE_DIR/machine.sh"
@@ -64,7 +64,7 @@ case "$MODE" in
   --list)
     echo "Distribution policy: full-set-everywhere (every asset reaches every managed target)."
     echo
-    echo "EDITORIAL exclusions — org-only skills, hand-maintained in harness.config.json:"
+    echo "EDITORIAL exclusions — org-only skills, hand-maintained in harnesses.json:"
     n=0
     while IFS= read -r s; do
       [ -n "$s" ] || continue
