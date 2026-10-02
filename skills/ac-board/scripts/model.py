@@ -13,7 +13,7 @@ Env:    AC_BOARD_NOW (ISO timestamp) pins "now" — the test seam; unset = the r
 import datetime as dt, json, os, re, sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.realpath(__file__)), "../../ac-pipeline/scripts"))
-from pull_order import PLAN_ORDER, PLAN_RUNG, blocks_counts, front, plan_stage, rank  # noqa: E402
+from pull_order import PLAN_ORDER, PLAN_RUNG, blocks_counts, front, plan_stage, rank, waits_on_loop  # noqa: E402
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.realpath(__file__)), "../../_tools"))
 import bead  # noqa: E402
 
@@ -153,6 +153,9 @@ def build(T, ROOT, COMPACT):
                       if d.get("type") == "blocks" and is_open(rec(d["depends_on_id"])))
 
     BLOCKS = None if recs is None else blocks_counts(recs)  # open beads waiting on each id
+    # gates whose open blockers are all loop work: not on the human yet (pull_order.waits_on_loop)
+    is_gate = lambda i: i in gate_ids or bool(GATE_LABELS & set(labels(rec(i))))
+    waiting = {g["id"]: w for g in gates for w in [waits_on_loop(g["id"], recs, is_gate)] if w}
 
     def epic_progress(eid):
         kids = [r for r in (recs or {}).values()
@@ -220,7 +223,8 @@ def build(T, ROOT, COMPACT):
         """(state, the rendered line, [reasons behind it])."""
         if beads is None or ready_ids is None:
             return "UNKNOWN", "? unknown — the bead reads failed", []
-        you = [f"{n_gates} on you"] if n_gates else []
+        n_you = n_gates - len(waiting)
+        you = [f"{n_you} on you"] if n_you else []
         if (n_ready or n_ip) and live_names is None:
             return "UNKNOWN", "? unknown — agent roster unreadable", [f"{n_ready} ready", f"{n_ip} in progress"]
         if held:
@@ -232,7 +236,7 @@ def build(T, ROOT, COMPACT):
         rest = ([f"{n_ready} ready, none pickable"] if n_ready else  # the lead cause only
                 [f"{n_unref} unrefined"] if n_unref else
                 [f"{n_blocked} blocked"] if n_blocked else [f"{n_ip} unclaimed"] if n_ip else [])
-        if n_gates: return "STUCK", "⛔ STUCK — waiting on you", [plural(n_gates, "gate")] + rest
+        if n_you: return "STUCK", "⛔ STUCK — waiting on you", [plural(n_you, "gate")] + rest
         if live: return "STUCK", "⛔ STUCK — nothing can move", rest
         return "EMPTY", "⏸ EMPTY — nothing planned", []
 
@@ -401,7 +405,10 @@ def build(T, ROOT, COMPACT):
                       "subject": g["id"],
                       "detail": f"{gate_kind(g)} · unblocks {plural(k, 'bead')}" if k else gate_kind(g),
                       "route": "/ac-human"}
-            if k: m.append(((rank("gate"), -k), entry))
+            if g["id"] in waiting:  # its prior steps come first; it shows after them
+                entry.update(rung="wait-gate", detail=f"{gate_kind(g)} · after {', '.join(waiting[g['id']][:2])}")
+                m.append(((rank("wait-gate"), -k), entry))
+            elif k: m.append(((rank("gate"), -k), entry))
             else: idle_entries.append(entry)
         if n_unref:
             m.append(((rank("refine-bead"),), {"rung": "refine-bead", "n_unrefined": n_unref,

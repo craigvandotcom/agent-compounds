@@ -148,6 +148,18 @@ check planorder "the refusal is flagged in PLANS" '^   refined +1 ▓+░* needs
 rm "$W/planorder/repo/_plans/r.md" "$W/planorder/repo/_plans/p.md"
 check planorder "a draft continues planning"    '^2\. continue planning 1 plan$'
 
+# A gate still waiting on loop work is not on you yet: its prior steps lead NEXT, it follows them.
+WGATE='{"id":"ac-g2","title":"DECISION: approve the build","issue_type":"decision","labels":["human-gate"],'$B',"dependencies":[{"issue_id":"ac-g2","depends_on_id":"ac-u1","type":"blocks"}]}'
+CLOSE='{"id":"ac-c1","title":"closeout","issue_type":"task",'$B',"dependencies":[{"issue_id":"ac-c1","depends_on_id":"ac-g2","type":"blocks"}]}'
+fixture waiting "[$WGATE,$UNREF,$CLOSE]" "[$UNREF]" "$WGATE
+$UNREF
+$CLOSE" "$LIVE"
+check waiting "not stuck on you"               'waiting on you' absent
+check waiting "NEXT leads with its prior step" '^1\. refine 1 bead$'
+check waiting "the gate follows it"            '^2\. ac-g2$'
+check waiting "naming what it waits on"        '^   decision · after ac-u1$'
+
+
 # A failed read renders `?` and is named — never a guessed count.
 fixture failed "[$READY]" "[$READY]" "$READY" "$LIVE"
 put "$W/failed/reads" beads 1 ""; echo "br: database locked" >"$W/failed/reads/beads.err"
@@ -168,7 +180,7 @@ else echo "FAIL compact: expected one line"; FAILURES=$((FAILURES + 1)); fi
 
 # Every line fits a phone: 40 columns, never wrapped.
 CASES=$((CASES + 1))
-wide=$(for c in stalled flowing starved empty plans ladder planorder failed; do render "$c"; render "$c" 1; done |
+wide=$(for c in stalled waiting flowing starved empty plans ladder planorder failed; do render "$c"; render "$c" 1; done |
        python3 -c 'import sys; print(max(len(l.rstrip("\n")) for l in sys.stdin))')
 if [ "$wide" -le 40 ]; then echo "ok   width: widest line $wide"
 else echo "FAIL width: widest line $wide > 40"; FAILURES=$((FAILURES + 1)); fi

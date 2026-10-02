@@ -33,7 +33,7 @@ the run's branch directly — there is no merge stage; `ac-beadify` + the refine
 
 The next move is always the one closest to implement: finish what is nearest done before
 feeding the front. `ac-board`'s `🎯 NEXT` ranks every move by this ladder, and `ac-human`'s
-docket presents its human rungs (3 · 7 · 8) in the same order. Code: `scripts/pull_order.py`.
+docket presents its human rungs (3 · 7 · 8 · 9) in the same order. Code: `scripts/pull_order.py`.
 
 | # | Rung | Route |
 |---|---|---|
@@ -46,5 +46,6 @@ docket presents its human rungs (3 · 7 · 8) in the same order. Code: `scripts/
 | 6 | polish approved plans | `ac-polish plan` |
 | 7 | approve draft plans | `/ac-plan` |
 | 8 | human gates that block nothing, then promote the pool | `ac-human` · `ac-align` |
+| 9 | human gates still waiting on loop work: after the steps before them | `ac-human` |
 
 Within a rung: most beads freed, then priority, then oldest.

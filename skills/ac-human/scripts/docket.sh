@@ -76,7 +76,7 @@ import datetime as dt, json, os, re, sqlite3, sys
 
 T, ROOT, MODE = sys.argv[1], sys.argv[2], sys.argv[3]
 sys.path.insert(0, sys.argv[4])
-from pull_order import PLAN_ORDER, blocks_counts, front, plan_stage  # noqa: E402
+from pull_order import PLAN_ORDER, blocks_counts, front, plan_stage, waits_on_loop  # noqa: E402
 sys.path.insert(0, sys.argv[5])
 import bead  # noqa: E402
 NOW = dt.datetime.now(dt.timezone.utc)
@@ -284,11 +284,9 @@ itemized.sort(key=order)
 GATE_LABEL = "human-gate"
 beads_by_id = {b["id"]: b for b in beads or []}
 def awaiting_loop(b):
-    w = waits_on(b)
-    if BLOCKS is None or EDGES is None or not w: return None
-    if any(GATE_LABEL in labels(EDGES.get(i, {})) or GATE_LABEL in labels(beads_by_id.get(i, {}))
-           for i in w): return None
-    return w
+    if BLOCKS is None: return None
+    return waits_on_loop(b["id"], EDGES, lambda i: GATE_LABEL in labels(EDGES.get(i, {}))
+                         or GATE_LABEL in labels(beads_by_id.get(i, {})))
 awaiting = [b for b in itemized if awaiting_loop(b)]
 itemized = [b for b in itemized if b not in awaiting]
 idle = [b for b in itemized if BLOCKS is not None and not frees(b)]

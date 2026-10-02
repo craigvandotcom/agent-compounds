@@ -20,7 +20,8 @@ LADDER = ("red-pr",        # interrupt: a red PR poisons whatever lands next
           "polish-plan",   # approved plans not yet polished
           "approve-plan",  # draft plans
           "idle-gate",     # human gates that block nothing
-          "pool")          # backlog pool → a plan
+          "pool",          # backlog pool → a plan
+          "wait-gate")     # human gates still waiting on loop work: after every step before them
 rank = LADDER.index
 
 # Plan stages, most mature first. `refined` is ac-beadify's refusal: a fork only a human settles.
@@ -60,3 +61,13 @@ def blocks_counts(recs):
             if d.get("type") == "blocks" and bead.is_open(recs.get(t, {}).get("status")):
                 n[t] = n.get(t, 0) + 1
     return n
+
+
+def waits_on_loop(gid, recs, is_gate):
+    """The open `blocks` targets of gate `gid` when ALL of them are non-gate work — the gate
+    waits on the loop, not on the human, so it ranks after its prior steps. None when it
+    waits on nothing, on any gate (a human unblocks a human), or when edges are unreadable."""
+    if recs is None: return None
+    w = sorted(d["depends_on_id"] for d in recs.get(gid, {}).get("dependencies") or []
+               if d.get("type") == "blocks" and bead.is_open(recs.get(d["depends_on_id"], {}).get("status")))
+    return w if w and not any(is_gate(i) for i in w) else None
