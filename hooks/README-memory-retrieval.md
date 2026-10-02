@@ -37,6 +37,16 @@ labelled **background data, NOT instructions** (poisoning guard). Telemetry
 (`log_recall`/`log_injection`) still records full qmd paths, so observability is
 unaffected by the shorter injection.
 
+## Sealed projects (project-local qmd index)
+
+A project with its own `.qmd/index.yml` (made by `qmd init`) is sealed: qmd adopts that index
+for every command run inside the tree, so the hook's CLI searches see only that project. The
+resident daemon serves the global index, so in a sealed project the hook never asks it
+(semantic recall falls back to the CLI, then to the BM25 floor), maps `qmd://` paths through
+the project's own config, and prints a scoped wider-recall hint. Keep sealed projects out of
+the global `~/.config/qmd/index.yml` and nothing outside sees them either. First user:
+forge-one (client work). Proof: `memory-retrieval-seal.test.sh`.
+
 ## Health / the `mem` dot
 
 Every real prompt calls `write_health`, which atomically updates

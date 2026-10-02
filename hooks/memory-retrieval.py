@@ -41,6 +41,10 @@ the recall surface for ALL sessions. The wiki lobe means wiki-page quality
 collection (decisions/STRATEGY) is deliberately NOT an injection lobe — decisions are
 deliberate-retrieval-only (`qmd query`); the 6 decision-shaped qrels are retired.
 
+Exception — sealed projects: inside a project with its own `.qmd/index.yml` (`qmd init`),
+recall is scoped to that project only. The CLI already reads the project's index; the
+global daemon is never asked (see _project_index, memory-retrieval-seal.test.sh).
+
 The status-bar `mem` dot is driven live from every real prompt via `write_health`
 (debounced — a single load-contended prompt must not flip it red).
 
@@ -104,6 +108,13 @@ WIDER_RECALL_HINT = (
     "Wider recall (not auto-injected): `qmd query $'lex:Q\\nvec:Q' --no-rerank` "
     "searches every fact on the machine (add `-c <collection>` to scope to one repo); "
     "`cass search \"Q\" --json` searches past agent-session transcripts."
+)
+# Shown instead when the session sits inside a project with its own qmd index (see
+# _project_index): every qmd command there reads that index only, so "every fact on the
+# machine" would be false.
+SEALED_RECALL_HINT = (
+    "Wider recall (not auto-injected): `qmd query $'lex:Q\\nvec:Q' --no-rerank` "
+    "searches this project's own index only (project-local .qmd); nothing outside it is reachable here."
 )
 DESC_MAX = 280      # injected description cap — descriptions are the distilled claim, snippets are noise
 
@@ -496,6 +507,33 @@ _QMD_INDEX_YML = os.environ.get(
 )
 
 
+def _project_index(cwd=None):
+    """The project dir holding the nearest project-local qmd config (`.qmd/index.yml` or
+    `.yaml`, made by `qmd init`) at or above the session's cwd, else None. qmd adopts such an
+    index for every command run inside that tree, so the CLI calls here are already scoped to
+    it. The resident daemon is not: it serves the global index. A project with its own index
+    is sealed (forge-one keeps client work in and the rest of the machine out), so the daemon
+    must not be asked and paths must map through the project's own config."""
+    d = os.path.realpath(cwd or os.getcwd())
+    while True:
+        if any(os.path.isfile(os.path.join(d, ".qmd", n)) for n in ("index.yml", "index.yaml")):
+            return d
+        parent = os.path.dirname(d)
+        if parent == d:
+            return None
+        d = parent
+
+
+def _project_roots(proj):
+    """_collection_roots() over a project-local config, relative paths resolved against
+    the project (qmd allows `path: .`)."""
+    cfg = next((os.path.join(proj, ".qmd", n) for n in ("index.yml", "index.yaml")
+                if os.path.isfile(os.path.join(proj, ".qmd", n))), None)
+    roots = _collection_roots(cfg) if cfg else {}
+    return {c: r if os.path.isabs(r) else os.path.normpath(os.path.join(proj, r))
+            for c, r in roots.items()}
+
+
 def _collection_roots(path=_QMD_INDEX_YML):
     """{collection: abs-root} hand-parsed from qmd's index.yml (no PyYAML dep)."""
     roots, cur = {}, None
@@ -514,7 +552,8 @@ def _collection_roots(path=_QMD_INDEX_YML):
     return roots
 
 
-_ROOTS = _collection_roots()
+_PROJECT = _project_index()
+_ROOTS = _project_roots(_PROJECT) if _PROJECT else _collection_roots()
 _LOBES = set(MEMORY_LOBES)
 
 
@@ -763,7 +802,7 @@ def _cli_vsearch(prompt, qmd_path):
 def semantic_search(prompt, qmd_path):
     """Semantic recall over every collection on the machine. Daemon first; CLI only if the
     daemon is unreachable."""
-    rows = _daemon_search(prompt)
+    rows = None if _PROJECT else _daemon_search(prompt)
     if rows is None:
         rows = _cli_vsearch(prompt, qmd_path)
 
@@ -1052,7 +1091,7 @@ def main():
     # must know the rest of the machine is still reachable. Both forms below use a TYPED
     # query document, which is what skips the 1.7B expander; a bare `qmd query "text"`
     # does not, and costs 25-46s. Measured: ~2.5s scoped, ~9.5s machine-wide.
-    print(WIDER_RECALL_HINT)
+    print(SEALED_RECALL_HINT if _PROJECT else WIDER_RECALL_HINT)
     print("</memory-recall>")
 
     # observe-loop (W2.2): log ONLY the injected paths, only on this emit path — after the block
