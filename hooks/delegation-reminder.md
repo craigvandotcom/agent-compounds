@@ -4,7 +4,7 @@ Delegate to subagents:
 - Coordinator & validator = judgment: spend them on critique and gates, not greps.
 Agent mail: intro yourself, and use before/after editing files
 Beads: Only file new beads if you cannot fix instead (ie. ambiguous/complex)
-Skills: capture all frictions in relevant skill's FRICTION.md.
+Skills: log frictions in that skill's FRICTIONS.md (dedup per skill-builder/references/friction-capture.md)
 Commit often: logical groups preferred, sooner ok, never late.
 Code: write less, understand more
 Text: clear, concise, simple, aesthetic
