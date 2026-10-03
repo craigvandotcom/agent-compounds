@@ -44,7 +44,8 @@ channel). This heartbeat is the *run skeleton*; the skill is the *behavior*.
   [ -x "$TRUNK_TOOL" ] || TRUNK_TOOL="$APP_ROOT/skills/_tools/trunk.sh"
   DEFAULT_BRANCH="$(cd "$APP_ROOT" && bash "$TRUNK_TOOL")" || exit 2
   git -C "$APP_ROOT" fetch origin "$DEFAULT_BRANCH"
-  TRIAGE_WT="${TMPDIR:-/tmp}/ac_triage_run-$(date +%Y%m%d-%H%M%S)-$$"
+  mkdir -p "${XDG_CACHE_HOME:-$HOME/.cache}/ac-triage"   # never /tmp: its tmpfs quota fails br with EDQUOT
+  TRIAGE_WT="${XDG_CACHE_HOME:-$HOME/.cache}/ac-triage/ac_triage_run-$(date +%Y%m%d-%H%M%S)-$$"
   # Detached at fresh origin/<default> — so whatever the live tree has checked out (any
   # feature branch, or a detached HEAD) is irrelevant: this run never reads or writes it.
   git -C "$APP_ROOT" worktree add --detach "$TRIAGE_WT" "origin/$DEFAULT_BRANCH" || {
@@ -80,7 +81,7 @@ channel). This heartbeat is the *run skeleton*; the skill is the *behavior*.
 
 - **Worktree symlink caveat (BINDING).** `.claude/skills/ac-triage` and
   `.claude/skills/CORE` are *relative* symlinks into the sibling agent-compounds repo. They
-  resolve only from the live checkout (`$APP_ROOT`), NOT from inside a `/tmp` worktree (which
+  resolve only from the live checkout (`$APP_ROOT`), NOT from inside the scratch worktree (which
   would resolve `../../../agent-compounds` to a nonexistent path). So read every skill file —
   `SKILL.md`, `CORE/triage.md` — via `"$APP_ROOT/.claude/skills/…"`, never via a `.claude/…`
   path relative to the worktree cwd. Board/state files (`.beads/`, `.claude/state/`,
@@ -173,12 +174,13 @@ Identity + reservations per `agent-mail/references/session-procedure.md` (mint �
   ```bash
   # cwd is still $TRIAGE_WT
   AGENT_NAME=<name> git commit -m "chore(triage): daily findings + report" -- <exact files touched>
-  git push --no-verify origin "HEAD:$DEFAULT_BRANCH"   # HEAD:<resolved trunk> in every app
+  git push origin "HEAD:$DEFAULT_BRANCH"   # HEAD:<resolved trunk> in every app
   ```
 
   `AGENT_NAME` inline — a fresh scheduler shell doesn't inherit the export and the pre-commit
   guard blocks its own commits without it (`precommit-guard-needs-agent-name-in-shell`).
-  `--no-verify` — the pre-push build hook swallows background pushes.
+  Hooks stay on: dcg blocks a hook-skipping push, and a headless run that stops for approval
+  strands its commit. Not `push.sh` here — it pushes the local `$BRANCH` ref, not this detached HEAD.
 - **Verify the push landed:** `git rev-parse "origin/$DEFAULT_BRANCH"` must equal local `HEAD`.
   On non-ff/rejection (a concurrent-pusher race) → Slack `TRIAGE DEGRADED:` with the stranded
   SHA. Never leave work silently stranded.
@@ -200,6 +202,6 @@ git -C "$APP_ROOT" worktree prune                     # drop any stale administr
 ```
 
 Every abort branch above — Slack-probe fail, source-fetch escalation, push race at step 4,
-degrade at step 5 — must run this teardown before exiting. A leaked `/tmp` worktree per day is
+degrade at step 5 — must run this teardown before exiting. A leaked scratch worktree per day is
 its own defect. Detached worktrees carry no branch, so removal never strands a ref. (The one
 exception is the worktree-*creation* failure in step 0: there is nothing to tear down.)
