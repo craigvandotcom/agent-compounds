@@ -76,11 +76,11 @@ Identity + reservations per `agent-mail/references/session-procedure.md` (mint Â
 
 ```bash
 AGENT_NAME=FoggyCreek git commit -m "chore(align): weekly poolâ†’active proposal" -- <exact files touched>
-git push --no-verify
+bash <this skill>/../ac-pipeline/scripts/push.sh --branch "$TRUNK"
 ```
 
 `AGENT_NAME` inline (`precommit-guard-needs-agent-name-in-shell`); never `git add -A`;
-`--no-verify` (backgrounded pre-push build). All commits stay inside this app's repo.
+never `--no-verify` (dcg blocks it). All commits stay inside this app's repo.
 
 ### 6. Verify the push landed
 
