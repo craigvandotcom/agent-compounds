@@ -116,18 +116,18 @@ Check input validation, auth/authorization, sensitive data exposure.
 
 ### Step 4: Performance Audit
 
-Check N+1 queries, React re-renders, memoization.
+Check N+1 queries, unnecessary re-renders, memoization.
 
 ### Step 5: Code Quality Audit
 
-Check TypeScript strictness, error handling, mobile-first compliance.
+Check the project's language strictness, error handling, and responsiveness.
 
 ### Step 6: Test Coverage Audit
 
-Run your project's equivalent of (example: a pnpm/Next.js stack):
+Run the project's coverage command (its documented test-coverage / equivalent):
 
 ```bash
-pnpm test:coverage
+<project's coverage command>
 ```
 
 Verify happy path, edge cases, error conditions, async behavior, user interactions.
