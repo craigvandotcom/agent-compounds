@@ -196,8 +196,7 @@ Remove the isolated worktree so none accumulate (AC: `git worktree list` is clea
 
 ```bash
 cd "$APP_ROOT"                                        # leave $TRIAGE_WT before removing it
-git -C "$APP_ROOT" worktree remove --force "$TRIAGE_WT" 2>/dev/null \
-  || rm -rf "$TRIAGE_WT"                              # fallback if `worktree remove` refuses
+git -C "$APP_ROOT" worktree remove --force "$TRIAGE_WT"  # no rm fallback: dcg blocks it
 git -C "$APP_ROOT" worktree prune                     # drop any stale administrative refs
 ```
 
