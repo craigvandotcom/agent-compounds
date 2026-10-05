@@ -1,0 +1,11 @@
+{
+  "ship": {
+    "preflight": [],
+    "prove": "bash -c 'if [ \"${1:-}\" = \"--ref\" ] && [ \"$(git rev-parse \"${2:?--ref needs a SHA}\")\" != \"$(git rev-parse HEAD)\" ]; then echo \"prove: --ref is not the checked-out HEAD; lint and proofs run on the working tree\" >&2; exit 1; fi; ./lint.sh && bash scripts/run-all-proofs.sh && git rev-parse HEAD' prove",
+    "version": {
+      "bump": "printf '%s\\n' \"$(awk -F. '{print $1\".\"$2\".\"$3+1}' VERSION)\" > VERSION",
+      "read": "cat VERSION"
+    },
+    "targets": []
+  }
+}
