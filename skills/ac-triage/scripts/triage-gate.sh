@@ -14,8 +14,13 @@
 # Rules:
 #   - An item is new when its key is absent from the source's seen-set. A key that leaves the
 #     source is pruned, so a recurrence is new again.
-#   - Keys join the seen-set only after the model run that consumes them exits 0; a failed run
-#     leaves them to resurface next run.
+#   - Keys join the seen-set only after the model run that consumes them exits 0 AND its report
+#     commit is on origin/<default>: the gate records the remote tip before the run, fetches
+#     after it, and requires a commit in that range touching .claude/state/triage-last-run.md
+#     (scheduled-daily.md step 3 writes it on every run). A zero exit alone only means the
+#     session ended. A run that exits 0 without landing is a failed run; an origin the gate
+#     cannot reach cannot prove a landing, so it fails closed (the model is not started).
+#     Either way the keys resurface next run.
 #   - A could-not-check source upserts ONE open ops bead (marker `triage-gate:source-down:<name>`):
 #     created once, commented at most every TRIAGE_GATE_COMMENT_EVERY_H hours, commented once on
 #     recovery. It never starts the model and never touches the seen-set.
@@ -33,7 +38,8 @@
 #         TRIAGE_GATE_COMMENT_EVERY_H (default 24) · AC2_BR_CMD (default br)
 #         TRIAGE_GATE_STALE_H (default 2) — --status calls a heartbeat older than this silent
 # Exit:   0  every source handled (clean · escalated and landed · down with its ops bead current)
-#         1  the model run failed — its items stay unseen and resurface next run
+#         1  the model run failed or landed nothing on origin — its items stay unseen and
+#            resurface next run
 #         2  a down source could not be recorded on its ops bead (br failed); wins over 1
 #         3  skipped — another gate run holds the lock
 #         64 usage or config error
@@ -53,6 +59,8 @@ cd "$ROOT" || exit 64
 CONFIG="${TRIAGE_GATE_CONFIG:-$ROOT/.claude/skills/CORE/triage.md}"
 STATE="${TRIAGE_GATE_STATE:-${XDG_STATE_HOME:-$HOME/.local/state}/ac-triage/$(basename "$ROOT")}"
 BR="${AC2_BR_CMD:-br}"
+TOOLS="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/../../_tools" && pwd)"
+REPORT=".claude/state/triage-last-run.md"
 EVERY_H="${TRIAGE_GATE_COMMENT_EVERY_H:-24}"
 WORKFLOW=".claude/skills/ac-triage/workflows/scheduled-daily.md"
 
@@ -72,7 +80,7 @@ if [ "$STATUS" = 1 ]; then  # proof of life for the board — never takes the lo
   ' "$HB" 2>/dev/null || echo "triage: ⚠ unreadable heartbeat"
   exit 0
 fi
-. "$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/../../_tools" && pwd)/br-call.sh" || exit 64
+. "$TOOLS/br-call.sh" || exit 64
 command -v flock >/dev/null || { echo "triage-gate: flock not found" >&2; exit 64; }
 mkdir -p "$STATE/seen" "$STATE/down" || exit 64
 
@@ -145,6 +153,20 @@ while read -r name secs cmd <&3; do
   say "$name: ✓ $(wc -l <"$RUN/items") current · $n_new new"
 done 3<<<"$SOURCES"
 
+# origin_tip — resolve trunk and fetch it; sets TRUNK_BRANCH and TIP (the remote tip sha). Non-zero
+# when the remote cannot be reached: the gate cannot prove a landing then. No subshell — the
+# variables must survive.
+origin_tip() {
+  TIP=""
+  TRUNK_BRANCH=$(bash "$TOOLS/trunk.sh" 2>/dev/null) || return 1
+  git fetch -q origin "+refs/heads/$TRUNK_BRANCH:refs/remotes/origin/$TRUNK_BRANCH" 2>/dev/null || return 1
+  TIP=$(git rev-parse --verify -q "refs/remotes/origin/$TRUNK_BRANCH") && [ -n "$TIP" ]
+}
+landed() {  # landed <base-sha> — a report commit reached origin/<default> since <base-sha>
+  origin_tip || return 1
+  [ -n "$(git log -n1 --format=%H "$1..$TIP" -- "$REPORT" 2>/dev/null)" ]
+}
+
 mark_seen() { while IFS=$'\t' read -r name key _; do echo "$key" >>"$STATE/seen/$name"; done <"$1"; }
 
 N_NEW=$(wc -l <"$RUN/new")
@@ -156,12 +178,23 @@ if [ "$N_NEW" -gt 0 ]; then
     echo "new items ($N_NEW) — not escalated (--no-escalate):"; cat "$RUN/new"; ESCALATED="dry-run $N_NEW"
   else
     cp "$RUN/new" "$PENDING"
-    echo "escalating $N_NEW new item(s) to the model"
-    if ${TRIAGE_GATE_MODEL:-default_model} "$PENDING"; then
-      mark_seen "$PENDING"; rm -f "$PENDING"; ESCALATED="landed $N_NEW"
-    else
-      echo "triage-gate: model run failed — $N_NEW item(s) stay unseen" >&2
+    if ! origin_tip; then
+      echo "triage-gate: origin unreachable or trunk unresolved — cannot prove a landing, model not started; $N_NEW item(s) stay unseen" >&2
       ESCALATED="failed $N_NEW"; [ "$EXIT" = 2 ] || EXIT=1
+    else
+      BASE=$TIP
+      echo "escalating $N_NEW new item(s) to the model"
+      if ${TRIAGE_GATE_MODEL:-default_model} "$PENDING"; then
+        if landed "$BASE"; then
+          mark_seen "$PENDING"; rm -f "$PENDING"; ESCALATED="landed $N_NEW"
+        else
+          echo "triage-gate: model run exited 0 without a landed commit on origin/$TRUNK_BRANCH — $N_NEW item(s) stay unseen" >&2
+          ESCALATED="failed $N_NEW"; [ "$EXIT" = 2 ] || EXIT=1
+        fi
+      else
+        echo "triage-gate: model run failed — $N_NEW item(s) stay unseen" >&2
+        ESCALATED="failed $N_NEW"; [ "$EXIT" = 2 ] || EXIT=1
+      fi
     fi
   fi
 fi

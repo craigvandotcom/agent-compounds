@@ -8,12 +8,19 @@ PASS=0; FAIL=0
 ok()   { PASS=$((PASS + 1)); }
 bad()  { FAIL=$((FAIL + 1)); echo "FAIL: $1"; }
 
-# A throwaway repo; each source's behaviour is a file the case writes: <src>.out (items),
-# <src>.rc (exit code), <src>.sleep (seconds to hang).
+# A throwaway repo with a bare local origin (the gate proves a landing against it); each
+# source's behaviour is a file the case writes: <src>.out (items), <src>.rc (exit code),
+# <src>.sleep (seconds to hang).
+GITENV=(-c user.name=t -c user.email=t@example.com -c commit.gpgsign=false)
 setup() {
-  rm -rf "$W/repo" "$W/state" "$W/br.log" "$W/model.log" "$W/beads"
+  rm -rf "$W/repo" "$W/state" "$W/br.log" "$W/model.log" "$W/beads" "$W/origin.git" "$W/wt"
   mkdir -p "$W/repo" "$W/state" "$W/beads"
-  git -C "$W/repo" init -q
+  git init -q --bare -b main "$W/origin.git"
+  git -C "$W/repo" init -q -b main
+  git -C "$W/repo" remote add origin "$W/origin.git"
+  git "${GITENV[@]}" -C "$W/repo" commit -q --allow-empty -m init
+  git -C "$W/repo" push -q origin main
+  git -C "$W/repo" remote set-head origin main >/dev/null
   cat >"$W/src.sh" <<'SH'
 #!/usr/bin/env bash
 d=$(dirname "$0"); s=$1
@@ -41,9 +48,22 @@ SH
   cat >"$W/model" <<SH
 #!/usr/bin/env bash
 cat "\$1" >>"$W/model.log"; echo --- >>"$W/model.log"
-exit "\$(cat "$W/model.rc" 2>/dev/null || echo 0)"
+[ -f "$W/model.rc" ] && exit "\$(cat "$W/model.rc")"
+# the real run commits its report in its own worktree and pushes it; model.mode picks the shape:
+#   (none)    report commit pushed to origin/main   other  somebody else's commit pushed, no report
+#   stranded  report committed locally, never pushed
+rm -rf "$W/wt"; git clone -q "$W/origin.git" "$W/wt"
+g() { git -c user.name=t -c user.email=t@example.com -c commit.gpgsign=false -C "$W/wt" "\$@"; }
+case "\$(cat "$W/model.mode" 2>/dev/null)" in
+  other)    echo x >"$W/wt/other.txt"; g add other.txt; g commit -q -m other; g push -q origin HEAD:main ;;
+  stranded) mkdir -p "$W/wt/.claude/state"; echo r >"$W/wt/.claude/state/triage-last-run.md"
+            g add .claude; g commit -q -m report ;;
+  *)        mkdir -p "$W/wt/.claude/state"; date +%s%N >"$W/wt/.claude/state/triage-last-run.md"
+            g add .claude; g commit -q -m report; g push -q origin HEAD:main ;;
+esac
+exit 0
 SH
-  chmod +x "$W/model"; rm -f "$W/model.rc"
+  chmod +x "$W/model"; rm -f "$W/model.rc" "$W/model.mode"
 }
 gate() {
   (cd "$W/repo" && TRIAGE_GATE_CONFIG="$W/triage.md" TRIAGE_GATE_STATE="$W/state" \
@@ -83,6 +103,36 @@ if [ "$rc" = 1 ]; then ok; else bad "model failure exits 1 (got $rc)"; fi
 if ! grep -q k9 "$W/state/seen/alpha"; then ok; else bad "failed item not marked seen"; fi
 rm -f "$W/model.rc"; : >"$W/model.log"; rc=$(gate)
 if [ "$rc" = 0 ] && grep -q k9 "$W/model.log" && grep -q k9 "$W/state/seen/alpha"; then ok; else bad "failed item resurfaces and lands"; fi
+
+# 4b. model exits 0 but its commit never reached origin → treated as failed; keys stay unseen
+setup
+printf 'k1\tstranded finding\n' >"$W/alpha.out"; echo stranded >"$W/model.mode"
+rc=$(gate)
+if [ "$rc" = 1 ]; then ok; else bad "model exit 0 without a landed commit exits 1 (got $rc)"; fi
+if ! grep -q k1 "$W/state/seen/alpha"; then ok; else bad "model exit 0 without a landed commit leaves keys unseen"; fi
+if grep -q "without a landed commit" "$W/gate.out" && jq -e '.escalated == "failed 1"' "$W/state/heartbeat.json" >/dev/null; then ok; else bad "stranded run is reported, not 'landed'"; fi
+rm -f "$W/model.mode"; : >"$W/model.log"; rc=$(gate)
+if [ "$rc" = 0 ] && grep -q k1 "$W/model.log" && grep -q k1 "$W/state/seen/alpha"; then ok; else bad "stranded item comes back and lands next run"; fi
+
+# 4c. a landed report commit marks seen; someone else's push during the run does not count
+setup
+printf 'k2\tlanded finding\n' >"$W/alpha.out"
+rc=$(gate)
+if [ "$rc" = 0 ] && grep -q k2 "$W/state/seen/alpha" && jq -e '.escalated == "landed 1"' "$W/state/heartbeat.json" >/dev/null; then ok; else bad "landed report commit marks seen (got $rc)"; fi
+setup
+printf 'k3\tother pusher\n' >"$W/alpha.out"; echo other >"$W/model.mode"
+rc=$(gate)
+if [ "$rc" = 1 ] && ! grep -q k3 "$W/state/seen/alpha"; then ok; else bad "another agent's push is not a landing (got $rc)"; fi
+
+# 4d. origin unreachable (or absent) → fail closed: nothing marked seen, no model started
+setup
+printf 'k4\tno origin\n' >"$W/alpha.out"
+git -C "$W/repo" remote set-url origin "$W/does-not-exist.git"
+rc=$(gate)
+if [ "$rc" = 1 ] && ! grep -q k4 "$W/state/seen/alpha" && [ ! -s "$W/model.log" ]; then ok; else bad "unreachable origin marks nothing seen (got $rc)"; fi
+git -C "$W/repo" remote remove origin
+: >"$W/model.log"; rc=$(gate)
+if [ "$rc" = 1 ] && ! grep -q k4 "$W/state/seen/alpha"; then ok; else bad "no origin at all marks nothing seen (got $rc)"; fi
 
 # 5. source error twice → one ops bead, then a comment; recovery comments once
 setup
