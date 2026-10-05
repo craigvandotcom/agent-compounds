@@ -12,11 +12,12 @@
 #   reopen-blocked    blocked bead, no open `blocks` edge          → reopen (status: open) —
 #                     "a card handed back, or blocked for no reason, gets reopened
 #                     automatically" (the Vision)
-#   label-review      label beads-standards never names           → review (flag only — the
-#                     label vocabulary is open; never remove mechanically)
-#   type-review       open bead whose title prefix contradicts its issue_type (DECISION:/HUMAN:
-#                     typed task, ACTION: typed decision) → review (flag only — which side is
-#                     wrong is a judgment; the docket files by issue_type)
+#   label-review      label absent from beads-standards/references/controlled-labels.txt
+#                     → review (flag only — the vocabulary is open; never remove mechanically)
+#   type-review       open bead whose (issue_type, title prefix) is outside the declared
+#                     matrix (DECISION: needs decision, ACTION: task, HUMAN: task or decision)
+#                     → review (flag only — which side is wrong is a judgment; the docket
+#                     files by issue_type)
 #   finding-<kind>    a step-4 finding, deduped: skip-open <id> (an open ac-tidy / proposal /
 #                     human-gate bead names the target) · suppressed <id> (a closed ac-tidy
 #                     finding named it) · file
@@ -147,13 +148,20 @@ for b in beads:
     if not any(bid in by_id and is_open(by_id[bid]) for bid in blockers):
         row("reopen-blocked", b["id"], "reopen → status: open", "blocked, no open blocks edge")
 
-# ── label-review: labels beads-standards never names (flag only) ─────────
+# ── label-review: labels the declared vocabulary never lists (flag only) ─
+# The vocabulary is control data — beads-standards/references/controlled-labels.txt, one
+# label per line, a trailing `*` declaring a prefix family — never prose scraped for
+# backticked tokens. A missing or empty file is the `?` gate, never an empty vocabulary.
 vocab, families = set(), set()
-for d, _, files in os.walk(os.path.join(SKILLS, "beads-standards")):
-    for f in files:
-        for tok in re.findall(r"`([a-z][a-z0-9:_<>.,-]*)`", open(os.path.join(d, f), errors="replace").read()):
-            vocab.add(tok)
-            if ":<" in tok: families.add(tok.split(":<")[0] + ":")
+try:
+    for ln in open(os.path.join(SKILLS, "beads-standards/references/controlled-labels.txt")):
+        ln = ln.strip()
+        if not ln or ln.startswith("#"): continue
+        (families if ln.endswith("*") else vocab).add(ln[:-1] if ln.endswith("*") else ln)
+except OSError as e:
+    gated(f"controlled-labels.txt unreadable: {e}")
+if not (vocab or families):
+    gated("controlled-labels.txt declares no labels")
 unnamed = {}
 for b in filter(is_open, beads):
     for l in labels(b):
@@ -162,15 +170,21 @@ for b in filter(is_open, beads):
 for l, ids in sorted(unnamed.items()):
     row("label-review", l, "review", f"{len(ids)} open bead(s), e.g. {ids[0]}")
 
-# ── type-review: title prefix contradicts issue_type (flag only) ─────────
-# gate_kind (ac-m9y4.1) is the ONE prefix->kind reader — docket.sh's binary split and
-# lint 19's PREFIX_KIND already agree HUMAN: maps to the decision side; this is the
-# third reader that must too, rather than a fourth hand-rolled regex.
-KIND_TO_TYPE = {"DECISION": "decision", "ACTION": "task"}
+# ── type-review: (issue_type, title prefix) outside the declared matrix (flag only) ──
+# The matrix names, per gate-title prefix, the issue types that are canonical for it. A
+# prefix absent from the matrix is unconstrained. `HUMAN:` is the human-action card:
+# `task` is its canonical shape (a `decision` is also legal), so only a type that names
+# a different kind of work (investigation, question, ...) disagrees with it.
+TITLE_TYPE_MATRIX = {
+    "DECISION": {"decision"},
+    "ACTION": {"task"},
+    "HUMAN": {"task", "decision"},
+}
 for b in filter(is_open, beads):
     t, title = b.get("issue_type"), b.get("title", "")
-    want = KIND_TO_TYPE.get(bead.gate_kind(title))
-    if want and t and t != want:
+    m = re.match(r"^([A-Za-z]+):", title.strip())
+    prefix = m.group(1).upper() if m else None
+    if prefix in TITLE_TYPE_MATRIX and t and t not in TITLE_TYPE_MATRIX[prefix]:
         row("type-review", b["id"], "review", f"typed {t}, titled {title.split(':')[0]}:")
 
 # ── step-4 findings, deduped against every bead that names the target ────

@@ -54,6 +54,12 @@ bead() {  # bead <id> <status> <type> <labels-csv> [description] [title]
   bead ac-aact    open   decision "refined" "" "ACTION: rotate the key"
   bead ac-dok     open   decision "refined" "" "DECISION: fine as typed"
   bead ac-dshut   closed task     "refined" "" "DECISION: closed, ignored"
+  bead ac-canon   open   task  "refined,skill-improvement,human-ratified,origin:ac-land,skill:ac-tidy"
+  bead ac-cockpit open   task  "refined,cockpit"
+  bead ac-htask   open   task          "refined,human-gate" "" "HUMAN: rotate the key"
+  bead ac-hdec    open   decision      "refined,human-gate" "" "HUMAN: pick a vendor"
+  bead ac-hinv    open   investigation "refined" "" "HUMAN: look into it"
+  bead ac-qdec    open   question      "refined" "" "DECISION: which way"
   bead ac-blk-live   blocked task "refined"
   bead ac-blk-none   blocked task "refined"
   bead ac-blk-closed blocked task "refined"
@@ -115,6 +121,15 @@ cell() { printf '%s\n' "$OUT" | awk -F'\t' -v r="$1" -v t="$2" '$1==r && $2==t {
 
 [ "$(cell label-review zzz-odd)" = review ] && pass "unnamed label → review, never remove" || fail "zzz-odd: $(cell label-review zzz-odd)"
 [ -z "$(cell label-review origin:manual)" ] && pass "origin:<family> label named → none" || fail "origin family flagged"
+[ -z "$(cell label-review skill-improvement)$(cell label-review human-ratified)" ] \
+  && pass "skill-improvement + human-ratified (declared) → no label-review row" || fail "declared canon flagged"
+[ -z "$(cell label-review origin:ac-land)$(cell label-review skill:ac-tidy)" ] \
+  && pass "declared prefix families (origin:*, skill:*) → none" || fail "family flagged"
+[ "$(cell label-review cockpit)" = review ] \
+  && pass "bare cockpit label: a prose path mention (infrastructure/services/cockpit/...) never declares it" || fail "cockpit: $(cell label-review cockpit)"
+! printf '%s\n' "$OUT" | awk -F'\t' '$1 == "label-review" && $2 ~ /\// {print}' | grep -q . \
+  && ! printf '%s\n' "$OUT" | awk -F'\t' '$1 == "label-review" && ($2 == "infrastructure" || $2 == "services")' | grep -q . \
+  && pass "path-shaped canon creates no truncated label token" || fail "truncated path token in label-review"
 ! printf '%s\n' "$OUT" | awk -F'\t' '$3 ~ /remove/ && $1 == "label-review"' | grep -q . \
   && pass "no label-review row ever removes" || fail "label-review proposes removal"
 
@@ -122,6 +137,10 @@ cell() { printf '%s\n' "$OUT" | awk -F'\t' -v r="$1" -v t="$2" '$1==r && $2==t {
 [ "$(cell type-review ac-aact)" = review ]  && pass "ACTION: typed decision → type-review" || fail "ac-aact missed"
 [ -z "$(cell type-review ac-dok)$(cell type-review ac-dshut)" ] \
   && pass "matching type, or closed → no type-review" || fail "type-review over-flags"
+[ -z "$(cell type-review ac-htask)" ] && pass "task titled HUMAN: (canonical human-action shape) → none" || fail "HUMAN: task flagged"
+[ -z "$(cell type-review ac-hdec)" ]  && pass "decision titled HUMAN: → none" || fail "HUMAN: decision flagged"
+[ "$(cell type-review ac-hinv)" = review ] && pass "investigation titled HUMAN: → type-review" || fail "ac-hinv missed"
+[ "$(cell type-review ac-qdec)" = review ] && pass "question titled DECISION: → type-review" || fail "ac-qdec missed"
 
 [ "$(cell finding-i2-edge 'ac-e1→EPA')" = "suppressed ac-ruled" ] && pass "I2 edge a closed ac-tidy finding named → suppressed" || fail "e1: $(cell finding-i2-edge 'ac-e1→EPA')"
 [ "$(cell finding-i2-edge 'ac-e2→EPA')" = file ] && pass "I2 edge named only by a non-tidy closed bead → file" || fail "e2: $(cell finding-i2-edge 'ac-e2→EPA')"

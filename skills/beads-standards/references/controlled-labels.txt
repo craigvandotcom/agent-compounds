@@ -1,0 +1,45 @@
+# controlled-labels.txt — the declared label vocabulary the bead board may carry.
+# One label per line. Blank lines and lines starting with `#` are ignored. A trailing
+# `*` declares a prefix family (`origin:*` accepts `origin:<anything>`).
+# Reader: skills/ac-tidy/scripts/tidy-scan.sh (label-review). A label is canonical
+# because it is listed here, never because a doc backticked it.
+# Prose canon: beads-standards/SKILL.md and reference/bead-conventions.md.
+
+# provenance
+origin:*
+skill:*
+
+# lifecycle + gating
+unrefined
+refined
+human-gate
+qa-blocker
+pipeline-proposal
+post-merge
+sensitive-prod
+plan-gap
+spec-contradiction
+
+# refine path
+refine-full
+refine-light
+degraded-solo
+
+# catch-stage closed set
+qa-finding
+review-finding
+hygiene-finding
+ci-finding
+prod-finding
+
+# domain + routing
+tooling
+native
+device
+migration
+cross-repo
+followup
+skill-improvement
+
+# retired stamp, still carried by historical beads
+human-ratified
