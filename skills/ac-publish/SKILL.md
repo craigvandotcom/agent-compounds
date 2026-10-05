@@ -1,140 +1,57 @@
 ---
 name: ac-publish
-description: 'The ac2 ship gate — obtain a proof via ac-prove, assert its REQUIRED JOBS ACTUALLY EXECUTED, then version, tag the proven SHA and hand off to ac-distribute; labels external escapes with a catch-stage on arrival. Triggers: "ac2 publish", "ship the ac2 batch", "release this batch" — run by the operator once a batch is ready to ship. NOT the proof itself (ac-prove), NOT the store upload (ac-distribute).'
+description: 'The ship spine — runs a project''s `.claude/factory.json` ship block: preflight, version, prove, human authorize, promote, verify, tag; `beta` route for test builds. Triggers: "ac2 publish", "ship the ac2 batch", "release this batch" — run by the operator once a batch is ready to ship. NOT the commands themselves: the project owns them, bound by ship-contract.'
 ---
 
-# ac-publish — a proven batch in, a shipped release out
+# ac-publish — run the project's ship block
 
-Ship-command rules (prove, version/build numbers, web + native targets): `references/ship-contract.md`; the per-app facts template an app copies to CORE/distribution.md: `references/distribution.template.md`.
+Stack-free: the project declares every command under `ship` in `.claude/factory.json`; this skill
+runs them in order and owns none of the mechanics. Rules each command holds:
+`references/ship-contract.md`. Onboarding: `references/distribution.template.md`. Schema:
+`templates/factory.json`.
 
-## I/O Contract
+| | |
+| --- | --- |
+| **Input** | A closed batch on the committed tree; the project's `ship` block |
+| **Output** | A promoted and verified build at a PROVEN SHA, tagged on release — or a refusal and no ship |
+| **Verification** | The block's own `prove` and `verify`; `scripts/needs-device-gate.sh` (apps declare it in preflight) |
 
-|                  |                                                                                  |
-| ---------------- | -------------------------------------------------------------------------------- |
-| **Input**        | A closed ac2 batch on the committed tree, and the ref `R` it ends at             |
-| **Output**       | A tagged, promoted release at a PROVEN SHA — or an explicit refusal and no ship    |
-| **Artifacts**    | The tag · the release report · beads for escapes, each catch-stage-labelled        |
-| **Verification** | `ac-prove ensure --fix-forward`; executed-jobs; `needs-device-gate.sh --range`      |
-
-## Phase 0 — mint the version, then prove
-
-Refuse an open needs-device surface (§ below), then mint the version, propagate it and COMMIT
-it — all before `ac-prove`. One bump per publish, never re-bumped downstream; propagation to
-the native build surfaces is `references/version-bump.md`, the sole owner of that counter.
-
-The ref `R` handed to the proof leg IS that bump commit, so **proven SHA = tagged SHA =
-promoted artifact.** Never bump after the proof: `publish-checkpoint-gate.mjs` refuses a real
-commit between checkpoint and release SHA, and `NEXT_PUBLIC_APP_VERSION` is read from
-`package.json` at BUILD time — a later bump ships the previous version under the new tag.
-
-## The proof leg — call `ac-prove`, never re-derive it
-
-    ac-prove ensure --fix-forward [+qa] --ref "$R"     # returns the PROVEN SHA
-
-Freshness, dispatch, attribution, the Green Gate and the fix-forward loop are `ac-prove`'s, in
-full: `skills/ac-prove/SKILL.md`. This skill re-implements none of it.
-
-**Consume the RETURNED SHA, not your input `R`.** A fix-forward round commits, so the tip moves;
-tagging your original ref after one ships a commit nothing proved.
-
-## The one thing this gate adds: required jobs AND steps must have EXECUTED
-
-A run's conclusion is a fact about the RUN, not about any job inside it, and the two diverge:
-a required job skipped by an `if:` or never scheduled leaves a green run with nothing behind
-it (the step conclusion is literally `skipped`). The slim proof (bd-fugib.7) retired the two-tier
-workflow — every `reason=prove` dispatch runs the full leg — but a green run is still not a proof
-until the heavy steps are named as having EXECUTED (`references/executed-jobs.md`).
-
-**So assert per-job AND per-step, by name, against the run you dispatched:**
+## Run start — check the block
 
 ```bash
-# One required job name PER LINE, then a `# REQUIRED_STEPS` block of one required step name
-# PER LINE — real names contain spaces and '·'; a word-split list asserts over fragments that
-# match nothing. COMMITTED DATA (.github/required-jobs.txt), resolved via this skill's home.
-CONTRACT="$(dirname "$(readlink -f .claude/skills/ac-publish/SKILL.md)")/../../.github/required-jobs.txt"
-REQUIRED=$(awk '/^# REQUIRED_STEPS/{exit} /^#/ || /^$/{next} {print}' "$CONTRACT" 2>/dev/null)
-REQUIRED_STEPS=$(awk '/^# REQUIRED_STEPS/{f=1; next} f && (/^#/ || /^$/){next} f{print}' "$CONTRACT" 2>/dev/null)
-[ -n "$REQUIRED" ] || { echo "NOT-GATED: no required-job contract at $CONTRACT — nothing was asserted"; exit 2; }
-[ -n "$REQUIRED_STEPS" ] || { echo "NOT-GATED: no required-step contract at $CONTRACT — nothing was asserted"; exit 2; }
-
-# Layer 1 — jobs must have concluded success.
-GREEN=$(gh run view "$RUN_ID" --json jobs \
-          --jq '.jobs[] | select(.status=="completed" and .conclusion=="success") | .name')
-MISSING=$(comm -23 <(printf '%s\n' "$REQUIRED" | sort) <(printf '%s\n' "$GREEN" | sort))
-[ -z "$MISSING" ] || { echo "NOT-GATED: required job(s) did not execute green:"; printf '  %s\n' "$MISSING"; exit 2; }
-
-# Layer 2 — steps must have concluded success; `skipped` (an `if:` guard) is NOT-GATED.
-GREEN_STEPS=$(gh run view "$RUN_ID" --json jobs \
-          --jq '[.jobs[] | .steps[]? | select(.conclusion=="success") | .name] | unique[]')
-MISSING_STEPS=$(comm -23 <(printf '%s\n' "$REQUIRED_STEPS" | sort) <(printf '%s\n' "$GREEN_STEPS" | sort))
-[ -z "$MISSING_STEPS" ] || { echo "NOT-GATED: required step(s) did not execute green:"; printf '  %s\n' "$MISSING_STEPS"; exit 2; }
+jq -e '.ship | (.preflight | type == "array") and (.prove | type == "string")
+  and (.targets | type == "array" and length > 0 and all(.[]; .name | type == "string"))
+  and (.version == null or (.version | has("bump") and has("read")))' .claude/factory.json >/dev/null
 ```
 
-- **Absent from the job/step list, or `skipped`/`cancelled`/`neutral`** — nothing was measured. `NOT-GATED`.
-- **`REQUIRED`/`REQUIRED_STEPS` empty or unreadable** — ranges over an empty set, the exact green-over-nothing this leg exists to stop. Refuse `NOT-GATED`.
-- **The REQUIRED_STEPS contract names the four substantive full-leg steps** — 'Unit + integration tests (vitest, full suite)', 'Build check (next build)', 'Supabase integration tests — real Postgres (workflow_dispatch only)', 'Apply migrations — db reset (workflow_dispatch only)' — and the required JOB names carry the ' — Tier 2 full suite' suffix the workflow appends on every prove dispatch (bd-fugib.8; the exact-name matcher needs the evaluated name, which the TestFlight gate also requires). The tsc check lives in ci.yml's per-push static leg, not the proof; the Shadow divergence check is deleted.
+Non-zero, or no `ship` block: `NOT-GATED` — refuse, ship nothing. A `null` `version`, `promote` or
+`verify` logs `SKIP (declared): <step>` and the run continues. A `null` `prove` is `NOT-GATED`: a
+gate that cannot verify never reads as a pass.
 
-`NOT-GATED` is never a pass and never a FAIL-and-continue: it is a stop. A dormant job reporting green is the gate-audit class (canon: `skills/ac-pipeline/references/` § assurance-declarations) — how a pipeline ships unproven code while every dashboard stays green.
+## Route
 
-## Open needs-device surfaces — refuse before tagging
-
-A required-jobs-green run is not a device sitting. From the app checkout, before Phase 0:
-
-    bash skills/ac-publish/scripts/needs-device-gate.sh --range "$FROM..$R"
-
-Non-empty intersection with an OPEN `needs-device` bead, or an open needs-device bead
-whose `## Delivers` + AC probes yield no paths (zero-path, fail-closed): refuse and name
-the bead(s). Override is `NEEDS_DEVICE_GATE_OVERRIDE=<reason>` only — a named, logged
-needs-device override; an unset variable is not one.
-
-Pending prod migrations refuse the same way: `supabase migration list --linked` from the app
-checkout; any repo migration with no REMOTE entry blocks the publish — `references/migration-gate.md`.
-
-## QA placement — by pointer, never copied
-
-Whether QA runs at this gate or was pulled earlier is decided by the verification-gate class
-table in `skills/ac-pipeline/references/` — one selection brain, consulted, never restated.
-A copy of that table here would be a second selection brain, and the two would disagree
-silently. Pull QA earlier only when that table says so; then pass `+qa` to `ac-prove`.
+Ask `release` or `beta`; offer `beta` only when `jq -e '[.ship.targets[] | select(.beta == true)] | length > 0'`
+holds. `beta` runs only the targets declared `"beta": true`, bumps no version and tags nothing.
 
 ## Ship, in this order
 
-1. **Tag the PROVEN SHA explicitly, never `HEAD`.** Phase 0 and the proof leg are done, so this list opens on a proven SHA that already carries its own bump. `ac-prove` pushes evidence
-   commits, so by the time this step runs `HEAD` has moved past the commit that was proven.
-2. **Web — promote, do not rebuild.** The artifact the proof validated is the artifact that ships:
-   an alias move over its staged build, never `vercel deploy --prod`. Mechanics: `references/web-promote.md`.
-3. **Native and mobile — the binary must be PROVABLY the proven SHA.** The property that
-   matters is PROVENANCE, not which machine compiled it: built from the **proven SHA**, from a
-   **clean tree**, with the **required check-runs green on that SHA**. CI is the DEFAULT because
-   it establishes all three structurally. A local build is a **declared exception**, legal only
-   when it passes the SAME gate both lanes run (`scripts/ci/testflight-gate-check.sh`), whose
-   bypass must be loud, named and logged — never a silent default.
-   Hand the upload to `ac-distribute` (check-only on the bump).
+1. **Preflight.** Run each `ship.preflight[]` entry from the app checkout. Any non-zero stops the ship; name it.
+2. **Version** (release only). `version.read` above the latest tag: reuse it, never bump twice.
+   Otherwise run `version.bump` once — it commits. Compare as semver: a prerelease such as
+   `2.0.0-ws2` is BELOW `2.0.0`, and `sort -V` orders it above. `null`: no bump, no tag.
+3. **Prove.** Run `ship.prove --ref "$R"` at the bumped commit. Its LAST stdout line is the proven
+   SHA; non-zero is FAIL. Use that SHA for every later step, never `R` or `HEAD`. No fix-forward
+   inside a run: a failed proof stops it.
+4. **Authorize.** One `AskUserQuestion` listing the route's targets; the human picks which run.
+   Unattended: stop and leave the ship on the docket (`ac-human`).
+5. **Promote, then verify.** For each picked target, `promote <SHA>`, then `verify <SHA>`. Any
+   non-zero stops the ship before the tag.
+6. **Tag** (release only). Tag the verified SHA as `v<version.read>`, then `git push` the tag.
 
-   > This step once read "CI-built artifacts ONLY" — unenforceable in a consuming app whose CI
-   > signing lane is intermittently broken, so it was ignored (an ignored rule is worse than
-   > none), and it pushed every risky ship onto the local lane while that lane had NO gate at
-   > all (a consuming app, 2026-08-31: `ios-release.yml` gated on check-runs, `ship-testflight.sh`
-   > had zero). State the property you actually need; make both lanes able to satisfy it.
-4. **Verify identity, not version strings.** Confirm what production actually serves is the
-   proven SHA. Two deployments can mint the same version.
+Out of scope: the commands behind each step (the project's), QA selection (the verification-gate
+class table in `skills/ac-pipeline/references/`), inbound triage.
 
-## External escapes close the outer loop
+Retiring, kept until the first release through this spine has run: `references/web-promote.md` ·
+`references/executed-jobs.md` · `references/migration-gate.md`.
 
-A finding that arrives from OUTSIDE — production, a user, store review, a late QA pass — is
-the only signal that can tell this factory it was wrong; everything else grades itself.
-
-**Label it with its catch-stage ON ARRIVAL** from the closed set in `skills/beads-standards/SKILL.md`
-(`prod-finding`, Sentry-normalized · `qa-finding` · `ci-finding`) — the label says which gate leaked;
-**write it even when the fix lands immediately** — the fix may be in-batch, the label never is.
-
-**File the escape as a bead, born probe-bearing** (create contract § Probe): an implementable
-type carries `## Acceptance Criteria` with a ``Probe: `<command>` — tier: <slug>`` bullet; the
-guard refuses a probe-less create, so a filer that cannot name one files `investigation`.
-
-## Out of scope
-
-CI trust logic (`ac-prove`, exclusively) · the store upload itself (`ac-distribute`) · QA
-selection (the class table) · inbound triage — escapes are LABELLED here, worked elsewhere.
-
-Next: /ac-distribute <build>
+Next: /ac-land
