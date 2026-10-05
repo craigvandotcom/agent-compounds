@@ -39,8 +39,10 @@
 #
 # Exit codes (assurance-declarations § NOT-GATED):
 #   0  touchers: OK        — nothing owed, or every owed line present and its command runs clean
-#   1  touchers: REFUSED   — a content verdict (missing, malformed, zero-referrer, or multi-path bullet)
-#   2  touchers: NOT-GATED — the command was never verified runnable (no rg, no repo); nothing is claimed
+#   1  touchers: REFUSED   — a content verdict (missing, malformed, zero-referrer, multi-path bullet,
+#                            or an `owned by:` id that is not on the board: [owner-unknown])
+#   2  touchers: NOT-GATED — the command was never verified runnable (no rg, no repo), or the board
+#                            could not be read to resolve an owner; nothing is claimed
 #
 # Deliberately NO `set -u` / `set -e` / `pipefail` at top level: this file is SOURCED into
 # stamp-refined.sh, and shell options set here would leak into every caller.
@@ -62,6 +64,9 @@ _TOUCHERS_TOOLS_DIR="$(cd "$(dirname "$_TOUCHERS_SELF")" && pwd)"
 _BEAD_PY_HOME="$_TOUCHERS_TOOLS_DIR/bead.py"
 [ -f "$_BEAD_PY_HOME" ] || { printf 'touchers: NOT-GATED — bead.py missing at %s — the Delivers-path extraction pattern cannot be resolved\n' "$_BEAD_PY_HOME" >&2; return 2 2>/dev/null || exit 2; }
 command -v python3 >/dev/null 2>&1 || { printf 'touchers: NOT-GATED — python3 not on PATH — bead.py cannot be run\n' >&2; return 2 2>/dev/null || exit 2; }
+# The one br read shape. Sourced, so it sets no shell option (br-call.sh's own contract).
+[ -f "$_TOUCHERS_TOOLS_DIR/br-call.sh" ] || { printf 'touchers: NOT-GATED — br-call.sh missing at %s — an owner id cannot be resolved\n' "$_TOUCHERS_TOOLS_DIR/br-call.sh" >&2; return 2 2>/dev/null || exit 2; }
+. "$_TOUCHERS_TOOLS_DIR/br-call.sh"
 
 # The program lives in its own file, never a heredoc attached to `python3 -`: a heredoc
 # IS the command's stdin, so a text argument piped in on the same command would starve
@@ -211,6 +216,27 @@ _touchers_tracked() {
   git -C "$1" ls-files --error-unmatch -- "$2" >/dev/null 2>&1
 }
 
+# The ids an `owned by:` clause names: the leading run of id-shaped tokens, split on spaces and
+# commas, ending at the first token that is not one (a `|`, a parenthesis, a word). A closed
+# owner is still an owner — it already did its work — so existence is the only test.
+_touchers_owners() {
+  printf '%s' "$1" | sed -n 's/.*owned by:[[:space:]]*//p' | tr ',;' '  ' | awk '
+    { for (i = 1; i <= NF; i++) {
+        t = $i; sub(/[.]$/, "", t)
+        if (t ~ /^[A-Za-z][A-Za-z0-9]*-[A-Za-z0-9][A-Za-z0-9._-]*$/) print t; else break
+      } }'
+}
+
+# _touchers_owner_exists <id> -> 0 on the board (open or closed) · 1 not found · 2 board unreadable.
+# The read goes through br_call, which refuses an error envelope instead of reading it as data.
+_touchers_owner_exists() {
+  local err rc
+  err=$(br_call show "$1" --json 2>&1 >/dev/null); rc=$?
+  [ "$rc" -eq 0 ] && return 0
+  case "$err" in *[Nn]ot\ found*) return 1 ;; esac
+  return 2
+}
+
 # touchers_derive <rel-path>
 #   -> `<stem>\t<command>`  (path is git-tracked; the command is verified runnable)
 #   -> `new`                (path is not tracked yet — nothing owed)
@@ -248,7 +274,7 @@ touchers_derive() {
 # The whole leg over one bead description. One verdict, one greppable token.
 touchers_check() {
   local file="${1:-}" label="${2:-}" root dl numbered maxb b block paths existing count
-  local rel dout stem cmd refs tline tcmd actual ep_rc
+  local rel dout stem cmd refs tline tcmd actual ep_rc owner orc
   [ -n "$label" ] || label="${file:-description}"
 
   if [ -z "$file" ] || [ ! -f "$file" ]; then
@@ -339,6 +365,20 @@ touchers_check() {
         "$label" "$rel" >&2
       return 1
     fi
+
+    # An owner that is not on the board owns nothing: a typo or an invented id would otherwise
+    # pass the stamp with no bead ever answerable for the referrers.
+    for owner in $(_touchers_owners "$tline"); do
+      _touchers_owner_exists "$owner"; orc=$?
+      if [ "$orc" -eq 1 ]; then
+        printf 'touchers: REFUSED %s — [owner-unknown] the touchers line for `%s` names owner `%s`, which is not on the board (open and closed beads both count). Name a real bead id, or use out-of-scope: <reason>.\n' \
+          "$label" "$rel" "$owner" >&2
+        return 1
+      elif [ "$orc" -ne 0 ]; then
+        printf 'touchers: NOT-GATED %s — the board could not be read to resolve owner `%s`; nothing was checked.\n' "$label" "$owner" >&2
+        return 2
+      fi
+    done
   done
 
   printf 'touchers: OK %s — every referenced ## Delivers path carries a touchers line whose command reproduces its count.\n' "$label"

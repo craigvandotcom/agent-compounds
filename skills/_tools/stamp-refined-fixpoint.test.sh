@@ -183,7 +183,9 @@ write_board() {
      comments:[{text:$receipt}]},
     {id:"bd-clean",        issue_type:"task", labels:["origin:ac-triage"], description:$legp, comments:[{text:$receipt}]},
     {id:"bd-path-partial", issue_type:"task", labels:["origin:ac-triage"], description:$legp, comments:[{text:$receipt}]},
-    {id:"bd-no-origin",    issue_type:"task", labels:[], description:$legp, comments:[]}
+    {id:"bd-no-origin",    issue_type:"task", labels:[], description:$legp, comments:[]},
+    {id:"bd-api-caller",   issue_type:"task", labels:[], description:"owner named in the touchers fixtures", comments:[]},
+    {id:"bd-scope-note",   issue_type:"task", labels:[], description:"owner named in the touchers fixtures", comments:[]}
   ]' >"$FIXTURE_BEADS"
 }
 write_board

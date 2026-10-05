@@ -40,6 +40,24 @@ done
 # directly — the sourced form is a documented usage in touchers.sh's own header.
 . "$TOOL"
 
+# A stub board: every owner id a fixture names is on it (one closed, one open), and anything
+# else answers the real binary's error envelope. BR_STUB_DOWN=1 makes the board unreadable.
+cat >"$WORK/br" <<'BR'
+#!/usr/bin/env bash
+# br stub — `show <id> --json` only.
+id=""; for a in "$@"; do case "$a" in show|--json) ;; *) id="$a" ;; esac; done
+if [ "${BR_STUB_DOWN:-}" = 1 ]; then
+  printf '%s' '{"error":{"code":"DB_LOCKED","message":"database is locked","retryable":true}}'; exit 3
+fi
+case "$id" in
+  bd-fixture-refs|ac-qn7h.2) printf '[{"id":"%s","status":"open"}]' "$id"; exit 0 ;;
+  bd-closed-owner)           printf '[{"id":"%s","status":"closed"}]' "$id"; exit 0 ;;
+  *) printf '{"error":{"code":"ISSUE_NOT_FOUND","message":"Issue not found: %s","retryable":false}}' "$id"; exit 3 ;;
+esac
+BR
+chmod +x "$WORK/br"
+export AC2_BR_CMD="$WORK/br"
+
 # The declared commands, scoped to the fixture dir so their counts cannot drift with the
 # registry: the target is referenced by both siblings (2), ref-one by ref-two alone (1).
 CMD_TARGET="rg -l -F \"touchers/tchr-target\" $FIXDIR_REL -g \"!$TARGET\""
@@ -390,6 +408,65 @@ if [ "$RC" -eq 2 ] && echo "$OUT" | grep -q "NOT-GATED"; then
   pass "Case 17: a crashing bead.py (BEAD_MODULE_PATH override) is NOT-GATED, never a silent pass"
 else
   fail "Case 17: expected exit 2 + NOT-GATED, got $RC. Output: $OUT"
+fi
+
+# --- Case 19: an owner id that is not on the board is REFUSED [owner-unknown] ------------
+# A typo or an invented id passed the stamp before: nothing resolved `owned by:`. Open and
+# closed owners both pass (a closed owner already did its work); an unreadable board is
+# NOT-GATED, never a pass and never a false refusal.
+D=$(write_desc owner-unknown.md "## Delivers
+- \`$TARGET\` — the fixture artifact
+  touchers: \`$CMD_TARGET\` · owned by: bd-no-such-owner
+")
+run_check "$D" owner-unknown
+if [ "$RC" -eq 1 ] && echo "$OUT" | grep -q "owner-unknown" && echo "$OUT" | grep -q "bd-no-such-owner"; then
+  pass "Case 19: owner-unknown — an owned-by id absent from the board is REFUSED, naming the id (exit 1)"
+else
+  fail "Case 19: owner-unknown — expected exit 1 naming bd-no-such-owner, got $RC. Output: $OUT"
+fi
+
+D=$(write_desc owner-closed.md "## Delivers
+- \`$TARGET\` — the fixture artifact
+  touchers: \`$CMD_TARGET\` · owned by: bd-fixture-refs, bd-closed-owner
+")
+run_check "$D" owner-closed
+if [ "$RC" -eq 0 ] && echo "$OUT" | grep -q "touchers: OK"; then
+  pass "Case 19: owner-unknown — an open and a closed owner both resolve and pass (exit 0)"
+else
+  fail "Case 19: owner-unknown — expected exit 0 for open + closed owners, got $RC. Output: $OUT"
+fi
+
+D=$(write_desc owner-second.md "## Delivers
+- \`$TARGET\` — the fixture artifact
+  touchers: \`$CMD_TARGET\` · owned by: bd-fixture-refs, bd-second-typo
+")
+run_check "$D" owner-second
+if [ "$RC" -eq 1 ] && echo "$OUT" | grep -q "bd-second-typo"; then
+  pass "Case 19: owner-unknown — every id in a list is resolved, not only the first (exit 1)"
+else
+  fail "Case 19: owner-unknown — expected exit 1 naming bd-second-typo, got $RC. Output: $OUT"
+fi
+
+D=$(write_desc owner-oos.md "## Delivers
+- \`$TARGET\` — the fixture artifact
+  touchers: \`$CMD_TARGET\` · out-of-scope: referrers cite the path only
+")
+run_check "$D" owner-oos
+if [ "$RC" -eq 0 ]; then
+  pass "Case 19: owner-unknown — an out-of-scope line names no owner and resolves nothing (exit 0)"
+else
+  fail "Case 19: owner-unknown — expected exit 0 for an out-of-scope line, got $RC. Output: $OUT"
+fi
+
+D=$(write_desc owner-down.md "## Delivers
+- \`$TARGET\` — the fixture artifact
+  touchers: \`$CMD_TARGET\` · owned by: bd-fixture-refs
+")
+OUT=$(BR_STUB_DOWN=1 bash "$TOOL" check "$D" owner-down 2>&1); RC=$?
+if [ "$RC" -eq 2 ] && echo "$OUT" | grep -q "NOT-GATED"; then
+  pass "Case 19: owner-unknown — an unreadable board is NOT-GATED, never a pass (exit 2)"
+else
+  fail "Case 19: owner-unknown — expected exit 2 + NOT-GATED for a dead board, got $RC. Output: $OUT"
 fi
 
 echo
