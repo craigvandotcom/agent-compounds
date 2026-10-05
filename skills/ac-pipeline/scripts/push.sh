@@ -27,12 +27,20 @@
 # push burned ~25 minutes of self-hosted runner on every batch commit for a verdict
 # ac-prove re-checks for freshness anyway.
 #
-# Usage: push.sh [--branch <name>] [--remote <name>]
+# CHECKS-ONLY MODE (--check-only): a pre-push hook calls push.sh this way. Steps 1 and 3
+# run (dirty-tree refusal, whole-tree checks); no fetch, no merge, no push. The outer
+# `git push` that fired the hook does the one transfer — a hook that ran step 4 would land
+# the push inside push.sh, and the outer push would then fail on a stale expected SHA
+# (`cannot lock ref`). Origin ahead surfaces as the outer push's own non-fast-forward
+# rejection; a hook never rewrites local history mid-push.
+#
+# Usage: push.sh [--branch <name>] [--remote <name>] [--check-only]
 #   --branch       branch to push (default: main)
 #   --remote       remote to push to (default: origin)
+#   --check-only   run the gate (steps 1 and 3) and exit; never fetch, merge or push
 #
 # Exit codes:
-#   0  pushed
+#   0  pushed (with --check-only: gate passed, nothing pushed — the caller pushes)
 #   1  REFUSED — a whole-tree check failed, a merge left conflicts, or the push itself was
 #      rejected: nothing pushed. NEXT: fix-forward — fix the named failure and re-run; this
 #      is never a blind retry.
@@ -43,12 +51,14 @@ set -uo pipefail
 
 BRANCH="main"
 REMOTE="origin"
+CHECK_ONLY=0
 
 while [ $# -gt 0 ]; do
   case "$1" in
     --branch)      BRANCH="${2:-}"; shift 2 ;;
     --remote)      REMOTE="${2:-}"; shift 2 ;;
-    -h|--help)     sed -n '2,45p' "${BASH_SOURCE[0]}"; exit 0 ;;
+    --check-only)  CHECK_ONLY=1; shift ;;
+    -h|--help)     sed -n '2,48p' "${BASH_SOURCE[0]}"; exit 0 ;;
     *)             echo "push.sh: unknown argument '$1'" >&2; exit 2 ;;
   esac
 done
@@ -111,11 +121,13 @@ if [ -n "$DIRTY" ]; then
 fi
 
 # --- 2. bring origin's history in — a merge, always; a rewrite of history, never --------
-git fetch "$REMOTE" "$BRANCH" >/dev/null 2>&1 \
-  || echo "push.sh: warn — fetch failed; comparing against the last-known $REMOTE/$BRANCH" >&2
-LOCAL_SHA=$(git rev-parse "$BRANCH" 2>/dev/null)
-REMOTE_SHA=$(git rev-parse "$REMOTE/$BRANCH" 2>/dev/null || true)
-if [ -n "$REMOTE_SHA" ] && [ "$LOCAL_SHA" != "$REMOTE_SHA" ] \
+if [ "$CHECK_ONLY" -eq 0 ]; then
+  git fetch "$REMOTE" "$BRANCH" >/dev/null 2>&1 \
+    || echo "push.sh: warn — fetch failed; comparing against the last-known $REMOTE/$BRANCH" >&2
+  LOCAL_SHA=$(git rev-parse "$BRANCH" 2>/dev/null)
+  REMOTE_SHA=$(git rev-parse "$REMOTE/$BRANCH" 2>/dev/null || true)
+fi
+if [ "$CHECK_ONLY" -eq 0 ] && [ -n "$REMOTE_SHA" ] && [ "$LOCAL_SHA" != "$REMOTE_SHA" ] \
    && ! git merge-base --is-ancestor "$REMOTE_SHA" "$LOCAL_SHA" 2>/dev/null; then
   echo "push.sh: $REMOTE/$BRANCH has commits this branch does not — bringing them in with a merge (every existing commit keeps its own identity)"
   if ! git merge --no-edit "$REMOTE/$BRANCH"; then
@@ -140,7 +152,11 @@ if [ "$CHECKS_FAILED" -ne 0 ]; then
   exit 1
 fi
 
-# --- 4. push -----------------------------------------------------------------------------
+# --- 4. push — never in --check-only: the calling push is the one transfer ---------------
+if [ "$CHECK_ONLY" -eq 1 ]; then
+  echo "push.sh: whole-tree gate passed (--check-only); nothing pushed here — the calling push transfers"
+  exit 0
+fi
 if ! git push "$REMOTE" "$BRANCH"; then
   echo "REFUSED [push-rejected]: git push to $REMOTE/$BRANCH was rejected; the commit is safe locally. NEXT: fix-forward — reconcile by hand (never discard history), then re-run push.sh." >&2
   exit 1

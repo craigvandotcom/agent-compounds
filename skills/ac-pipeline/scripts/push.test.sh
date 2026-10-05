@@ -166,6 +166,82 @@ else
   fail "green-no-dispatch: rc=$rc out=$out ghlog=$(cat "$GHLOG" 2>/dev/null)"
 fi
 
+# --- 5. pre-push hook wiring: a hook that calls push.sh, the outer push exits 0 -------------
+# A hook that runs the FULL push.sh lets push.sh's own step-4 push land; the OUTER `git push`
+# that fired the hook then updates origin from its pre-hook SHA and is rejected ("cannot lock
+# ref ... expected Y") — non-zero though it landed. `--check-only` makes the hook run the gate
+# alone, so the outer push does the one transfer.
+install_hook() {  # $1 repo, $2 extra push.sh args
+  cat >"$1/.git/hooks/pre-push" <<EOF
+#!/usr/bin/env sh
+# the nested push re-enters this hook; the guard is the app's own recursion workaround
+[ "\${AC_PRE_PUSH_NESTED:-0}" = "1" ] && exit 0
+AC_PRE_PUSH_NESTED=1 "$PUSH" $2
+EOF
+  chmod +x "$1/.git/hooks/pre-push"
+}
+
+# 5a. the double push, pinned: a hook calling the FULL script makes a landed push exit non-zero.
+R="$(new_repo hook-full-mode)"
+install_hook "$R" ""
+printf 'v2\n' >>"$R/tracked.txt"
+git -C "$R" add -- tracked.txt
+git -C "$R" commit -qm "a green change"
+out="$(cd "$R" && git push origin main 2>&1)"; rc=$?
+if [ "$rc" -ne 0 ] && [ "$(git --git-dir="$R.git" rev-parse main)" = "$(git -C "$R" rev-parse HEAD)" ]; then
+  pass "a hook running the full push.sh lands the push AND the outer push exits non-zero (the double push)"
+else fail "hook-full-mode: rc=$rc out=$out"; fi
+
+# 5b. the fix: the hook runs --check-only; the plain push exits 0 and origin equals HEAD.
+R="$(new_repo hook-check-only)"
+install_hook "$R" "--check-only"
+printf 'v2\n' >>"$R/tracked.txt"
+git -C "$R" add -- tracked.txt
+git -C "$R" commit -qm "a green change"
+out="$(cd "$R" && git push origin main 2>&1)"; rc=$?
+if [ "$rc" -eq 0 ] && [ "$(git --git-dir="$R.git" rev-parse main)" = "$(git -C "$R" rev-parse HEAD)" ] \
+   && printf '%s' "$out" | grep -q 'check-only'; then
+  pass "hook running push.sh --check-only: a plain git push exits 0 and origin/main equals local HEAD"
+else fail "hook-check-only: rc=$rc out=$out"; fi
+
+# 5c. a gate failure through the hook: the plain push exits non-zero, nothing pushed.
+R="$(new_repo hook-check-only-red)"
+install_hook "$R" "--check-only"
+cat >"$R/lint.sh" <<'EOF'
+#!/usr/bin/env bash
+echo "lint.sh: deliberately red for the test"
+exit 1
+EOF
+chmod +x "$R/lint.sh"
+git -C "$R" add -- lint.sh
+git -C "$R" commit -qm "add a red lint.sh"
+BEFORE="$(git --git-dir="$R.git" rev-parse main)"
+out="$(cd "$R" && git push origin main 2>&1)"; rc=$?
+if [ "$rc" -ne 0 ] && printf '%s' "$out" | grep -q 'REFUSED \[red-check\]' \
+   && [ "$BEFORE" = "$(git --git-dir="$R.git" rev-parse main)" ]; then
+  pass "hook running push.sh --check-only: a failing whole-tree check exits non-zero and pushes nothing"
+else fail "hook-check-only-red: rc=$rc before=$BEFORE out=$out"; fi
+
+# 5d. --check-only run directly: the dirty-tree refusal holds; a green tree is never pushed
+# or merged.
+R="$(new_repo check-only-direct)"
+printf 'uncommitted edit\n' >>"$R/tracked.txt"
+out="$(cd "$R" && "$PUSH" --check-only 2>&1)"; rc=$?
+if [ "$rc" -eq 3 ] && printf '%s' "$out" | grep -q 'REFUSED \[dirty-tree\]'; then
+  pass "--check-only keeps the dirty-tree refusal (exit 3, file named)"
+else fail "check-only-dirty: rc=$rc out=$out"; fi
+git -C "$R" checkout -- tracked.txt
+printf 'unpushed\n' >>"$R/tracked.txt"
+git -C "$R" add -- tracked.txt
+git -C "$R" commit -qm "unpushed change"
+BEFORE="$(git --git-dir="$R.git" rev-parse main)"
+HEAD_BEFORE="$(git -C "$R" rev-parse HEAD)"
+out="$(cd "$R" && "$PUSH" --check-only 2>&1)"; rc=$?
+if [ "$rc" -eq 0 ] && [ "$BEFORE" = "$(git --git-dir="$R.git" rev-parse main)" ] \
+   && [ "$HEAD_BEFORE" = "$(git -C "$R" rev-parse HEAD)" ]; then
+  pass "--check-only on a green tree exits 0 and neither pushes nor moves local HEAD"
+else fail "check-only-green: rc=$rc out=$out"; fi
+
 echo "---"
 echo "CASES=$CASES FAILURES=$FAILURES"
 exit $([ "$FAILURES" -eq 0 ] && echo 0 || echo 1)
