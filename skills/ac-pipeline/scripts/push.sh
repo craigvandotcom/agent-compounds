@@ -35,7 +35,7 @@
 # rejection; a hook never rewrites local history mid-push.
 #
 # Usage: push.sh [--branch <name>] [--remote <name>] [--check-only]
-#   --branch       branch to push (default: main)
+#   --branch       branch to push (default: main); from a detached HEAD, HEAD is pushed to it
 #   --remote       remote to push to (default: origin)
 #   --check-only   run the gate (steps 1 and 3) and exit; never fetch, merge or push
 #
@@ -124,7 +124,11 @@ fi
 if [ "$CHECK_ONLY" -eq 0 ]; then
   git fetch "$REMOTE" "$BRANCH" >/dev/null 2>&1 \
     || echo "push.sh: warn — fetch failed; comparing against the last-known $REMOTE/$BRANCH" >&2
-  LOCAL_SHA=$(git rev-parse "$BRANCH" 2>/dev/null)
+  # A detached HEAD (a worktree checked out at a commit) is what the caller holds: the
+  # branch name there is the LIVE checkout's ref, shared across worktrees, never this tree's
+  # work. Compare and push HEAD; the local branch ref is left untouched.
+  if git symbolic-ref -q HEAD >/dev/null 2>&1; then PUSH_SRC="$BRANCH"; else PUSH_SRC="HEAD"; fi
+  LOCAL_SHA=$(git rev-parse "$PUSH_SRC" 2>/dev/null)
   REMOTE_SHA=$(git rev-parse "$REMOTE/$BRANCH" 2>/dev/null || true)
 fi
 if [ "$CHECK_ONLY" -eq 0 ] && [ -n "$REMOTE_SHA" ] && [ "$LOCAL_SHA" != "$REMOTE_SHA" ] \
@@ -157,7 +161,7 @@ if [ "$CHECK_ONLY" -eq 1 ]; then
   echo "push.sh: whole-tree gate passed (--check-only); nothing pushed here — the calling push transfers"
   exit 0
 fi
-if ! git push "$REMOTE" "$BRANCH"; then
+if ! git push "$REMOTE" "$PUSH_SRC:refs/heads/$BRANCH"; then
   echo "REFUSED [push-rejected]: git push to $REMOTE/$BRANCH was rejected; the commit is safe locally. NEXT: fix-forward — reconcile by hand (never discard history), then re-run push.sh." >&2
   exit 1
 fi

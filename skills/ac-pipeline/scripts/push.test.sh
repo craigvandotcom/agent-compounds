@@ -242,6 +242,38 @@ if [ "$rc" -eq 0 ] && [ "$BEFORE" = "$(git --git-dir="$R.git" rev-parse main)" ]
   pass "--check-only on a green tree exits 0 and neither pushes nor moves local HEAD"
 else fail "check-only-green: rc=$rc out=$out"; fi
 
+# --- 6. detached worktree: HEAD lands on origin, the diverged local branch is untouched ----
+# A detached worktree shares refs with the live checkout, so `main` there is the LIVE main.
+# Pushing the branch ref pushed (or was rejected for) another session's commits, never the
+# worktree's HEAD. Local main here is ahead 1 / behind 1; the worktree HEAD is origin/main + 1.
+R="$(new_repo detached-worktree)"
+printf 'unpushed live work\n' >"$R/live.txt"
+git -C "$R" add -- live.txt
+git -C "$R" commit -qm "live checkout's unpushed commit"
+LIVE_MAIN="$(git -C "$R" rev-parse main)"
+CLONE="$WORKDIR/detached-worktree-clone"
+git clone -q "$R.git" "$CLONE"
+git -C "$CLONE" config user.email push-test@test.local
+git -C "$CLONE" config user.name "push-sh-test"
+git -C "$CLONE" config commit.gpgsign false
+printf 'from the other clone\n' >"$CLONE/other.txt"
+git -C "$CLONE" add -- other.txt
+git -C "$CLONE" commit -qm "other clone's commit"
+git -C "$CLONE" push -q origin main
+git -C "$R" fetch -q origin
+WT="$WORKDIR/detached-worktree-wt"
+git -C "$R" worktree add -q --detach "$WT" origin/main
+printf 'tidy result\n' >"$WT/tidy.txt"
+git -C "$WT" add -- tidy.txt
+git -C "$WT" commit -qm "detached tidy commit"
+WT_HEAD="$(git -C "$WT" rev-parse HEAD)"
+out="$(cd "$WT" && "$PUSH" --branch main 2>&1)"; rc=$?
+if [ "$rc" -eq 0 ] \
+   && [ "$(git --git-dir="$R.git" rev-parse main)" = "$WT_HEAD" ] \
+   && [ "$(git -C "$R" rev-parse main)" = "$LIVE_MAIN" ]; then
+  pass "detached worktree: push.sh lands HEAD on origin/main and leaves the diverged local main untouched"
+else fail "detached-worktree: rc=$rc live=$LIVE_MAIN wt=$WT_HEAD origin=$(git --git-dir="$R.git" rev-parse main) out=$out"; fi
+
 echo "---"
 echo "CASES=$CASES FAILURES=$FAILURES"
 exit $([ "$FAILURES" -eq 0 ] && echo 0 || echo 1)
