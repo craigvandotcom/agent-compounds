@@ -66,8 +66,15 @@ if [ ! -f "$ROOT/lint.sh" ]; then
   fi
   python3 "$CHECK" "$ROOT"
   rc=$?
-  [ "$rc" -eq 77 ] && exit 0
-  exit "$rc"
+  [ "$rc" -eq 77 ] && rc=0
+  [ "$rc" -eq 0 ] || exit "$rc"
+  # The consumer's own friction logs: an entry the weighting pass cannot score never
+  # reaches the docket, so it is refused here, where it is written.
+  if compgen -G "$ROOT/skills/*/FRICTIONS.md" >/dev/null; then
+    python3 "$REGISTRY_ROOT/skills/skill-builder/scripts/friction-rollup.py" \
+      --root "$ROOT" --strict --view dream >/dev/null || exit 1
+  fi
+  exit 0
 fi
 
 # ruff — the same gate CI runs as `ruff check .` before `bash lint.sh`

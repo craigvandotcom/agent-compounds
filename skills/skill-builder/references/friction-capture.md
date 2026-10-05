@@ -122,6 +122,9 @@ skill's existing `FRICTIONS.md` entries and judges same-vs-new against them dire
 
 - **Same root friction** → reuse the existing `id`, bump `recurrence`, update `last_seen` and
   (if sharper) `proposed_fix`.
+- **Same root friction on a closed entry** (`promoted` or `resolved`) → the fix did not hold:
+  set `status: open` and say in `narrative` which fix it outlived. Only an open entry
+  reaches the docket.
 - **New root friction** → mint a new kebab-slug `id`.
 
 **Cross-skill dedup (BEFORE minting an id).** A friction living in shared tooling — the

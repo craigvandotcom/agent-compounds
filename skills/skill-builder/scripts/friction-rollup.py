@@ -17,15 +17,13 @@ This script is the single parser. Two views come out of one pass:
 ASSURANCE — MODE: advisory · ON-FAILURE: open. It never exits non-zero on ledger
 content: a malformed ledger is REPORTED as malformed, never a hard failure, because a
 crashed sensor is a silent sensor. Callers flag; they never block on it.
-The ONE exception is opt-in `--strict`: it flips ON-FAILURE for two integrity classes
-only — entries with no scorable ordinal (impact/frequency/recurrence) and `entries:`
-frontmatter counts that disagree with the parsed entries — emitting an explicit
-NOT-SCORABLE / entry-count mismatch line to stderr and exiting 3. Its OWNER is lint
-Check 22 (`lint/checks/22-ledger-integrity.py`), which mirrors the two classes as its own
-verdict lines so the frictions docket can consume them; the former scheduled strict
-pass had no owner and is retired (2026-09-08: detection automated, mutation
-human-gated). `--strict` stays available to any other caller. Everything else stays
-advisory in both modes.
+The ONE exception is opt-in `--strict`: it flips ON-FAILURE for one integrity class —
+entries with no scorable ordinal (impact/frequency/recurrence) — emitting a NOT-SCORABLE
+line per entry to stderr and exiting 3. Its caller is the consumer branch of
+`hooks/pre-commit` (60-ac-lint), which refuses a commit in any repo whose own
+`skills/*/FRICTIONS.md` carries one; lint Check 22 runs the same sweep over the registry.
+`entries:` count mismatches stay in the JSON as information, never a failure.
+Everything else stays advisory in both modes.
 
 READ-ONLY BY DEFAULT. The one write path is the explicit `--stamp` flag, which stamps
 `last_pass: <today>` into every ledger this run parsed. It exists for exactly one caller:
@@ -238,23 +236,17 @@ def entry_count_mismatches(ledgers: list) -> list:
 
 def strict_fail(ledgers: list, by_id: dict) -> int:
     """--strict: the weighting pass must never silently skip a reading it cannot score.
-    Loud on stderr, exit 3. Owned by lint Check 22 (lint/checks/22-ledger-integrity.py),
-    which mirrors these classes as its own verdict lines for the frictions docket;
-    advisory mode never calls this."""
+    Loud on stderr, exit 3. Called by the consumer pre-commit; advisory mode never calls this."""
     unscorable = sorted(
         (r for r in by_id.values() if r["unscorable"]),
         key=lambda r: (r["path"], r["id"]),
     )
-    mismatches = entry_count_mismatches(ledgers)
     for r in unscorable:
         sys.stderr.write("NOT-SCORABLE: %s (%s): %s\n"
                          % (r["id"], r["path"], "; ".join(r["unscorable"])))
     sys.stderr.write("NOT-SCORABLE: %d entry/ies lack a scorable ordinal\n"
                      % len(unscorable))
-    for m in mismatches:
-        sys.stderr.write("entry-count mismatch: %s declares %s, parsed %d (%s)\n"
-                         % (m["path"], m["declared"], m["parsed"], m["why"]))
-    return 3 if (unscorable or mismatches) else 0
+    return 3 if unscorable else 0
 
 
 def collect(root: str, threshold: int, today: datetime.date) -> tuple:
@@ -428,10 +420,9 @@ def main(argv=None) -> int:
     ap.add_argument("--threshold", type=int, default=DEFAULT_THRESHOLD)
     ap.add_argument("--top", type=int, default=10)
     ap.add_argument("--stamp", action="store_true",
-                    help="dream CYCLE only: write last_pass into every parsed ledger")
+                    help="dream session close only: write last_pass into every parsed ledger")
     ap.add_argument("--strict", action="store_true",
-                    help="weighting pass: fail loud (exit 3) on entries with no scorable "
-                         "ordinal or a declared entries: count that mismatches reality")
+                    help="fail loud (exit 3) on entries with no scorable ordinal")
     ap.add_argument("--today", default=None, help="ISO date override (tests)")
     ap.add_argument("--ledger", default=None,
                     help="parse ONE ledger and emit its raw entries (no cross-ledger "

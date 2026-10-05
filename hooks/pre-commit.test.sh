@@ -57,6 +57,14 @@ out="$(cd "$CONSUMER" && bash "$LINK_DIR/60-ac-lint" 2>&1)" && bad "consumer inv
 printf '%s\n' '{"id":"ac-ok","status":"open","created_at":"2026-08-25T10:00:00Z","labels":["origin:manual"],"title":"ok"}' > "$CONSUMER/.beads/issues.jsonl"
 ( cd "$CONSUMER" && bash "$LINK_DIR/60-ac-lint" >/dev/null 2>&1 ) && ok "consumer valid board passes" || bad "consumer valid board refused"
 
+# the consumer's own friction logs: an unscorable entry is refused, a scorable one passes
+mkdir -p "$CONSUMER/skills/s"
+printf -- '---\nskill: s\n---\n\n## f\n- impact: M\n- frequency: every build\n- perceptibility: loud\n- recurrence: 1\n- status: open\n' > "$CONSUMER/skills/s/FRICTIONS.md"
+out="$(cd "$CONSUMER" && bash "$LINK_DIR/60-ac-lint" 2>&1)" && bad "consumer unscorable friction passed" \
+  || { echo "$out" | grep -q 'NOT-SCORABLE: f ' && ok "consumer unscorable friction refused" || bad "refused, but not for the friction: $out"; }
+sed -i 's/every build/frequent/' "$CONSUMER/skills/s/FRICTIONS.md"
+( cd "$CONSUMER" && bash "$LINK_DIR/60-ac-lint" >/dev/null 2>&1 ) && ok "consumer scorable friction passes" || bad "consumer scorable friction refused"
+rm -r "$CONSUMER/skills"
 rm -f "$CONSUMER/.beads/issues.jsonl"
 ( cd "$CONSUMER" && bash "$LINK_DIR/60-ac-lint" >/dev/null 2>&1 ) && ok "consumer with no board skips (exit 0)" || bad "consumer with no board refused"
 

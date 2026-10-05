@@ -246,6 +246,18 @@ def main():
         except json.JSONDecodeError:
             bad("Case 14: live registry run did not emit JSON — %s" % res.stderr[:400])
 
+    # --- Case 17: --strict fails on an unscorable entry, never on a count mismatch ------
+    sroot = os.path.join(tmp, "strict")
+    os.makedirs(os.path.join(sroot, "skills", "bad"))
+    with open(os.path.join(sroot, "skills", "bad", "FRICTIONS.md"), "w") as fh:
+        fh.write(ledger("bad", "never", [entry("free-text", frequency="every build")]))
+    check(run(sroot, "--strict").returncode == 3,
+          "Case 17a: --strict exits 3 on a free-text frequency")
+    with open(os.path.join(sroot, "skills", "bad", "FRICTIONS.md"), "w") as fh:
+        fh.write(ledger("bad", "never", [entry("fine")]).replace("entries: 1", "entries: 9"))
+    check(run(sroot, "--strict").returncode == 0,
+          "Case 17b: --strict passes a scorable ledger whose entries: count is off")
+
     # --- Case 15: the dream path and the dashboard path cannot disagree ---------------
     # The seam this bead exists to close: two consumers, one computation. Run the two
     # consumer invocations SEPARATELY and demand identical weights, bar and clusters.
