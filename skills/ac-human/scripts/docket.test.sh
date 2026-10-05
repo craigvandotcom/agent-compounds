@@ -148,7 +148,7 @@ has    "unanimous member marked"      "✓ dl-un · 4d"
 has    "split member unmarked"        "· dl-split · 4d"
 has    "batch accept offered"         "→ accept 1 unanimous ✓"
 # cards
-has    "friction count excludes resolved/minor" "🧰 FRICTIONS · top 3 of 3"
+has    "friction count excludes resolved/minor" "🧰 FRICTIONS · top 3 of 3 · registry"
 has    "critical+common marked"       "1. [critical·common] w40"
 has    "critical only"                "[critical] w30"
 has    "common only"                  "[common] w20"
@@ -188,6 +188,24 @@ $OUT"
 has    "br failure → ? gates"         "🔴 GATES · ?"
 has    "br failure named"             "br_call list"
 has    "br failure → ? remaining"     "🧑 NEEDS YOU · ? gates"
+
+# watch lane: a loud entry at the threshold shows (never promotable), one below stays hidden
+python3 -c 'import json, sys; e = lambda i, w: dict(id=i, weight=w, recurrence=1, promotable=False, status="open", perceptibility="loud")
+json.dump({"dream": {"threshold": 12, "entries": [e("f-loud", 12), e("f-light", 11)]}}, open(sys.argv[1], "w"))' "$R/fw.json"
+OUT=$(cd "$R" && AC_HUMAN_FRICTION_CMD="cat '$R/fw.json'" "$DOCKET"); ALL="$ALL
+$OUT"
+has    "loud at threshold → watch"    "1. [watch] w12"
+hasnt  "loud below threshold hidden"  "f-light"
+
+# friction root: the repo's own logs when it has any, else the registry's
+EMPTY='echo "{\"dream\": {\"entries\": []}}"'
+mkdir -p "$R/skills/s"; : > "$R/skills/s/FRICTIONS.md"
+OUT=$(cd "$R" && AC_HUMAN_FRICTION_CMD="$EMPTY" "$DOCKET")
+has    "own logs → this repo"         "top 0 of 0"
+hasnt  "own logs → no registry label" "· registry"
+rm -r "$R/skills"
+OUT=$(cd "$R" && AC_HUMAN_FRICTION_CMD="$EMPTY" "$DOCKET")
+has    "no logs → the registry"       "top 0 of 0 · registry"
 
 # --gates slice
 OUT=$(cd "$R" && "$DOCKET" --gates); ALL="$ALL

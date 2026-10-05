@@ -63,7 +63,9 @@ job beads 20 'br_call list --limit 0 --json'
 job unpushed 10 'if git rev-parse --abbrev-ref --symbolic-full-name @{u} >/dev/null 2>&1;
   then git log @{u}..HEAD --oneline -- .beads/issues.jsonl | wc -l; else echo no-upstream; fi'
 if [ "$MODE" = full ]; then
-  job frictions 30 "${AC_HUMAN_FRICTION_CMD:-python3 '$SKILLS/skill-builder/scripts/friction-rollup.py' --root '$REGISTRY' --view dream}"
+  FR_ROOT=$REGISTRY; compgen -G "$PROJECT_ROOT/skills/*/FRICTIONS.md" >/dev/null && FR_ROOT=$PROJECT_ROOT
+  export FR_ROOT  # this repo's own friction logs; the registry's when it has none
+  job frictions 30 "${AC_HUMAN_FRICTION_CMD:-python3 '$SKILLS/skill-builder/scripts/friction-rollup.py' --root '$FR_ROOT' --view dream}"
   MEM="$SKILLS/dream/scripts/memory-rollup.py"
   if [ -n "${AC_HUMAN_MEMORY_CMD:-}" ]; then job memory 60 "$AC_HUMAN_MEMORY_CMD"
   elif [ -f "$MEM" ]; then job memory 60 "python3 '$MEM' --json"
@@ -429,17 +431,20 @@ def friction_card():
     try: d = json.loads(raw)["dream"]
     except (ValueError, KeyError, TypeError) as e:
         failed.append(f"friction-rollup.py: {e}"); return ["🧰 FRICTIONS · ?", ""]
-    live = [e for e in d.get("entries", []) if e.get("status") in (None, "open")
-            and (e.get("promotable") or (e.get("recurrence") or 0) >= 3)]
+    th = d.get("threshold") or float("inf")  # watch: heavy but loud, so never promotable
+    flags = lambda e: [m for m, on in (("critical", e.get("promotable")),
+                                       ("common", (e.get("recurrence") or 0) >= 3),
+                                       ("watch", not e.get("promotable") and (e.get("weight") or 0) >= th)) if on]
+    live = [e for e in d.get("entries", []) if e.get("status") in (None, "open") and flags(e)]
     live.sort(key=lambda e: -(e.get("weight") or 0))
-    out = [f"🧰 FRICTIONS · top {min(3, len(live))} of {len(live)}"]
+    src = "" if os.environ.get("FR_ROOT") == ROOT else " · registry"
+    out = [f"🧰 FRICTIONS · top {min(3, len(live))} of {len(live)}{src}"]
     for i, e in enumerate(live[:3], 1):
-        mark = "·".join(m for m, on in (("critical", e.get("promotable")),
-                                        ("common", (e.get("recurrence") or 0) >= 3)) if on)
+        mark = "·".join(flags(e))
         out.append(f"{i}. [{mark}] w{int(e.get('weight') or 0)}")
         out += [IND + l for l in whole(e["id"])]
         out.append(IND + cut("fix: " + (e.get("proposed_fix") or "—")))
-    out.append(IND + "→ promote · won't fix · later" if live else IND + "—")
+    out.append(IND + "→ /dream: fix now · won't fix · later" if live else IND + "—")
     out.append("")
     return out
 
