@@ -17,7 +17,7 @@ routed so they compound. The capture half of the AI-native-org write loop.
 
 ## When to Use
 
-**Triggers:** end of any session; "reflect", "capture learnings", "what did we learn",
+**Triggers:** end of any session or workflow; "reflect", "capture learnings", "what did we learn",
 "save lessons", "remember this", "compound this session".
 
 **When NOT to use:**
@@ -40,7 +40,7 @@ is the *session-end executor* of that procedure, not a second copy of it.
 
 Operating summary (details + edge cases live in context-engineering):
 - Every lesson is **one `{type}`** (fact · rule · decision · recipe · skill-improvement)
-  **× one `{domain}`** (org · app-local · personal · global). Type → format +
+  **× one `{domain}`** (org · app-local · client · personal · global). Type → format +
   home-kind; domain → subtree.
 - **Rules are markdown facts** with `type: rule` — the CM playbook is a derived cache,
   never the home.
@@ -120,9 +120,9 @@ the `MEMORY.md` pointer convention, and dream's reader all depend on them); `kin
 probe already run above) → increment `recurrence` on the existing row, do NOT create a duplicate
 file. `cost` stays coarse (`material|minor`); a minutes floor is optional and operator-set.
 
-**Skill-scoped friction (W4.3)** — if `ac-land`'s Step 0 hand-off tagged the T3 item as
-*skill-scoped friction* rather than a general lesson, write it to
-`skills/<skill>/FRICTIONS.md` instead of the `<memory-root>` path above. Schema, per-skill
+**Skill-scoped friction (W4.3)** — any lesson about how one skill worked (chafed, failed, cost a detour), from
+`ac-land`'s hand-off or your own reflection, goes to `skills/<skill>/FRICTIONS.md` instead of the `<memory-root>`
+path above, worded true for every user of the skill (client or app specifics go to their domain). Schema, per-skill
 template, and the dedup judgment (reuse-id-and-bump-recurrence vs mint-new) are
 `skill-builder/references/friction-capture.md`'s — read that file's existing entries and
 judge before writing; don't restate its rules here. Create the target file lazily from its

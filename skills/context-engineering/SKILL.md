@@ -59,9 +59,8 @@ plan: `<org>/alignment/roadmaps/ai-native-org-v1.md` §1–1.5).
 
 ## WRITE: the save-routing taxonomy
 
-Every durable item is **one `{type}` × one `{domain}`**. Type → format + home-kind;
-domain → subtree. No item gets a new store: *a lesson with no slot is a taxonomy bug to
-flag, never a new folder to invent.*
+Every durable item is **one `{type}` × one `{domain}`**. Type → format + home-kind; domain → subtree.
+No item gets a new store: *a lesson with no slot is a taxonomy bug to flag, never a new folder to invent.*
 
 **Types**
 
@@ -81,13 +80,14 @@ flag, never a new folder to invent.*
 | **org** | the business, apps, brand, books | `<org>/memory/` | `<org>/alignment/decisions/` |
 | **content** | content-craft lessons: what works on which platform, editorial patterns — distinct from org strategy facts | `<org>/content/memory/` | `<org>/alignment/decisions/` |
 | **app-local** | one app's internals | the app's `factory.json` `memory.root` (each own-repo app) | app docs |
+| **client** | one client's environment, people or access, in a repo that serves clients | where the repo's own `AGENTS.md` routes it (e.g. `clients/<c>/AGENTS.md`) | the repo's docs |
 | **personal** | life, PKM, journaling | `knowledge/` | — |
 | **global** | tooling, agents, infra, PAI | `<global>/memory/` | `<global>/memory/` |
 
-> **Public-skill boundary:** this skill is the **method**; the example paths above are
-> illustrative. The deployment's **actual** homes and altitudes live in its always-on floor
-> (the user-level identity file: memory lanes, load order) — keep deployment specifics
-> there, not here, so the skill stays generic/reusable. (`<memory-root>` below = the domain's memory-note home: an app's `factory.json` `memory.root`, else the shared substrate root.)
+> **Public-skill boundary:** this skill is the **method**; the example paths above are illustrative. The deployment's
+> **actual** homes and altitudes live in its always-on floor (the user-level identity file: memory lanes, load order)
+> — keep deployment specifics there, not here, so the skill stays generic/reusable. (`<memory-root>` below = the
+> domain's memory-note home: an app's `factory.json` `memory.root`, else the shared substrate root.)
 
 **Underscore convention:** `_`-prefixed directories (`_agent-*`, `_plans`, `_backlog`,
 `_strategy`, `_archive`, etc.) are **transient working state** — scratch, in-flight, or
