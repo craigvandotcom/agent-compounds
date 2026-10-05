@@ -28,19 +28,19 @@ Some sessions do real work — or make a decision in pure conversation — and n
 substantive-but-unreflected sessions deterministically (your deployment's own script —
 build one against your session-transcript store; path below is a placeholder):
 ```bash
-python3 <your-deployment>/dream-cycle/reflect_gap.py --hours 24
+python3 <your-deployment>/context-mining/reflect_gap.py --hours 24
 ```
 After the mining agents return, mark what you mined so tomorrow's run does not pay for it
-again — the ledger exists (`<your-deployment>/dream-cycle/mined-sessions.json`) but only fills
+again — the ledger exists (`<your-deployment>/context-mining/mined-sessions.json`) but only fills
 if you call it:
 ```bash
-python3 <your-deployment>/dream-cycle/reflect_gap.py --hours 24 --record
+python3 <your-deployment>/context-mining/reflect_gap.py --hours 24 --record
 ```
 A session re-flags only if it gained new turns since (the ledger keys on `last_ts`).
 Use `--remine` to deliberately re-list an already-mined session.
 
 **Run the listing pass FIRST and do not skip it.** The listing writes
-`dream-cycle/mined-pending.json` — the snapshot `--record` is held to — and `--record`
+`context-mining/mined-pending.json` — the snapshot `--record` is held to — and `--record`
 marks only what that snapshot listed, at the listed `last_ts`, then consumes it. Without
 it, `--record` records NOTHING and says so on stderr (safe: everything re-flags tomorrow).
 This is not belt-and-braces. `--record` used to re-derive the gap set at record time,
