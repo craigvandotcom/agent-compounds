@@ -352,7 +352,6 @@ Quality Gate runs `prettier --check .` over the whole repo as its *first* step; 
 single unformatted file — even one you didn't touch that was already red on `main` —
 fails the entire gate ~10 min into CI. Running `pnpm format` locally makes that
 impossible for sub-second cost; if it rewrites pre-existing files, commit the
-formatting (you're repairing a gate CI was already failing). Also **commit without
-`--no-verify`** — the pre-commit `lint-staged` hook auto-formats staged files; only
-the *push* uses `--no-verify` (to skip the heavy pre-push build). Never let CI catch
-a formatting miss.
+formatting (you're repairing a gate CI was already failing). Commit and push with
+the hooks on — the pre-commit `lint-staged` hook auto-formats staged files, and the push goes
+through `ac-pipeline/scripts/push.sh`. Never let CI catch a formatting miss.

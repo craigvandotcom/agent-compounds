@@ -34,7 +34,7 @@ this run is reviewing is CI-green.
 
 ## Troubleshooting
 
-- **Push blocked / collides** → `git pull --rebase` and re-push (never force-push over another session's committed work); if the pre-push build false-positives on foreign WIP, push with `--no-verify` (the round gate + post-push CI are the real verification)
+- **Push blocked / collides** → `git pull --rebase` and re-push (never force-push over another session's committed work); push through `ac-pipeline/scripts/push.sh` — its check covers only the tree being pushed, so foreign WIP cannot trip it
 - **Dirty tree at Phase 0** → EXPECTED under trunk-direct, NOT a blocker — inventory the foreign WIP, don't touch it, and pathspec-commit only your own files (Phase 3); only a genuine red flag (unexpected deletions, sensitive files) surfaces to the user
 - **Agent dies / returns nothing** → note the lens as absent for the round and continue with the rest of the panel; re-spawn once if 2+ die
 - **Quality gate fails on a fix** → revert that fix, mark non-auto-fixable, add to registry; never ship a red gate

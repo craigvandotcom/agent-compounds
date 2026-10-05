@@ -87,8 +87,8 @@ This is the single exhaustive local run of the workflow (rounds ran affected-onl
 FIRST as auto-fix; if it rewrites files you did NOT author, commit the formatting as part of
 this run (rule + why: `ac-pipeline/references/verification-gate.md` §Format-first gate). If any check fails,
 fix before proceeding. Commit any Phase-5 fixes (user-approved + AUTO_IMPLEMENT triage items)
-directly to `main` (pathspec, push immediately; **no `--no-verify` on the commit**, `--no-verify`
-on the push only — same rule as Phase 3).
+directly to `main` (pathspec, push immediately through the push layer, hooks on for commit and
+push — same rule as Phase 3).
 
 **Note:** the close ceremony below (`ac-publish`) dispatches Tier 1 CI on the final SHA —
 so this Phase-5 local run is a pre-handoff sanity check, not the last word. Keep it: catching a
