@@ -280,9 +280,9 @@ Placement isn't once-and-for-all — context earns its layer continuously, in **
 - **Promotion (the exception — needs evidence):** an L3 lesson that is **recurring + stable +
   broadly applicable** has outgrown retrieval → escalate to a skill (L2) or a context file
   (L0/L1) **at the right altitude**. The bar is high — promotion buys always-on cost, so demand
-  proof (recalled/applied repeatedly; ≥N occurrences; not situational). **The dream cycle runs
-  the promotion check (review-only)** — it never fires automatically (a human session with the operator
-  present is the other legitimate trigger).
+  proof (recalled/applied repeatedly; ≥N occurrences; not situational). **A `dream` session runs
+  the promotion check (review-only)** — it never fires automatically; a human session with the
+  operator present is the only trigger.
 - **`recurrence` is the escalation counter; N=2 is the threshold.** A rule RE-BROKEN after being
   written has proven L3 retrieval is the wrong medium — stop rewording, move it. 2+ with no move
   means the missing destination, not the repeated mistake, is the defect. **Rank destinations,
@@ -341,7 +341,7 @@ task-triggered content becomes a named skill instead, never always-on tokens.
 
 ---
 
-## Hygiene (enforced by the dream cycle, Phase 2)
+## Hygiene (enforced by a dream session, Phase 2)
 
 - **Lint pass:** periodically scan the substrate for contradictions, stale facts,
   orphaned/duplicate notes; propose fixes as gated PRs. (The step most teams skip; it's
@@ -363,8 +363,8 @@ task-triggered content becomes a named skill instead, never always-on tokens.
 5. **Index line** (facts/rules: add to that dir's `MEMORY.md`).
 6. **Gate** if it's a skill-improvement (propose, don't apply).
 
-For session-end capture, `reflect` wraps this procedure; the weekly `dream` cycle runs
-it in bulk plus hygiene. Both cite this file — change the architecture HERE, once.
+For session-end capture, `reflect` wraps this procedure; a `dream` session runs it in
+bulk plus hygiene. Both cite this file — change the architecture HERE, once.
 
 ---
 

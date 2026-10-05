@@ -19,7 +19,7 @@ Cite them. One source, per `context-engineering` § Common Mistakes.
 |---|---|---|
 | `context-engineering` | the constitution | taxonomy · homes · L0–L4 · placement · altitude · promotion doctrine |
 | `reflect` | session-end capture | how a single session's lessons are extracted and routed |
-| `dream` | synthesis · lint · judge · propose | the cycle's phases, the auto/gated split, REVIEW |
+| `dream` | synthesis · lint · judge · fix | the session's phases, what's fixed in-session vs. sent to `ac-backlog` |
 | `wiki` | synthesis pages | page types · frontmatter · citation rule · gardening |
 | `skill-builder` | the skill corpus | friction capture · maintenance ledger · hygiene-pass |
 
@@ -31,7 +31,7 @@ going.
 
 | Lane | Atom | Capture | Refine | Drain | Enforce |
 |---|---|---|---|---|---|
-| **L3 memory** | a fact/rule/decision in `<memory-root>` | `reflect` at session end; nightly context-mining | `dream` Phase 2 synthesis | `dream` REVIEW + the daily queue job | `memory-lint.py` |
+| **L3 memory** | a fact/rule/decision in `<memory-root>` | `reflect` at session end; nightly context-mining | `dream` Phase 2 synthesis | `dream` (human session, fixes in-session) | `memory-lint.py` |
 | **Skill frictions** | a `FRICTIONS.md` entry in a skill | the skill's own run, via `reflect` | weighting by impact × frequency × recurrence | `skill-builder` hygiene-pass; promotion to skill text | `lint.sh` |
 | **Wiki synthesis** | a cited page in `wiki/` | promotion from clustered facts | monthly garden pass | hallucination audit | `memory-lint.py` (wiki kind) |
 
@@ -52,7 +52,7 @@ Choosing a lane.
 **When NOT to use:**
 - Where does this fact go? → `context-engineering`
 - Capture this session's lessons → `reflect`
-- Run the cycle / review proposals → `dream`
+- Run a dream session / review the docket → `dream`
 - Write or garden a page → `wiki`
 - Fix a skill's own text → `skill-builder`
 
@@ -75,8 +75,7 @@ substrate — including this reference's.
 python3 <your-deployment>/scripts/health/memory-lint.py        # substrate integrity
 python3 <your-deployment>/scripts/health/wiki-metrics.py       # governance metrics, docket age
 python3 <your-deployment>/retrieval-evals/run-evals.py # can the hook still FIND things
-python3 <your-deployment>/dream-cycle/classify.py --dir <proposals-dir>
-python3 <your-deployment>/dream-cycle/file-beads.py --dry-run  # is anything undocketed
+python3 skills/dream/scripts/memory-rollup.py --json           # the docket dream reads live
 ```
 
 Interpretation, thresholds, and the traps each one hides: `references/health-surface.md`.

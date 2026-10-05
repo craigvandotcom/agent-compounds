@@ -13,8 +13,8 @@ Capture backstop + Loop 2 — Tier-0 daily hygiene). You are the **daily backsto
 
 ## Your Task
 
-Mine the last 24 hours for uncaptured lessons, then emit the mechanical hygiene the 02:00
-queue job can auto-apply.
+Mine the last 24 hours for uncaptured lessons, then emit the mechanical hygiene a `dream`
+session can review and apply.
 
 ### 1. Gather Git Changes
 ```bash
@@ -88,7 +88,7 @@ For genuinely new lessons:
   (memory `context-mining-staging-dir-is-write-only`). That dir holds `INDEX.md` only.
 - Include evidence and outcome grounding
 
-### 7. Tier-0 daily hygiene (mechanical, lossless — emit for the 02:00 auto-apply)
+### 7. Tier-0 daily hygiene (mechanical, lossless — emit for the next dream session)
 Substrate lint is split by reversibility (the decision doc): **semantic lint stays weekly**
 (contradiction, staleness, near-duplicate *merges* — all Tier-2, gated). Only the **Tier-0
 mechanical** checks run daily, because they are lossless and the script can re-derive them.
@@ -152,25 +152,23 @@ prune: move it into the home (the index line is already correct) and leave it ou
 proposal. On 2026-09-15, 5 of 17 dangling slugs still had their bodies in the 2026-08-25
 staging dir — pruning those would have destroyed five real lessons under a "lossless" label.
 
-For each home with genuinely dead lines, **emit an `index-prune` proposal** into today's dream
-queue (`<your-deployment>/dream-cycle/proposals/<YYYY-MM-DD>/`) so the 02:00 job auto-applies it.
-Frontmatter the classifier requires (`<your-deployment>/dream-cycle/classify.py` is the authority
-— it re-derives and applies the prune itself, you only flag it):
+For each home with genuinely dead lines, **emit an `index-prune` proposal** — a dated
+proposal file for the next `dream` session to review and apply; dream is a human-started
+session, never a cron job (`../../dream/SKILL.md`):
 ```markdown
 ---
 status: pending
 category: lint-fix
 lint_subtype: index-prune
-target_repo: root            # only root-memory homes auto-apply; app-local → note it for the human
+target_repo: root            # app-local → note it for the human instead
 target_file: <home>/MEMORY.md
 evidence: [dangling index lines: <slugs>]
 ---
 ## What
 <paste the FULL re-derived MEMORY.md with the dangling lines removed, inside a ``` fence>
 ```
-Only root-memory homes (the global home) auto-apply; for an app-local home with
-drift, surface it in the report for the human instead (repo-boundary + altitude rules).
-If no home has drift, skip — emit nothing.
+For an app-local home with drift, surface it in the report for the human instead
+(repo-boundary + altitude rules). If no home has drift, skip — emit nothing.
 
 Second Tier-0 check: **staged-lesson orphans** — a staged note with no live twin never reached
 a home. Sweep the last 7 days only — **by directory date, never `find -mtime`**: a git

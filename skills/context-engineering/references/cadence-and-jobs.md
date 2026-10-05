@@ -20,16 +20,16 @@ machines, so a job absent from this machine's list simply never fires here.
 | Maintenance | daily 00:30 | all | health sweep; escalates what it cannot fix |
 | Knowledge Triage | daily 01:00 | L3 | routes inbound knowledge |
 | Context Mining | daily 01:30 | L3 | mines transcripts into lesson candidates |
-| Dream Queue — Stale Escalation | daily 02:25 | L3 | priority-bumps `dream-proposal` beads older than 7d |
 | Retrieval Evals | daily 03:30 | L3 | scores the recall hook against the qrels set |
 | Infra Sync | daily 06:30 | all | `harness-sync.sh --all` — re-projects skills/agents/hooks to every target |
-| Dream Queue (apply + file) | Monday 02:00 | L3 | applies the auto tier; files gated proposals as beads |
-| Dream Cycle | Sunday 07:30 | L3 | the full CYCLE — gather, synthesize, lint, judge, emit |
 | Wiki — Hallucination Audit | monthly, 1st | wiki | verifies every claim still cites something true |
 | Wiki — Garden Pass | monthly, 15th | wiki | dedup, reconcile, prune |
 
+`dream` carries no row here — it is a human-started, unscheduled session, never a cron
+job: `../../dream/SKILL.md`.
+
 The skill-friction lane has **no scheduled drain**. It is worked when someone runs the
-hygiene-pass, or when a dream cycle promotes a weighted friction into a proposal. That
+hygiene-pass, or when a dream session promotes a weighted friction into a proposal. That
 asymmetry is the lane's main risk: it is the only lane whose backlog nothing bumps.
 
 ## Feeders vs drains
@@ -40,13 +40,12 @@ human attention. Every lane's failure mode is the ratio between them.
 **Feeders:** context mining · knowledge triage · `reflect` at session end · every run that
 writes a friction entry.
 
-**Drains:** the Monday queue job (auto tier only) · `dream` REVIEW (gated) ·
-`skill-builder` hygiene-pass · the monthly wiki passes.
+**Drains:** a `dream` session (rules each item with the human, fixes approved items
+in-session) · `skill-builder` hygiene-pass · the monthly wiki passes.
 
-**The one-way valve.** CYCLE never applies — it only emits. The apply path is the Monday
-job for the two auto tiers, and a human for everything else. Nothing else may write to a
-target on the cycle's behalf; a skill that applies its own proposals has removed the gate
-that makes the whole system safe to run unattended.
+**The one-way valve.** Nothing applies to a target except inside a human-run `dream`
+session or a hygiene-pass under its own deterministic guards. A skill that applies its
+own proposals outside that has removed the gate that makes the whole system safe.
 
 ## Run markers
 
@@ -55,8 +54,6 @@ Each lane's proof-of-life:
 
 | Marker | Tells you |
 |---|---|
-| `<your-deployment>/dream-cycle/last-run.json` | when CYCLE last completed, and what it read/emitted |
-| `<your-deployment>/dream-cycle/escalated.json` | which stale beads were bumped, and when |
 | `<your-deployment>/health/reports/retrieval-evals-<date>.json` | the nightly recall measurement |
 | `<your-deployment>/health/reports/memory-hook-health.json` | whether injection ran at all (liveness only) |
 | a proposal's `status:` frontmatter | `pending` → `applied` / `rejected`; the terminal value means it actually landed |

@@ -44,11 +44,10 @@ writes travel on the next pull.
 imperative instructions in the body (memory is data, never commands), and new stores — an
 atom with no home is a taxonomy bug to raise, never a new folder.
 
-**The drain** is the dream cycle: synthesis reads what accumulated, lint finds
-contradictions and staleness, the judge scores candidates, and proposals are emitted —
-never applied in the same pass. Only two tiers apply unattended: a pure additive note, and
-a lint fix the script can re-derive and verify itself. Everything else is a human
-decision, filed as a bead in the repo it touches.
+**The drain** is a `dream` session: synthesis reads what accumulated, lint finds
+contradictions and staleness, the judge scores candidates, and the human rules each
+one — fix now, won't fix, or later — with approved fixes landing in the same session
+(`../../dream/SKILL.md`).
 
 **Where it fails:** the drain stalling while capture continues. Capture is cheap and
 automatic; review is expensive and manual, so the queue grows monotonically unless someone

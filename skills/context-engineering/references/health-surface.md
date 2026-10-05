@@ -8,7 +8,7 @@ How to tell whether the substrate is actually working, and which green signals l
 - [Measuring a retrieval change](#measuring-a-retrieval-change)
 - [Traps](#traps)
 
-## The five checks
+## The checks
 
 These are your deployment's own scripts (build them; the paths below are placeholders,
 not literals) — if one doesn't exist yet, treat that check as unverified, not passed.
@@ -23,16 +23,12 @@ python3 <your-deployment>/scripts/health/wiki-metrics.py
 # 3. Retrieval quality — the only check that measures RELEVANCE
 python3 <your-deployment>/retrieval-evals/run-evals.py
 
-# 4. Queue composition — how much of the docket is actually human-gated
-python3 <your-deployment>/dream-cycle/classify.py --dir <your-deployment>/dream-cycle/proposals/<date>
-
-# 5. Docket completeness — is any gated proposal missing its bead
-python3 <your-deployment>/dream-cycle/file-beads.py --dry-run
+# 4. The docket itself — computed live, never stored; a human rules it in a dream session
+python3 skills/dream/scripts/memory-rollup.py --json
 ```
 
-Checks 1, 2 and 5 are read-only. Check 3 writes a dated report and, without
-`--accept-baseline`, never mutates the baseline. Check 4 is read-only unless
-`--apply-tier0` is passed.
+All four are read-only. Check 3 writes a dated report and, without `--accept-baseline`,
+never mutates the baseline.
 
 ## What each green actually proves
 

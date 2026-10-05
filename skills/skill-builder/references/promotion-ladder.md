@@ -94,11 +94,11 @@ whose loss can't be undone by pointing at a copy, so it earns the timed buffer.
 
 Every holding-zone entry (in the skill's `MAINTENANCE.md` § Holding pen) carries:
 - **what** it is + **where it came from** (section, date).
-- a **`review-by` date** (default window: **one dream cycle ≈ 1 week**, or 30 days for low-traffic
+- a **`review-by` date** (default window: **~1 week**, or 30 days for low-traffic
   skills — tune per skill).
 - a **default resolution** (`promote` or `delete`).
 
-**Exit is signal-driven, evaluated by the next hygiene pass or dream cycle that reaches the skill:**
+**Exit is signal-driven, evaluated by the next hygiene pass or dream session that reaches the skill:**
 - **Reclaimed / re-added** before `review-by` → it churns back UP (promote to references/core per the
   proof rules); the churn detector notes "this keeps coming back — home it properly."
 - **Unclaimed past `review-by`, no churn signal** → **git-delete** with a **cut-log entry** recording

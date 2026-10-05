@@ -18,8 +18,7 @@ computed live on every read, never stored. `<repo>` is the current repo when it 
 ## What dream is
 
 A human-run session with the agent present. Nothing in dream runs unattended; no cron
-invokes it. The jobs in `<your-deployment>/jobs/weekly.json` sit disabled (see The polish
-gate). A session starts because a human starts it — usually from ac-human's offer.
+invokes it. A session starts because a human starts it — usually from ac-human's offer.
 
 ## Session workflow — three phases
 
@@ -48,12 +47,6 @@ new decision nobody ruled on.
 - **Close the session:** `friction-rollup.py --root <repo> --stamp` (records `last_pass`),
   then a **gap analysis** — what the substrate still doesn't know. The next GATHER
   starts there.
-
-## The polish gate
-
-Automation does not scale back up — crons, filing, auto-tier — until the manual loop
-has run enough sessions to trust its output. While the `weekly.json` jobs sit disabled,
-dream stays a human session.
 
 ## Common mistakes
 

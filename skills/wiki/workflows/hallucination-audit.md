@@ -19,9 +19,9 @@ several clean audits, not a default.
 **Relationship to other passes:** distinct from `garden.md`'s citation-audit pass (which
 samples pages generally for citation *hygiene* — dead links, missing citations) and from
 `dream`'s `references/lint-checks.md` check 11 (wiki↔facts contradiction — a *systematic*
-sweep of every citation on every page, run weekly by the dream cycle). This workflow is
-narrower and stricter: a small, truly random sample, traced by hand, monthly — the
-adversarial spot-check that complements dream's exhaustive-but-shallower weekly pass.
+sweep of every citation on every page, due whenever the next `dream` session reaches it).
+This workflow is narrower and stricter: a small, truly random sample, traced by hand,
+monthly — the adversarial spot-check that complements dream's exhaustive-but-shallower pass.
 
 ## Steps
 
@@ -60,8 +60,7 @@ adversarial spot-check that complements dream's exhaustive-but-shallower weekly 
    just a one-off fix. Propose the skill edit the same way (a `skill-improvement`
    proposal → bead), don't hand-edit `SKILL.md` directly from this workflow.
 5. **Record the run.** Whether the sample came back clean or not, this is a first-class
-   valid outcome either way (mirrors the dream cycle's "a quiet week is not a failure"
-   doctrine) — write a one-paragraph note (page: audit date, sample of 5 with
+   valid outcome either way — write a one-paragraph note (page: audit date, sample of 5 with
    disposition, any beads filed) somewhere durable so trend-over-time is visible later
    (e.g. append to a running log if/when this audit accumulates enough runs to warrant
    one — for the first several runs, the beads filed + this workflow's own git history
