@@ -6,7 +6,7 @@
 # `Cause:` line, no `Bead:`/`Beads:` trailer, no bead id from any repo (bd-…,
 # ac-…) anywhere in the message. `[no-bead]` is NOT an escape — the tag no
 # longer means anything to tooling. Silent when every staged file is
-# bookkeeping (.beads/, _archive/, .claude/reviews/, or FRICTIONS.md/
+# bookkeeping (.beads/, _archive/, .compounds/reviews/, or FRICTIONS.md/
 # MAINTENANCE.md at any depth) — bookkeeping names no cause by design.
 #
 # SAFETY: this hook is ALWAYS advisory. It must never block a commit — every
@@ -35,7 +35,7 @@ if [ -n "$staged" ]; then
   for f in $staged; do
     base=$(basename "$f")
     case "$f" in
-      .beads/*|_archive/*|.claude/reviews/*) continue ;;
+      .beads/*|_archive/*|.compounds/reviews/*) continue ;;
       *)
         case "$base" in
           FRICTIONS.md|MAINTENANCE.md) continue ;;
