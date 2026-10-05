@@ -176,6 +176,18 @@ cases += [
           "description-file from stdin cannot be verified and is refused"),
 ]
 
+# --- bash drops the backslash before a backtick or `$` inside double quotes; shlex keeps it ---
+cases += [
+  (ALLOW, _labelled + r'-d "x Probe: \`grep -q foo bar.txt\` - tier: none"',
+          "inline -d probe written with escaped backticks is admitted"),
+  (ALLOW, _labelled + r'-d "x Probe: \`grep -q \$HOME bar.txt\` - tier: none"',
+          "inline -d probe with an escaped dollar is admitted"),
+  (BLOCK, _labelled + r'-d "x Probe: \`grep -c foo bar.txt\` - tier: none"',
+          "escaped-backtick probe still goes through the shape check (grep -c refused)"),
+  (BLOCK, _labelled + r'-d "x no probe here \`true\`"',
+          "escaped backticks without a Probe line are still refused"),
+]
+
 # --- probe-shape axis (moved from lint Check 19, ac-review ruling 5): a `Probe:` line
 # that runs must still MEASURE — these three shapes pass `no probe, no bead` (a runnable
 # command with no syntax error) while measuring nothing, so they are born-refused here
@@ -246,6 +258,18 @@ if p.returncode == 2 and "internal error" in p.stderr:
 else:
     extra_fails += 1
     print(f"FAIL  want=2 got={p.returncode}  bead.py missing (crash) -> fails closed\n      err: {p.stderr[:150]}")
+
+# A --description-file the same command is about to write does not exist at PreToolUse
+# time: the refusal must say to write it in a prior command, not "no Probe: line".
+extra_total += 1
+p = subprocess.run([sys.executable, G], input=json.dumps(
+                    {"tool_name": "Bash", "tool_input": {"command": _labelled + "--description-file " + _with_probe + ".missing"}}),
+                    capture_output=True, text=True, env=dict(os.environ), timeout=30, check=False)
+if p.returncode == 2 and "prior command" in p.stderr:
+    print("ok    BLOCK  missing description-file -> refusal says to write it in a prior command")
+else:
+    extra_fails += 1
+    print(f"FAIL  want=2+'prior command' got={p.returncode}  missing description-file message\n      err: {p.stderr[:200]}")
 
 fails += extra_fails
 print(f"\n{len(cases) + extra_total - fails}/{len(cases) + extra_total} passed")

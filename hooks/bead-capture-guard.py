@@ -529,6 +529,20 @@ def _read_body_file(path):
         return None
 
 
+def _unescape_dq(text):
+    """Drop the backslash bash drops inside double quotes before a backtick or `$`.
+    shlex keeps it; `\\\\` and `\\"` are already collapsed, so only these two remain."""
+    return re.sub(r"\\([`$])", r"\1", text)
+
+
+def _missing_body_file(cmd):
+    """The `--description-file` path when it is a plain path that does not exist yet."""
+    path = flag_value(cmd, {"--description-file"}, ("--description-file=",))
+    if path is None or path == "-" or _template_token(path) or path.startswith("$"):
+        return None
+    return path if not os.path.exists(path) else None
+
+
 def probe_body(cmd):
     """The text `has_probe` searches.
 
@@ -567,7 +581,7 @@ def probe_body(cmd):
         return _read_body_file(path)
     if d.startswith("$"):
         return None
-    return d
+    return _unescape_dq(d)
 
 
 def probe_reason(cmd):
@@ -592,6 +606,10 @@ def probe_reason(cmd):
     if body is True:
         return None
     if not body:
+        missing = _missing_body_file(cmd)
+        if missing is not None:
+            return (f"`--description-file {missing}` does not exist yet — the guard reads it "
+                    "before the command runs, so write the file in a prior command")
         return "no `Probe:` line in the body"
     matches = list(PROBE.finditer(body))
     if not matches:
