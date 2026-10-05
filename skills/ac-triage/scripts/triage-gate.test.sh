@@ -56,10 +56,10 @@ rm -rf "$W/wt"; git clone -q "$W/origin.git" "$W/wt"
 g() { git -c user.name=t -c user.email=t@example.com -c commit.gpgsign=false -C "$W/wt" "\$@"; }
 case "\$(cat "$W/model.mode" 2>/dev/null)" in
   other)    echo x >"$W/wt/other.txt"; g add other.txt; g commit -q -m other; g push -q origin HEAD:main ;;
-  stranded) mkdir -p "$W/wt/.claude/state"; echo r >"$W/wt/.claude/state/triage-last-run.md"
-            g add .claude; g commit -q -m report ;;
-  *)        mkdir -p "$W/wt/.claude/state"; date +%s%N >"$W/wt/.claude/state/triage-last-run.md"
-            g add .claude; g commit -q -m report; g push -q origin HEAD:main ;;
+  stranded) mkdir -p "$W/wt/.compounds/state"; echo r >"$W/wt/.compounds/state/triage-last-run.md"
+            g add .compounds; g commit -q -m report ;;
+  *)        mkdir -p "$W/wt/.compounds/state"; date +%s%N >"$W/wt/.compounds/state/triage-last-run.md"
+            g add .compounds; g commit -q -m report; g push -q origin HEAD:main ;;
 esac
 exit 0
 SH

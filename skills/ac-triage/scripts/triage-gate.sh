@@ -16,7 +16,7 @@
 #     source is pruned, so a recurrence is new again.
 #   - Keys join the seen-set only after the model run that consumes them exits 0 AND its report
 #     commit is on origin/<default>: the gate records the remote tip before the run, fetches
-#     after it, and requires a commit in that range touching .claude/state/triage-last-run.md
+#     after it, and requires a commit in that range touching .compounds/state/triage-last-run.md
 #     (scheduled-daily.md step 3 writes it on every run). A zero exit alone only means the
 #     session ended. A run that exits 0 without landing is a failed run; an origin the gate
 #     cannot reach cannot prove a landing, so it fails closed (the model is not started).
@@ -60,7 +60,7 @@ CONFIG="${TRIAGE_GATE_CONFIG:-$ROOT/.claude/skills/CORE/triage.md}"
 STATE="${TRIAGE_GATE_STATE:-${XDG_STATE_HOME:-$HOME/.local/state}/ac-triage/$(basename "$ROOT")}"
 BR="${AC2_BR_CMD:-br}"
 TOOLS="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/../../_tools" && pwd)"
-REPORT=".claude/state/triage-last-run.md"
+REPORT=".compounds/state/triage-last-run.md"
 EVERY_H="${TRIAGE_GATE_COMMENT_EVERY_H:-24}"
 WORKFLOW=".claude/skills/ac-triage/workflows/scheduled-daily.md"
 
