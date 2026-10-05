@@ -14,6 +14,9 @@
 # And it never redirects a br read's stderr to /dev/null — that redirect is the exact habit
 # this helper exists to replace; br stderr passes through to the caller untouched.
 #
+# br's stdout goes to a regular file, never a pipe: a reader that exits early (a dead parent,
+# `head`) cannot hand br an EPIPE to panic on. The file lives under the cache dir, not /tmp.
+#
 # Usage:   br_call <br-args…>
 # Example: data=$(br_call show ac-xyz --json) || return $?
 # Env:     AC2_BR_CMD — the br binary to use (default: br). The seam close-gate.sh and
@@ -22,10 +25,14 @@
 # Canon:   skills/ac-pipeline/SKILL.md (one engine per pattern); proof: br-call.test.sh
 
 br_call() {
-  local out rc br_cmd
+  local out rc br_cmd tmp dir
   br_cmd="${AC2_BR_CMD:-br}"
-  out="$("$br_cmd" "$@")"
+  dir="${XDG_CACHE_HOME:-$HOME/.cache}/br-call"
+  mkdir -p "$dir" && tmp=$(mktemp "$dir/out.XXXXXX") || { echo "br_call: cannot create a capture file under $dir" >&2; return 2; }
+  "$br_cmd" "$@" >"$tmp"
   rc=$?
+  out="$(cat "$tmp")"
+  rm -f "$tmp"
   if [ "$rc" -ne 0 ]; then
     # Non-zero exit: surface the envelope's message when stdout carried one, then the raw
     # payload, both on stderr — never a silent empty data.
