@@ -49,7 +49,7 @@ Read these files:
 
 **If a lane's `progress.md` is a stub or header-only** (no beads/commits listed) — common: 10 of 13
 lanes in RUN 20260719-102946-27401 — do NOT conclude the lane did no work. Fall back to the batch
-review artifacts (`.claude/reviews/batch/*.md`, plus anything staged in `.claude/reviews/pending/`)
+review artifacts (`.compounds/reviews/batch/*.md`, plus anything staged in `.compounds/reviews/pending/`)
 and `br show <id>` close reasons to reconstruct that lane's work BEFORE analyzing it. This is a
 safety net for the retrospective's own blind spot, not a licence to leave the stubs unfixed.
 

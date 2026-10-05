@@ -101,7 +101,7 @@ fi
 
 Confirm exit 0 when `slack-send` ran; a Slack failure IS a finding — retry once. A
 missing `slack-send` degrades loudly (the message above), never silently. Finalize
-`last-run.json` (`{status: done, counts, mode, machine}`).
+`.compounds/state/align-last-run.json` (`{status: done, counts, mode, machine}`).
 
 The Slack body's one-line rollup also carries the board's docket counters, read from Scan A's
 `docket-health:` line (never recomputed): `plan-gap: N · gate-incomplete: N`.

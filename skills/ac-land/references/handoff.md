@@ -51,14 +51,14 @@ The only next steps are starting the next wave or stopping.
 ## Preserve the raw friction carrier (before teardown discards /tmp)
 
 Copy it — `stage`/`cost`/`lesson`/`class` typing intact — into a git-tracked artifacts path
-FIRST, mirroring the `.claude/reviews/batch/` convention already in use:
+FIRST, mirroring the `.compounds/reviews/batch/` convention already in use:
 
 ```bash
 if [ -f "/tmp/loop-retro-${RUN_ID}.md" ]; then
   TRUNK_TOOL="$PWD/.claude/skills/_tools/trunk.sh"
   [ -x "$TRUNK_TOOL" ] || TRUNK_TOOL="skills/_tools/trunk.sh"
   TRUNK="$(bash "$TRUNK_TOOL")" || exit 2
-  DEST=".claude/reviews/loop-retro"
+  DEST=".compounds/reviews/loop-retro"
   mkdir -p "$DEST"
   cp "/tmp/loop-retro-${RUN_ID}.md" "$DEST/loop-retro-${RUN_ID}.md"
   git add "$DEST/loop-retro-${RUN_ID}.md"

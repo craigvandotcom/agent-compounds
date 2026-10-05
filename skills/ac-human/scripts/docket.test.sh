@@ -20,7 +20,7 @@ before(){ a=$(printf '%s\n' "$OUT" | grep -nF -- "$2" | head -1 | cut -d: -f1)
 block_has(){ chunk=$(awk -v id="$2" 'index($0,id)==1{f=1} f{print; if($0==""){exit}}' <<<"$OUT")
              printf '%s' "$chunk" | grep -qF -- "$3" && ok || bad "$1 — expected '$3' in block '$2'"; }
 
-R="$W/repo"; mkdir -p "$R/.beads" "$R/.claude"; git -C "$R" init -q
+R="$W/repo"; mkdir -p "$R/.beads" "$R/.compounds/config"; git -C "$R" init -q
 TODAY=$(date +%F)
 
 # ── fixture board ─────────────────────────────────────────────────────────
@@ -86,7 +86,7 @@ con.commit()
 json.dump({"lanes": [{"label": "declared", "name": "decl",
                       "fields": {"votes": [{"re": "^votes:\\s*([^\\n]+)"}]}, "line": ["{votes}"],
                       "unanimous": {"re": "^votes:\\s*(\\w+),\\s*\\1,\\s*\\1\\s*$"}}]},
-          open(f"{R}/.claude/docket-lanes.json", "w"))
+          open(f"{R}/.compounds/config/docket-lanes.json", "w"))
 ent = lambda i, w, r, prom, st="open": dict(id=i, skill="s", weight=w, recurrence=r, promotable=prom,
                                             status=st, perceptibility="silent", proposed_fix=f"fix {i}", path="p")
 json.dump({"dream": {"entries": [ent("f-crit", 30, 1, True), ent("f-common", 20, 3, False),

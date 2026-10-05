@@ -11,7 +11,7 @@
 # Usage:  docket.sh            the full docket for the project containing $PWD
 #         docket.sh --gates    the 🔴 section only (one repo's slice of the org-wide sweep)
 #         docket.sh --org      --gates for every `.beads/` repo, in parallel
-# Lanes:  an app declares batch lanes in `<project>/.claude/docket-lanes.json`
+# Lanes:  an app declares batch lanes in `<project>/.compounds/config/docket-lanes.json`
 #         (format: this skill's references/docket-lanes.md § Declared lanes).
 # Env:    AC_HUMAN_FRICTION_CMD / AC_HUMAN_MEMORY_CMD override the card sources.
 #         REPOS_ROOT + APPS_LIST choose the --org repos; unset → engine/machine.sh.
@@ -248,7 +248,7 @@ def prio(b):
 order = lambda b: (-frees(b), prio(b), -days(b["created_at"]))  # the pull order: most freed first
 
 # ── lanes: declared batch lanes first, then any label with >5 gates ───────
-decl, lanes_file = [], os.path.join(ROOT, ".claude", "docket-lanes.json")
+decl, lanes_file = [], os.path.join(ROOT, ".compounds", "config", "docket-lanes.json")
 if os.path.isfile(lanes_file):
     try: decl = json.load(open(lanes_file)).get("lanes", [])
     except (ValueError, OSError, AttributeError) as e: failed.append(f"{lanes_file}: {e}")

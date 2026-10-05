@@ -24,7 +24,7 @@
 # then one `# tidy-scan:` summary line.
 #
 # NEVER writes. Switch to applying the mechanical rows only after 7 consecutive
-# `.claude/state/tidy-runs.jsonl` lines carry `match: true`.
+# `.compounds/state/tidy-runs.jsonl` lines carry `match: true`.
 #
 # Exit: 0 scanned (zero rows is a real clean); 2 NOT-GATED — `tidy-scan: ?` plus the
 # reason; a failed read is never an empty list.

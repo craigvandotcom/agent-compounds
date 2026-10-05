@@ -29,7 +29,7 @@ TaskCreate("Report — write + Slack the run summary")
 
 Read `CORE/triage.md` for enabled sources + per-app severity bar. Load the **last-run
 watermark per source** (timestamp / last issue id / cursor) from the app's
-**`.claude/state/triage-watermarks.json`** (committed, one key per source:
+**`.compounds/state/triage-watermarks.json`** (committed, one key per source:
 `{"sentry": {"watermark": "<ISO ts / cursor>", "updated": "<ISO ts>"}, …}`) so each run
 only pulls NEW signal. Missing file or missing key = first run for that source: bounded
 lookback (e.g. last 7 days) to avoid a flood, then write the entry.
@@ -227,7 +227,7 @@ NEXT
 Layout: `skill-builder/references/command-patterns.md` § 7 — every line ≤ 40 columns.
 
 The report must OUTLIVE the session — headless runs otherwise report to nobody. Write it
-to the app's **`.claude/state/triage-last-run.md`** and, when the app has a Slack channel
+to the app's **`.compounds/state/triage-last-run.md`** and, when the app has a Slack channel
 configured, post it via `slack-send`. A run that found nothing new still writes the report
 (proof-of-life beats silence — an empty report and a dead scheduler look identical otherwise).
 

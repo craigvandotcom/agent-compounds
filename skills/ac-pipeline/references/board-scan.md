@@ -367,7 +367,7 @@ examined — a refused `br list`, a response without `.issues[]` or with a `.err
 rows missing `updated_at`/`created_at`, or a failing `br doctor health` (the schema
 tripwire). A scan that examined nothing is never a clean shortlist. Counts only an id in a
 commit SUBJECT or behind a `Bead:` trailer; drops a bookkeeping-only commit (every touched
-file under `.beads/`, `_archive/` or `.claude/reviews/`, or named `FRICTIONS.md`/
+file under `.beads/`, `_archive/` or `.compounds/reviews/`, or named `FRICTIONS.md`/
 `MAINTENANCE.md`) and any commit that FILED the bead. Mechanism and proof harness:
 `scripts/board-truth.sh` + `scripts/board-truth.test.sh`.
 
@@ -414,7 +414,7 @@ truth:    { flagged[] (bead_id, cited_epoch), count }   # Scan F — advisory sh
 | **`ac-tidy`** | lifecycle reconciliation · archival · orphan/stale flags | bead↔plan cross-references |
 | **`ac-human`** (session) | render the board first, then human gates only (apply the loop boundary: drop ready beads that lack `human-gate` / `pipeline-proposal` / `dream-proposal`, in-flight waves, `bead-ready` / `beadified` plans) | prod health, org-wide `human-gate` sweep; PRs/CI reuse the board render — **scheduled-CI health comes from Scan E, not an ad-hoc `gh run list`** |
 | **`ac-board`** | render-only — the WHOLE board, both sides of the loop boundary; no judgment, no writes, no prompts; also the session opener `ac-human` invokes, where the docket below is the drill-down | wave branches (`git branch -r`), PRs (`gh pr list`), active-agent roster (`_tools/agent-roster.py`), **Scan E for scheduled gates** — all run by `ac-board/scripts/board.sh`, which executes the `## Scan E` and `### Docket health` fences as published (rename a heading → the board flags it) |
-| **`ac-implement`** (conductor) | Orient — classify the actionable set (orphans · unrefined · plan waves · bug lane) + the parentage-gap/epic-edge structural lint, to drive the autonomous run; **print Scan E's `ci-gates` line EVERY run, `ok` included; print Scan F's `board-truth` line EVERY run, `0` included, and adjudicate any flagged bead BEFORE dispatching an implement child at it; print Scan A's `docket-health` line EVERY run** | `bv --robot-triage`, `bead-ready` plans, `.claude/legacy-branches.txt` |
+| **`ac-implement`** (conductor) | Orient — classify the actionable set (orphans · unrefined · plan waves · bug lane) + the parentage-gap/epic-edge structural lint, to drive the autonomous run; **print Scan E's `ci-gates` line EVERY run, `ok` included; print Scan F's `board-truth` line EVERY run, `0` included, and adjudicate any flagged bead BEFORE dispatching an implement child at it; print Scan A's `docket-health` line EVERY run** | `bv --robot-triage`, `bead-ready` plans, `.compounds/config/legacy-branches.txt` |
 
 The board is the shared substrate; the lens is each skill's reason to exist. Don't move a lens
 in here, and don't re-specify a scan out there.

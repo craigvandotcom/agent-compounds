@@ -283,7 +283,7 @@ def build(T, ROOT, COMPACT):
 
     tidy = {"status": "missing", "streak": None}
     try:  # tidy shadow streak: trailing `match: true` runs — 7 means tidy-scan may apply for real
-        with open(os.path.join(ROOT, ".claude/state/tidy-runs.jsonl")) as fh:
+        with open(os.path.join(ROOT, ".compounds/state/tidy-runs.jsonl")) as fh:
             runs = [json.loads(l) for l in fh if l.strip()]
         streak = next((i for i, r in enumerate(reversed(runs)) if r.get("match") is not True), len(runs))
         tidy = {"status": "ok", "streak": streak}

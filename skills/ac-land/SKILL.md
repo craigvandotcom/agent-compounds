@@ -99,7 +99,7 @@ Output the summary (beads completed/remaining, commits, gates, learnings, open i
 
 ### Preserve the raw friction carrier (before teardown discards /tmp)
 
-Copy `/tmp/loop-retro-<RUN_ID>.md` into `.claude/reviews/loop-retro/` and commit it FIRST — `stage`/`cost`/`lesson`/`class` typing intact.
+Copy `/tmp/loop-retro-<RUN_ID>.md` into `.compounds/reviews/loop-retro/` and commit it FIRST — `stage`/`cost`/`lesson`/`class` typing intact.
 
 ### Cleanup Temp Files + Teardown (operational — part of landing)
 

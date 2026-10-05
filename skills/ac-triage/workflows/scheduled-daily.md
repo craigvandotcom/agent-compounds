@@ -84,7 +84,7 @@ channel). This heartbeat is the *run skeleton*; the skill is the *behavior*.
   resolve only from the live checkout (`$APP_ROOT`), NOT from inside the scratch worktree (which
   would resolve `../../../agent-compounds` to a nonexistent path). So read every skill file —
   `SKILL.md`, `CORE/triage.md` — via `"$APP_ROOT/.claude/skills/…"`, never via a `.claude/…`
-  path relative to the worktree cwd. Board/state files (`.beads/`, `.claude/state/`,
+  path relative to the worktree cwd. Board/state files (`.beads/`, `.compounds/state/`,
   `_backlog/pool/`) are real files in the app tree and DO exist in `$TRIAGE_WT` — read and
   write those there.
 
@@ -130,7 +130,7 @@ channel). This heartbeat is the *run skeleton*; the skill is the *behavior*.
 - **Gate mode** (the prompt names a gate items file, one `source<TAB>key<TAB>summary` per line):
   the fetch already ran — triage exactly those items, fetch nothing else. Run a source's live
   pass only where CORE/triage.md § Gate says its gate read is a dry count.
-- Watermarks from `.claude/state/triage-watermarks.json`; advance a source's watermark
+- Watermarks from `.compounds/state/triage-watermarks.json`; advance a source's watermark
   ONLY after its successful fetch.
 - Fetch every source CORE/triage.md marks live. **Configured-but-failing → escalate**
   (ops `human-gate` bead, deduped against open ones), never silent-skip, never advance
@@ -156,13 +156,13 @@ channel). This heartbeat is the *run skeleton*; the skill is the *behavior*.
 
 ### 3. Report + persist (even on a zero-findings run)
 
-- Write the Phase-4 report to `.claude/state/triage-last-run.md` — an empty run still
+- Write the Phase-4 report to `.compounds/state/triage-last-run.md` — an empty run still
   writes it (proof-of-life; a dead scheduler and a quiet prod must not look identical).
 - Post the same report via `slack-send` to the app's channel.
 
 ### 4. Commit + push (pathspec-scoped ONLY)
 
-- Stage only what triage owns: `.beads/*.jsonl`, `.claude/state/`, `_backlog/pool/`.
+- Stage only what triage owns: `.beads/*.jsonl`, `.compounds/state/`, `_backlog/pool/`.
   Never sweep unrelated dirty files (concurrent sessions share this checkout).
 Identity + reservations per `agent-mail/references/session-procedure.md` (mint · export · reserve · release).
 

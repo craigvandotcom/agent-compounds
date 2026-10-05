@@ -19,7 +19,7 @@ the declaration format an app uses.
 
 ## Declared lanes — the app's batch card
 
-An app declares its own batch lanes in `<project>/.claude/docket-lanes.json`. The registry never
+An app declares its own batch lanes in `<project>/.compounds/config/docket-lanes.json`. The registry never
 names an app's lane; an app without the file sees only the three rules above.
 
 ```json

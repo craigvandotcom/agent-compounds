@@ -167,6 +167,15 @@ check failed "verdict is unknown"              '^\? unknown — the bead reads f
 check failed "the failing read is named"       '\? br_call list: br: database locked'
 check failed "no verdict state is claimed"     'RUNNING|IDLE|STUCK|EMPTY' absent
 
+# TIDY shadow: the streak is read from the factory state folder, `.compounds/state/`.
+fixture tidyshadow "[$READY]" "[$READY]" "$READY" "$LIVE"
+check tidyshadow "no run log renders no tidy row"  '^   tidy ' absent
+mkdir -p "$W/tidyshadow/repo/.compounds/state"
+for i in 1 2 3; do echo '{"match": true}'; done >"$W/tidyshadow/repo/.compounds/state/tidy-runs.jsonl"
+check tidyshadow "the run log counts the trailing agreeing runs" '^   tidy +3/7 agree$'
+for i in 4 5 6 7; do echo '{"match": true}'; done >>"$W/tidyshadow/repo/.compounds/state/tidy-runs.jsonl"
+check tidyshadow "seven agreeing runs is ready to apply" '^   tidy +ready to apply$'
+
 # Watch-only features (a moved count's delta, ANSI colour) moved to tui.py — see tui.test.sh.
 # render.py stays plain text always: no escapes leak in.
 CASES=$((CASES + 1))

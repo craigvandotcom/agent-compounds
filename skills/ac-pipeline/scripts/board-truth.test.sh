@@ -23,7 +23,7 @@ is_bookkeeping_commit() { # <sha> <<< files
         if (base == "FRICTIONS.md" || base == "MAINTENANCE.md") return 1
         if (f ~ /^\.beads\//) return 1
         if (f ~ /^_archive\//) return 1
-        if (f ~ /^\.claude\/reviews\//) return 1
+        if (f ~ /^\.compounds\/reviews\//) return 1
         return 0
       }
       NF == 0 { next }

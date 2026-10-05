@@ -9,11 +9,11 @@
 # directories with zero collision") both name this exact test.
 #
 # REPO: agent-compounds (skills/ac-pipeline/scripts/) — reused across every app that
-# threads the `ac-pipeline/references/run-id.md` contract. Exercises the formula from
-# `ac-pipeline/references/run-id.md` (§ The key + § RUN_ID) VERBATIM (not a paraphrase):
-#   CLAIM_ID="${CLAIM_ID:-<first-candidate-bead-id>-$(date +%Y%m%d)}"
-#   RUN_ID="${RUN_ID:-$(date +%Y%m%d-%H%M%S)-$$}"
-#   ARTIFACTS_DIR="/tmp/bead-work-${CLAIM_ID}${RUN_ID:+-$RUN_ID}"
+# threads the `ac-pipeline/references/run-id.md` contract. The formula is EXTRACTED from the
+# first fenced `ARTIFACTS_DIR=` line of that doc (the `RUN_ID_DOC` env var overrides the path;
+# default the real run-id.md), never retyped here: a doc without the formula fails loud, and a
+# doc whose formula lost its RUN_ID term fails Case 1. The `<prefix>` / `<claim-id>`
+# placeholders are bound to `bead-work` / the batch's claim id.
 #
 # WHAT'S ACTUALLY BEING PROVEN: two conductors picking two DIFFERENT batches
 # (different first-claimed bead ID, or the same bead on a different day) already
@@ -23,7 +23,7 @@
 # CLAIM_ID — a single claimed batch split across two sessions, the doc's own
 # worked example — launched at the SAME moment on the same `main` checkout.
 # Without RUN_ID, both would collapse to the literal same
-# `/tmp/bead-work-<claim-id>` and clobber each other's progress.md/scratch. This
+# `_scratch/bead-work-<claim-id>` and clobber each other's progress.md/scratch. This
 # test proves RUN_ID (driven by each process's own PID via `$$`) keeps them
 # apart even when CLAIM_ID and the wall-clock second are identical.
 #
@@ -37,7 +37,7 @@
 # actually simulates two independent conductor SESSIONS, which is what two real
 # `ac-implement`/`ac-loop` invocations are.
 #
-# No `br` or git state needed — pure shell arithmetic on the documented formula,
+# No `br` state needed — the documented formula run as written (it reads the repo root),
 # deterministic. `--mkdir` opts into an extra filesystem-level proof (actually
 # `mkdir -p` both computed dirs and assert they're different inodes / no
 # overwritten sentinel file); cleaned up in a trap either way.
@@ -67,43 +67,42 @@ fail() {
   FAILURES=$((FAILURES + 1))
 }
 
-# The formula, exactly as `ac-pipeline/references/run-id.md` "The key" + "RUN_ID" sections document it — a single
-# function so both simulated conductors run byte-identical logic, never two
-# independently-retyped copies that could silently drift from the real contract.
-derive_artifacts_dir() {
-  # $1 = CLAIM_ID (pre-computed identically by both conductors — the SAME batch)
-  local claim_id="$1"
-  local run_id="${RUN_ID:-$(date +%Y%m%d-%H%M%S)-$$}"
-  local dir="/tmp/bead-work-${claim_id}${run_id:+-$run_id}"
-  printf '%s|%s\n' "$dir" "$run_id"
+ROOT="$(git rev-parse --show-toplevel 2>/dev/null)" || { echo "FAIL not inside a git repository"; exit 1; }
+DOC="${RUN_ID_DOC:-$ROOT/skills/ac-pipeline/references/run-id.md}"
+
+# The formula, parsed ONCE from the doc's fenced block: the first line that starts
+# `ARTIFACTS_DIR="`, cut after its closing quote (the doc's trailing comment goes), the
+# `<prefix>` / `<claim-id>` placeholders bound. Every simulated conductor runs this one
+# parsed assignment.
+FORMULA="$(awk '/^```/{f=!f; next} f && /^ARTIFACTS_DIR="/{print; exit}' "$DOC" 2>/dev/null \
+  | sed -E 's/^(ARTIFACTS_DIR="[^"]*").*/\1/; s/<prefix>/bead-work/; s/<claim-id>/${CLAIM_ID}/')"
+if [ -z "$FORMULA" ]; then
+  echo "FAIL no fenced ARTIFACTS_DIR=\"...\" formula in $DOC"
+  exit 1
+fi
+echo "formula: $FORMULA"
+
+# derive_dir <claim-id> — one conductor, run as a separate process; prints "dir|run_id". RUN_ID
+# is minted if absent, exactly as the doc's mint-if-absent rule says. `git rev-parse` inside the
+# formula resolves from this script's cwd.
+derive_dir() {
+  CLAIM_ID="$1" FORMULA="$FORMULA" bash -c '
+    RUN_ID="${RUN_ID:-$(date +%Y%m%d-%H%M%S)-$$}"
+    eval "$FORMULA"
+    printf "%s|%s\n" "$ARTIFACTS_DIR" "$RUN_ID"
+  '
 }
 
 echo "=== Case 1: two conductors, IDENTICAL CLAIM_ID (same batch, split session) ==="
 CLAIM_ID="bd-u2lo1.1-$(date +%Y%m%d)"   # identical on purpose — the collision case
 
-# Two genuinely separate processes (distinct $$), racing at the same instant,
-# computing off the SAME CLAIM_ID. Each writes "dir|run_id" to its own tmp file.
+# Two genuinely separate processes (distinct $$), racing at the same instant, off the SAME
+# CLAIM_ID. Each writes "dir|run_id" to its own tmp file.
 OUT_A=$(mktemp)
 OUT_B=$(mktemp)
-bash -c "
-  derive_artifacts_dir() {
-    local claim_id=\"\$1\"
-    local run_id=\"\${RUN_ID:-\$(date +%Y%m%d-%H%M%S)-\$\$}\"
-    local dir=\"/tmp/bead-work-\${claim_id}\${run_id:+-\$run_id}\"
-    printf '%s|%s\n' \"\$dir\" \"\$run_id\"
-  }
-  derive_artifacts_dir '$CLAIM_ID' > '$OUT_A'
-" &
+derive_dir "$CLAIM_ID" >"$OUT_A" &
 PID_A=$!
-bash -c "
-  derive_artifacts_dir() {
-    local claim_id=\"\$1\"
-    local run_id=\"\${RUN_ID:-\$(date +%Y%m%d-%H%M%S)-\$\$}\"
-    local dir=\"/tmp/bead-work-\${claim_id}\${run_id:+-\$run_id}\"
-    printf '%s|%s\n' \"\$dir\" \"\$run_id\"
-  }
-  derive_artifacts_dir '$CLAIM_ID' > '$OUT_B'
-" &
+derive_dir "$CLAIM_ID" >"$OUT_B" &
 PID_B=$!
 wait "$PID_A" "$PID_B"
 
@@ -128,23 +127,10 @@ echo
 echo "=== Case 2: two conductors, DIFFERENT batches (different CLAIM_ID; trivial but asserted) ==="
 CLAIM_ID_X="bd-aaaa1.1-$(date +%Y%m%d)"
 CLAIM_ID_Y="bd-bbbb2.3-$(date +%Y%m%d)"
-RUN_ID_SHARED="${RUN_ID:-20260101-000000-99999}"  # even a SHARED/absent-RUN_ID scenario must not collide across batches
-DIR_X=$(RUN_ID="$RUN_ID_SHARED" bash -c '
-  derive_artifacts_dir() {
-    local claim_id="$1"
-    local run_id="${RUN_ID:-$(date +%Y%m%d-%H%M%S)-$$}"
-    printf "/tmp/bead-work-%s%s\n" "$claim_id" "${run_id:+-$run_id}"
-  }
-  derive_artifacts_dir "'"$CLAIM_ID_X"'"
-')
-DIR_Y=$(RUN_ID="$RUN_ID_SHARED" bash -c '
-  derive_artifacts_dir() {
-    local claim_id="$1"
-    local run_id="${RUN_ID:-$(date +%Y%m%d-%H%M%S)-$$}"
-    printf "/tmp/bead-work-%s%s\n" "$claim_id" "${run_id:+-$run_id}"
-  }
-  derive_artifacts_dir "'"$CLAIM_ID_Y"'"
-')
+export RUN_ID="${RUN_ID:-20260101-000000-99999}"  # even a SHARED RUN_ID must not collide across batches
+DIR_X=$(derive_dir "$CLAIM_ID_X" | cut -d'|' -f1)
+DIR_Y=$(derive_dir "$CLAIM_ID_Y" | cut -d'|' -f1)
+unset RUN_ID
 echo "  Conductor X (batch bd-aaaa1.1): $DIR_X"
 echo "  Conductor Y (batch bd-bbbb2.3): $DIR_Y"
 if [ "$DIR_X" = "$DIR_Y" ]; then
@@ -152,6 +138,13 @@ if [ "$DIR_X" = "$DIR_Y" ]; then
 else
   pass "Case 2: different batches -> distinct ARTIFACTS_DIR regardless of RUN_ID: $DIR_X != $DIR_Y"
 fi
+
+echo
+echo "=== Case 3: the run folder lives under the repo's _scratch/, where a subagent can write ==="
+case "$DIR_A" in
+  "$ROOT"/_scratch/bead-work-*) pass "Case 3: $DIR_A is under $ROOT/_scratch/" ;;
+  *) fail "Case 3: $DIR_A is not under $ROOT/_scratch/bead-work-*" ;;
+esac
 
 if [ "$MKDIR_PROOF" -eq 1 ]; then
   echo

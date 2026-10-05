@@ -35,7 +35,7 @@ MAX_ROUNDS=5
 # Mint RUN_ID if the orchestrator didn't hand one down (contract: ac-pipeline/references/run-id.md
 # mint-if-absent rule) — keeps standalone and orchestrated runs on the same formula.
 RUN_ID="${RUN_ID:-$(date +%Y%m%d-%H%M%S)-$$}"
-ARTIFACTS_DIR=/tmp/hygiene-${RUN_ID}   # RUN_ID carries the PID → no same-second collision (ac-pipeline/references/run-id.md)
+ARTIFACTS_DIR="$(git rev-parse --show-toplevel)/_scratch/hygiene-${RUN_ID}"   # RUN_ID carries the PID → no same-second collision (ac-pipeline/references/run-id.md)
 ```
 
 ```bash
@@ -157,7 +157,7 @@ against reality.
    `<!-- evidence: <N green runs | probe-fact | operator sign-off> -->` form (`ac-review`'s
    doctrine-delta dimension checks this shape at diff-time; this lens re-audits stamps already
    landed, not just new ones).
-2. **Spot-check each claim against actual run history** — CI run logs, `.claude/reviews/batch/`
+2. **Spot-check each claim against actual run history** — CI run logs, `.compounds/reviews/batch/`
    commits, or dream recurrence records that plausibly exercised the stamped mechanism. A stamp
    claiming a green-run count the record can't substantiate, or a probe-fact stamp whose probe
    script no longer exists, is a finding regardless of the stamp's age.

@@ -50,7 +50,7 @@ git log "$COV_BASE..HEAD" --format='%ct|%H|%s|%b' 2>/dev/null \
   | tee "$D/commits-flat" >/dev/null
 
 # Bookkeeping is decided by the diff, never a self-declared subject tag: a commit whose
-# EVERY touched file is bookkeeping (under .beads/, _archive/ or .claude/reviews/, or
+# EVERY touched file is bookkeeping (under .beads/, _archive/ or .compounds/reviews/, or
 # named FRICTIONS.md/MAINTENANCE.md at any depth) names beads without implementing them.
 # A commit that touches zero files is not bookkeeping. Mixed diffs (one bookkeeping file
 # plus one real file) are NOT dropped — the real file is the claim that matters.
@@ -61,7 +61,7 @@ git log "$COV_BASE..HEAD" --format='%H' --name-only 2>/dev/null \
         if (base == "FRICTIONS.md" || base == "MAINTENANCE.md") return 1
         if (f ~ /^\.beads\//) return 1
         if (f ~ /^_archive\//) return 1
-        if (f ~ /^\.claude\/reviews\//) return 1
+        if (f ~ /^\.compounds\/reviews\//) return 1
         return 0
       }
       /^[0-9a-f]{40}$/ {

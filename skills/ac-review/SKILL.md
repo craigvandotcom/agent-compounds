@@ -1,6 +1,6 @@
 ---
 name: ac-review
-description: 'The hand-run independent review: `ac-review <range>` over a range the operator names — nothing triggers it and no batch runs it. Three lenses (correctness against the plan and the bead ACs, test-quality, and one risk lens the diff chooses) report against one bar: a demonstrated failure in ordinary operation, or a violated acceptance criterion, with a reproducing command. Every finding routes to Defect (a bead), Hardening (one report line, never a bead) or Nothing; a fresh verifier re-runs each Critical/High before any fix. Reviewers run the validator stance, read-only on the shared tree; reports land in `.claude/reviews/`. Triggers: ''/ac-review'', ''review the batch'', ''review this range''.'
+description: 'The hand-run independent review: `ac-review <range>` over a range the operator names — nothing triggers it and no batch runs it. Three lenses (correctness against the plan and the bead ACs, test-quality, and one risk lens the diff chooses) report against one bar: a demonstrated failure in ordinary operation, or a violated acceptance criterion, with a reproducing command. Every finding routes to Defect (a bead), Hardening (one report line, never a bead) or Nothing; a fresh verifier re-runs each Critical/High before any fix. Reviewers run the validator stance, read-only on the shared tree; reports land in `.compounds/reviews/`. Triggers: ''/ac-review'', ''review the batch'', ''review this range''.'
 ---
 
 # ac-review — the hand-run review
@@ -30,7 +30,7 @@ a deliberate tool, run when the operator asks for one.
 3. **The verify round.** Before any fix, one fresh verifier per Critical/High finding runs
    each probe and tries to refute it (`reviewer-prompt-template.md` § The verify round).
    No Critical/High → no verify round.
-4. **Report and verdict.** `references/report-template.md`, written to `.claude/reviews/`.
+4. **Report and verdict.** `references/report-template.md`, written to `.compounds/reviews/`.
    `VERDICT: APPROVED` when every lens reported and every finding is dispositioned; else
    `VERDICT: NEEDS_DECISION`. The conductor writes the verdict, never the reviewer.
 

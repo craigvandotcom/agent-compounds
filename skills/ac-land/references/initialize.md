@@ -15,15 +15,16 @@ the primary path. There is no branch-based fallback in this chain.
 #    them all.
 # 1. Handed ARTIFACTS_DIR (single bead-work session, no RUN_ID) → use verbatim.
 # 2. Last resort → newest dir, with a logged warning (it was guessed).
+SCRATCH="$(git rev-parse --show-toplevel)/_scratch"
 if [ -n "$RUN_ID" ]; then
-  ARTIFACTS_DIRS=$(ls -1dt /tmp/bead-work-*-"$RUN_ID"/ 2>/dev/null | sed 's:/$::')
+  ARTIFACTS_DIRS=$(ls -1dt "$SCRATCH"/bead-work-*-"$RUN_ID"/ 2>/dev/null | sed 's:/$::')
   ARTIFACTS_DIR=$(printf '%s\n' "$ARTIFACTS_DIRS" | head -1)   # primary (newest batch) for single-dir steps
-  [ -z "$ARTIFACTS_DIR" ] && ARTIFACTS_DIR=/tmp/bead-work     # run shipped nothing landable
+  [ -z "$ARTIFACTS_DIR" ] && ARTIFACTS_DIR="$SCRATCH/bead-work"     # run shipped nothing landable
 elif [ -n "$ARTIFACTS_DIR" ]; then
   :                                                   # handed by orchestrator — use verbatim
 else
-  ARTIFACTS_DIR=$(ls -1dt /tmp/bead-work-*/ 2>/dev/null | head -1 | sed 's:/$::')
-  [ -z "$ARTIFACTS_DIR" ] && ARTIFACTS_DIR=/tmp/bead-work
+  ARTIFACTS_DIR=$(ls -1dt "$SCRATCH"/bead-work-*/ 2>/dev/null | head -1 | sed 's:/$::')
+  [ -z "$ARTIFACTS_DIR" ] && ARTIFACTS_DIR="$SCRATCH/bead-work"
   echo "WARN: ARTIFACTS_DIR not handed and no RUN_ID scope — GUESSED $ARTIFACTS_DIR" >&2
 fi
 echo "ARTIFACTS_DIR=$ARTIFACTS_DIR"
@@ -31,7 +32,7 @@ echo "ARTIFACTS_DIR=$ARTIFACTS_DIR"
 ```
 
 **You MUST substitute the resolved `$ARTIFACTS_DIR` into all sub-agent prompts below.** The
-literal string `/tmp/bead-work` is a placeholder — for parallel sessions you write the actual
+literal string `_scratch/bead-work` is a placeholder — for parallel sessions you write the actual
 resolved path into each spawned agent's prompt. Do NOT pass the variable name; sub-agents don't
 share the parent shell.
 

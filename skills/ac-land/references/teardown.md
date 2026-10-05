@@ -11,57 +11,60 @@ child that cannot find that section still owes teardown; do not skip it.
 
 ## Cleanup temp files
 
-Remove session artifacts (they've been consumed by retrospective). Run each block separately to avoid shell chaining that triggers safety hooks.
+Move session artifacts out of `_scratch/` (they've been consumed by retrospective). Run each block separately to avoid shell chaining that triggers safety hooks.
 
-**Concurrency-safe, two-tier teardown.** Scheduled ac-implement swarm runs can overlap in time, and one run's mixed-kind children each hold their own dir, so a blind `rm -rf /tmp/<prefix>-*` would delete a concurrently-LIVE run's in-flight artifact dirs. Two tiers, covering all 11 targets (10 glob prefixes + the bare literal `/tmp/bead-work`):
+**Concurrency-safe, two-tier teardown.** Scheduled ac-implement swarm runs can overlap in time, and one run's mixed-kind children each hold their own dir under the repo's `_scratch/`, so a blind sweep of `_scratch/<prefix>-*` would move a concurrently-LIVE run's in-flight artifact dirs. Two tiers, covering every run prefix in `ac-pipeline/references/run-id.md` § Prefixes, the older `plan-refine-internal` / `plan-refine` / `plan-clean` / `beadify` / `batch-close` dirs, and the bare literal `_scratch/bead-work/`:
 
-- **Tier 1 — universal content-aware age-gate (LOAD-BEARING).** A dir is stale ONLY if nothing inside it — nor the dir itself — was modified within `STALE_MIN` minutes: `find "$d" -mmin -$STALE_MIN -print -quit` returning non-empty means something is fresh ⇒ LIVE ⇒ keep; empty output ⇒ demonstrably abandoned ⇒ delete. Do NOT gate on the parent dir's own mtime: in-place rewrites of files like `progress.md` do NOT bump the containing dir's mtime, so a dir-mtime gate would reap a live long-running run. Each loop is keyed to its exact `/tmp/<prefix>-*/` glob (or the literal `/tmp/bead-work`) — nothing can reach unrelated `/tmp` content.
-- **In-tree scratch.** Stances write under the project's `_scratch/<run-id>/` (gitignored). Delete this run's dir outright — it is keyed by RUN_ID, so nothing live shares it.
-- **Tier 2 — RUN_ID exact-match (optimization; the 7 embedding prefixes ONLY).** Immediately delete THIS run's own dirs so it cleans up after itself without waiting out the age gate. The `[ -n "$RUN_ID" ]` guard on every line is MANDATORY: with `RUN_ID` unset or empty, the unguarded glob degenerates right back to the original unscoped bug. `work-review-*`, `batch-close-*`, external `plan-refine-*`, and bare `/tmp/bead-work` get NO tier-2 line — a RUN_ID glob never matches them, and a silent no-op masquerading as cleanup is worse than no line — they rely on the age gate alone.
+- **Tier 1 — universal content-aware age-gate (LOAD-BEARING).** A dir is stale ONLY if nothing inside it — nor the dir itself — was modified within `STALE_MIN` minutes: `find "$d" -mmin -$STALE_MIN -print -quit` returning non-empty means something is fresh ⇒ LIVE ⇒ keep; empty output ⇒ demonstrably abandoned ⇒ stale. Do NOT gate on the parent dir's own mtime: in-place rewrites of files like `progress.md` do NOT bump the containing dir's mtime, so a dir-mtime gate would reap a live long-running run. Each selector is keyed to its exact `_scratch/<prefix>-*/` glob (or the literal `_scratch/bead-work/`) — nothing can reach unrelated `_scratch/` content.
+- **Tier 2 — RUN_ID exact-match (optimization; the 7 embedding prefixes ONLY).** Select THIS run's own dirs so it cleans up after itself without waiting out the age gate. The `[ -n "$RUN_ID" ]` guard on every line is MANDATORY: with `RUN_ID` unset or empty, the unguarded glob degenerates right back to the original unscoped bug. `work-review-*`, `batch-close-*`, external `plan-refine-*`, and bare `_scratch/bead-work/` get NO tier-2 line — a RUN_ID glob never matches them, and a silent no-op masquerading as cleanup is worse than no line — they rely on the age gate alone.
 
-Every candidate is PRINTED (`STALE:` / `OWN:` lines) and nothing is deleted inside the loops — deletion happens in the compose step below, so a wrongful sweep is diagnosable post-hoc.
+Every candidate is PRINTED (`STALE:` / `OWN:` lines) and nothing is moved inside the loops — the move happens in the compose step below, so a wrongful sweep is diagnosable post-hoc.
 
 ```bash
+cd "$(git rev-parse --show-toplevel)"   # the globs below are repo-root relative
 STALE_MIN=1440   # 24h — max plausible gap between WRITES in a live run (NOT a bound on total run duration)
 
-# Tier 1 — universal content-aware age-gate, ONE selector over all 12 targets (11 glob
-# prefixes + literal /tmp/bead-work; globs expand at the CALL SITE, so the function only
-# ever sees concrete dirs — identical per-dir semantics to writing 12 loops longhand).
+# Tier 1 — universal content-aware age-gate, ONE selector over every target (the globs
+# expand at the CALL SITE, so the function only ever sees concrete dirs).
 # Prefix inventory: ac-pipeline/references/run-id.md § Prefixes — keep the argument list in sync.
 stale() { for d in "$@"; do [ -d "$d" ] || continue
   [ -z "$(find "$d" -mmin -$STALE_MIN -print -quit 2>/dev/null)" ] && echo "STALE: $d"; done; }
-stale /tmp/bead-work/ /tmp/bead-work-*/ /tmp/plan-init-*/ /tmp/batch-close-*/ \
-      /tmp/plan-refine-internal-*/ /tmp/plan-refine-*/ /tmp/plan-clean-*/ \
-      /tmp/bead-refine-*/ /tmp/beadify-*/ /tmp/hygiene-*/ /tmp/work-review-*/
+stale _scratch/bead-work/ _scratch/bead-work-*/ _scratch/plan-init-*/ _scratch/batch-close-*/ \
+      _scratch/plan-refine-internal-*/ _scratch/plan-refine-*/ _scratch/plan-clean-*/ \
+      _scratch/bead-refine-*/ _scratch/beadify-*/ _scratch/hygiene-*/ _scratch/work-review-*/ \
+      _scratch/qa-browser-*/ _scratch/qa-device-*/ _scratch/ui-elevate-*/ _scratch/swarm-*/ \
+      _scratch/wave-merge-*/ _scratch/prompt-rubric-*/
 
 # Tier 2 — immediate self-cleanup by exact RUN_ID match, 7 embedding prefixes only.
 # The [ -n "$RUN_ID" ] guard is MANDATORY (unset RUN_ID degenerates the globs to the
 # original unscoped bug — one guard, wrapping every glob).
 if [ -n "$RUN_ID" ]; then
-  for d in /tmp/bead-work-*-"$RUN_ID"/ /tmp/plan-init-*-"$RUN_ID"/ \
-           /tmp/plan-refine-internal-*-"$RUN_ID"/ /tmp/plan-clean-*-"$RUN_ID"/ \
-           /tmp/bead-refine-*-"$RUN_ID"/ /tmp/beadify-*-"$RUN_ID"/ /tmp/hygiene-*-"$RUN_ID"/; do
+  for d in _scratch/bead-work-*-"$RUN_ID"/ _scratch/plan-init-*-"$RUN_ID"/ \
+           _scratch/plan-refine-internal-*-"$RUN_ID"/ _scratch/plan-clean-*-"$RUN_ID"/ \
+           _scratch/bead-refine-*-"$RUN_ID"/ _scratch/beadify-*-"$RUN_ID"/ _scratch/hygiene-*-"$RUN_ID"/; do
     [ -d "$d" ] && echo "OWN: $d"
   done
 fi
 ```
 
-**Step 2 — compose the delete from the PRINTED LITERALS (the dcg contract).** The loops
-above are SELECTORS ONLY — they print candidates and delete nothing. `rm -rf "$d"` inside
-a loop is a dynamic-path delete and dcg blocks it. Read the `STALE:`/`OWN:` lines and
-issue ONE command with the printed paths pasted verbatim as literals:
+**Step 2 — compose the move from the PRINTED LITERALS (the dcg contract).** The loops
+above are SELECTORS ONLY — they print candidates and move nothing. A variable or
+substituted path in `mv` is blocked by dcg. Read the `STALE:`/`OWN:` lines and issue one
+`mv` per printed dir, the path pasted verbatim as a literal (drop the trailing `/`) into a
+distinct literal destination `/tmp/delete-me-<ts>-<n>`. `/tmp` is tmpfs and
+`systemd-tmpfiles-clean` reaps it, so nothing is deleted by hand:
 
 ```bash
 # example — paste the actual printed paths; never $VAR, never $( ), never a bare loop var
-rm -rf /tmp/bead-work-buglane-20260719-102946-27401 /tmp/bead-refine-20260719-102946-27401-refA
+mv _scratch/bead-work-buglane-20260719-102946-27401 /tmp/delete-me-20260719-102946-1
+mv _scratch/bead-refine-20260719-102946-27401-refA /tmp/delete-me-20260719-102946-2
 ```
 
-Allowed/blocked delete shapes are canon — `ac-pipeline/references/shell-guardrails.md`
-(literal `/tmp/...` paths + distinctive globs allowed; variable/substituted paths and
-home/repo `rm -rf` blocked — the version-pinned details live THERE, not here). For
-repo-tree debris (a stale `.next.stale-*`, an orphaned scratch file): `git rm` if tracked;
-else gitignore-and-flag or `dcg allow-once` — don't fight the guard. Zero `STALE:`/`OWN:`
-lines printed = nothing to delete; step 2 is skipped.
+Allowed/blocked shapes are canon — `ac-pipeline/references/shell-guardrails.md`
+(literal paths allowed; variable/substituted paths blocked — the version-pinned details
+live THERE, not here). For repo-tree debris (a stale `.next.stale-*`, an orphaned scratch
+file): `git rm` if tracked; else gitignore-and-flag or `dcg allow-once` — don't fight the
+guard. Zero `STALE:`/`OWN:` lines printed = nothing to move; step 2 is skipped.
 
 Mark ledger task 7 `completed`; `TaskUpdate` task 8 `in_progress`.
 

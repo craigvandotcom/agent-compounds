@@ -1,7 +1,7 @@
 # Review Report Template
 
 One report per hand-run review. The operator runs `ac-review <range>` and writes the
-report into `.claude/reviews/`. Nothing advances a mark and nothing machine-reads this
+report into `.compounds/reviews/`. Nothing advances a mark and nothing machine-reads this
 file: a batch is everything since the last `v*` tag, and where one ends is not this
 report's business.
 
