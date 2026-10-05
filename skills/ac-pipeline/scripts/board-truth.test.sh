@@ -35,15 +35,20 @@ is_bookkeeping_commit() { # <sha> <<< files
 # The extractor, lifted verbatim from board-truth.sh's citation awk (minus the NR==FNR
 # bookkeeping-lookup line, which the harness below substitutes with a real one) so the
 # test cannot drift from the implementation it claims to cover.
+# The id matcher is read out of board-truth.sh's own `ID_RE=` line, never retyped here.
+ID_RE=$(sed -n "s/^ID_RE='\(.*\)'\$/\1/p" "$TARGET")
+NOT_ID=$(sed -n "s/^NOT_ID='\(.*\)'\$/\1/p" "$TARGET")
+[ -n "$ID_RE" ] || { echo "FAIL  board-truth.sh declares no ID_RE — the extractor has no id shape"; exit 1; }
+
 extract() { # <bookkeeping-sha-or-EMPTY> <<< record
-  awk -F'|' -v bk="$1" '
+  awk -F'|' -v bk="$1" -v idre="$ID_RE" -v noid="$NOT_ID" '
       { ct=$1+0; subj=$3
         if (bk != "" && $2 == bk) next
         body=""; for(i=4;i<=NF;i++) body=body "|" $i
         n=split(subj, t, /[^A-Za-z0-9._-]/)
-        for(i=1;i<=n;i++) if (t[i] ~ /^bd-[A-Za-z0-9._-]+$/) if (ct>seen[t[i]]+0) seen[t[i]]=ct
+        for(i=1;i<=n;i++) if (t[i] ~ idre && t[i] != noid) if (ct>seen[t[i]]+0) seen[t[i]]=ct
         m=split(body, w, /[|[:space:]]+/)
-        for(i=1;i<m;i++) if (w[i] ~ /^[Bb]eads?:$/ && w[i+1] ~ /^bd-[A-Za-z0-9._-]+$/) if (ct>seen[w[i+1]]+0) seen[w[i+1]]=ct
+        for(i=1;i<m;i++) if (w[i] ~ /^[Bb]eads?:$/ && w[i+1] ~ idre) if (ct>seen[w[i+1]]+0) seen[w[i+1]]=ct
       } END { for (k in seen) printf "%s\n", k }'
 }
 
@@ -75,6 +80,10 @@ expect '1700000000|abc1234|chore(beads): stamp bd-probe8 refined|x' "$(printf '.
   'a chore(beads)-subject commit that changes real files is NOT dropped'
 expect '1700000000|abc1234|fix(x): correct calc|Bead: bd-probe9' "$(printf '.beads/foo.json\nsrc/real.ts')" 'bd-probe9' \
   'a commit touching one bookkeeping file plus one real file is NOT dropped'
+expect '1700000000|abc1234|fix(x): thing|Bead: ac-probe10' '' 'ac-probe10' 'ac- prefix: Bead: trailer is detected'
+expect '1700000000|abc1234|fix(ac-2314.1): thing|body text' '' 'ac-2314.1' 'ac- prefix: dotted id in subject is detected'
+expect '1700000000|abc1234|fix: thing|Bead: artstill-app-x9z' '' 'artstill-app-x9z' 'multi-segment prefix (artstill-app-): trailer is detected'
+expect '1700000000|abc1234|docs: notes|see ac-probe11 for context' '' '' 'ac- prefix: bare prose mention does NOT count'
 
 echo "--- script contract ---"
 CASES=$((CASES + 1))

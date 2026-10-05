@@ -75,20 +75,27 @@ git log "$COV_BASE..HEAD" --format='%H' --name-only 2>/dev/null \
     ' \
   | tee "$D/bookkeeping-shas" >/dev/null
 
+# A bead id is `<prefix>-<suffix>` on ANY board (bd-, ac-, artstill-app-): the matcher takes
+# every hyphenated token and the join against the open-bead ids below keeps only real ones,
+# so no prefix is hardcoded here.
+ID_RE='^[A-Za-z][A-Za-z0-9]*-[A-Za-z0-9._-]+$'
+# The `[no-bead]` commit tag is hyphenated but never an id.
+NOT_ID='no-bead'
+
 # Only two shapes count as a claim that a bead was WORKED: an id in the SUBJECT, or an id
 # introduced by a `Bead:`/`Beads:` trailer. A bare mention in prose does not count — ledger
 # and report commits list dozens of ids they never touched.
-awk -F'|' '
+awk -F'|' -v idre="$ID_RE" -v noid="$NOT_ID" '
     NR == FNR { bk[$1] = 1; next }
     { ct=$1+0; subj=$3
       if ($2 in bk) next
       body=""; for(i=4;i<=NF;i++) body=body "|" $i
       n=split(subj, t, /[^A-Za-z0-9._-]/)
-      for(i=1;i<=n;i++) if (t[i] ~ /^bd-[A-Za-z0-9._-]+$/) if (ct>seen[t[i]]+0) seen[t[i]]=ct
+      for(i=1;i<=n;i++) if (t[i] ~ idre && t[i] != noid) if (ct>seen[t[i]]+0) seen[t[i]]=ct
       # Split on the field separator too: the flattener prefixes each body field with `|`,
       # so a trailer that STARTS the body arrives as `|Bead:` and would never match.
       m=split(body, w, /[|[:space:]]+/)
-      for(i=1;i<m;i++) if (w[i] ~ /^[Bb]eads?:$/ && w[i+1] ~ /^bd-[A-Za-z0-9._-]+$/) if (ct>seen[w[i+1]]+0) seen[w[i+1]]=ct
+      for(i=1;i<m;i++) if (w[i] ~ /^[Bb]eads?:$/ && w[i+1] ~ idre) if (ct>seen[w[i+1]]+0) seen[w[i+1]]=ct
     } END { for (k in seen) printf "%s\t%d\n", k, seen[k] }' "$D/bookkeeping-shas" "$D/commits-flat" \
   | tee "$D/cited" >/dev/null
 
