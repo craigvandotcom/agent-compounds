@@ -1,5 +1,7 @@
 # Memory Retrieval Hook
 
+> **Unwired since 2026-10-06** — recall is pulled (`qmd query` / `cass search`), never injected. The script stays for `retrieve()` (the retrieval-evals callable). Re-enable: restore the `memory-recall` entry in `engine/hooks.wiring.json` (`git log -p -- engine/hooks.wiring.json`), then run `engine/sync.sh --all`.
+
 ## The canonical hook
 
 **`memory-retrieval.py`** — the single, unified UserPromptSubmit memory-recall hook
@@ -70,7 +72,6 @@ semantic 8.0s.
 
 ## Wiring
 
-Wired by project-relative path in root `.claude/settings.json` UserPromptSubmit
-(`$CLAUDE_PROJECT_DIR/.claude/hooks/memory-retrieval.py`) — the canon manifest is
+None while unwired (see the note at the top). When wired, the canon manifest is
 `agent-compounds/engine/hooks.wiring.json` (`memory-recall` entry), rendered per harness by
-`harness-sync.sh`. Apps carry their own absolute-path call to this same file.
+`harness-sync.sh`.

@@ -1,6 +1,12 @@
 #!/usr/bin/env python3
 """UserPromptSubmit hook: relevance pre-retrieval over the memory lobes (L3).
 
+ASSURANCE-ROLE: utility
+CALLER: infrastructure/retrieval-evals/run-evals.py (loads `retrieve()`) — deliberately
+UNWIRED in engine/hooks.wiring.json since 2026-10-06: recall is pulled (`qmd query` /
+`cass search`), never injected. Re-enable: restore the `memory-recall` entry, run
+`engine/sync.sh --all`. See README-memory-retrieval.md.
+
 THE canonical memory-recall hook (unified 2026-07-10, observe-loop Wave 1.1 — the
 former adaptive variant was merged in here and its file deleted). Context-engineering
 L3 rule: memory is injected by relevance, not bulk-loaded.

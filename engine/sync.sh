@@ -1060,7 +1060,7 @@ export const server = async ({ directory, client }) => {
   }
 
   return {
-    // UserPromptSubmit: memory-recall + the delegation reminder. Their stdout is
+    // UserPromptSubmit: the delegation reminder. Its stdout is
     // appended as an extra text part, which is how the other harnesses inject context.
     "chat.message": async (input, output) => {
       if (WIRING_ERROR) {
@@ -1300,6 +1300,8 @@ PY
   fi
 }
 
+path_under() { case "$1" in "$2"|"$2"/*) return 0 ;; esac; return 1; } # <path> <dir>
+
 # ensure_home_link <link> <target-abs> — machine-local absolute symlink (setup.sh pattern)
 ensure_home_link() {
   local dest="$1" target="$2"
@@ -1308,6 +1310,14 @@ ensure_home_link() {
     echo "  SKIP (real file present): ${dest/#$HOME/~}"; return 0
   fi
   [ "$(readlink "$dest" 2>/dev/null)" = "$target" ] && return 0
+  # A link under $HOME to a target outside it, while the org root is not under $HOME, is
+  # a fixture run (a test's mktemp org) aimed at the real home: the fixture is deleted
+  # and the link dangles. Refuse; set AC_ALLOW_OUTSIDE_HOME_LINK=1 for a deliberate layout.
+  if path_under "$dest" "$HOME" && ! path_under "$target" "$HOME" && ! path_under "$ORG_ROOT" "$HOME" \
+     && [ "${AC_ALLOW_OUTSIDE_HOME_LINK:-0}" != 1 ]; then
+    echo "  ERROR: refusing to link ${dest/#$HOME/~} -> $target — the target is outside \$HOME ($HOME) and org_root ($ORG_ROOT) is not under \$HOME. A test or fixture run is pointed at the real home; export HOME to a scratch dir (or AC_ALLOW_OUTSIDE_HOME_LINK=1 if this layout is deliberate)." >&2
+    exit 1
+  fi
   if [ "$DRY" = 1 ]; then echo "  link ${dest/#$HOME/~} -> $target";
   else ln -sfn "$target" "$dest"; echo "  linked ${dest/#$HOME/~} -> $target"; fi
   note_change

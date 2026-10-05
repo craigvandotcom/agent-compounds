@@ -18,7 +18,7 @@ the machinery that would have acted on it.
 
 | Ask | If yes → | Why |
 |---|---|---|
-| Will a future session need to *retrieve* this to avoid re-deriving it? | **L3 memory** | The recall hook only injects from memory lobes. |
+| Will a future session need to *retrieve* this to avoid re-deriving it? | **L3 memory** | Recall (`qmd query`) searches the memory lobes. |
 | Did a *procedure* misbehave — a skill's own step was wrong, missing, or unenforceable? | **Skill friction** | It is evidence for changing the procedure, not a fact to recall. |
 | Do many facts about one subject need to read as a single cited narrative? | **Wiki page** | Integration a human reads; not a retrieval unit. |
 
@@ -37,7 +37,7 @@ reachable one — see `context-engineering` § PROMOTION & DEMOTION.
 line in that dir's `MEMORY.md`.
 
 **Guarantees:** every atom is retrievable by any agent through the same surface (`qmd`)
-and injected by relevance through the per-prompt recall hook. Homes are git-tracked, so
+and pulled by relevance with `qmd query`. Homes are git-tracked, so
 writes travel on the next pull.
 
 **Refuses:** near-duplicates (dedupe-over-append is mandatory), unevidenced claims,

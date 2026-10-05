@@ -35,7 +35,7 @@ after adversarial citation review); provenance: `<global>/plans/memory-wiki-upgr
 **When NOT to Use:**
 - Saving a single fact, rule, decision, or recipe → `context-engineering` routes it
 - End-of-session capture → `reflect`
-- Reading/browsing pages (no skill needed — **index-first**: open `<domain>/wiki/index.md` and follow links; `qmd query` when no page covers it; the hook auto-injects matching pages)
+- Reading/browsing pages (no skill needed — **index-first**: open `<domain>/wiki/index.md` and follow links; `qmd query` when no page covers it)
 
 ---
 
@@ -73,9 +73,9 @@ status: draft | canonical
 `references/research-basis.md`): author *when this should surface* explicitly, don't
 make the agent infer relevance post hoc. Write it the way you'd write a skill's
 `description:` trigger clause. **How it's consumed:** the `wiki` collection is one of
-the memory-retrieval hook's lobes, so the trigger text is part of the page's hybrid
+a `qmd query` lobe, so the trigger text is part of the page's hybrid
 search/embedding surface — a well-written trigger literally improves when the page
-auto-injects. memory-lint enforces its presence.
+surfaces. memory-lint enforces its presence.
 
 ## Page structure: Compiled Truth + Timeline
 
@@ -83,7 +83,7 @@ Every page body has two layers below the frontmatter, split by a
 `--- <!-- timeline -->` divider line:
 
 - **Compiled Truth** (above the divider) — the current synthesis, freely rewritable,
-  same regenerability mindset as the rest of this doctrine. This is what an injected
+  same regenerability mindset as the rest of this doctrine. This is what a retrieved
   page shows.
 - **Timeline** (below the divider) — append-only, dated, one-paragraph entries, newest
   first. **Never edited or deleted** — a correction is a new dated entry, not a rewrite

@@ -38,13 +38,12 @@ read as a stronger claim than it makes.
 | Signal | Proves | Does NOT prove |
 |---|---|---|
 | memory-lint green | every atom is indexed, linked, and parseable | that any atom is correct, current, or retrievable |
-| hook health green | injection ran and returned something | that what it returned was relevant |
 | retrieval eval exit 0 | no query that hit at baseline-time now misses | that recall is *good* — only that it did not regress |
 | `cass search` returns hits | the archive is queryable | nothing about the memory substrate; different system |
 | a proposal marked `applied` | the frontmatter was flipped | that the edit landed — verify the target |
 | lint.sh green | the registry's structural rules hold | that skill *content* is true |
 
-The load-bearing distinction: **liveness vs relevance.** memory-lint and hook-health are
+The load-bearing distinction: **liveness vs relevance.** memory-lint is
 liveness. Only the retrieval eval measures relevance, and it is the one that costs a
 nightly run — which is exactly why it is the one that gets ignored when it goes red.
 
@@ -55,8 +54,8 @@ Work in this order; each step separates a different failure.
 1. **Does the doc exist and is it indexed?** `qmd search "<terms>" -c memory`. No hit →
    the atom is missing or unindexed; this is a capture problem, not retrieval.
 2. **Does the CLI find it with the full question?** `qmd query "<the actual prompt>"`.
-   Found here but not injected → the hook's retrieval is at fault, not the index.
-3. **Does the hook find it?** Import `retrieve()` from `.claude/hooks/memory-retrieval.py`
+   Found here but the agent lacked it → it did not search, or searched other terms.
+3. **Does the eval's ranker find it?** Import `retrieve()` from `hooks/memory-retrieval.py`
    and call it with the same text. It is side-effect-free and safe to call directly.
 4. **Compare the candidate pool against the top-5.** If the target is in the pool but
    ranked out, it is a ranking problem. If it is absent from the pool, it is a

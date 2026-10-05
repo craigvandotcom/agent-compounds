@@ -37,6 +37,11 @@ ok()  { echo "  ok    $1"; }
 bad() { echo "  FAIL  $1"; fails=$((fails + 1)); }
 
 WORK="$(mktemp -d)"; trap 'rm -rf "$WORK"' EXIT
+# sync.sh writes under $HOME (hooks, the ~/.claude/CLAUDE.md floor link): run it against a
+# scratch home, never the real one — a link into this suite's deleted fixture would dangle.
+export DCG_UNDER_TEST="${DCG_UNDER_TEST:-$HOME/.local/bin/dcg}"  # the dcg gate runs for real; keep resolving the real binary
+export HOME="$WORK/fakehome"
+mkdir -p "$HOME/.claude"
 HOME_DIR="$WORK/home"
 DRIVER="$WORK/drive.mjs"
 
@@ -50,7 +55,7 @@ command -v node >/dev/null 2>&1 || { echo "HARNESS FAIL: node not on PATH — th
 # wiring spells, as empty executables. Derived from the manifest, never spelled:
 # a new {INFRA} entry brings its own fixture. The render assert checks existence;
 # the gate driven below reads the wiring JSON and never runs the scripts.
-FIXTURE_ORG="$WORK/org"
+FIXTURE_ORG="$HOME/org"
 FIXTURE_MACHINE="$WORK/machine.json"
 mkdir -p "$FIXTURE_ORG/infrastructure/harness-config/claude"
 printf 'machine-global floor fixture\n' > "$FIXTURE_ORG/infrastructure/harness-config/claude/CLAUDE.md"
@@ -115,6 +120,20 @@ case "$OUT" in
   *"BLOCKED: ac-hooks: wiring unreadable at"*) ok "corrupt wiring: tool call blocked with the unreadable message" ;;
   *) bad "corrupt wiring: expected BLOCKED message, got: $OUT" ;;
 esac
+
+# GUARD: a fixture org outside $HOME aimed at a home must be refused, not linked
+# (a link into a deleted fixture dangles). Dry-run, scratch home: nothing is written.
+GUARD_ORG="$WORK/guard-org"; GUARD_HOME="$WORK/guard-home"
+cp -r "$FIXTURE_ORG" "$GUARD_ORG"; mkdir -p "$GUARD_HOME/.claude" "$WORK/guard-oc"
+printf '{"org_root": "%s"}\n' "$GUARD_ORG" > "$WORK/guard-machine.json"
+if OUT="$(HOME="$GUARD_HOME" AC_MACHINE_FILE="$WORK/guard-machine.json" bash "$SYNC" --root --check --opencode-home "$WORK/guard-oc" 2>&1)"; then
+  bad "home-link guard: sync accepted an org outside \$HOME"
+else
+  case "$OUT" in
+    *"refusing to link"*) ok "home-link guard: org outside \$HOME refused loudly" ;;
+    *) bad "home-link guard: failed without the refusal message: $(printf '%s' "$OUT" | tail -2)" ;;
+  esac
+fi
 
 echo
 if [ "$fails" -eq 0 ]; then

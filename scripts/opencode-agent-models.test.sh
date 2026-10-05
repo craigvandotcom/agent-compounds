@@ -29,6 +29,10 @@ command -v jq >/dev/null 2>&1 || { echo "HARNESS FAIL: jq not on PATH"; exit 1; 
 
 WORK="$(mktemp -d)"; trap 'rm -rf "$WORK"' EXIT
 mkdir -p "$WORK/home"
+# sync.sh writes under $HOME (hooks, the ~/.claude/CLAUDE.md floor link): run it against a
+# scratch home, never the real one.
+export HOME="$WORK/fakehome"
+mkdir -p "$HOME/.claude"
 # ac-vlje.5: the installer reads its machine facts from engine/machine.sh and requires
 # the settings file (exit 4 when absent) — CI has none, so the reader is pointed at a
 # fixture stating this machine's real org root (the fact the derivation used to answer)

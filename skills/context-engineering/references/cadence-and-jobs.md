@@ -20,7 +20,7 @@ machines, so a job absent from this machine's list simply never fires here.
 | Maintenance | daily 00:30 | all | health sweep; escalates what it cannot fix |
 | Knowledge Triage | daily 01:00 | L3 | routes inbound knowledge |
 | Context Mining | daily 01:30 | L3 | mines transcripts into lesson candidates |
-| Retrieval Evals | daily 03:30 | L3 | scores the recall hook against the qrels set |
+| Retrieval Evals | daily 03:30 | L3 | scores recall against the qrels set |
 | Infra Sync | daily 06:30 | all | `harness-sync.sh --all` — re-projects skills/agents/hooks to every target |
 | Wiki — Hallucination Audit | monthly, 1st | wiki | verifies every claim still cites something true |
 | Wiki — Garden Pass | monthly, 15th | wiki | dedup, reconcile, prune |
@@ -55,7 +55,6 @@ Each lane's proof-of-life:
 | Marker | Tells you |
 |---|---|
 | `<your-deployment>/health/reports/retrieval-evals-<date>.json` | the nightly recall measurement |
-| `<your-deployment>/health/reports/memory-hook-health.json` | whether injection ran at all (liveness only) |
 | a proposal's `status:` frontmatter | `pending` → `applied` / `rejected`; the terminal value means it actually landed |
 | a friction entry's `status:` | `open` → `promoted` when the skill edit ships |
 
