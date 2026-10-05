@@ -274,6 +274,23 @@ check(bead._looks_like_file_path("vitest.config.mts") is True,
       "_looks_like_file_path: the FINAL dot segment is what's checked against the known-"
       "extension list, never a middle one")
 
+# --- a bare extensionless artifact name (Makefile, Dockerfile, ...) is path-shaped --------
+
+check(bead.extract_paths("- lint: Makefile") == ["Makefile"],
+      "extract_paths: a bare extensionless conventional file (Makefile) is a path")
+check(bead.extract_paths("- image: Dockerfile and LICENSE") == ["Dockerfile", "LICENSE"],
+      "extract_paths: other conventional extensionless files (Dockerfile, LICENSE) are paths")
+check(bead.extract_paths("- ci: lib/a.ts and Makefile") == ["Makefile", "lib/a.ts"],
+      "extract_paths: slash-bearing and known-extension shapes keep passing beside a bare Makefile")
+check(bead.extract_paths("see the Makefile.") == ["Makefile"],
+      "extract_paths: a trailing sentence period is edge-stripped off a bare Makefile")
+check(bead.extract_paths("the makefile and some Readme words") == [],
+      "extract_paths: only the exact conventional names are paths — other bare words stay prose")
+check(bead.extract_paths("- x: Dockerfile.dev") == [],
+      "extract_paths: a dotted variant with an unknown extension (Dockerfile.dev) is not widened in")
+check(bead._looks_like_file_path("Makefile") is True and bead._looks_like_file_path("Makefiles") is False,
+      "_looks_like_file_path: the extensionless leg is an exact-name set, never a pattern")
+
 # A PLAN's own `## Deliverables` heading uses the SAME extractor (heading= override).
 PLAN_DESC = "## Deliverables\n- skills/_tools/bead.py\n- skills/_tools/bead.test.py\n"
 plan_dl = bead.delivers(PLAN_DESC, heading="Deliverables")

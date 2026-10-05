@@ -455,12 +455,20 @@ def consumes(text):
 # --- Delivers: whole-word paths, repo-root files, `.hidden/path`, `~/cross-repo`, ------
 # --- the `deleted-<kind>:` grammar, and the touchers-line exclusion (defined ONCE) -----
 
+# Conventional files with no extension and no `/`. A bare word is path-shaped ONLY when it is
+# one of these exact (case-sensitive) names; any other extensionless word stays prose.
+EXTENSIONLESS_FILES = (
+    "Makefile", "Dockerfile", "Procfile", "Gemfile", "Rakefile", "Justfile", "Brewfile",
+    "Podfile", "Vagrantfile", "Jenkinsfile", "Fastfile", "CODEOWNERS", "LICENSE",
+)
+
 ARTIFACT_RE = re.compile(
     r"(?<![\w./-])(?:\./)?(?:"
     r"~/[A-Za-z0-9_@.(){}\[\]-]+(?:/[A-Za-z0-9_@.(){}\[\]-]+)*"                      # ~/cross-repo path
     r"|\.[A-Za-z0-9_@(){}\[\]-]+(?:/[A-Za-z0-9_@.(){}\[\]-]+)+(?:\.[A-Za-z0-9]{1,10})?"  # .hidden/path (ext optional)
     r"|[A-Za-z0-9_@(){}\[\]-]+(?:/[A-Za-z0-9_@.(){}\[\]-]+)+\.[A-Za-z0-9]{1,10}"     # dir/dir/file.ext
     r"|[A-Za-z0-9_@(){}\[\]-]+(?:\.[A-Za-z0-9_@(){}\[\]-]+)*\.[A-Za-z0-9]{1,10}"     # repo-root file(.mid)*.ext
+    r"|(?:" + "|".join(EXTENSIONLESS_FILES) + r")"                                       # bare Makefile, Dockerfile, ...
     r")(?![\w/-])"
 )
 
@@ -514,11 +522,11 @@ KNOWN_FILE_EXTENSIONS = frozenset({
 
 def _looks_like_file_path(tok):
     """`tok` (already edge-stripped) is path-shaped enough to trust: it contains a `/`
-    (already directory-qualified by ARTIFACT_RE's own alternation), or its final `.<ext>`
-    is a KNOWN file extension. Never a purely numeric decimal (`0.68`) either way —
+    (already directory-qualified by ARTIFACT_RE's own alternation), or it is a conventional
+    EXTENSIONLESS_FILES name, or its final `.<ext>` is a KNOWN file extension. Never a purely numeric decimal (`0.68`) either way —
     `_PURELY_NUMERIC_RE` is checked before the extension lookup so a numeric "extension"
     (`0.68` -> ext `68`) is never accidentally legalised by a future list edit."""
-    if "/" in tok:
+    if "/" in tok or tok in EXTENSIONLESS_FILES:
         return True
     if _PURELY_NUMERIC_RE.match(tok):
         return False
@@ -530,7 +538,7 @@ def _looks_like_file_path(tok):
 
 def extract_paths(text):
     """Whole-word path-shaped tokens in plain text, sorted and deduped. A path token must
-    contain a `/` or end in a KNOWN file extension, and must never be purely numeric —
+    contain a `/`, be an EXTENSIONLESS_FILES name, or end in a KNOWN file extension, and must never be purely numeric —
     `foods.status` (a SQL column reference), `0.68` (a measured ratio) and `(bd-x.1` (a
     paren-wrapped bead id) are prose, never a file (checker recheck 2026-09-27)."""
     out = []
