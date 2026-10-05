@@ -13,9 +13,10 @@ _plans/
 # that .claude/ (with .agents/ .factory/ .codex/) stays out of the published tree: it holds
 # generated agents, session state, review ceremonies and machine-local settings. Ignored
 # WHOLESALE, not path by path — the per-subpath list used to miss each new subdir (agents/
-# sat unignored until 2026-09-22). One deliberate exception: settings.json is shared config.
+# sat unignored until 2026-09-22). Deliberate exceptions: settings.json and factory.json (the ship block) are shared config.
 .claude/*
 !.claude/settings.json
+!.claude/factory.json
 
 # Idea inbox — local only, same convention as _plans/
 _ideas/
@@ -46,7 +47,7 @@ tools/dcg/fixtures/
 .polish/
 
 # The factory state folder (ac-14s1) — config, run logs and reviews live in .compounds/
-# instead of Claude Code's .claude/reviews. Local-only, same as _plans/ and .polish/.
+# instead of Claude Code's own settings folder. Local-only, same as _plans/ and .polish/.
 .compounds/
 
 # ---------------------------------------------------------------------------
