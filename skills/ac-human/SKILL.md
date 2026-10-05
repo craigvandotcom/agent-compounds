@@ -68,7 +68,7 @@ You own the judgment:
 
 ## Phase 5: Drive the action loop (interactive · exit-first · auto-advance)
 
-After rendering, *drive* the session one item at a time, top of 🔴 downward — each action a **tap, not a typing task** — and surface the next item automatically; never dump the dashboard and wait. **Present the next item — do not pick a subset** (in the docket's printed order; independent gates before a collapsed lane). **Done** is always on the prompt as the escape. Per-item taps, recording, ripple, and capture: `references/action-loop.md`. Freshen / apply-proposals stay optional buttons only when those signals are live — they do not replace the next docket item.
+After rendering, *drive* the session one item at a time, top of 🔴 downward — each action a **tap, not a typing task** — and surface the next item automatically; never dump the dashboard and wait. **Present the next item — do not pick a subset** (in the docket's printed order; independent gates before a collapsed lane). **Done** is always on the prompt as the escape. Per-item taps, recording, ripple, and capture: `references/action-loop.md`. Freshen / apply-proposals / `/dream` (the 🧰 or 🧠 card lists items) stay optional buttons only when those signals are live — they do not replace the next docket item.
 
 ---
 

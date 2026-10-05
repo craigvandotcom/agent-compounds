@@ -29,7 +29,7 @@ advisory in both modes.
 
 READ-ONLY BY DEFAULT. The one write path is the explicit `--stamp` flag, which stamps
 `last_pass: <today>` into every ledger this run parsed. It exists for exactly one caller:
-dream's CYCLE-mode W4.5 scan, whose visit is the event `last_pass` is supposed to record.
+the dream session's close, whose visit is the event `last_pass` is supposed to record.
 No other consumer passes it, and without it this script does not touch a byte
 (pinned by friction-rollup.test.py's no-write case).
 

@@ -1,87 +1,59 @@
 ---
 name: dream
-description: Run the dream session — the org's deliberate self-improvement review, human-run and unscheduled. Use when asked to "run the dream cycle", "dream", "synthesize the week's lessons", "lint the memory substrate", "review dream proposals", "review the dream dockets", or "what did the dream cycle find"; also when a docket-review bead is open. The session reads both ranked dockets (memory-rollup — knowledge substrate, friction-rollup — friction ledger, both computed live), rules each item with the human, and emits approved work as task beads. NOT for capturing one session's lessons (that is reflect) or saving a single item (that is context-engineering routing).
+description: Run the dream session — the org's deliberate self-improvement review, human-run and unscheduled. Use when asked to "run the dream cycle", "dream", "synthesize the week's lessons", "lint the memory substrate", "review the dream dockets", or "what did the dream cycle find"; also when ac-human's friction or memory card offers it. The session reads both ranked dockets (memory-rollup — knowledge substrate, friction-rollup — friction ledger, both computed live), rules each item with the human, and fixes approved items in-session for the human to review. NOT for capturing one session's lessons (that is reflect) or saving a single item (that is context-engineering routing).
 ---
 
 # dream — human judgment over the ranked docket
 
-**Purpose:** the compounding engine (Primitive #4), now run as a deliberate human
-session. Not scheduled.
+**Purpose:** the compounding engine (Primitive #4), run as a deliberate human session.
 **Constitution:** `../context-engineering/SKILL.md` (load it first — taxonomy, homes,
 hygiene rules all come from there).
 **Dockets (input):** `scripts/memory-rollup.py --json` (knowledge substrate) +
-`../skill-builder/scripts/friction-rollup.py --view dream` (friction ledger) — computed
-live on every read, never stored; ac-human's cards read the same two. **Status:** MANUAL.
+`../skill-builder/scripts/friction-rollup.py --root <repo> --view dream` (friction ledger) —
+computed live on every read, never stored. `<repo>` is the current repo when it has
+`skills/*/FRICTIONS.md`, else the registry: the logs ac-human's cards read. **Status:** MANUAL.
 
 ---
 
-## What dream is now
+## What dream is
 
-A deliberate, human-run session with the agent present. Not scheduled, not headless.
-The docket is the input; the session is judgment, mining, and ruling. The operator reads the
-ranked docket, rules each item, and the agent captures the decisions — and mines what
-the sweep only flagged.
-
-Nothing in dream runs unattended. No cron invokes it. The scheduled weekly CYCLE and
-the daily review-queue job are gone — the jobs in `<your-deployment>/jobs/weekly.json`
-sit disabled (see The polish gate). A session starts because a human starts it.
-
-## The automated leg — the sweep (findings only)
-
-The mechanical sweep (`<your-deployment>/dream-cycle/docket-sweep.py`, optional —
-write your own) does four things, and nothing else:
-
-1. **Verifies premises live** — every pending proposal memo and open dream bead gets
-   a verdict against HEAD: `LIVE` / `ANSWERED` / `UNJUDGED` / `STALE-EVIDENCE`.
-2. **Leaves ranking to the two rollups** (above) — it writes no docket file.
-3. **Mints the single combined docket-review bead** ('review dream dockets') if none
-   is open (idempotent — the session's handle on the board; it never closes it).
-4. **Never decides anything.** Findings only.
-
-The sweep also closes answered-at-birth items, citing the deciding artifact. It never
-rules on what remains. Judgment is the session's, not the sweep's.
+A human-run session with the agent present. Nothing in dream runs unattended; no cron
+invokes it. The jobs in `<your-deployment>/jobs/weekly.json` sit disabled (see The polish
+gate). A session starts because a human starts it — usually from ac-human's offer.
 
 ## Session workflow — three phases
 
 ### Phase 1 — GATHER
 
-Run both rollups (above) — the ranked rows and the flagged re-entries. Scan fresh ledgers since the last session
-— friction logs, memory homes, wiki, pending proposals — so nothing the sweep's last
-pass predates is missed. The dockets are the input; the fresh scan is the check.
+Run both rollups (above). Scan ledgers changed since the last session — friction logs,
+memory homes, wiki, pending proposals. Verify each item's premise at HEAD; an item whose
+premise no longer holds leaves the docket.
 
 ### Phase 2 — JUDGE (with the operator)
 
-Rule each ranked item with the operator. Mine the consolidations and wiki refinements the
-sweep flagged. Capture every ruling in **EXACT phrasing — never paraphrase**: the words
-are the decision, and a paraphrase is a new decision nobody ruled on.
+Rule each ranked item: **fix now** · **won't fix** · **later**. Capture every ruling in
+**EXACT phrasing — never paraphrase**: the words are the decision, and a paraphrase is a
+new decision nobody ruled on.
 
-### Phase 3 — EMIT
+### Phase 3 — FIX (in-session)
 
-- **Approved** items become task beads born refined at apply time — implementation-ready
-  because the human ruled in-session. Every bead carries the born-verified contract
-  below.
-- **Rejected** items are memo-marked so they do not re-enter the docket as live.
-- The session ends with a **gap analysis** — what the substrate still doesn't know.
-  The next session's GATHER starts there.
-
-## The gates stay (the born-verified contract)
-
-Every task bead born in EMIT carries:
-
-- `evidence:` / `consequence:` / `recommendation:`
-- a `Probe:` line a gate can run
-- `origin:dream`
-
-Unverified premises do not file. A premise that no longer holds at HEAD is not
-emitted — it stays on the docket for the sweep's next pass. (Bead conventions:
-`../beads-standards/reference/bead-conventions.md`.)
+- **Fix now:** make the change, show the diff, commit on the operator's approval. One
+  commit per repo, never across a repo boundary. A behaviour change ships with its test
+  or the command that proves it.
+- **Close in the same commit:** the friction entry's `status: promoted` (memory item:
+  its resolution), citing the change.
+- **Too big for the session** (a new tool, a redesign, more than a few files): capture it
+  with `ac-backlog`; never start it here.
+- **Won't fix:** `status: wontfix` plus the ruling. **Later:** leave it; it re-ranks.
+- **Close the session:** `friction-rollup.py --root <repo> --stamp` (records `last_pass`),
+  then a **gap analysis** — what the substrate still doesn't know. The next GATHER
+  starts there.
 
 ## The polish gate
 
 Automation does not scale back up — crons, filing, auto-tier — until the manual loop
-has run enough sessions to trust its output. The disabled jobs in
-`<your-deployment>/jobs/weekly.json` are the marker: while they sit disabled, dream stays
-a human session.
+has run enough sessions to trust its output. While the `weekly.json` jobs sit disabled,
+dream stays a human session.
 
 ## Common mistakes
 
@@ -89,6 +61,6 @@ a human session.
 |---|---|
 | Running dream unattended | Never — a session is a human sitting with the agent |
 | Paraphrasing a ruling | Capture in the exact phrasing — a paraphrase is a new ruling |
-| Emitting a task bead without its probe | The probe is the born-verified contract; a probe-less bead is not implement-ready |
-| Filing an item whose premise already died | Verify at HEAD before emit — unverified premises do not file |
-| Letting the sweep decide | The sweep ranks and mints the bead; it never rules. Judgment is the session's |
+| Filing a bead for a fix that fits the session | Fix it now; `ac-backlog` is for work too big for it |
+| Fixing an item whose premise already died | Verify at HEAD first |
+| Landing a fix without closing its entry | The status change and the fix are one commit |
