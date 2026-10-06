@@ -6,7 +6,7 @@
 #
 # ASSURANCE
 #   PROBE:      bash skills/ac-publish/scripts/needs-device-gate.sh --self-test
-#   SCHEDULE:   every ac-publish, before tagging
+#   SCHEDULE:   every ac-publish release, in preflight; the beta route skips it
 #   MODE:       blocking
 #   ON-FAILURE: closed — a refusal is a stop; there is no override
 #
@@ -172,6 +172,9 @@ none
   run_case "ac2 Delivers+Probe intersection refuses" 1 'GATE REFUSED: fx-ac2' \
     --board "$work/ac2.json" --paths-file "$work/paths.txt"
 
+  AC_PUBLISH_ROUTE=beta run_case "the beta route skips the gate" 0 'SKIP \(beta route\)' \
+    --board "$work/ac2.json" --paths-file "$work/paths.txt"
+
   write_board zero fx-wuxx0 "$zeropath_desc"
   write_paths 'docs/unrelated.md'
   run_case "zero-path refuses on the label alone" 1 'GATE REFUSED: fx-wuxx0' \
@@ -241,11 +244,19 @@ none
 }
 
 if [ "$SELF_TEST" -eq 1 ]; then
+  unset AC_PUBLISH_ROUTE
   run_self_test
   exit $?
 fi
 
 # --- live / fixture run ----------------------------------------------------------------
+# The beta route skips the gate: the TestFlight build is how a device bead gets
+# its receipt, so gating that build on the receipt deadlocks. A release stays gated.
+if [ "${AC_PUBLISH_ROUTE:-release}" = beta ]; then
+  echo "SKIP (beta route): device beads gate the release, not the build that tests them"
+  exit 0
+fi
+
 command -v jq >/dev/null 2>&1 || not_gated "jq is required to read the board"
 
 if [ -z "$PATHS_FILE" ] && [ -z "$RANGE" ]; then

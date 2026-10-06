@@ -35,7 +35,7 @@ holds. `beta` runs only the targets declared `"beta": true`, bumps no version an
 
 ## Ship, in this order
 
-1. **Preflight.** Run each `ship.preflight[]` entry from the app checkout. Any non-zero stops the ship; name it.
+1. **Preflight.** Export `AC_PUBLISH_ROUTE=<route>`; run each `ship.preflight[]` entry from the app checkout. Any non-zero stops the ship; name it.
 2. **Version** (release only). `version.read` above the latest tag: reuse it, never bump twice.
    Otherwise run `version.bump` once — it commits. Compare as semver: a prerelease such as
    `2.0.0-ws2` is BELOW `2.0.0`, and `sort -V` orders it above. `null`: no bump, no tag.
