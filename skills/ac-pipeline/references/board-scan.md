@@ -109,7 +109,7 @@ check `19-bead-template-conformance`.
 ### Docket health (open gates + reason-less gates)
 
 **Always print.** Every listed consumer inherits this line — do not make it
-consumer-only. Key ONLY on the explicit `Gate-reason:` marker (never infer
+consumer-only. Key ONLY on a body line that starts `Gate-reason:` (never infer
 "this looks mechanical"). A deferred bead is not on the docket: exclude
 `status=deferred` AND exclude `status=open` rows whose `defer_until` is in
 the future. Empty/`br` failure is NOT clean (same doctrine as Scan E
@@ -149,7 +149,7 @@ def on_docket(i):
     return st in ('open', 'blocked', 'in_progress')
 hg = [i for i in issues if 'human-gate' in (i.get('labels') or [])]
 docket = [i for i in hg if on_docket(i)]
-reasonless = [i for i in docket if 'Gate-reason:' not in (i.get('description') or '')]
+reasonless = [i for i in docket if not re.search(r'^Gate-reason:', i.get('description') or '', re.M)]
 stale = []
 for i in reasonless:
     created = parse_until(i.get('created_at') or i.get('created'))

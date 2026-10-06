@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # return-hold.test.sh — proof harness for return-hold.sh against a stub br.
 # Invariants: the hold lands as board state (human-gate label + Gate-reason
-# marker + released claim), a re-run is a no-op, and — the load-bearing case —
+# line atop the body + released claim), a re-run is a no-op, and — the load-bearing case —
 # a held bead is absent from pick.sh's claimable set, driven through the REAL
 # pick.sh filter, not a re-implementation of it.
 # Runs under bash and zsh:  bash <this> && zsh <this>       Exit 0 = all cases pass.
@@ -48,7 +48,7 @@ STUB
 chmod +x "$AC2_BR_CMD"
 
 reset() { rm -rf "$FIX"; mkdir -p "$FIX"; : >"$FIX/comments.txt"; : >"$FIX/state-labels"; : >"$FIX/calls.log"; }
-show() { printf '[{"id":"%s","labels":%s,"status":"in_progress","assignee":"w1"}]' "$1" "$2" > "$FIX/show.json"; }
+show() { printf '[{"id":"%s","labels":%s,"status":"in_progress","assignee":"w1","description":"%s"}]' "$1" "$2" "${3-}" > "$FIX/show.json"; }
 ready() { local IFS=,; printf '[%s]' "$*" > "$FIX/ready.json"; }
 bead() {  # bead <id> <type> <priority> <created> <labels-json> [assignee] [title]
   printf '{"id":"%s","issue_type":"%s","priority":%s,"created_at":"%s","labels":%s,"status":"open","assignee":"%s","title":"%s"}' \
@@ -61,11 +61,11 @@ check() {  # check <name> <expected-stdout> <expected-exit> [cmd args…]
   else FAIL=$((FAIL + 1)); echo "FAIL $name: got '$got' rc=$rc, want '$want' rc=$wrc"; sed 's/^/  /' "$W/err"; fi
 }
 expect_log() {  # expect_log <name> <grep-pattern>
-  if grep -q "$2" "$FIX/calls.log"; then PASS=$((PASS + 1))
+  if grep -q -- "$2" "$FIX/calls.log"; then PASS=$((PASS + 1))
   else FAIL=$((FAIL + 1)); echo "FAIL $1: calls.log lacks '$2'"; fi
 }
 refute_log() {  # refute_log <name> <grep-pattern>
-  if grep -q "$2" "$FIX/calls.log"; then FAIL=$((FAIL + 1)); echo "FAIL $1: calls.log unexpectedly has '$2'"
+  if grep -q -- "$2" "$FIX/calls.log"; then FAIL=$((FAIL + 1)); echo "FAIL $1: calls.log unexpectedly has '$2'"
   else PASS=$((PASS + 1)); fi
 }
 
@@ -77,22 +77,21 @@ show h-task "$R"
 check "hold exits 0" "return-hold: h-task held (human-gate + 'Gate-reason: authorization'), claim released" 0 \
   bash "$HOLD" h-task --reason authorization --actor w1
 expect_log "human-gate label applied" "update h-task --add-label human-gate"
-expect_log "marker comment recorded" "comments add h-task"
+expect_log "marker written atop the body" "update h-task --description Gate-reason: authorization — returned by w1"
+refute_log "no marker comment" "comments add"
 if grep -q -- "--status open" "$FIX/calls.log" && grep -q -- "--assignee <empty>" "$FIX/calls.log"; then PASS=$((PASS + 1))
 else FAIL=$((FAIL + 1)); echo "FAIL claim released with open+empty-assignee"; fi
-if grep -qF "Gate-reason: authorization" "$FIX/comments.txt"; then PASS=$((PASS + 1))
-else FAIL=$((FAIL + 1)); echo "FAIL marker text recorded"; fi
+if grep -qF "<empty>" "$FIX/calls.log" && grep -q "^update h-task --description" "$FIX/calls.log"; then PASS=$((PASS + 1))
+else FAIL=$((FAIL + 1)); echo "FAIL body update recorded"; fi
 
 # 2 — re-run is a no-op: label and marker already present, still exit 0.
 reset
-show h-task '["refined","human-gate"]'
-printf 'Gate-reason: authorization\n' > "$FIX/comments.txt"
+show h-task '["refined","human-gate"]' 'Gate-reason: authorization — returned by w0\n\n## Intent'
 : >"$FIX/calls.log"
 check "re-run exits 0" "return-hold: h-task held (human-gate + 'Gate-reason: authorization'), claim released" 0 \
   bash "$HOLD" h-task --reason authorization --actor w1
 refute_log "label not re-added" "add-label"
-if [ "$(wc -l <"$FIX/comments.txt")" -eq 1 ]; then PASS=$((PASS + 1))
-else FAIL=$((FAIL + 1)); echo "FAIL marker comment duplicated"; fi
+refute_log "marker not re-written" "--description"
 
 # 3 — THE hole, closed: a held bead is absent from pick.sh's claimable set.
 # The held bead is served by the REAL pick.sh filter, never a copy of it.
@@ -110,6 +109,7 @@ check "held alone is DRY" DRY 1 bash "$PICK" --actor w2
 check "missing reason refused" "" 1 bash "$HOLD" h-task --actor w1
 check "missing actor refused" "" 1 bash "$HOLD" h-task --reason authorization
 check "missing id refused" "" 1 bash "$HOLD" --reason authorization --actor w1
+check "off-canon reason refused" "" 1 bash "$HOLD" h-task --reason "split — two workers bounced it" --actor w1
 
 echo
 echo "$PASS passed, $FAIL failed"

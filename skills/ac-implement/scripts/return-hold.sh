@@ -7,7 +7,8 @@
 # --execute against prod). This script applies board state, never prose alone:
 #
 #   1. adds the `human-gate` label (pick.sh excludes human-gate beads: UN-claimable)
-#   2. records a `Gate-reason: <reason>` marker comment (the trace a GATED line names)
+#   2. writes a `Gate-reason: <reason>` line atop the body — the docket reads the body,
+#      never comments
 #   3. releases the claim (status open, assignee "") so no worker holds it
 #
 # Idempotent: re-running skips the label when present and the marker when
@@ -44,6 +45,10 @@ done
 [ -n "$ID" ] || { echo "return-hold.sh: a bead id is required" >&2; exit 1; }
 [ -n "$REASON" ] || { echo "return-hold.sh: --reason is required (e.g. authorization)" >&2; exit 1; }
 [ -n "$ACTOR" ] || { echo "return-hold.sh: --actor is required" >&2; exit 1; }
+case "${REASON%% *}" in
+  fork|authorization|intent|action) ;;
+  *) echo "return-hold.sh: --reason must start with fork|authorization|intent|action (beads-standards § Human-gate template)" >&2; exit 1 ;;
+esac
 
 export RUST_LOG=error
 
@@ -71,18 +76,11 @@ if [ "$held" -eq 0 ]; then
     || { echo "return-hold.sh: could not label $ID human-gate — hold uncertain, claim retained" >&2; exit 1; }
 fi
 
-# 2 — marker comment, skipped when already recorded.
-if ! RUST_LOG=error "$BR" comments list "$ID" 2>/dev/null | grep -qF "$MARKER"; then
-  f=$(mktemp) || { echo "return-hold.sh: could not stage the marker — hold uncertain, claim retained" >&2; exit 1; }
-  {
-    printf '%s\n' "$MARKER"
-    printf 'Returned by %s: this bead needs a human decision before any worker claims it. ' "$ACTOR"
-    printf 'Prose alone never holds — the human-gate label above is the hold.\n'
-  } > "$f"
-  RUST_LOG=error "$BR" comments add "$ID" -f "$f" --actor "$ACTOR" >/dev/null
-  rc=$?
-  rm -f "$f"
-  [ "$rc" -eq 0 ] \
+# 2 — marker line atop the body, skipped when a body line already starts with it.
+body=$(printf '%s' "$show_json" | jq -r '.[0].description // ""')
+if ! printf '%s\n' "$body" | awk -v m="$MARKER" 'index($0, m) == 1 { f = 1 } END { exit !f }'; then
+  RUST_LOG=error "$BR" update "$ID" --description "$MARKER — returned by $ACTOR
+$body" --actor "$ACTOR" >/dev/null \
     || { echo "return-hold.sh: could not record the marker on $ID — hold uncertain, claim retained" >&2; exit 1; }
 fi
 
