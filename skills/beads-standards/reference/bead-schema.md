@@ -48,14 +48,16 @@ needed: `migration` · `native`).
   refused, rc 5 (measured on `br` 0.5.12) — only a lone reversed edge that closes no cycle
   lands silently, so read every edge back (`br dep cycles`, then `br show` on both ends).
 - `br create` REJECTS `-f` alongside a title, rc 4 (measured on `br` 0.5.12): `-f` is a
-  bulk `## Title` importer, not a body file — creation bodies go `-d "$(cat <file>)"`
-  (`--description-file` is deliberately not adopted). That routes the body through the
-  shell, so bead prose must stay dcg-safe (no command substitution, no unbalanced
-  quoting). The capture guard reads the inline `-d` value, so a file/heredoc body is
-  OPAQUE to it and its born-`Probe:` check fails open on exactly this form; the backstop
-  is the committed-board check (`lint/checks/35-board-integrity.py`), which reads the
-  landed body and refuses a probe-less implementable bead at the ledger commit. Only
-  comments and receipts take `-f <file>`.
+  bulk `## Title` importer, not a body file — creation bodies go `-d "$(cat <file>)"` or
+  `--description-file <file>`. A `$(cat …)` body routes through the shell, so bead prose
+  must stay dcg-safe (no command substitution, no unbalanced quoting). The capture guard
+  reads the body in every one of these forms — inline `-d`, `$(cat <file>)`,
+  `--description-file` (the file must exist before the command runs) — and refuses a stdin
+  body (`--description-file -`). Only a bare `$VAR` body is opaque to it and skips the
+  `Probe:` check; the backstop is the committed-board check
+  (`lint/checks/35-board-integrity.py`), which reads the landed body and refuses a
+  probe-less implementable bead at the ledger commit. Only comments and receipts take
+  `-f <file>`.
 
 ## Required axes
 
@@ -64,7 +66,7 @@ needed: `migration` · `native`).
 | `origin:<skill>` | The creating workflow — see § The origin label below. | EVERY bead |
 | Readiness | One of `unrefined` / `human-gate`. `refined` is stamped exclusively by a refine pass on convergence and is never applied at creation, whatever readiness label rides beside it and whatever the type (epic included) — and it never rides beside `human-gate`: a human bead is not implementation-ready by definition, however the refine pass reads it. | Every NON-EPIC bead |
 | Touchers | A `## Delivers` path that git TRACKS (on disk but untracked is NEW) and that is REFERENCED by another file owes, beneath its bullet, one line: ``touchers: `<command>` · owned by: <bead ids> \| out-of-scope: <reason>``. Command-derived, never remembered; no count is stored, so nothing goes stale — the command is re-run LIVE at stamp time and refused only if it now finds nothing. New files and unreferenced files owe nothing. One path per `## Delivers` bullet. Derived and checked by `skills/_tools/touchers.sh` (`derive` writes the line at beadify; `check` re-runs it): `stamp-refined.sh` § TOUCHERS LEG calls `check` at REFINE, not capture, and refuses `[unowned-touchers]` on a missing, malformed or zero-referrer line, and `[owner-unknown]` on an `owned by:` id absent from the board (open or closed resolves; an unreadable board is NOT-GATED). VERIFIED at the DIFF: `skills/ac-implement/scripts/diff-closure.sh --bead <id>` greps the callers of what actually changed and refuses `[unowned-callers]` on any the line did not name — the declaration is the claim, the diff is the sensor (worker §5 · code-polish §1 · ac-review Phase 5). The `--bead` scope oracle is the bead's own `## Delivers` paths, diffed against `HEAD` rather than the branch's whole history — so a sibling's already-committed WIP in a shared swarm checkout cannot seed a symbol this bead's close depends on. Why: bead-polish measured a 16.2% repair rate from hand-listed consumer sets, and every serious 2026-08/09 defect was a caller nobody enumerated; a stored count added a SECOND way to go stale on top of that (measured: 15/19, 31/48, 24/42 artifacts downgraded on count alone) with the command already re-run live at every check — the count carried no information the command did not already carry. | Every bead, at refine |
-| Probe | `## Acceptance Criteria` with at least one bullet of the shape ``Probe: `<command>` — tier: <slug>`` — born probe-bearing, so pickup has something runnable to verify against instead of a verdict someone will improvise later. Exempt: `epic` / `decision` / `investigation` by type, and any bead carrying the `human-gate` label regardless of type (the human ruling itself is the acceptance criterion — this is what makes an `ACTION:` card, typed `task`, legal with no `Probe:` line). A filer that cannot name a probe and is not a human-gate card files the bead as `investigation`, the type that says so — never as a probe-less task. See § The device rule below for work only a device can verify. | Every `bug` / `task` / `feature` bead, at creation, unless `human-gate` |
+| Probe | `## Acceptance Criteria` with at least one bullet of the shape ``Probe: `<command>` — tier: <slug>`` — born probe-bearing, so pickup has something runnable to verify against instead of a verdict someone will improvise later. Exempt: `epic` / `decision` / `investigation` by type, and any bead carrying the `human-gate` label regardless of type (the human ruling itself is the acceptance criterion — this is what makes an `ACTION:` card, typed `task`, legal with no `Probe:` line). A filer that cannot name a probe routes by WHY, never to a probe-less task: the cause is unknown and an agent can answer it → `investigation` (`bead-conventions.md` § Type admission); the fix needs design → the backlog pool (`ac-backlog`), then `ac-plan`; only a human can do it → an `ACTION:` card (`human-gate`). See § The device rule below for work only a device can verify. | Every `bug` / `task` / `feature` bead, at creation, unless `human-gate` |
 
 Put `origin:` FIRST in the label list. Epics are exempt from readiness: they are containers,
 never picked up for implementation. This mirrors `ac-tidy`'s nightly readiness-label repair,

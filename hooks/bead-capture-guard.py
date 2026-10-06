@@ -9,7 +9,8 @@ Enforced here:
   - `origin:<skill>` on every bead — which workflow created it.
   - a readiness label on every NON-EPIC bead — `unrefined` / `human-gate`.
   - a `Probe:` line on every IMPLEMENTABLE bead (`bug` / `task` / `feature`) — born
-    probe-bearing; `epic` / `decision` / `investigation` are exempt. The probe itself
+    probe-bearing; `epic` / `decision` / `investigation` are exempt, and so is any
+    `human-gate` card (an `ACTION:` card is a `task`). The probe itself
     must MEASURE: `probe_shape_violation` refuses three shapes that pass `no probe, no
     bead` while proving nothing (`pnpm <script> -- <file>`, a bare `vitest run <file>`,
     `grep -c` as pass/fail).
@@ -129,7 +130,8 @@ REFINED_LABEL = "refined"
 
 # The probe axis (born probe-bearing, ac-v5vi): an implementable bead is created with at
 # least one runnable acceptance probe. Containers, forks and unconfirmed leads own no probe
-# yet — a filer that cannot name one files `investigation`, the type that says so.
+# yet, and a `human-gate` card closes on the human's act, not a probe. A filer that cannot
+# name one routes by KIND (PROBE_MESSAGE) — `investigation` admits only an open question.
 IMPLEMENTABLE_TYPES = {"bug", "task", "feature"}
 PROBE_EXEMPT_TYPES = {"epic", "decision", "investigation"}
 PROBE = re.compile(r"Probe:\s*`([^`]+)`[^\n]*\btier:")
@@ -232,9 +234,13 @@ so pickup has something runnable to verify against — and the probe itself must
 MEASURE: `pnpm <script> -- <file>` (pnpm forwards the literal `--`), a bare
 `pnpm|npx vitest run <file>` (vitest-affected can silently drop it), and `grep -c`
 read as pass/fail all pass `no probe, no bead` while proving nothing. `epic`,
-`decision` and `investigation` are exempt — containers, forks and unconfirmed
-leads own no probe yet. A filer that cannot name a probe files the bead as
-`investigation` — the type that says so — never as a probe-less task.
+`decision`, `investigation` and any `human-gate` card are exempt.
+
+Cannot name a probe? Route by why — never a probe-less task:
+
+    cause unknown, an agent can answer it  -> -t investigation
+    the fix needs design                   -> the backlog pool (ac-backlog), then ac-plan
+    only a human can do it                 -> an ACTION: card, -l "origin:<skill>,human-gate"
 
 Canon: beads-standards/reference/bead-schema.md § Required axes.\
 """
@@ -655,7 +661,7 @@ def scan_tokens(tokens, is_subagent):
         if typ is not None and typ not in READINESS_EXEMPT_TYPES and not has_readiness(cmd):
             print(READINESS_MESSAGE.format(sub=sub, typ=typ), file=sys.stderr)
             sys.exit(2)
-        if typ is not None and typ in IMPLEMENTABLE_TYPES:
+        if typ is not None and typ in IMPLEMENTABLE_TYPES and "human-gate" not in all_labels(cmd):
             reason = probe_reason(cmd)
             if reason is not None:
                 print(PROBE_MESSAGE.format(sub=sub, typ=typ, reason=reason), file=sys.stderr)

@@ -215,7 +215,8 @@ def main():
                 violations[3].append(
                     f"{rel}:{lineno} — open bead '{rid}' created {created} (on/after origin "
                     f"cutover {CUTOVER}) carries no origin: label")
-            if rec.get("issue_type") in IMPLEMENTABLE and not PROBE.search(rec.get("description") or ""):
+            if (rec.get("issue_type") in IMPLEMENTABLE and "human-gate" not in labels
+                    and not PROBE.search(rec.get("description") or "")):
                 violations[3].append(
                     f"{rel}:{lineno} — open {rec.get('issue_type')} bead '{rid}' created "
                     f"{created} carries no Probe: line")

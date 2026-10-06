@@ -35,8 +35,10 @@ say which home and why, hand off, STOP — not a bead capture.
    (exclusively ac-polish's output on convergence); a decision fork gets `human-gate`
    instead. Provenance labels only where true. An implementable bead
    (`bug`/`task`/`feature`) is BORN PROBE-BEARING (create contract § Probe): its
-   `## Acceptance Criteria` carries a ``Probe: `<command>` — tier:`` bullet; no probe →
-   file `investigation`.
+   `## Acceptance Criteria` carries a ``Probe: `<command>` — tier:`` bullet. No probe →
+   route by why (create contract § Probe): unknown cause an agent can answer →
+   `investigation`; needs design → the pool (the kind table above), not a bead; only a human can
+   do it → an `ACTION:` card.
 5. **Create.** `br create "<imperative title>" -t <type> --labels "origin:ac-backlog,<labels>" --description "<context: what/why/where, the user's words preserved>"`.
    Set `--priority` only if the user signaled urgency; default is fine. Body carries the
    typed headers from conventions § Body template (`## Acceptance Criteria`, and on a
@@ -49,8 +51,9 @@ say which home and why, hand off, STOP — not a bead capture.
 
 **Clarify at most once.** Capture beats interrogation. Ask only if you cannot determine what
 done looks like OR which repo it belongs to — one `AskUserQuestion`, max 2 questions, then
-commit to an interpretation. Still fuzzy → file it anyway as `investigation` + `unrefined`
-with the raw words preserved verbatim; refinement is ac-polish's job (bead mode), not capture's.
+commit to an interpretation. Still fuzzy → it is not a bead: send it to the backlog pool
+with the raw words preserved verbatim. `investigation` is for one open question an agent can
+answer, not for a capture that has not found its shape.
 
 **Confirm in one line:** `<id> filed in <repo> as <type>[ +labels] — refine with ac-polish
 when scheduling.` Nothing more; the user is mid-thought.

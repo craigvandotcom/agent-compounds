@@ -87,6 +87,10 @@ cases = [
   (ALLOW, 'br create "Epic: x" -t epic -l "origin:ac-triage,impact:data"',           "epic without Probe -> admitted"),
   (BLOCK, 'br create "x" -t task -l "origin:ac-triage,unrefined"',       "task, absent description -> blocked"),
   (ALLOW, 'br create "x" -t task -l "origin:ac-triage,unrefined,impact:data" -d "<body>"', "placeholder body skips probe"),
+  # a human-gate card closes on the human's act, not a probe: the canonical ACTION card
+  # (human-gate-template.md, `-t task`) is admitted probe-less; drop human-gate and it is not.
+  (ALLOW, 'br create "ACTION: renew cert" -t task -l "origin:manual,human-gate" -d "## Intent\nrenew"', "ACTION card, human-gate task without Probe -> admitted"),
+  (BLOCK, 'br create "ACTION: renew cert" -t task -l "origin:manual,unrefined" -d "## Intent\nrenew"', "same card without human-gate -> refused"),
   # --- one origin per bead (ac-m9y4.6): the impact axis (ac-wp8i.3) is retired — an
   # `impact:` label is now inert prose, never checked. `origin:a,origin:b` used to exit 0
   # on the strength of "at least one origin present"; it must now block.

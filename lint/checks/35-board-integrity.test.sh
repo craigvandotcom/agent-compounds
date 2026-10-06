@@ -4,7 +4,7 @@
 #   PROBE: a non-JSON board line is RED; a duplicate id is RED; an OPEN
 #           post-cutover bead without an origin: label is RED; an OPEN post-cutover
 #           implementable bead (task/bug/feature) without a Probe: line is RED;
-#           a probed task and an exempt decision are GREEN; closed beads and
+#           a probed task, an exempt decision and a human-gate ACTION card are GREEN; closed beads and
 #           pre-cutover beads are NEVER scanned for origin/probe (GREEN); a clean
 #           board is GREEN; every rule scans the WHOLE board — no git checkout
 #           required anywhere in this file; a closed bead's landing record must cite
@@ -48,6 +48,7 @@ OPEN_ORIGINLESS='{"id":"ac-lost","status":"open","created_at":"2026-08-25T10:00:
 OPEN_TASK_NOPROBE='{"id":"ac-noprobe","status":"open","created_at":"2026-08-25T10:00:00Z","labels":["origin:ac-review"],"issue_type":"task","title":"probe-less task"}'
 OPEN_TASK_PROBED='{"id":"ac-probed","status":"open","created_at":"2026-08-25T10:00:00Z","labels":["origin:ac-review"],"issue_type":"task","title":"probed task","description":"## Acceptance Criteria\n- it does a thing.\n  Probe: `true` — tier: none"}'
 OPEN_DECISION='{"id":"ac-dec","status":"open","created_at":"2026-08-25T10:00:00Z","labels":["origin:human-gate"],"issue_type":"decision","title":"a human fork"}'
+OPEN_ACTION='{"id":"ac-act","status":"open","created_at":"2026-08-25T10:00:00Z","labels":["origin:manual","human-gate"],"issue_type":"task","title":"ACTION: a human act"}'
 
 # --- RED: a non-JSON line ------------------------------------------------------
 board "$WORK/a" '{"id":"ac-ok","status":"open","created_at":"2026-08-25T10:00:00Z","labels":["origin:manual"],"title":"ok"}' 'not json at all'
@@ -69,10 +70,10 @@ board "$WORK/h" "$OPEN_TASK_NOPROBE"
 rc=$(run_check "$WORK/h")
 [ "$rc" -eq 1 ] && grep -q "carries no Probe: line" "$OUT" && grep -q 'ac-noprobe' "$OUT" && ok "probe-less implementable bead is RED" || bad "probe-less bead: rc=$rc out=$(cat "$OUT")"
 
-# --- GREEN: probed task and exempt decision -----------------------------------
-board "$WORK/i" "$OPEN_TASK_PROBED" "$OPEN_DECISION"
+# --- GREEN: probed task, exempt decision, probe-less human-gate ACTION card--------------------------------
+board "$WORK/i" "$OPEN_TASK_PROBED" "$OPEN_DECISION" "$OPEN_ACTION"
 rc=$(run_check "$WORK/i")
-[ "$rc" -eq 0 ] && ok "probed task + exempt decision are GREEN" || bad "probed/exempt: rc=$rc out=$(cat "$OUT")"
+[ "$rc" -eq 0 ] && ok "probed task + exempt decision + human-gate ACTION card are GREEN" || bad "probed/exempt: rc=$rc out=$(cat "$OUT")"
 
 # --- GREEN: closed and pre-cutover beads are never scanned for origin/probe ---
 board "$WORK/d" "$CLOSED_ORIGINLESS" "$PRE_CUTOVER_OPEN" "$OPEN_TAGGED"
