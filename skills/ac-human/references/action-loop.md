@@ -24,8 +24,8 @@ auto-advance, Done as escape); this file carries the per-type playbook.
     the refined bead itself — refusing and downgrading when the ruling is newer than the
     last polish receipt — but a ruling recorded on a separate DECISION card leaves no
     comment on the beads it gates, so for those this rewrite-or-strip step is the only guard.
-  `<human>` is copied VERBATIM from the closing board's own `.beads/config.yaml` `humans:`
-  key (`beads-standards/reference/bead-conventions.md` § Decision beads is the sole
+  `<human>` is copied VERBATIM from the closing board's `humans:` key — `.beads/config.local.yaml`
+  first, `.beads/config.yaml` only when the local file lacks it (`beads-standards/reference/bead-conventions.md` § Decision beads is the sole
   restatement) — never a role name, never typed from memory:
   ```bash
   br comments add <id> "DECISION (<human>): <choice> — <why>"

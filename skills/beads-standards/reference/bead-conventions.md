@@ -224,8 +224,9 @@ contract plus useful pointers, not prophecy dressed as fact.
 
 ## Decision beads (the human-gate contract)
 
-Who may rule: the closing board's own `.beads/config.yaml` `humans:` key
-(comma-separated names) — that key, read live by `close-gate.sh`
+Who may rule: the closing board's own `humans:` key (comma-separated names)
+— `.beads/config.local.yaml` first, then `.beads/config.yaml`, whose published
+copy may hold a placeholder that matches nobody. That key, read live by `close-gate.sh`
 (`skills/ac-implement/scripts/close-gate.sh`) from the board it closes on, is
 the sole authority for who may sign a `DECISION (<actor>): ...` ruling
 comment; `<human>` in every template (here and in
