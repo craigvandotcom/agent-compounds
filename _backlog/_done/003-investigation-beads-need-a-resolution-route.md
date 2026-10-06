@@ -1,5 +1,5 @@
 ---
-status: captured
+status: complete
 type: feature
 size: S
 horizon: next
@@ -37,3 +37,13 @@ should never reach the board.
 
 - `br create --type investigation` without `Resolves via:` is blocked; with it, allowed;
   `hooks/bead-capture-guard.test.py` green.
+
+## Resolution (2026-10-06) — superseded, not built
+
+Closed without the `Resolves via:` field. Its premise did not hold: the swarm does pick
+`investigation` beads (`pick.sh` excludes only `decision`) once ac-polish gives them an exit
+probe. The misfiles came from the guard's refusal text routing every probe-less create to
+`investigation`, and from the guard blocking the canonical probe-less `ACTION:` card. Both
+fixed at the source: the refusal now routes by kind (open question → investigation · needs
+design → pool · human-only → ACTION card), and `human-gate` cards are probe-exempt in the
+guard and lint 35, as `bead-schema.md` already said.
