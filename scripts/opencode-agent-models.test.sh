@@ -43,7 +43,7 @@ export AC_MACHINE_FILE="$MACHINE_FIXTURE"
 bash "$SYNC" --root --opencode-home "$WORK/home" >/dev/null 2>&1
 
 CFG="$ROOT/harnesses.json"
-[ -f "$ROOT/harnesses.local.json" ] && CFG_JSON="$(jq -s '.[0] * .[1]' "$CFG" "$ROOT/harnesses.local.json")" || CFG_JSON="$(cat "$CFG")"
+CFG_JSON="$("$ROOT/engine/machine.sh" --harnesses)"
 
 for name in orchestrator coordinator researcher implementer validator; do
   f="$WORK/home/agents/$name.md"

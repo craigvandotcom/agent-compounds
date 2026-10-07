@@ -23,12 +23,10 @@
 #     still reads enabled; an agent_models override survives the merge; a non-object
 #     `harnesses` value -> 2 naming the key; the merge carries no org_root/targets
 #     (only the `harnesses` value is merged, never the whole machine file)
-#   the DEPTH case's reader leg: the engine copied to a path of a different depth,
-#     AC_MACHINE_FILE at a fixture, and --targets resolving exactly the fixture's
-#     targets. `sync.sh --all -n` cannot be green here — that reader switches in
-#     ac-vlje.5, not switched yet — so it joins this case at the epic's own pick.
-#     (The sibling deployed-consumer audits, née lint checks 07/12, were retired
-#     outright rather than switched — sync.sh no longer runs them at all.)
+#   the DEPTH case: the engine copied to a path of a different depth, AC_MACHINE_FILE at
+#     a fixture, and --targets resolving exactly the fixture's targets (the reader leg);
+#     `sync.sh --all -n` on the same fixture exits 0, names exactly the fixture's targets
+#     and no path under the real $HOME's org, under a scratch HOME (the sync leg)
 #
 # ASSURANCE
 #   PROBE:    bash engine/machine.test.sh
@@ -220,11 +218,8 @@ fi
 
 # --- the depth case's reader leg -----------------------------------------------------------
 # The engine copied to a path of a different DEPTH. The reader derives its own root, so it
-# must still resolve exactly the fixture's targets wherever it lives.
-#
-# (`sync.sh --all -n` joins this case at the epic's pick — ac-vlje.5 switches that
-#  reader, not switched yet. The sibling deployed-consumer audits, née lint checks
-#  07/12, were retired outright rather than switched.)
+# must still resolve exactly the fixture's targets wherever it lives. The sync leg drives
+# the same roster through `sync.sh --all -n`.
 DEEP="$W/deep/one/two/three/registry"
 mkdir -p "$DEEP"
 cp -R "$HERE" "$DEEP/engine"
@@ -237,6 +232,28 @@ if [ "$rc" = 0 ] && [ "$got" = "$expect" ]; then
   ok "depth: the engine at a different depth resolves exactly the fixture's targets"
 else
   bad "depth case: expected the fixture's targets (0), got rc=$rc"; printf '%s\n' "$got"
+fi
+
+# The sync leg. Runs the real $ROOT/engine/sync.sh (the depth copy has no skills/ or agents/
+# for deploy.sh to render), so the fixture is what proves the roster, not the engine's depth.
+# Hermetic: a scratch HOME (every harness home resolves under it, none exists, so each is
+# skipped), PI_CODING_AGENT_DIR unset, and a dry run. The fixture org carries what the run
+# requires: the floor file, every target a git repo, and a gitignored harness layer in the
+# public target app-one.
+mkdir -p "$W/fakehome" "$W/org/infrastructure/harness-config/claude"
+printf 'fixture floor\n' > "$W/org/infrastructure/harness-config/claude/CLAUDE.md"
+git -C "$W/org/software/app-one" init -q
+git -C "$W/org/software/app-public" init -q
+printf '.claude/\n.agents/\n.factory/\n.codex/\n' > "$W/org/software/app-one/.gitignore"
+got="$(env -u PI_CODING_AGENT_DIR HOME="$W/fakehome" AC_MACHINE_FILE="$W/roster.json" "$ROOT/engine/sync.sh" --all -n 2>&1)"; rc=$?
+if [ "$rc" = 0 ] \
+   && printf '%s\n' "$got" | grep -qF "== $W/org/software/app-one" \
+   && printf '%s\n' "$got" | grep -qF "== $W/org/software/app-public" \
+   && [ "$(printf '%s\n' "$got" | grep '^== ' | grep -vc '^== root: ')" = 2 ] \
+   && ! printf '%s\n' "$got" | grep '^== ' | grep -qvF "$W/org"; then
+  ok "depth: sync.sh --all -n resolves exactly the fixture's targets under a scratch HOME"
+else
+  bad "depth sync leg: expected exit 0 naming exactly the fixture's targets, got rc=$rc"; printf '%s\n' "$got"
 fi
 
 # --- --harnesses ---------------------------------------------------------------------------
