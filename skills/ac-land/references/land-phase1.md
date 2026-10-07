@@ -49,7 +49,7 @@ pnpm build:check
 > **STANDALONE ONLY — else SKIP.** Only run the block below if this is a standalone landing with
 > no full-suite CI path (no `quality-gate.yml` workflow in this repo, or a manual land with no
 > Phase 1c to follow). In the normal loop/tiered close, SKIP entirely: Phase 1c no longer fires any
-> full-suite CI run (that proof now happens at publish start via `ac-prove`), and a blocking local
+> full-suite CI run (that proof now happens at publish start, in `ac-publish`'s prove step), and a blocking local
 > full run here is the exact run §5 moves off the critical path.
 >
 > ```bash

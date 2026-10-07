@@ -1,6 +1,6 @@
 ---
 name: ac-publish
-description: 'The ship spine — runs a project''s `.claude/factory.json` ship block: preflight, version, prove, human authorize, promote, verify, tag; `beta` route for test builds. Triggers: "ac2 publish", "ship the ac2 batch", "release this batch" — run by the operator once a batch is ready to ship. NOT the commands themselves: the project owns them, bound by ship-contract.'
+description: 'The ship spine — runs a project''s `.claude/factory.json` ship block: preflight, version, prove, human authorize, promote, verify, tag; `beta` route for test builds. Triggers: "ac2 publish", "ship the ac2 batch", "release this batch", "ship to testflight", "submit for review", "prove this commit" — run by the operator once a batch is ready to ship. NOT the commands themselves: the project owns them, bound by ship-contract.'
 ---
 
 # ac-publish — run the project's ship block
@@ -50,8 +50,5 @@ holds. `beta` runs only the targets declared `"beta": true`, bumps no version an
 
 Out of scope: the commands behind each step (the project's), QA selection (the verification-gate
 class table in `skills/ac-pipeline/references/`), inbound triage.
-
-Retiring, kept until the first release through this spine has run: `references/web-promote.md` ·
-`references/executed-jobs.md` · `references/migration-gate.md`.
 
 Next: /ac-land

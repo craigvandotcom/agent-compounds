@@ -23,9 +23,9 @@
 #      script never re-tries with a history-discarding remedy of its own.
 #
 # NO DISPATCH HERE: the full quality-gate proof (quality-gate.yml's `reason=prove` leg)
-# is dispatched exactly once, at publish, by ac-prove (bd-fugib.8). Dispatching it per
+# is dispatched exactly once, at publish, by ac-publish's prove step (bd-fugib.8). Dispatching it per
 # push burned ~25 minutes of self-hosted runner on every batch commit for a verdict
-# ac-prove re-checks for freshness anyway.
+# the prove step re-checks for freshness anyway.
 #
 # CHECKS-ONLY MODE (--check-only): a pre-push hook calls push.sh this way. Steps 1 and 3
 # run (dirty-tree refusal, whole-tree checks); no fetch, no merge, no push. The outer

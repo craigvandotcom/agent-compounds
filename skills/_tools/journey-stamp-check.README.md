@@ -1,9 +1,9 @@
 # \_tools/journey-stamp-check.sh
 
 Mechanical staleness gate for **review-critical journeys**. Consumed by
-`ac-distribute`'s store-release precondition (§5 decision 5 of
+`ac-publish`'s store-release precondition (§5 decision 5 of
 `_plans/2026-07-07-runtime-proof-doctrine.md`): the staleness rule (SHA-ancestry
-AND no intervening surface diff) can't be eyeballed, so distribute invokes this
+AND no intervening surface diff) can't be eyeballed, so the ship invokes this
 script in the app repo rather than trusting memory that "QA passed."
 
 **Runs in the APP repo, not agent-compounds** — same distribution model as

@@ -249,7 +249,7 @@ sessions).
 
 **Aggregation.** The conductor merges verdicts into the single QA_VALIDATION block
 below (`journeys_tested` from verdict statuses, `findings_filed` from filed beads,
-`evidence` from verdict paths). Downstream consumers (ac-publish, ac-distribute) are
+`evidence` from verdict paths). Downstream consumer (ac-publish) is
 unchanged. Mechanical validation: `ac-pipeline/scripts/validate-qa-run.sh $ARTIFACTS_DIR`
 asserts manifest⊖verdict completeness, parallel-lane overlap, teardown, the `degraded`
 field's presence (assertion 8), and (when `proves` is non-empty) a writeback record
@@ -329,7 +329,7 @@ br create "investigate: <symptom>" -t investigation \
 ## Reporting — the QA_VALIDATION block
 
 Both twins emit the same block; the `platform:` field disambiguates which plane
-was proven. Consumed by `ac-publish` (gates the PR) and `ac-distribute` (gates the
+was proven. Consumed by `ac-publish` (gates the PR) and its native ship targets (gates the
 ship — it keys on `platform:` so a browser PASS can't satisfy a native ship gate).
 
 ```markdown

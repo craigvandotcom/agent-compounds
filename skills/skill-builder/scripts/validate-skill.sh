@@ -439,7 +439,7 @@ POINTER_MISSING=0
 # Scope = SKILL.md spine only. A deliberate markdown-link pointer [text](path) is an unambiguous
 # claim the file exists → HARD FAIL if missing. A backtick/bare mention (`references/x.md`) is
 # often illustrative ("→ references/<topic>.md or memory") or cross-skill shorthand
-# ("ac-prove/workflows/scheduled.md") → WARN only, for a human to judge.
+# ("ac-triage/workflows/scheduled-daily.md") → WARN only, for a human to judge.
 resolve_ref() { case "$1" in _shared/*) echo "$SKILLS_PARENT/$1" ;; *) echo "$SKILL_PATH/$1" ;; esac; }
 SKILL_BODY=$(awk '/^```/{f=!f; next} !f' "$SKILL_MD")
 LINK_REFS=$(printf '%s\n' "$SKILL_BODY" \

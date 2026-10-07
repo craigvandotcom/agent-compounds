@@ -12,17 +12,6 @@ window. This is the trunk-direct analogue of the pre-merge review a PR used to f
 releases ship regularly, the verification gate covers `main` and this weekly pass is the ordinary
 quality sweep on top.
 
-**Baseline pointer only — `ac-prove` `probe` mode (Consumer Roster row (e)).** The weekly
-review-main run consumes the latest `ac-prove` receipt in **`probe` mode ONLY** — a read-only
-freshness check against `publish-checkpoint-gate.mjs` (`ac-prove` Step 1). This is **never** a
-dispatch: hygiene never calls `ensure` or `ensure --fix-forward`, never triggers a fresh CI run,
-and never fixes CI forward — proving `main` is a ship-path concern, not a review-pass concern.
-It is also **never proof-of-green**: `probe` mode checks freshness only (condition 1 of
-`ac-prove`'s three-condition trust rule — Canonical Receipt Contract) — the referenced run's
-actual conclusion is unchecked and may be RED. Treat the receipt strictly as a baseline pointer
-("here's roughly how fresh `main`'s last full proof is"), never as evidence that the codebase
-this run is reviewing is CI-green.
-
 ---
 
 ## Flexibility / Overrides

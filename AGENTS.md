@@ -97,9 +97,9 @@ agent-compounds/
 **v2 map** (seven packages; WS3 generates the table from `packages.json` later). Stage order
 lives in `skills/ac-pipeline/references/stage-table.md`; nothing here restates it.
 
-- **factory-core** — ac-pipeline, ac-plan, ac-polish, ac-beadify, ac-implement, ac-review, ac-prove, ac-publish, ac-land, beads-standards, agent-mail
+- **factory-core** — ac-pipeline, ac-plan, ac-polish, ac-beadify, ac-implement, ac-review, ac-publish, ac-land, beads-standards, agent-mail
 - **factory-verify** — ac-qa, ui-elevate, ui-debug, testing, ac-hygiene
-- **factory-ops** — ac-human, ac-align, ac-backlog, ac-triage, ac-distribute
+- **factory-ops** — ac-human, ac-align, ac-backlog, ac-triage
 - **stack-nextjs-supabase** — supabase, capacitor
 - **substrate** — context-engineering, reflect, dream, wiki (deploy together)
 - **meta** — skill-builder

@@ -135,7 +135,7 @@ else
 fi
 
 # --- 4. green: pushed, and NO quality-gate dispatch is attempted (bd-fugib.8) -------------
-# The proof is dispatched exactly once, at publish, by ac-prove — never per push. push.sh
+# The proof is dispatched exactly once, at publish, by ac-publish's prove step — never per push. push.sh
 # must not even look at quality-gate.yml: a fake gh on PATH records every invocation and
 # the case asserts the log is EMPTY (gh untouched proves nothing was dispatched).
 R="$(new_repo green-no-dispatch)"
@@ -161,7 +161,7 @@ if [ "$rc" -eq 0 ] \
    && printf '%s' "$out" | grep -q 'push.sh: pushed' \
    && ! printf '%s' "$out" | grep -q 'dispatched' \
    && [ ! -s "$GHLOG" ] ; then
-  pass "green: pushed, and no quality-gate dispatch is attempted (gh never invoked; the proof is ac-prove's, at publish)"
+  pass "green: pushed, and no quality-gate dispatch is attempted (gh never invoked; the proof is ac-publish's, at publish)"
 else
   fail "green-no-dispatch: rc=$rc out=$out ghlog=$(cat "$GHLOG" 2>/dev/null)"
 fi

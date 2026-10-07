@@ -467,11 +467,11 @@ should-NOT-activate
 - PASS — "clean up the backlog" (routes to ac-tidy — reconciling what is already on the board)
 - PASS — "bead this crash I just saw" (routes to ac-backlog — one user-dictated item, not
   a fetch-and-cluster run over external systems)
-- PASS — "post the release notes out to the list" (routes to ac-distribute, which ac-triage
+- PASS — "post the release notes out to the list" (routes to the archived ship-out lane, which ac-triage
   names inline as its outbound counterpart)
 - PASS — "triage the patients in the waiting room"
 
-## ac-distribute
+## Archived ship-out lane (re-judged — routes to ac-publish)
 
 Verdicts are a lower bound (self-judged with the full registry in context — § Method verdict).
 
@@ -485,19 +485,19 @@ should-activate
 
 should-NOT-activate
 
-- FAIL (precision) → PASS (after fix) — "ship it to production". ac-distribute opens "Use to
+- FAIL (precision) → PASS (after fix) — "ship it to production". The ship-out lane opens "Use to
   SHIP a built app out the door" and calls itself "the outbound last mile", so it owned the
   strongest `ship` surface in the registry — but the production release GATE is ac-publish,
-  which pins main, mints the version bump, calls ac-prove, runs the heavy review, tags, and
-  only THEN calls ac-distribute. Routing "ship it to production" here skips every gate, which
+  which pins main, mints the version bump, calls the proof primitive, runs the heavy review, tags, and
+  only THEN calls the ship-out lane. Routing "ship it to production" here skips every gate, which
   makes this the most consequential miss found across B2–B5 rather than a cosmetic one. The
-  reference was asymmetric: ac-publish names ac-distribute, ac-distribute named ac-triage and
+  reference was asymmetric: ac-publish names the ship-out lane, the ship-out lane named ac-triage and
   ac-qa but not ac-publish. Fix: add the reciprocal clause naming ac-publish.
-- PASS — "pull the crashes back in" (routes to ac-triage, which ac-distribute's own tail names
+- PASS — "pull the crashes back in" (routes to ac-triage, which the ship-out lane's own tail names
   as the inbound counterpart)
 - PASS — "prove the build works on device first" (routes to ac-qa — also named in that
   tail)
-- PASS — "is main green" (routes to ac-prove — its literal trigger; ac-distribute makes no
+- PASS — "is main green" (routes to ac-publish — its literal trigger; the ship-out lane makes no
   CI-trust claim)
 - PASS — "distribute these flyers at the conference"
 
@@ -515,13 +515,13 @@ should-activate
 
 should-NOT-activate
 
-- PASS — "ship to testflight" (routes to ac-distribute — the beta lane it composes; every
+- PASS — "ship to testflight" (routes to ac-publish — the beta lane it composes; every
   ac-publish trigger is production-scoped)
-- PASS — "is main green" (routes to ac-prove, which ac-publish explicitly names as a component
+- PASS — "is main green" (routes to ac-publish, which explicitly names it as a component
   it calls rather than a job it does)
 - PASS — "run the heavy review over everything since the last publish" (routes to ac-review —
   the sharpest near-miss here, since ac-publish's description contains that phrase verbatim;
-  what saves it is the "Composes ac-prove + ac-review + ac-distribute" framing, which reads to
+  what saves it is the "Composes the proof primitive + ac-review + the ship-out lane" framing, which reads to
   a router as parts, not scope)
 - PASS — "close the batch" (routes to the batch boundary — the per-batch checkpoint, not the
   human-triggered production gate)
@@ -637,7 +637,7 @@ should-activate
 should-NOT-activate
 
 - PASS — "show me the whole board including the loop-side work" (the board deliberately shows both sides)
-- PASS — "is main green" (routes to ac-prove, which carries that exact phrase as a literal trigger; ac-board only lists CI among the panes it renders, so the literal wins)
+- PASS — "is main green" (routes to ac-publish, which carries that exact phrase as a literal trigger; ac-board only lists CI among the panes it renders, so the literal wins)
 - PASS — "build me an analytics dashboard page for the app" (dashboard-as-UI, not the board)
 
 ## ac-human
@@ -756,7 +756,7 @@ should-NOT-activate
 - PASS — "show me the state of the pipeline" (routes to ac-board, which
   carries `state of the pipeline` as a literal trigger)
 
-## ac-prove
+## Archived proof primitive (re-judged — routes to ac-publish)
 
 Verdicts are a lower bound (self-judged with the full registry in context — § Method verdict).
 
@@ -774,9 +774,9 @@ should-NOT-activate
   `tip-valid full-suite proof` and `the full leg`, so plain local execution selects the
   CI-trust primitive; the destination is the testing skill (or just running the command).
   No NOT-for clause existed. Fix: exclusion clause naming testing.
-- PASS — "show CI status on the board" (routes to ac-board — ac-prove
+- PASS — "show CI status on the board" (routes to ac-board — the proof primitive
   obtains a proof, it does not render panes)
-- PASS — "publish the release" (routes to ac-publish, the ship path that CALLS ac-prove)
+- PASS — "publish the release" (routes to ac-publish, the ship path that CALLS the proof primitive)
 - PASS — "review the code quality across the app" (routes to ac-hygiene — the named
   hygiene/registry-audit/prove cluster separates cleanly here)
 - PASS — "audit the skill registry" (routes to skill-builder)
@@ -822,7 +822,7 @@ should-NOT-activate
   guard block`, but commit discipline itself is owned by ac-pipeline (references/
   commit-discipline); agent-mail owns the reservation, not the commit sequence. No NOT-for
   clause existed. Fix: exclusion clause naming ac-pipeline.
-- PASS — "email the release notes to the list" (routes to ac-distribute — Agent Mail is
+- PASS — "email the release notes to the list" (routes to the archived ship-out lane — Agent Mail is
   agent-to-agent coordination, not outbound publishing)
 - PASS — "which agent should I delegate this to" (routes to ac-pipeline's delegation-contract —
   agent-mail is identity and locking, not stance selection)
@@ -1190,7 +1190,7 @@ should-NOT-activate
   the archived browser-smoke skill and the screenshot refresher — but NOT the store-assets skill,
   the one sibling whose job is native captures. The asymmetry is the tell: the store-assets skill
   excludes the refresher and device capture excludes the refresher, so the trio's third edge
-  was simply missing. Fix: add the store-assets routing (now ac-distribute) to the clause.
+  was simply missing. Fix: add the store-assets routing (now ac-publish) to the clause.
 - PASS — "run the structured native QA gate" (routes to ac-qa, named inline)
 - PASS — "refresh the landing page screenshots" (routes to ac-qa, named inline)
 - PASS — "check the login flow in the browser" (routes to ac-qa, named inline)
@@ -1328,7 +1328,7 @@ should-NOT-activate
   lenses, not of models)
 - PASS — "find me an expert consultant to hire"
 
-## Archived store assets (re-judged — routes to ac-distribute)
+## Archived store assets (re-judged — routes to ac-publish)
 
 Verdicts are a lower bound (self-judged with the full registry in context — § Method verdict).
 
@@ -1367,7 +1367,7 @@ should-activate
 should-NOT-activate
 
 - PASS — "grab a screenshot on the simulator" (routes to ac-qa, named inline)
-- PASS — "build the App Store listing assets" (routes to ac-distribute, named inline)
+- PASS — "build the App Store listing assets" (routes to ac-publish, named inline)
 - PASS — "check the landing page renders on preview" (routes to ac-qa — validation,
   not capture)
 - PASS — "add meta tags to the landing page" (the retired SEO skill)
@@ -1519,7 +1519,7 @@ should-NOT-activate
 | bead refiner | — | — | none needed |
 | ac-beadify | — | — | none needed |
 | ac-tidy | — | — | none needed |
-| ac-distribute | "ship it to production" selected it | precision | reciprocal clause added naming ac-publish as the production release gate that calls it |
+| the ship-out lane | "ship it to production" selected it | precision | reciprocal clause added naming ac-publish as the production release gate that calls it |
 | ac-publish | — | — | none needed |
 | site polisher | — | — | none needed |
 | UI polisher | — | — | none needed |
@@ -1528,9 +1528,9 @@ should-NOT-activate
 | ac-hygiene | "review this feature branch" and "audit the auth module" selected it | precision | NOT-for clause naming ac-review, audit, the registry auditor, ac-tidy |
 | ac-idea-lab | "brainstorm twenty new product ideas" selected it | precision | tail extended to name brainstorming and multi-model |
 | ac-pipeline | "run validate-qa-run" selected it | precision | NOT-for widened to exclude RUNNING anything it documents, hosted scripts included |
-| ac-prove | "run the full test suite" selected it | precision | NOT-for clause naming testing and ac-board |
+| the proof primitive | "run the full test suite" selected it | precision | NOT-for clause naming testing and ac-board |
 | registry auditor | — | — | none needed |
-| agent-mail | "how do I commit safely in the shared checkout" selected it | precision | clause naming ac-pipeline (commit-discipline, delegation-contract) and ac-distribute |
+| agent-mail | "how do I commit safely in the shared checkout" selected it | precision | clause naming ac-pipeline (commit-discipline, delegation-contract) and the ship-out lane |
 | beads-standards | "refine these beads" and "file a bead for this crash" selected it | precision | STANDARD-not-executor clause naming ac-polish, ac-backlog, ac-beadify |
 | capacitor | "write a test for this" and "write the migration" selected it | precision | clause naming testing, supabase, ui-debug (web-design compliance retired with no live successor) |
 | context-engineering | its exclusion routed to `librarian`, a skill that does not exist | stale | phantom destination dropped, dream added, file organization stated behaviorally |
@@ -1543,7 +1543,7 @@ should-NOT-activate
 | planning | — | — | none needed |
 | command builder | — | — | none needed |
 | testing | "test the login flow in the browser" and "run the full-app QA" selected it | precision | clause naming ac-qa (browser, device, and gated runs), audit |
-| device capture | "grab the screenshots for the App Store listing" selected it | precision | the store-assets routing (now ac-distribute) added — the screenshot trio's one missing edge |
+| device capture | "grab the screenshots for the App Store listing" selected it | precision | the store-assets routing (now ac-publish) added — the screenshot trio's one missing edge |
 | ui-debug | "make it feel premium" and "the visual-regression test is failing" selected it | precision | clause naming ui-elevate, testing / ac-qa, the retired web-design skill, capacitor |
 | brainstorming | "push this concept deeper, what am I missing" selected it | precision | ac-idea-lab and multi-model added to a clause that named only ui-brainstorm |
 | model panel | multi-model UI opinions, and "stress-test this idea" selected it | precision | the colliding phrase "stress-testing an idea" removed from the description, plus a clause naming ui-brainstorm, ac-idea-lab, openrouter |
@@ -1594,13 +1594,13 @@ predicted the NON-failures too: the site and UI polishers carry the registry's r
 NOT-for clauses (5 and 5 named alternatives) and passed all 20 judgments clean despite being
 the batch's highest-overlap pair at 210 shared shingles — so the refine-flagged hard
 constraint on the site polisher's 1018-char description never bound. The one failure,
-ac-distribute vs ac-publish, is also the most consequential found across B2–B5: routing "ship
-it to production" to ac-distribute skips the version bump, the full-suite proof, the heavy
+the ship-out lane vs ac-publish, is also the most consequential found across B2–B5: routing "ship
+it to production" to the ship-out lane skips the version bump, the full-suite proof, the heavy
 review and the tag.
 
 B6 score: 80 judgments, 8 failures (all precision), across 6 of the 8 remaining `ac-*` skills.
 All re-judged PASS after the description edit. The predictor held a fifth time and cleanly: the
-four skills carrying NO NOT-for clause (ac-align, ac-human, ac-hygiene, ac-prove) all
+four skills carrying NO NOT-for clause (ac-align, ac-human, ac-hygiene, the proof primitive) all
 failed, and the two with the richest clauses (ac-human's board-mode routing tail,
 the retired registry auditor's four-destination exclusion) passed all 20 judgments clean. ac-pipeline, the canon-holder, failed
 in a new way worth naming: its description ENUMERATES the scripts it hosts, which reads to a
@@ -1676,8 +1676,8 @@ On 2026-09-12 the archived-skill sections of this corpus were re-judged against 
 registry: each archived section is retitled, its trigger phrasings keep their recorded
 verdicts, and every routing tail now names the live successor — the conductor, the batch
 boundary, the legacy branch path, ac-plan, ac-polish, multi-model, ac-qa, ac-backlog,
-ac-distribute, skill-builder, or ui-elevate. Three destination classes have no live
-successor and are recorded as such: store-listing visuals (covered at ac-distribute), and
+ac-publish, skill-builder, or ui-elevate. Three destination classes have no live
+successor and are recorded as such: store-listing visuals (covered at ac-publish), and
 the SEO-metadata and web-design-compliance phrasings, which match no live skill. Old
 verdict rows were preserved; only destinations were updated, so the append-only history
 stands.

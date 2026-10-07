@@ -63,7 +63,6 @@
       "ac-beadify",
       "ac-implement",
       "ac-review",
-      "ac-prove",
       "ac-publish",
       "ac-land",
       "beads-standards",
@@ -112,8 +111,7 @@
       "ac-align",
       "ac-tidy",
       "ac-backlog",
-      "ac-triage",
-      "ac-distribute"
+      "ac-triage"
     ]
   },
   "stack-nextjs-supabase": {

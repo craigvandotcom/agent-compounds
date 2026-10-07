@@ -1,6 +1,6 @@
 ---
 name: ac-triage
-description: Use to pull operational + user signal BACK IN from external systems — crashes, errors, logs, beta feedback, externally-filed issues — cluster it, and route real findings by shape — defects to beads, recurring feature/experience themes to the backlog pool (as candidates the human approves). Fetches from Sentry, App Store Connect (TestFlight feedback), Supabase logs, GitHub Issues, PostHog, store reviews. The inbound counterpart to ac-distribute. Triggers on "triage crashes", "check sentry", "any new errors", "pull feedback", "triage github issues", "what's breaking in prod", "triage production signal", "review crash reports". Headless — runs anywhere, scheduled. NOT for triaging the bead board itself — that is bv (read-only) or ac-polish (bead mode).
+description: Use to pull operational + user signal BACK IN from external systems — crashes, errors, logs, beta feedback, externally-filed issues — cluster it, and route real findings by shape — defects to beads, recurring feature/experience themes to the backlog pool (as candidates the human approves). Fetches from Sentry, App Store Connect (TestFlight feedback), Supabase logs, GitHub Issues, PostHog, store reviews. The inbound counterpart to ac-publish. Triggers on "triage crashes", "check sentry", "any new errors", "pull feedback", "triage github issues", "what's breaking in prod", "triage production signal", "review crash reports". Headless — runs anywhere, scheduled. NOT for triaging the bead board itself — that is bv (read-only) or ac-polish (bead mode).
 ---
 
 > **Generic skill — method only, zero app facts.** Symlinked from agent-compounds and
@@ -19,7 +19,7 @@ FETCHES signal sitting in an external system, or it would be missed.
 **Scope boundary:** ac-triage FETCHES + clusters external signal and routes each confirmed
 finding **by shape** — defects to **`ac-backlog`**'s bead route (classification,
 repo-routing, dedupe), feature/experience themes to the **backlog pool** as candidates. It does NOT ship
-builds (that's `ac-distribute`) and does NOT reimplement the bead-side conventions — it hands
+builds (that's `ac-publish`) and does NOT reimplement the bead-side conventions — it hands
 off. Headless, source-agnostic, cross-app; only the *sources* are app-specific.
 
 Findings disposition per `ac-pipeline/references/disposition.md` (this skill is its
@@ -85,4 +85,4 @@ HERE and propagate everywhere.
 - **A source not configured is skipped; a source configured-but-FAILING is an escalation**
   — file/update the ops bead, never silently skip a wired source, never advance its watermark.
 - **Per-run epic** (2+ finding-beads) — refined through `/ac-polish`, never in-session.
-- **Inbound counterpart to `ac-distribute`** — it ships out, this listens back.
+- **Inbound counterpart to `ac-publish`** — it ships out, this listens back.

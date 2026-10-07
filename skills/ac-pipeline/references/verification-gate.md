@@ -3,7 +3,7 @@
 **Selects which verification passes run, at what depth, for any diff or scope.**
 Primary executors: the `ui-elevate` + `ac-qa` + `ac-qa` triad;
 consumed by every ceremony that verifies (the implement Verify pass, the ceremony
-smoke net § below, `ac-prove`, `ac-distribute`). Running all three
+smoke net § below, `ac-publish`). Running all three
 passes on every wave is waste — a one-line copy fix does not need a simulator
 boot. This file decides, from the wave's diff, **which passes run and at what
 depth**. It is the single source; conductors (implement Phase 1/2, the ceremony smoke net) consult it rather than re-deciding.

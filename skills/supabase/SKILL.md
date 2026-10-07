@@ -197,7 +197,7 @@ per-app in `CORE/supabase.md`.
 **Apply-timing (WHEN to push — `rule-migrations-expand-contract`):** EXPAND (additive) is pushed
 **before/at the merge** of the code that depends on it (web deploys at merge against live prod
 schema); CONTRACT (destructive) is **held** and applied only after old native builds age out, via
-`ac-publish`'s migration gate. `db push` stays blocked-for-agents either way — the rule times when the human is handed the command.
+`references/migration-gate.md` and each project's ship preflight. `db push` stays blocked-for-agents either way — the rule times when the human is handed the command.
 
 The gate (an app encodes this as one script — e.g. `pnpm db:verify`):
 

@@ -376,7 +376,7 @@ Emit the **`QA_VALIDATION`** block from `ac-qa/references/qa-shared.md` with:
 - `appearance_matrix:` dark/light × Dynamic Type combos
 - `perf_observations:` qualitative only — hangs, freezes, leaks
 
-Consumed by `ac-publish` (gates the PR) and `ac-distribute` (the native ship gate
+Consumed by `ac-publish` (gates the PR) and its native ship targets (the native ship gate
 keys on `platform:`).
 
 ## Journey stamps (last_pass)

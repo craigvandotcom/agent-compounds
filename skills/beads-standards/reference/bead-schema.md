@@ -78,7 +78,7 @@ Every bead carries exactly one `origin:` label naming the workflow that created 
 
 | Label | Meaning |
 |---|---|
-| `origin:<skill>` | The skill that created the bead — `origin:ac-review`, `origin:ac-hygiene`, `origin:ac-beadify`, `origin:ac-triage`, `origin:ac-qa`, `origin:curate-foods`, `origin:dream`, `origin:reflect`, `origin:ac-land`, `origin:ac-align`, `origin:ac-prove`, `origin:ac-backlog`, `origin:ac-polish`. |
+| `origin:<skill>` | The skill that created the bead — `origin:ac-review`, `origin:ac-hygiene`, `origin:ac-beadify`, `origin:ac-triage`, `origin:ac-qa`, `origin:curate-foods`, `origin:dream`, `origin:reflect`, `origin:ac-land`, `origin:ac-align`, `origin:ac-publish`, `origin:ac-backlog`, `origin:ac-polish`. |
 | `origin:manual` | Hand-authored, created outside any skill. |
 | `origin:unknown` | Genuinely unattributable. Legal and honest — never guess, never invent a source. |
 

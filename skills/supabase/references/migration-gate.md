@@ -24,7 +24,7 @@ Override: `PENDING_MIGRATION_OVERRIDE=<reason>`. An unset variable is not an ove
 
 ## Why the proof leg cannot cover this
 
-`ac-prove` replays migrations against a FRESH LOCAL stack. It proves they apply; it never
+The ship's prove step replays migrations against a FRESH LOCAL stack. It proves they apply; it never
 reads prod. A green suite therefore says nothing about what prod's schema holds, and a
 from-scratch replay passes identically whether prod is current or ten migrations behind.
 

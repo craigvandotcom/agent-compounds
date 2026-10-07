@@ -19,7 +19,7 @@ One command, one ref argument (`prove --ref <SHA>`, or `--ref` omitted for curre
 
 ### What a trusted proof is made of — freshness, attribution, the green gate
 
-These three conditions inherit from the proof primitive (`ac-prove`) as generic rules:
+These three conditions are generic rules for any project's prove step:
 
 1. **Freshness** — a freshness check passes for the ref: the latest trusted evidence line is
    an ancestor of the proven SHA, with only evidence commits between it and the ref.
