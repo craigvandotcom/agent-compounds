@@ -208,7 +208,7 @@ fi
 : >"$BR_LOG"
 STATE="$WORK/state"; ART="$WORK/artifact.md"
 printf 'round zero\n' >"$ART"
-PRE0=$(shasum -a 256 "$ART" | awk '{print $1}')
+PRE0=$(if command -v shasum >/dev/null 2>&1; then shasum -a 256 "$ART"; else sha256sum "$ART"; fi | awk '{print $1}')
 PATH="$MOCK:$PATH" bash "$FIXPOINT" --mode bead --target bd-ac-receipt --artifact "$ART" \
   --state "$STATE" --round 1 --pre "deadbeef" >/dev/null 2>&1   # round 1: CONTINUE, records the sha
 FP_OUT=$(PATH="$MOCK:$PATH" bash "$FIXPOINT" --mode bead --target bd-ac-receipt --artifact "$ART" \

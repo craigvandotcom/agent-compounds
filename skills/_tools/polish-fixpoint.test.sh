@@ -19,7 +19,7 @@ W=$(mktemp -d "${TMPDIR:-/tmp}/polish-fixpoint-XXXXXX")
 trap 'rm -rf "$W"' EXIT
 PASS=0; FAIL=0
 
-sha() { shasum -a 256 "$1" | awk '{print $1}'; }
+sha() { if command -v shasum >/dev/null 2>&1; then shasum -a 256 "$1" | awk '{print $1}'; else sha256sum "$1" | awk '{print $1}'; fi; }
 
 # expect <name> <want-exit> <want-token> -- <args...>
 expect() {
