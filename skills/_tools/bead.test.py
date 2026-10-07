@@ -291,6 +291,28 @@ check(bead.extract_paths("- x: Dockerfile.dev") == [],
 check(bead._looks_like_file_path("Makefile") is True and bead._looks_like_file_path("Makefiles") is False,
       "_looks_like_file_path: the extensionless leg is an exact-name set, never a pattern")
 
+# --- VERSION and a bare dotfile are path-shaped (ac-9h9k); prose near them is not ---------
+
+check(bead.extract_paths("- v: VERSION") == ["VERSION"],
+      "extract_paths: a bare VERSION is a path")
+check(bead.extract_paths("- i: .gitignore") == [".gitignore"],
+      "extract_paths: a bare dotfile (.gitignore) is a path")
+check(bead.extract_paths("- e: .env.example and .env.local") == [".env.example", ".env.local"],
+      "extract_paths: a multi-segment dotfile (.env.example) is a path")
+check(bead.extract_paths("update the VERSION and .gitignore.") == [".gitignore", "VERSION"],
+      "extract_paths: a trailing sentence period is edge-stripped off a bare dotfile")
+check(bead.extract_paths("- note: the version is fine") == []
+      and bead.extract_paths("Version bump, version.") == [],
+      "extract_paths: lower/title-case version is prose — VERSION is an exact-name match")
+check(bead.extract_paths("wait... done. and .. here . there") == [],
+      "extract_paths: an ellipsis, a lone `.` or `..` is never a path")
+check(bead.extract_paths("every .md and .ts file, the .status column") == [],
+      "extract_paths: a one-segment dotted word that is not a listed dotfile stays prose")
+check(bead.extract_paths("under .claude/ only") == [],
+      "extract_paths: a bare dot-directory with a trailing slash is not widened in")
+check(bead.extract_paths("see .claude/settings.json") == [".claude/settings.json"],
+      "extract_paths: a .hidden/path still resolves whole beside the new dotfile leg")
+
 # A PLAN's own `## Deliverables` heading uses the SAME extractor (heading= override).
 PLAN_DESC = "## Deliverables\n- skills/_tools/bead.py\n- skills/_tools/bead.test.py\n"
 plan_dl = bead.delivers(PLAN_DESC, heading="Deliverables")

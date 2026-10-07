@@ -459,8 +459,20 @@ def consumes(text):
 # one of these exact (case-sensitive) names; any other extensionless word stays prose.
 EXTENSIONLESS_FILES = (
     "Makefile", "Dockerfile", "Procfile", "Gemfile", "Rakefile", "Justfile", "Brewfile",
-    "Podfile", "Vagrantfile", "Jenkinsfile", "Fastfile", "CODEOWNERS", "LICENSE",
+    "Podfile", "Vagrantfile", "Jenkinsfile", "Fastfile", "CODEOWNERS", "LICENSE", "VERSION",
 )
+
+# Bare dotfile names (no leading dot) that are path-shaped on their own. A one-segment dotted
+# word (`.md`, `.ts`, `.status`) is far likelier an extension or a prose fragment, so it stays
+# prose unless its name is listed here; a dotfile with a further dot (`.env.example`,
+# `.env.local`) is never an extension mention and needs no entry. Widen this list for a real
+# dotfile that misses, never loosen the rule.
+DOTFILE_NAMES = frozenset({
+    "env", "gitignore", "gitattributes", "gitmodules", "mailmap", "npmrc", "nvmrc",
+    "prettierrc", "prettierignore", "eslintrc", "babelrc", "editorconfig", "vercelignore",
+    "ubsignore", "cursorignore", "gitleaksignore", "dockerignore", "mdcignore", "bashrc",
+    "zshrc", "nojekyll", "tool-versions",
+})
 
 ARTIFACT_RE = re.compile(
     r"(?<![\w./-])(?:\./)?(?:"
@@ -468,6 +480,7 @@ ARTIFACT_RE = re.compile(
     r"|\.[A-Za-z0-9_@(){}\[\]-]+(?:/[A-Za-z0-9_@.(){}\[\]-]+)+(?:\.[A-Za-z0-9]{1,10})?"  # .hidden/path (ext optional)
     r"|[A-Za-z0-9_@(){}\[\]-]+(?:/[A-Za-z0-9_@.(){}\[\]-]+)+\.[A-Za-z0-9]{1,10}"     # dir/dir/file.ext
     r"|[A-Za-z0-9_@(){}\[\]-]+(?:\.[A-Za-z0-9_@(){}\[\]-]+)*\.[A-Za-z0-9]{1,10}"     # repo-root file(.mid)*.ext
+    r"|\.[A-Za-z_][A-Za-z0-9_@.-]*"                                                    # bare dotfile (.gitignore, .env.example)
     r"|(?:" + "|".join(EXTENSIONLESS_FILES) + r")"                                       # bare Makefile, Dockerfile, ...
     r")(?![\w/-])"
 )
@@ -528,6 +541,8 @@ def _looks_like_file_path(tok):
     (`0.68` -> ext `68`) is never accidentally legalised by a future list edit."""
     if "/" in tok or tok in EXTENSIONLESS_FILES:
         return True
+    if tok.startswith("."):  # bare dotfile: a further dot, or a listed name (see DOTFILE_NAMES)
+        return "." in tok[1:] or tok[1:].lower() in DOTFILE_NAMES
     if _PURELY_NUMERIC_RE.match(tok):
         return False
     dot = tok.rfind(".")
@@ -538,7 +553,7 @@ def _looks_like_file_path(tok):
 
 def extract_paths(text):
     """Whole-word path-shaped tokens in plain text, sorted and deduped. A path token must
-    contain a `/`, be an EXTENSIONLESS_FILES name, or end in a KNOWN file extension, and must never be purely numeric —
+    contain a `/`, be an EXTENSIONLESS_FILES name, be a bare dotfile (DOTFILE_NAMES or `.a.b`), or end in a KNOWN file extension, and must never be purely numeric —
     `foods.status` (a SQL column reference), `0.68` (a measured ratio) and `(bd-x.1` (a
     paren-wrapped bead id) are prose, never a file (checker recheck 2026-09-27)."""
     out = []
