@@ -538,12 +538,10 @@ stamp_refined_check() {
     echo "stamp_refined --check: FATAL — bead.py not found at '$BEAD_PY_CHECK_TOOL'" >&2; return 2
   fi
 
-  local rc=0 e4_out e4_rc
-  if [ -n "$itype" ]; then
-    e4_out=$(bash "$ELEMENT4_CHECK" --file "$file" --type "$itype" 2>&1); e4_rc=$?
-  else
-    e4_out=$(bash "$ELEMENT4_CHECK" --file "$file" 2>&1); e4_rc=$?
-  fi
+  local rc=0 e4_out e4_rc e4_args=(--file "$file")
+  [ -n "$itype" ] && e4_args+=(--type "$itype")
+  [ -n "$labels" ] && e4_args+=(--labels "$labels")
+  e4_out=$(bash "$ELEMENT4_CHECK" "${e4_args[@]}" 2>&1); e4_rc=$?
   printf '%s\n' "$e4_out"
   [ "$e4_rc" -ne 0 ] && rc=1
 

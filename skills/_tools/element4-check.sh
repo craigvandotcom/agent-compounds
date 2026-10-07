@@ -8,9 +8,10 @@
 #
 # Usage:
 #   element4-check.sh <bead-id> [<bead-id>...]     # resolves each id through br_call
-#   element4-check.sh --file <path> [--type <t>]   # checks a description file (fixtures/tests)
+#   element4-check.sh --file <path> [--type <t>] [--labels <csv>]   # checks a description file (fixtures/tests)
 #
-# Exit 0 — every checked bead satisfies element 4 (or is an exempt type).
+# Exit 0 — every checked bead satisfies element 4 (or is exempt: a decision or investigation type, or the
+#          human-gate label — bead-schema.md § Required axes: the human ruling is the acceptance criterion).
 # Exit 1 — at least one bead FAILS. Each failure is named with its reason.
 # Exit 2 — usage error, or a bead id that does not resolve.
 #
@@ -33,6 +34,8 @@ set -uo pipefail
 EXEMPT_TYPES="decision investigation"
 
 usage() { sed -n '9,11p' "$0" >&2; exit 2; }
+
+EXEMPT_LABEL="human-gate"
 
 fail_bead() {
   printf 'element4-check: FAIL %s — %s\n' "$1" "$2" >&2
@@ -83,12 +86,15 @@ check_schema_probes() {
   return 0
 }
 
-# check_description <label> <issue_type> <description>
+# check_description <label> <issue_type> <description> [<labels csv>]
 check_description() {
-  local label="$1" itype="$2" desc="$3"
+  local label="$1" itype="$2" desc="$3" labels="${4:-}"
 
   case " $EXEMPT_TYPES " in
     *" $itype "*) printf 'element4-check: SKIP %s (issue_type=%s is exempt)\n' "$label" "$itype"; return 0 ;;
+  esac
+  case ",$labels," in
+    *",$EXEMPT_LABEL,"*) printf 'element4-check: SKIP %s (label %s is exempt)\n' "$label" "$EXEMPT_LABEL"; return 0 ;;
   esac
 
   # Shape selection is a rule, not a race: a `## Declared RED` header, when present,
@@ -136,10 +142,16 @@ if [ $# -eq 0 ]; then usage; fi
 if [ "$1" = "--file" ]; then
   [ $# -ge 2 ] || usage
   FILE="$2"; shift 2
-  ITYPE="task"
-  if [ "${1:-}" = "--type" ]; then [ $# -ge 2 ] || usage; ITYPE="$2"; shift 2; fi
+  ITYPE="task"; LABELS=""
+  while [ $# -gt 0 ]; do
+    case "$1" in
+      --type)   [ $# -ge 2 ] || usage; ITYPE="$2"; shift 2 ;;
+      --labels) [ $# -ge 2 ] || usage; LABELS="$2"; shift 2 ;;
+      *) usage ;;
+    esac
+  done
   [ -f "$FILE" ] || { echo "element4-check: ERROR — no such file: $FILE" >&2; exit 2; }
-  check_description "$FILE" "$ITYPE" "$(cat "$FILE")"
+  check_description "$FILE" "$ITYPE" "$(cat "$FILE")" "$LABELS"
   exit "$RC"
 fi
 
@@ -162,6 +174,7 @@ for id in "$@"; do
   fi
   itype=$(printf '%s' "$arr" | jq -r '.[0].issue_type // "task"')
   desc=$(printf '%s' "$arr" | jq -r '.[0].description // ""')
-  check_description "$id" "$itype" "$desc"
+  labels=$(printf '%s' "$arr" | jq -r '.[0].labels // [] | join(",")')
+  check_description "$id" "$itype" "$desc" "$labels"
 done
 exit "$RC"

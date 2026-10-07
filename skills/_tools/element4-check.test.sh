@@ -488,6 +488,23 @@ else
   fail "Case 23: expected a stamp of the runs-something probe, got $RC. Output: $OUT / log: $(cat "$BR_LOG")"
 fi
 
+# --- Case 24: the human-gate label is exempt (bead-schema.md § Required axes); the same body without it is not ---
+write_fx gate.md '## Intent
+ACTION: a person runs the check.
+
+## Acceptance Criteria
+- The person has run it, recorded. (human-gate: closing this bead is the verification.)
+'
+OUT=$(bash "$CHECK" --file "$WORK/gate.md" --type task --labels "origin:fo-beadify,human-gate" 2>&1); RC=$?
+OUT2=$(bash "$CHECK" --file "$WORK/gate.md" --type task --labels "origin:fo-beadify,unrefined" 2>&1); RC2=$?
+OUT3=$(bash "$STAMP" --check "$WORK/gate.md" --type task --labels "origin:fo-beadify,human-gate" 2>&1); RC3=$?
+if [ "$RC" -eq 0 ] && echo "$OUT" | grep -q "label human-gate is exempt" && [ "$RC2" -eq 1 ] \
+   && echo "$OUT3" | grep -q "label human-gate is exempt"; then
+  pass "Case 24: a human-gate ACTION card with no probe is exempt (element4-check and stamp-refined --check); without the label it is REJECTED"
+else
+  fail "Case 24: expected exempt with the label (got $RC: $OUT), rejected without (got $RC2), and stamp-refined --check to pass the label through (got $RC3: $OUT3)"
+fi
+
 echo
 if [ "$FAILURES" -eq 0 ]; then
   echo "All element4-check fixture tests passed."
