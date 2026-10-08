@@ -13,7 +13,8 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 HOOK="$ROOT/hooks/pre-commit"
 command -v uvx >/dev/null 2>&1 || command -v ruff >/dev/null 2>&1 || { echo "SKIP: no ruff/uvx"; exit 77; }
 cd "$ROOT" || exit 2
-T="$(mktemp -d)"; trap 'rm -rf "$T"' EXIT
+T="$(cd "$(mktemp -d)" && pwd -P)"   # physical path: on macOS /var is a symlink, and the relative link below is computed lexically
+trap 'rm -rf "$T"' EXIT
 fails=0
 ok()  { echo "ok   $1"; }
 bad() { echo "FAIL $1"; fails=$((fails+1)); }
