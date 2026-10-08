@@ -68,19 +68,18 @@ only when its blocker closes, so a cached pool reports dry while work is waiting
 
 ## 2 — CLAIM
 
-The claim refuses a worker that never minted. Exit non-zero → the script wrote the hand-back
-receipt. Do not claim. Go to §9.
+`claim.sh` runs the mint check, the atomic claim and the CLAIM comment, and writes the comment
+ONLY when the claim itself succeeded. Never pipe or wrap the claim yourself: a pipe reports the
+last command's status and hides the refusal.
 
-    bash <scripts>/require-minted-actor.sh --actor "$ACTOR"
-    RUST_LOG=error br update <id> --claim --actor "$ACTOR" --json
+    bash <scripts>/claim.sh <id> --actor "$ACTOR"
 
-Exit non-zero, or `VALIDATION_FAILED` → someone else has it. `BURNED="$BURNED <id>"`, go to §1.
-Claim succeeded → record it, body through a FILE (an inline body with an apostrophe truncates
-at exit 0):
-
-    f=$(mktemp) && printf 'CLAIM: %s\n' "$ACTOR" > "$f" && RUST_LOG=error br comments add <id> -f "$f"
-
-Gate the comment on the claim's exit status. A lost race must not comment.
+- **exit 0** — claimed; exactly one `CLAIM:` comment was written. Continue.
+- **exit 1** — the actor never minted; the script wrote the hand-back receipt. Do not claim.
+  Go to §9.
+- **exit 3** — `ALREADY-CLAIMED`: the claim was refused and no comment was written.
+  `BURNED="$BURNED <id>"`, go to §1.
+- **exit 2** — `NOT-GATED`: run §9's verification-unavailable handback with the refusal.
 
 ## 3 — FLIGHT CHECK
 
