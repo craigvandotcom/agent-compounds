@@ -70,7 +70,8 @@ if [ "$IF_CHANGED" = 1 ] && [ -f "$STAMP_FILE" ] && [ "$(cat "$STAMP_FILE")" = "
   exit 0
 fi
 
-fails=0 legs_run=0
+fails=0 legs_run=0 unavailable=0
+UNAVAILABLE=()
 ok()  { echo "  ok    $1"; }
 FAILS=()
 bad() { echo "  FAIL  $1"; FAILS+=("  FAIL  $1"); fails=$((fails + 1)); }
@@ -117,8 +118,18 @@ run_leg() { # <harness>
     "spawn_$h" "$s" "$WORK/$h-$s.txt" "$WORK/$h-$s.log" &
   done
   wait
+  local m
   for s in "${STANCES[@]}"; do
     if ! scratch_valid "$s" "$WORK/$h-$s.txt"; then
+      # An account without access to a tier's model fails every spawn for that alone: an
+      # environment gap, not a stance defect. Name the model and skip, never fail.
+      m="$(sed 's/\x1b\[[0-9;]*m//g' "$WORK/$h-$s.log" 2>/dev/null \
+        | sed -n 's/.*issue with the selected model (\([^)]*\)).*/\1/p' | head -n 1)"
+      if [ -n "$m" ]; then
+        echo "  skip  $h/$s: model '$m' is unavailable to this account — spawn NOT probed"
+        UNAVAILABLE+=("$h/$s:$m"); unavailable=$((unavailable + 1))
+        continue
+      fi
       bad "$h/$s: no scratch file written — $(tail -n 1 "$WORK/$h-$s.log" 2>/dev/null | sed 's/\x1b\[[0-9;]*m//g')"
     elif [ "$h" = opencode ] && ! grep -qi "$s agent" "$WORK/$h-$s.log"; then
       bad "$h/$s: file written, but no '$s' subagent appears in the transcript"
@@ -141,6 +152,10 @@ if [ "$fails" -gt 0 ]; then
   # the scheduler journals only stderr on a failed job — repeat the verdict there
   { printf '%s\n' "${FAILS[@]}"; echo "  stance-spawn: $fails failure(s)"; } >&2
   exit 1
+fi
+if [ "$unavailable" -gt 0 ]; then
+  echo "  SKIP  ${unavailable} stance(s) not probed, model unavailable: ${UNAVAILABLE[*]}" >&2
+  exit 77
 fi
 mkdir -p "$(dirname "$STAMP_FILE")" && fingerprint > "$STAMP_FILE"
 echo "  stance-spawn: every stance spawned and wrote scratch on $legs_run harness(es)"
