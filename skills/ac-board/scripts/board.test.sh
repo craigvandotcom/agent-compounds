@@ -5,6 +5,13 @@
 # pins the clock with AC_BOARD_NOW, and asserts on the render. No repo, no br, no network.
 set -uo pipefail
 
+# The bar glyphs (▓ ░) are multi-byte UTF-8. Under the agent shell's C locale a grep quantifier
+# binds to the glyph's last byte, not the character, so pin a UTF-8 locale for every assertion.
+LOCALES=$(locale -a 2>/dev/null)   # a variable, not a pipe: grep -q under pipefail flakes on SIGPIPE
+if grep -qix 'en_US.UTF-8' <<<"$LOCALES"; then export LC_ALL=en_US.UTF-8
+elif grep -qix 'C.UTF-8' <<<"$LOCALES"; then export LC_ALL=C.UTF-8
+fi
+
 RENDER="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/render.py"
 NOW=2026-09-22T12:00:00+00:00
 FAILURES=0
