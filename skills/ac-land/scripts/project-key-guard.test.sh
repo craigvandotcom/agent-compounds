@@ -58,14 +58,17 @@ else
 fi
 rm -rf "$FIXTURE"
 
-# Live check: the repo this test runs in resolves a slash-free key that is its own name.
+# Live check: the repo this test runs in resolves a slash-free key that is the AGENTS.md pin.
+# The pin is the repo's name, NOT its checkout directory's: a worktree or scratch clone is named
+# anything, so basename(git root) is the wrong oracle. Read the pin independently of the resolver.
 REPO_ROOT=$(git rev-parse --show-toplevel 2>/dev/null)
 if [ -n "$REPO_ROOT" ] && [ -f "$REPO_ROOT/AGENTS.md" ] && [ -n "$RESOLVER" ]; then
   GOT=$(cd "$REPO_ROOT" && eval "$RESOLVER" && printf '%s' "$PINNED_KEY")
-  if [ "$GOT" = "$(basename "$REPO_ROOT")" ]; then
-    expect 1 "live key equals the repo name ($GOT)"
+  WANT=$(grep -m1 'Agent Mail project key' "$REPO_ROOT/AGENTS.md" | grep -oE '`[^`]+`' | head -1 | tr -d '`')
+  if [ -n "$GOT" ] && [ "$GOT" = "$WANT" ] && [[ "$GOT" != */* ]]; then
+    expect 1 "live key equals the AGENTS.md pin, slash-free ($GOT)"
   else
-    expect 0 "live key equals the repo name (got: $GOT)"
+    expect 0 "live key equals the AGENTS.md pin, slash-free (got: $GOT, pin: $WANT)"
   fi
 else
   echo "  SKIP  live key check (no AGENTS.md at the git root)"
