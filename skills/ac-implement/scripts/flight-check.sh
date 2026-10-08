@@ -65,6 +65,10 @@
 # Exit 0  cleared for flight — premises hold, RED observed, receipt written
 # Exit 1  PREMISE-FAILED (one named class) — route, do not debug
 # Exit 2  NOT-GATED — this gate could not verify; treat as a stop, never as a pass
+# Exit 3  NOT-A-CHILD: epic — the id is an EPIC, which is closed (worker.md §8), never flown.
+#         Refused BEFORE any probe runs; nothing is stamped, commented or unclaimed. Deliberately
+#         neither 1 (refly.sh reads rc==1 as a premise failure and TRIAGE-closes the bead
+#         obsolete) nor 2 (worker §9 hand-back): the worker routes it to §8.
 #
 set -uo pipefail
 
@@ -192,6 +196,22 @@ if [ ! -s "$BODY" ]; then
 fi
 
 echo "flight-check: $BEAD @ $(git rev-parse --short HEAD 2>/dev/null || echo no-git)"
+
+# --- Refusal 0: NOT-A-CHILD — an epic is closed per worker.md §8, never flown ------------
+# Its ACs are aggregate probes, green once the children landed; flying it would stamp it
+# PREMISE-FAILED: RED and unclaim it, and refly.sh would then close a shipped epic obsolete.
+# An unreadable type is not a refusal here: the body read above already NOT-GATED the
+# br-backed path, and the --body-file path has no board to ask.
+ISSUE_TYPE=""
+if command -v br >/dev/null 2>&1 && command -v jq >/dev/null 2>&1; then
+  ISSUE_TYPE=$(br_call show "$BEAD" --json </dev/null 2>/dev/null \
+    | jq -r 'if type == "array" then .[0] else . end | .issue_type // ""' 2>/dev/null) \
+    || ISSUE_TYPE=""
+fi
+if [ "$ISSUE_TYPE" = "epic" ]; then
+  echo "NOT-A-CHILD: epic — $BEAD is an epic; close it via worker.md §8, never fly it (nothing stamped, routed or unclaimed)"
+  exit 3
+fi
 
 # --- Refusal 1: CONSUMES ----------------------------------------------------------------
 # Every `## Consumes` line is `<blocker-id> -> <artifact>`, or the single word `none`.

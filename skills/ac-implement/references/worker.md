@@ -91,6 +91,8 @@ Gate the comment on the claim's exit status. A lost race must not comment.
   has already commented, prefixed the title and unclaimed. Add the id to `$BURNED`, go to §1.
 - **exit 2** — `NOT-GATED`. Verification was unavailable: run §9's verification-unavailable
   handback with this exact refusal. Never read it as a pass or pick another bead.
+- **exit 3** — `NOT-A-CHILD: epic`. The id is an epic; nothing was stamped or unclaimed. It is
+  closed, never flown: go to §8.
 
 **If this bead DELIVERS ITS OWN HARNESS**, the claim-time RED is only "the harness does not
 exist". Write the harness, **see it fail for the reason the AC names, before any fix**, and

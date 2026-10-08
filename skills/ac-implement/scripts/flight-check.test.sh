@@ -62,6 +62,7 @@ case "${1:-}" in
         else
           echo '[{"id":"ac-test-0001","labels":[]}]'  # the SUT holds no refined — the stamp leg correctly skips
         fi ;;
+      ac-test-epic) echo '[{"id":"ac-test-epic","issue_type":"epic","labels":[]}]' ;;
       ac-parent-epic) echo '[{"id":"ac-parent-epic","status":"open"}]' ;;
       *) exit 3 ;;  # exact-id miss: not on the board under that spelling
     esac ;;
@@ -772,6 +773,31 @@ printf '%s' "$RUN_OUT" | grep -q 'closure unverifiable' \
 printf '%s' "$RUN_OUT" | grep -q 'not on the board' \
   && bad "resolved-blocker refusal fabricated a not-on-the-board status: $RUN_OUT" \
   || ok "resolved-blocker refusal did not fabricate a not-on-the-board status"
+
+# ---------------------------------------------------------------------------------------
+echo "flight-check.test: case NOT-A-CHILD — an epic id is refused before any probe, unstamped and unclaimed"
+# ---------------------------------------------------------------------------------------
+cat >"$WORK/bodies/epic.md" <<BODY
+## Acceptance Criteria
+- Aggregate probe that must never run for an epic.
+  Probe: \`touch $WORK/epic-probe-marker\` — tier: none
+
+## Consumes
+- none
+BODY
+EPIC_OUT=$(env AC2_DRY_RUN=1 AC2_FLIGHT_DIR="$WORK/receipts" PATH="$WORK/bin:$PATH" \
+  bash "$GATE" ac-test-epic --body-file "$WORK/bodies/epic.md" --root "$WORK/root" 2>&1)
+EPIC_RC=$?
+{ [ "$EPIC_RC" -eq 3 ] && [ ! -e "$WORK/epic-probe-marker" ] \
+  && printf '%s' "$EPIC_OUT" | grep -q '^NOT-A-CHILD: epic'; } \
+  && ok "NOT-A-CHILD: refused before any probe ran" \
+  || bad "NOT-A-CHILD: expected rc 3, no probe marker, class named; rc=$EPIC_RC: $EPIC_OUT"
+printf '%s' "$EPIC_OUT" | grep -q 'PREMISE-FAILED' \
+  && bad "NOT-A-CHILD: epic was stamped PREMISE-FAILED: $EPIC_OUT" \
+  || ok "NOT-A-CHILD: no title stamp"
+printf '%s' "$EPIC_OUT" | grep -q 'ROUTE (dry-run)' \
+  && bad "NOT-A-CHILD: epic was routed (unclaim/stamp): $EPIC_OUT" \
+  || ok "NOT-A-CHILD: no unclaim"
 
 # ---------------------------------------------------------------------------------------
 echo ""
