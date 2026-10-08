@@ -96,6 +96,10 @@ is the reader doing its job; reaching for a finding to justify the round is not.
   nothing.
 - For each AC, state the observable that CHANGES (an exit code, a count, a message) — not
   the title of the thing that checks it.
+- Does a test AC guard a **silent-loss** path (a swallowed error, a best-effort step, an
+  ordering, a force/overwrite) with no **mutation leg** — an AC `mutation M turns test T red`
+  whose probe runs M in a disposable worktree? Such a test can pass while unable to fail;
+  flag the AC. Rule: `ac-beadify/references/bead-schema.md`.
 
 ## 7. Consumes-edge parity
 

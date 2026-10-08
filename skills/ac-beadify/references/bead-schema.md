@@ -178,6 +178,17 @@ repair of the sixth. Every one had been authored without being run. Executing th
 mechanically at round 7 recovered 2 runnable commands out of 14 beads. A probe a machine
 cannot run is a probe nobody ran.
 
+### Silent-loss tests carry a mutation leg
+
+A test that guards a **silent-loss** path — a swallowed error, a best-effort step, an
+ordering, a force/overwrite — stays GREEN when the guard it exists for is removed, unless the
+AC proves otherwise. "The test exists and passes" is satisfied by a test that cannot fail.
+Such a bead therefore carries an AC of the form `mutation M turns test T red`: M is the
+concrete mutation (name the line or behaviour removed), T the test, and the AC's probe applies
+M in a disposable worktree (or through an existing convict harness) and requires T to exit
+non-zero. Evidence, once: easy-mode bd-5gkwc (2026-10-07), where 3 of 4 review defects were
+silent-loss tests that stayed green under their own mutation and cost a follow-up epic.
+
 ## Test-tier slugs
 
 | Slug | Meaning |
