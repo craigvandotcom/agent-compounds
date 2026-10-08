@@ -3,6 +3,12 @@
 # fixtures (the same shape board.sh --json prints). No repo, no br, no network, no terminal.
 set -uo pipefail
 
+# The bar glyphs (█ ▒ ░) are multi-byte UTF-8. Under a C locale grep -o / [..] count bytes, not
+# characters, so pin a UTF-8 locale for every pattern below (first installed one wins).
+for _l in en_US.UTF-8 C.UTF-8 en_US.utf8 C.utf8; do
+  if LC_ALL="$_l" locale charmap 2>/dev/null | grep -qi '^UTF-8$'; then export LC_ALL="$_l"; break; fi
+done
+
 TUI="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/tui.py"
 W=$(mktemp -d); trap 'rm -rf "$W"' EXIT
 FAILURES=0
