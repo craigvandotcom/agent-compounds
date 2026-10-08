@@ -417,6 +417,7 @@ rm -f "$W/lint/checks/60-demo-root.py"
 # the commit, and the working tree's own (broken) check-execution path is
 # never reached.
 git -C "$W" reset -q --hard >/dev/null
+mkdir -p "$W/lint/lib"   # the hard reset prunes the emptied lib dir; the cp/add below need it
 git -C "$W" add "$W/lint/run.py" "$W/lint/lib/scope.py" "$W/lint/lib/frontmatter.py" "$W/lint/lib/verdict.py"
 python3 - "$W/lint/run.py" <<'PYEOF'
 import sys
@@ -439,6 +440,7 @@ fi
 # is made observably different, and that (not the plain working-tree copy's
 # label) is what appears.
 git -C "$W" reset -q --hard >/dev/null
+mkdir -p "$W/lint/lib"   # the hard reset prunes the emptied lib dir; the cp/add below need it
 cp "$REGISTRY/lint/lib/scope.py" "$REGISTRY/lint/lib/frontmatter.py" "$REGISTRY/lint/lib/verdict.py" "$W/lint/lib/"
 cp "$REGISTRY/lint/run.py" "$W/lint/run.py"
 python3 - "$W/lint/run.py" <<'PYEOF'
@@ -477,6 +479,7 @@ fi
 # broken) run.py is ever exec'd — this case is why it drives lint.sh
 # directly rather than lint/run.py.
 git -C "$W" reset -q --hard >/dev/null
+mkdir -p "$W/lint/lib"   # the hard reset prunes the emptied lib dir; the cp/add below need it
 cp "$REGISTRY/lint/run.py" "$W/lint/run.py"
 cp "$REGISTRY/lint/lib/scope.py" "$REGISTRY/lint/lib/frontmatter.py" "$REGISTRY/lint/lib/verdict.py" "$W/lint/lib/"
 git -C "$W" add "$W/lint/run.py" "$W/lint/lib/scope.py" "$W/lint/lib/frontmatter.py" "$W/lint/lib/verdict.py"
