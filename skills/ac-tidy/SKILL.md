@@ -56,8 +56,7 @@ Open `human-gate` and `qa-blocker` beads are untouchable except by the last row.
 
 One bead per finding: `br create "<title>" -t decision --labels "origin:ac-tidy,human-gate,pipeline-proposal"`,
 body with a `Gate-reason:` line per `beads-standards/reference/human-gate-template.md`. Skip a
-target an open bead already names. Findings: an epic with zero open children and no `Probe:`
-line · a `blocks` edge touching an epic (I2, `board-scan.md`) · a `_done/` plan whose
+target an open bead already names. Findings: an epic with zero open children · a `blocks` edge touching an epic (I2, `board-scan.md`) · a `_done/` plan whose
 `beadified:` and `delivered:` disagree with its epic's state · an item that looks done but
 fails its row above · duplicate or mergeable items · a `post-merge` tail bead (§ 2) — strip the label or re-queue it by ruling here, never by applying step 3.
 

@@ -213,8 +213,8 @@ for r in recs:
 for b in beads:
     if b.get("issue_type") != "epic" or not is_open(b): continue
     kids = children.get(b["id"], set()) | {x for x in by_id if x.startswith(b["id"] + ".")}
-    if not any(is_open(by_id[k]) for k in kids if k in by_id) and "Probe:" not in (b.get("description") or ""):
-        dedupe("epic-idle", [b["id"]], "open epic, zero open children, no Probe: line")
+    if not any(is_open(by_id[k]) for k in kids if k in by_id):
+        dedupe("epic-idle", [b["id"]], "open epic, zero open children")
 for b in beads:
     if is_open(b) and "post-merge" in labels(b):
         dedupe("post-merge-tail", [b["id"]], "open, still labelled post-merge")

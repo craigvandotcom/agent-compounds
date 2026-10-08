@@ -146,8 +146,9 @@ cell() { printf '%s\n' "$OUT" | awk -F'\t' -v r="$1" -v t="$2" '$1==r && $2==t {
 [ "$(cell finding-i2-edge 'ac-e2→EPA')" = file ] && pass "I2 edge named only by a non-tidy closed bead → file" || fail "e2: $(cell finding-i2-edge 'ac-e2→EPA')"
 ! has "ac-cc1→EPC" && pass "closed–closed I2 edge → none" || fail "closed edge reported"
 [ "$(cell finding-post-merge-tail ac-pm)" = "skip-open ac-owner" ] && pass "post-merge tail an open gate names → skip-open" || fail "pm: $(cell finding-post-merge-tail ac-pm)"
-[ "$(cell finding-epic-idle EPIDLE)" = file ] && pass "open epic, no open children, no Probe → finding" || fail "epic-idle missed"
-[ -z "$(cell finding-epic-idle EPD)" ] && pass "epic with a Probe: line → no finding" || fail "EPD flagged"
+[ "$(cell finding-epic-idle EPIDLE)" = file ] && pass "open epic, no open children → finding" || fail "epic-idle missed"
+[ "$(cell finding-epic-idle EPD)" = file ] && pass "epic with a Probe: line, zero open children → finding too" || fail "EPD missed (bd-26br6 class)"
+[ -z "$(cell finding-epic-idle EPA)" ] && pass "epic with a Probe: line but an open child → no finding" || fail "EPA flagged"
 
 # reopen-blocked (ac-m9y4.12): the edge is read through bead.py.
 [ -z "$(cell reopen-blocked ac-blk-live)" ]   && pass "blocked, an open blocks edge → none" || fail "blk-live flagged"
