@@ -54,7 +54,7 @@ record `push pending: <file>` in the report and carry on. Exit 1 is a failure â€
 Exactly one open `release`-labelled P1 `ACTION:` card, template in the human-gate file above.
 Find the last tag with `git describe --tags --abbrev=0 --match 'v*'`, then list app code since it:
 
-    git log --format='%h %s' <tag>..HEAD -- . ':!.beads' ':!_plans' ':!_docs' ':!.claude'
+    git log --format='%h %s' <tag>..HEAD -- . ':(exclude).beads' ':(exclude)_plans' ':(exclude)_docs' ':(exclude).claude'
 
 Commits listed and no open card: create it (`Gate-reason: authorization â€” a release is human-authorized`,
 the commits in its body, `best-done-when: at the Mac, via ac-publish`). Commits listed and a card
