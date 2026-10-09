@@ -8,7 +8,7 @@ what bead mode binds, and it is a MANDATORY load for a bead run.
 | knob | bead mode |
 | --- | --- |
 | **TARGET** | the epic id |
-| **ARTIFACT** | the epic plus its OPEN children, exported to one file by `scripts/bead-artifact.py export --ids <epic>,<open children>` — export runs `bead.py check` on each id; a REFUSED verdict still exports, as `CHECK:` lines (polish is the repair lane) — only NOT-GATED aborts. Never a closed bead: a closed description is the record of what shipped, and export REFUSES a closed id (see § Scope) |
+| **ARTIFACT** | the epic plus its OPEN children, exported to one file by `scripts/bead-artifact.py export --ids <epic>,<open children>` — export runs `bead.py check` on each id; a REFUSED verdict still exports, as `CHECK:` lines (polish is the repair lane) — only NOT-GATED aborts. Never a closed bead: a closed description is the record of what shipped, and export REFUSES a closed id (see § Scope). Export ends with the seams sweep (§ Seams sweep at export) over every plan-less bead the `seams-missing` rule covers |
 | **CHECKLIST** | `references/bead-checklist.md` |
 | **VALIDATE** | `skills/_tools/stamp-refined.sh --check <description-file> --type <t> --labels <csv>` per bead (`<t>`/`<csv>` read off that bead's own artifact-block meta-header line) — the restamp gate's OWN read-only entry point: element4-check.sh plus every content leg `bead.py check` runs, in one call; it names on one line whichever board-only leg it cannot run without a live id, never silent. Either RED blocks the round from recording. ONE entry point for both readers, so a bead VALIDATE passes never gets downgraded at restamp for a content reason `--check` could have caught |
 | **READERS** | ONE `coordinator` per round — it applies its own edits and must fix a VALIDATE RED itself, so it needs judgment tier AND the Edit tool; `references/reader-prompt.md` verbatim |
@@ -27,6 +27,31 @@ A bead with no epic is its own TARGET and a one-bead artifact; several open stan
 share one artifact to share the round cost, and a closed one is refused like any other.
 Measured 2026-09-15: "all open beads" run as "all open epics" rewrote 52 closed descriptions
 and receipted 84 closed beads for nothing.
+
+## Seams sweep at export — a plan-less bead owns no plan to carry its Seams
+
+A bead descended from an approved plan inherits that plan's `## Seams`. A plan-less
+task/feature/bug does not, so the sweep derives them. It runs once, at export, over every
+exported bead the `seams-missing` rule covers: plan-less, type task/feature/bug, at least one
+`## Delivers` path, and no `## Seams` section. It is part of the ARTIFACT, written into the
+artifact block before round 1 — ac-polish keeps ONE round procedure, and the board is still
+untouched until writeback.
+
+1. **Derive, per Delivers path.** `skills/_tools/touchers.sh derive <path>` prints
+   `<stem>\t<command>`, or `new` for an untracked path. `new` gets the row
+   `<path> · new — no touchers` and no reader. Everything else gets a reader.
+2. **One reader per object with a command**, sent `skills/ac-plan/references/plan-seams-reader.md`
+   verbatim, spawned by this session in parallel (the same prompt `ac-plan` step 4 sends, not
+   a second copy). `<DELIVERABLES>` is the bead's `## Delivers` plus its ACs. `<FILES>` is the
+   command's output tagged SOURCE, plus the test globs `**/*<stem>*.test.*` and, when
+   `factory.json` sets `journeys_dir`, that directory. The test globs are never empty, so
+   `no-test-globs` cannot fire.
+3. **Write `## Seams`** into the bead's artifact block from the reports: the SEAMS rows, the
+   TESTS `must update` rows, and the OUT-OF-PLAN rows a fresh second reader confirmed
+   (`plan-seams-reader.md` § Confirming an OUT-OF-PLAN claim). A path whose command finds no
+   seam to record gets one line instead:
+   `<path> · none — <command> lists <K> files, all covered`, where K is the number of files
+   that command prints. The next round's reader re-derives K (`bead-checklist.md` § 3).
 
 ## Run PER-EPIC, never per-bead
 

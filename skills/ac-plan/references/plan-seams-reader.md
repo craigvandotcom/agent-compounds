@@ -10,8 +10,8 @@ Deliverables / Out-of-scope / Problem sections. OUT: seams mode's own prompt and
 (`scripts/aim.sh`) — a seams-mode run still uses those, unchanged.
 
 Substitute `<OBJECT>` (the resolved object — its path and the symbols/columns that name it),
-`<DELIVERABLES>` (the plan's `## Deliverables` section, verbatim, so the reader knows what the
-plan is claiming to change), `<FILES>` (the DERIVED file list, below), and `<REPORT>` (an
+`<DELIVERABLES>` (the plan's `## Deliverables` section, verbatim, or for a plan-less bead its
+`## Delivers` plus its ACs, so the reader knows what the work is claiming to change), `<FILES>` (the DERIVED file list, below), and `<REPORT>` (an
 absolute path OUTSIDE the repository). Nothing else.
 
 ## The fresh-reader rule
@@ -26,8 +26,10 @@ any prior draft of this table, or any earlier reader's report.
 The conductor builds `<FILES>` before spawning this reader; the reader does not derive it.
 Two parts, concatenated into one list, each line tagged `SOURCE` or `TEST`:
 
-1. **SOURCE** — the object's touchers: run `skills/_tools/touchers.sh derive <object-path>` to
-   get its `<stem>\t<N>\t<command>`; run `<command>` and tag every line it prints `SOURCE`.
+1. **SOURCE** — the object's touchers: run `skills/_tools/touchers.sh derive <object-path>`. It
+   prints `<stem>\t<command>` (the gate's own `rg` shape, run from the repo root), or `new` for
+   a path git does not track — `new` has no touchers and gets no reader. Run `<command>` and
+   tag every line it prints `SOURCE`.
 2. **TEST** — every test, journey and UI QA file naming the object, found with the globs the
    conductor passes in from the repo's own testing conventions (e.g. `**/*<object>*.test.*`,
    the journeys dir, the UI QA spec dir — repo-specific, never invented by this prompt). Tag
@@ -71,7 +73,7 @@ For each **TEST** file, classify as exactly one of:
 
 ## Output
 
-Write the report to `<REPORT>` in exactly this shape — parsed downstream by `ac-plan`:
+Write the report to `<REPORT>` in exactly this shape — parsed downstream by `ac-plan` and by ac-polish bead mode:
 
 ```
 OBJECT: <what this reader took <OBJECT> to be; anything it could not resolve>

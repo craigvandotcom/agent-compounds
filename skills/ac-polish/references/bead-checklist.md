@@ -61,6 +61,9 @@ is the reader doing its job; reaching for a finding to justify the round is not.
   `stamp-refined.sh` refuses it. The reader cannot write a label or an edge, so when the
   predicate does apply, list it in DECLINED as `PROD-WRITE: <id> — <clause>` for the run to
   wire (or hold) before hand-off.
+- A `## Seams` row of the form `<path> · none — <command> lists <K> files, all covered` is a
+  claim, never evidence: re-run `<command>` and count what it prints. A different count than
+  K is class (a) — the sweep that wrote the row is stale or wrong.
 - For the object this bead reshapes: which bead in the epic owns each lifecycle stage —
   create · store · read · update · delete · cleanup? A stage no bead owns and the plan does
   not name out-of-scope is a HOLE, and grep cannot find it; only this question does.
