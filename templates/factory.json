@@ -13,6 +13,15 @@
     "version": "<SET: {bump: cmd, read: cmd} or null>",
     "targets": ["<SET: {name, promote, verify}, beta? only on targets that can take a test build>"]
   },
+  "autopilot": {
+    "_doc": "autopilot: the unattended hourly gate's contract (read only by skills/_tools/autopilot.sh). enabled is flipped by the human and nothing else; implement false means polish only; max_priority is the lowest-urgency priority it may touch (0-1 = P0-P1); width and cap bound one run. protect is an ERE over repo-relative paths: a diff touching a match is never auto-committed. It covers .claude/ so autopilot cannot edit its own limits; git log on this file is the authorization record.",
+    "enabled": false,
+    "implement": false,
+    "max_priority": 1,
+    "width": 2,
+    "cap": 1,
+    "protect": "^\\.claude/|^\\.github/|^scripts/ship/|^supabase/|\\.sql$|(^|/)package\\.json$|pnpm-lock\\.yaml$|\\.pbxproj$|^ios/App/fastlane/"
+  },
   "store": {
     "_doc": "store ids the distribution skill reads (never literals in skill text)",
     "app_store_id": "<SET: App Store app id>",
