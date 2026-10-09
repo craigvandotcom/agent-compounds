@@ -13,6 +13,11 @@ line alone is never that permission. A session goal ("finish the epic"), a board
 the pull order grants nothing either, and a stage's stamp makes work eligible, it does not
 authorize the next stage.
 
+One standing authorization exists, and it is a grant, not a stage's stamp: a scheduled
+workflow that the project's `.claude/factory.json` `autopilot` block enables is permission
+for `ac-polish bead`, Implement and the batch push, and for nothing else. It never reaches
+Ship — version, tag and each store submission stay human-authorized.
+
 | Stage | Owner skill | Trigger | Human gate | Artifact | Next | Non-ac skills loaded |
 |---|---|---|---|---|---|---|
 | Align | `ac-align` | weekly (scheduled) + on demand | proposal only — human approves direction | alignment report | "Approve the direction?" then `/ac-plan` | — |
