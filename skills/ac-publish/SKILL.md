@@ -20,7 +20,7 @@ runs them in order and owns none of the mechanics. Rules each command holds:
 
 ```bash
 jq -e '.ship | (.preflight | type == "array") and (.prove | type == "string")
-  and (.targets | type == "array" and length > 0 and all(.[]; .name | type == "string"))
+  and (.targets | type == "array" and all(.[]; .name | type == "string"))
   and (.version == null or (.version | has("bump") and has("read")))' .claude/factory.json >/dev/null
 ```
 
@@ -42,7 +42,7 @@ holds. `beta` runs only the targets declared `"beta": true`, bumps no version an
 3. **Prove.** Run `ship.prove --ref "$R"` at the bumped commit. Its LAST stdout line is the proven
    SHA; non-zero is FAIL. Use that SHA for every later step, never `R` or `HEAD`. No fix-forward
    inside a run: a failed proof stops it.
-4. **Authorize.** One `AskUserQuestion` listing the route's targets; the human picks which run.
+4. **Authorize.** One `AskUserQuestion` listing the route's targets (none: confirm the tag); the human picks which run.
    Unattended: stop and leave the ship on the docket (`ac-human`).
 5. **Promote, then verify.** For each picked target, `promote <SHA>`, then `verify <SHA>`. Any
    non-zero stops the ship before the tag.
