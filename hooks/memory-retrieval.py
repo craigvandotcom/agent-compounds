@@ -675,7 +675,14 @@ def keyword_search(terms, qmd_path):
             # Collections overlap on disk — canonicalize so the same fact dedupes
             # (and pools its match count) instead of injecting twice.
             f = canonical_path(f)
-            hits[f] = r
+            # Keep the BEST-scoring hit for a doc across its per-term searches, never the
+            # last one written: a doc matched by a strong later term but a weak earlier one
+            # was scored by whichever term happened to be searched last, so a genuinely
+            # relevant fact sank below looser matches (org-upc8 q032: the `never-chain-br-
+            # close` fact has the best term score of its whole pool but ranked 9th on the
+            # last term's score).
+            if f not in hits or float(r.get("score") or 0.0) > float(hits[f].get("score") or 0.0):
+                hits[f] = r
             counts[f] = counts.get(f, 0) + 1
 
     # Require ≥2 term matches on BOTH tiers (2026-09-08 ruling: one stray keyword is not
@@ -686,7 +693,19 @@ def keyword_search(terms, qmd_path):
     # Order the pool by RELEVANCE, not by which term happened to be searched first.
     # Insertion order ranked a doc matching one early term above a doc matching four
     # later ones; the top-5 cut then discarded the stronger candidate (org-aga).
-    kept.sort(key=lambda f: (-counts.get(f, 0), -float(hits[f].get("score") or 0.0), f))
+    # A fact's FILENAME is its distilled claim, so query terms appearing in the basename
+    # are a stronger relevance signal than a loose BM25 tail match — the ordering key
+    # leads with basename hits, then per-term match count, then the best BM25 score.
+    # (org-upc8: the canonical `pai-scheduler-canonical-scheduling` and
+    # `never-chain-br-close-to-a-commit` facts carry the query in their names but ranked
+    # 5th and 9th on raw BM25.)
+    def _name_hits(f):
+        base = f.rsplit("/", 1)[-1]
+        base = base[:-3] if base.endswith(".md") else base
+        base = base.lower()
+        return sum(1 for t in terms if t in base)
+
+    kept.sort(key=lambda f: (-_name_hits(f), -counts.get(f, 0), -float(hits[f].get("score") or 0.0), f))
     return ({f: hits[f] for f in kept}, ran_ok)
 
 
@@ -996,6 +1015,30 @@ def _has_lexical_anchor(prompt_tokens, item):
     return bool(prompt_tokens & _anchor_tokens(haystack))
 
 
+def _rrf_merge(*channels, k=60):
+    """Reciprocal-rank fusion across retrieval channels (keyword BM25, semantic hybrid).
+
+    A plain dict-union (`{**keyword, **semantic}`) appended EVERY semantic-only hit below
+    EVERY keyword hit, so a fact the semantic lane ranked first still landed under the BM25
+    tail and lost the top-5 cut (org-upc8: an app-memory `scan-siblings` fact was semantic
+    rank 0 but merged to rank 6 behind five loose infra `memory/auto` BM25 matches). RRF
+    scores each doc by the SUM of 1/(k+rank) across the channels it appears in, so a doc
+    strong in either lane rises; a doc strong in both stays on top. Stable tie-break by
+    first appearance, keyword channel first. Same candidate pool — reorder only.
+    """
+    scores: dict[str, float] = {}
+    data: dict[str, dict] = {}
+    order: list[str] = []
+    for channel in channels:
+        for rank, (f, item) in enumerate(channel.items()):
+            if f not in data:
+                data[f] = item
+                order.append(f)
+            scores[f] = scores.get(f, 0.0) + 1.0 / (k + rank)
+    ranked = sorted(enumerate(order), key=lambda p: (-scores[p[1]], p[0]))
+    return {f: data[f] for _, f in ranked}
+
+
 def retrieve(prompt, qmd_path=None, level=None):
     """Side-effect-free retrieval: keyword_search + semantic_search (tier-adaptive) merged and
     deduped, then rank-promoted toward the session level's preferred lobe(s) (Phase 4,
@@ -1040,8 +1083,10 @@ def retrieve(prompt, qmd_path=None, level=None):
             if f in keyword_results or _has_lexical_anchor(prompt_tokens, item)
         }
 
-        # Merge results
-        all_results = {**keyword_results, **semantic_results}
+        # Merge results. Reciprocal-rank fusion, never a plain dict-union: the union put
+        # every keyword hit ahead of every semantic-only hit, starving a semantically
+        # top-ranked fact below the BM25 tail (org-upc8).
+        all_results = _rrf_merge(keyword_results, semantic_results)
         # Telemetry label. The old form was a two-way Metal/CPU guess that reported the
         # warm-daemon path as "CPU only", which is both wrong and the opposite of the point.
         search_type = f"hybrid ({PERF_TIER})"
