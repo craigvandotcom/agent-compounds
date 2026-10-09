@@ -1012,7 +1012,17 @@ def _has_lexical_anchor(prompt_tokens, item):
         item.get("title") or "",
         f.replace("/", " ").replace("-", " ").replace("_", " "),
     ])
-    return bool(prompt_tokens & _anchor_tokens(haystack))
+    shared = prompt_tokens & _anchor_tokens(haystack)
+    if not shared:
+        return False
+    # One shared token clears the floor only when it is the fact's own distilled claim (its
+    # basename). A lone token shared with a long free-text description is nearest-neighbour
+    # noise: org-upc8 q006's `br-defer-date-blocked-beads` shared only "sched" via its body
+    # and displaced the real keyword hit. Two shared tokens anywhere still clear it, so a
+    # genuine paraphrase match (org-upc8 q041's `typefully-cli-gotchas`, one distinctive
+    # basename token) is unaffected.
+    base = f.rsplit("/", 1)[-1].rsplit(".", 1)[0].replace("-", " ").replace("_", " ")
+    return bool(shared & _anchor_tokens(base)) or len(shared) >= 2
 
 
 def _rrf_merge(*channels, k=60):
