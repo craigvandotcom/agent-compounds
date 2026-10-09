@@ -74,7 +74,8 @@ a timed window in the holding zone where it can be caught.** Easy to demote, imp
 **The standing posture this implies for every edit:** SKILL.md holds or shrinks. Growth is
 paid for with an offsetting deletion in the same file, or by moving content to `references/` —
 never with a written justification. Enforced mechanically by lint Check 14 (per-file, not
-corpus-summed — one file's shrink never buys another file's growth).
+corpus-summed — one file's shrink never buys another file's growth) on this registry's skills
+only; a consumer repo's own skills are not gated.
 
 ## What routes through the holding zone — and what skips it
 
