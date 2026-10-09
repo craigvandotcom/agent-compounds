@@ -533,6 +533,9 @@ Re-gate fixture: a deliverable that exists and is referenced owes a touchers lin
 ## Delivers
 - `fix/fixture-deliverable.md` — the re-gate fixture deliverable
 
+## Seams
+- fix/fixture-deliverable.md · reads — the fixture referrer cites it
+
 ## Consumes
 - none
 BODY
@@ -551,6 +554,9 @@ Re-gate fixture: a deliverable that exists and is referenced owes a touchers lin
 ## Delivers
 - `fix/fixture-deliverable.md` — the re-gate fixture deliverable
   touchers: `rg -l -F "fix/fixture-deliverable" .` · owned by: ac-l7xt-fix | out-of-scope: fixture
+
+## Seams
+- fix/fixture-deliverable.md · reads — the fixture referrer cites it
 
 ## Consumes
 - none
@@ -699,6 +705,9 @@ A touchers line that must survive a predecessor landing unedited — no count to
 ## Delivers
 - `fix/fixture-deliverable.md` — count fixture
   touchers: `rg -l -F "fix/fixture-deliverable" . -g '!fix/fixture-deliverable.md'` · owned by: ac-l7xt-fix
+
+## Seams
+- fix/fixture-deliverable.md · reads — the fixture referrer cites it
 
 ## Consumes
 - none

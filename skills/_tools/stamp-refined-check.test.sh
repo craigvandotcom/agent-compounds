@@ -205,6 +205,28 @@ else
   fail "Case 11: a human-gate-labelled bead was refused by no-probe; the label exemption regressed. Output: $OUT"
 fi
 
+# --- Case 12: a plan-less bead (origin:ac-triage) with a Delivers path and no ## Seams is
+# REFUSED by --check, naming seams-missing — the same bead.py check leg the stamp runs.
+write_fx plan-less.md "$CODE_RUNS"
+OUT=$(bash "$STAMP" --check "$WORK/plan-less.md" --type task --labels origin:ac-triage 2>&1); RC=$?
+if [ "$RC" -eq 1 ] && echo "$OUT" | grep -q 'seams-missing'; then
+  pass "Case 12: a plan-less task with a Delivers path and no Seams is REFUSED, naming seams-missing"
+else
+  fail "Case 12: expected exit 1 naming seams-missing, got $RC. Output: $OUT"
+fi
+
+# --- Case 13: the same bead with a non-empty ## Seams section passes clean.
+write_fx plan-less-seams.md "$CODE_RUNS
+## Seams
+- lib/parser.sh · new — no touchers
+"
+OUT=$(bash "$STAMP" --check "$WORK/plan-less-seams.md" --type task --labels origin:ac-triage 2>&1); RC=$?
+if [ "$RC" -eq 0 ] && ! echo "$OUT" | grep -q 'seams-missing'; then
+  pass "Case 13: the same bead with a Seams section passes clean"
+else
+  fail "Case 13: expected exit 0 with no seams-missing, got $RC. Output: $OUT"
+fi
+
 echo
 if [ "$FAILURES" -eq 0 ]; then
   echo "stamp-refined-check.test.sh: all cases passed"

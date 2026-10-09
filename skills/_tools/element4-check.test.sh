@@ -459,6 +459,9 @@ SH_RUNS='## Acceptance Criteria
 
 ## Delivers
 - script: scripts/x.sh
+
+## Seams
+- scripts/x.sh · new — no touchers
 '
 # Every origin now owes the fixpoint receipt (ac-m9y4.7) — bd-sh-runs is meant to reach a
 # real STAMP, so it carries one; bd-sh-bare is refused earlier (nothing left to run).

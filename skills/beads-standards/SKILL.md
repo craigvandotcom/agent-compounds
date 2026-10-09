@@ -99,7 +99,7 @@ inherited machine-wide, not repeated here.
 
 | Label | Meaning |
 |---|---|
-| `refined` | Implementation-ready **and probe-bearing**: every AC names an executable probe — a `Probe:` line a gate can run. Stamped **exclusively** by `skills/_tools/stamp-refined.sh` at refine convergence, which refuses probe-less descriptions — no conductor or capture step ever applies it directly. (Measured 2026-08-29: 18 of 22 `refined` beads in one ready pool were probe-less — every ac2 claim died NOT-GATED at flight-check.) |
+| `refined` | Implementation-ready **and probe-bearing**: every AC names an executable probe — a `Probe:` line a gate can run. Stamped **exclusively** by `skills/_tools/stamp-refined.sh` at refine convergence, which refuses probe-less descriptions — no conductor or capture step ever applies it directly. A plan-less `task`/`feature`/`bug` with a `## Delivers` path also carries a non-empty `## Seams` section (`bead.py check` refuses `[seams-missing]`; `origin:ac-beadify` inherits its plan's). |
 | `unrefined` | Needs a refinement pass before agent pickup. Default at creation. |
 | *(neither)* | **Ungraded — never assume ready.** Missing-both is not "not ready" either; it's unknown. Fail-safe: treat as unrefined until graded. |
 

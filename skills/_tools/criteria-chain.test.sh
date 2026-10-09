@@ -123,6 +123,9 @@ cat >"$WORK/d-vitest.md" <<'EOF'
 
 ## Delivers
 - module: lib/x.ts
+
+## Seams
+- lib/x.ts · new — no touchers
 EOF
 cat >"$WORK/d-bash.md" <<'EOF'
 ## Acceptance Criteria
@@ -131,6 +134,9 @@ cat >"$WORK/d-bash.md" <<'EOF'
 
 ## Delivers
 - script: scripts/x.sh
+
+## Seams
+- scripts/x.sh · new — no touchers
 EOF
 jq -s '.' \
   <(bead_json bd-grep "$WORK/d-grep.md") \

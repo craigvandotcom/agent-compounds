@@ -1211,6 +1211,31 @@ def no_probe_violation(issue_type, human_gate, desc):
             "probe-bearing (beads-standards: refined)")
 
 
+# --- seams-missing: a plan-less implementable bead owes its `## Seams` section -----------
+
+
+def seams_missing_violation(issue_type, human_gate, labels, desc):
+    """A plan-less `task`/`bug`/`feature` bead that names at least one `## Delivers` path
+    needs a non-empty `## Seams` section. A beadified bead inherits its plan's Seams
+    (`origin:ac-beadify`); `human-gate` beads, epics, decisions, investigations and beads
+    whose Delivers carry no path (prose-only bullets have `path: None`) owe none.
+    ONE HOME: `bead.py check` runs this, and the stamp, `stamp-refined.sh --check` and
+    flight-check's re-gate all run `bead.py check`."""
+    if human_gate or issue_type not in _IMPLEMENTABLE_ISSUE_TYPES:
+        return None
+    if "origin:ac-beadify" in (labels or []):
+        return None
+    if not any(d["path"] for d in delivers(desc)):
+        return None
+    if section(desc, "Seams").strip():
+        return None
+    return ("[seams-missing] a plan-less bead with a `## Delivers` path needs a `## Seams` "
+            "section; run the polish bead-mode seams sweep")
+
+
+_SEAMS_SECTION_RE = re.compile(r"^##[ \t]*Seams[ \t]*\n.*?(?=^##[ \t]|\Z)", re.MULTILINE | re.DOTALL)
+
+
 # --- sensitive-prod — derived by calling prod-write-tripwire.sh, never a second copy ----
 
 
@@ -1223,7 +1248,9 @@ def sensitive_prod_check(desc, labels, decision_blocks_count, label=""):
     fd, tmp = tempfile.mkstemp(prefix="bead-check-prodwrite-")
     try:
         with os.fdopen(fd, "w", encoding="utf-8") as fh:
-            fh.write(desc or "")
+            # Seams rows quote SQL, `psql` and migrations as the surfaces they read: the
+            # section describes callers, never a write this bead performs.
+            fh.write(_SEAMS_SECTION_RE.sub("", desc or ""))
         labels_csv = ",".join(labels or [])
         r = subprocess.run(
             ["bash", tripwire_path, tmp, labels_csv, str(decision_blocks_count), label or "description"],
@@ -1280,7 +1307,8 @@ def cmd_check(target):
     (whenever the file carries a `parse_meta_header` line) origin, refined-vs-human-gate,
     task/feature NO-DELIVERS/UNVERIFIABLE-DELIVERS and no-probe (a task/bug/feature bead
     needs at least one extractable Probe: line; epic/decision/investigation and
-    human-gate stay exempt) too. Only the
+    human-gate stay exempt) and seams-missing (a plan-less task/bug/feature with a Delivers
+    path needs a `## Seams` section) too. Only the
     legs that genuinely need the BOARD stay skipped for a file target: sensitive-prod (its
     own DECISION-blocks count is a dependency-edge lookup against a real bead id, which a
     file path is not) always, and the label/type-scoped legs when the file carries no
@@ -1368,6 +1396,13 @@ def cmd_check(target):
             refused.append(f"no-probe: {npv}")
     else:
         skipped.append("task/feature NO-DELIVERS/UNVERIFIABLE-DELIVERS and no-probe (issue_type unknown — file input carries no meta-header line)")
+
+    if labels_known and issue_type_known:
+        smv = seams_missing_violation(issue_type, human_gate, labels, desc)
+        if smv:
+            refused.append(smv)
+    else:
+        skipped.append("seams-missing (labels or issue_type unknown — file input carries no meta-header line)")
 
     if canon is not None:
         dbc = _decision_blocks_count(bead_id)

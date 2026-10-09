@@ -879,6 +879,38 @@ CLEAN_DESC = "## Intent\nRename a helper function.\n"
 s_clean = bead.sensitive_prod_check(CLEAN_DESC, [], 0, "ac-test")
 check(s_clean[0] == 0, "sensitive_prod_check: no signal at all passes clean", s_clean)
 
+# --- seams_missing_violation: a plan-less implementable bead owes `## Seams` -----------
+
+SEAMS_BODY = ("## Intent\nsomething.\n\n## Acceptance Criteria\n- x.\n  Probe: `test -x lib/parser.sh && bash lib/parser.sh`\n"
+              "\n## Delivers\n- lib/parser.sh\n")
+SEAMS_ROW = "\n## Seams\n- lib/parser.sh · new — no touchers\n"
+v_missing = bead.seams_missing_violation("task", False, ["origin:ac-triage"], SEAMS_BODY)
+check(v_missing is not None and "[seams-missing]" in v_missing,
+      "seams_missing_violation: a plan-less task with a Delivers path and no Seams is refused", v_missing)
+check(bead.seams_missing_violation("task", False, ["origin:ac-triage"], SEAMS_BODY + SEAMS_ROW) is None,
+      "seams_missing_violation: the same bead with a non-empty Seams section passes")
+check(bead.seams_missing_violation("task", False, ["origin:ac-triage"], SEAMS_BODY + "\n## Seams\n\n") is not None,
+      "seams_missing_violation: an empty Seams heading counts as missing")
+check(bead.seams_missing_violation("task", False, ["origin:ac-beadify"], SEAMS_BODY) is None,
+      "seams_missing_violation: origin:ac-beadify inherits its plan's Seams and is exempt")
+check(bead.seams_missing_violation("epic", False, ["origin:ac-triage"], SEAMS_BODY) is None,
+      "seams_missing_violation: an epic is exempt")
+check(bead.seams_missing_violation("task", True, ["origin:ac-triage"], SEAMS_BODY) is None,
+      "seams_missing_violation: a human-gate bead is exempt")
+PROSE_DELIVERS = ("## Intent\nsomething.\n\n## Acceptance Criteria\n- x.\n  Probe: `test -x a && bash a`\n"
+                  "\n## Delivers\n- a documented outcome with no path\n")
+check(bead.seams_missing_violation("bug", False, ["origin:ac-triage"], PROSE_DELIVERS) is None,
+      "seams_missing_violation: a bug whose Delivers is prose-only (path None) is exempt")
+
+SEAMS_PSQL = ("## Intent\nRename a helper function.\n\n## Seams\n"
+              "- lib/x.sql · reads — a psql backfill: one-off data-fix for prod rows in the users table\n")
+s_seams = bead.sensitive_prod_check(SEAMS_PSQL, [], 0, "ac-test")
+check(s_seams[0] == 0,
+      "sensitive_prod_check: prod-write words inside the Seams section do not trip the tripwire", s_seams)
+s_outside = bead.sensitive_prod_check(SEAMS_PSQL.replace("## Seams", "## Notes"), [], 0, "ac-test")
+check(s_outside[0] == 1,
+      "sensitive_prod_check: the same words outside a Seams section still trip it", s_outside)
+
 # --- cmd_check (the CLI): end-to-end, each exit class -----------------------------------
 
 BEAD_PY = os.path.join(HERE, "bead.py")

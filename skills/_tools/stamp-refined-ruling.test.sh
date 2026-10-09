@@ -96,6 +96,9 @@ Test `x` must FAIL before the fix; assert exit 1.
 
 ## Delivers
 - lib/lonely.ts
+
+## Seams
+- lib/lonely.ts · new — no touchers
 '
 
 RECEIPT1='POLISH-FIXPOINT: mode=bead rounds=2 sha256=deadbeefdeadbeef00000000000000000000000000000000000000000000 at=2026-09-24T21:29:36Z engine=polish-fixpoint.sh'
