@@ -37,6 +37,11 @@
 #   inline-message     -m/--message instead of a message FILE
 #   no-message-file    --message-file missing, unreadable or empty
 #   foreign-branch     the checkout is not on the branch this commit was written for
+#   autopilot-protected  AC2_AUTOPILOT=1 with an enabled factory.json autopilot block, and the
+#                      staged set (what `git add --dry-run` resolves, never the argv) holds a
+#                      deletion or a path the block's `protect` ERE matches — NEXT: handback,
+#                      before any [no-bead]/board/scope leg and before `git add`; autopilot.sh
+#                      exit 2 is NOT-GATED (exit 6). The beads ledger is never protected.
 #   no-claim-receipt   the subject names a bead whose claim flight-check REFUSED and no
 #                      flight receipt dated after that refusal is on record — the refusal→
 #                      rework rule lives only in worker seed text, so a worker that ignores
@@ -294,6 +299,55 @@ export GIT_LITERAL_PATHSPECS=1
 
 CUR="$(git rev-parse --abbrev-ref HEAD 2>/dev/null)"
 [ "$CUR" = "$BRANCH" ] || { echo "REFUSED [foreign-branch]: HEAD is on '$CUR', this commit was written for '$BRANCH'; stop and touch nothing" >&2; echo "NEXT: handback" >&2; exit 9; }
+
+# ---------------------------------------------------------------------------------------
+# LEG — autopilot-protected. Unattended (autopilot.sh active), a commit may neither delete a
+# file nor touch a path the project's `autopilot.protect` ERE matches. This leg runs BEFORE
+# the [no-bead]/board/scope legs (a `[no-bead]` subject, a missing board or an unscoped
+# Delivers skips every one of those) and before `git add`. The argv is never trusted: a
+# directory pathspec, `./x` and `a/../x` name files the strings do not, so the exact set is
+# what git itself would stage (`git add --dry-run`) plus whatever is already staged or deleted
+# against HEAD under these paths. The ERE runs once, in autopilot.sh (which never reads the
+# ledger as protected). Its NOT-GATED (exit 2) is exit 6 here; the refusal's remedy is a
+# hand-back, not a repair — the bead is out of bounds, not mis-committed.
+# ---------------------------------------------------------------------------------------
+AUTOPILOT_TOOL="${AUTOPILOT_TOOL:-$TOOLS_DIR/autopilot.sh}"
+bash "$AUTOPILOT_TOOL" active; ap_rc=$?
+case "$ap_rc" in
+  0)
+    ap_dry=$(git add --dry-run -- "${PATHS[@]}" 2>&1) \
+      || not_gated autopilot-protected "git add --dry-run failed, the staged set cannot be resolved: $ap_dry"
+    # `-z` pairs: status, then path. Re-join each pair as `<status><TAB><path>`.
+    ap_diff=$(git diff --name-status -z --no-renames HEAD -- "${PATHS[@]}" | tr '\0' '\n' | awk 'NR % 2 { s = $0; next } { print s "\t" $0 }') \
+      || not_gated autopilot-protected "git diff against HEAD failed, the staged set cannot be resolved"
+    ap_removed=$( { printf '%s\n' "$ap_dry" | sed -nE "s/^remove '(.*)'\$/\1/p"
+                    printf '%s\n' "$ap_diff" | awk -F'\t' '$1 == "D" { print substr($0, 3) }'; } )
+    if [ -n "$ap_removed" ]; then
+      echo "REFUSED [autopilot-protected]: this commit deletes $(printf '%s' "$ap_removed" | tr '\n' ' ') — autopilot never deletes" >&2
+      echo "NEXT: handback" >&2
+      exit 3
+    fi
+    ap_changed=()
+    while IFS= read -r ap_p; do
+      [ -n "$ap_p" ] && ap_changed+=("$ap_p")
+    done <<EOF
+$( { printf '%s\n' "$ap_dry" | sed -nE "s/^add '(.*)'\$/\1/p"
+     printf '%s\n' "$ap_diff" | awk -F'\t' 'NF > 1 && $1 != "D" { print substr($0, 3) }'; } | sort -u )
+EOF
+    if [ "${#ap_changed[@]}" -gt 0 ]; then
+      ap_hits=$(bash "$AUTOPILOT_TOOL" protected "${ap_changed[@]}"); ap_hrc=$?
+      case "$ap_hrc" in
+        0)
+          echo "REFUSED [autopilot-protected]: this commit touches protected path(s): $(printf '%s' "$ap_hits" | tr '\n' ' ')" >&2
+          echo "NEXT: handback" >&2
+          exit 3 ;;
+        1) ;;
+        *) not_gated autopilot-protected "autopilot.sh protected failed (exit $ap_hrc) — the protect list could not be applied" ;;
+      esac
+    fi ;;
+  1) ;;
+  *) not_gated autopilot-protected "autopilot.sh active exited $ap_rc — the autopilot config could not be read" ;;
+esac
 
 # ---------------------------------------------------------------------------------------
 # LEG — no-claim-receipt. A commit whose subject names bead X is refused when X has a

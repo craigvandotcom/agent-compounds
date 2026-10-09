@@ -262,6 +262,11 @@ this path).
 - `--force-with-lease` on a NON-main working branch (e.g. a pre-PR wave-branch push) is the sanctioned exception — branch-scoped only, never `main`.
 - Never an unscoped stash (a bare `git stash` with no pathspec). Never `git add -A`.
 - `cross-repo` beads: commit in the repo that tracks the files (see § Cross-repo).
+- Unattended (`AC2_AUTOPILOT=1` and an enabled `autopilot` block in `.claude/factory.json`),
+  `swarm-commit.sh` refuses `autopilot-protected` before staging: any deletion, and any path
+  the block's `protect` ERE matches, judged on the set `git add --dry-run` resolves, never
+  the argv. The remedy is `NEXT: handback`, not a repair. `.beads/issues.jsonl` is never
+  protected. A block the helper cannot read exits 6 NOT-GATED.
 - One scheduled writer per generated artifact (`.beads/issues.jsonl`, tidy
   proposals). Mapping lives on the job objects in `infrastructure/jobs/daily.json`
   / `weekly.json` (`_authorized_commits` / `_do_not_commit`). The ruling tap

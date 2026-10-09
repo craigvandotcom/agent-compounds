@@ -11,6 +11,9 @@
 #
 # Exit 0 = all cases pass · 77 = self-skip (flock(1) absent; the lane cannot be exercised).
 set -uo pipefail
+# The harness never inherits a live autopilot session's switch: the autopilot cases set it
+# per run, every other case runs with it unset.
+unset AC2_AUTOPILOT
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 LANE="$SCRIPT_DIR/swarm-commit.sh"
@@ -546,6 +549,106 @@ if printf '%s' "$out" | grep -q 'ledger-behind-upstream'; then
 else
   pass "directory spelling '.': cannot dodge into the ledger leg"
 fi
+
+# --- 23. autopilot-protected: unattended, no protected path and no deletion -------------------
+# The leg resolves what git would STAGE, never the argv strings, and runs before the
+# [no-bead]/board/scope legs. Every case below drives the real lane in a real repo that owns a
+# real .claude/factory.json; AC2_AUTOPILOT=1 is set per run (the file-top `unset` keeps the
+# harness itself from inheriting a live session's switch).
+AP_BLOCK='{"autopilot":{"enabled":true,"max_priority":1,"protect":"^supabase/|\\.sql$|^\\.claude/"}}'
+ap_repo() {  # ap_repo <name> <factory.json body> → a repo with tracked supabase/x.sql + ledger, both modified
+  local r; r="$(new_repo "$1")"
+  mkdir -p "$r/supabase" "$r/.claude" "$r/.beads"
+  printf 'select 1;\n' >"$r/supabase/x.sql"
+  printf '{"id":"zz-x"}\n' >"$r/.beads/issues.jsonl"
+  git -C "$r" add -- supabase/x.sql .beads/issues.jsonl
+  git -C "$r" commit -qm "seed protected"
+  printf 'select 2;\n' >"$r/supabase/x.sql"
+  printf '{"id":"zz-x","n":2}\n' >"$r/.beads/issues.jsonl"
+  printf '%s\n' "$2" >"$r/.claude/factory.json"
+  echo "$r"
+}
+ap_lane() {  # ap_lane <repo> <switch> <path>… → sets out, rc
+  local r=$1 sw=$2; shift 2
+  local args=() p; for p in "$@"; do args+=(--path "$p"); done
+  if [ "$sw" = on ]; then
+    out="$(cd "$r" && AC2_AUTOPILOT=1 "$LANE" --identity t --message-file msg.txt "${args[@]}" 2>&1)"; rc=$?
+  else
+    out="$(cd "$r" && "$LANE" --identity t --message-file msg.txt "${args[@]}" 2>&1)"; rc=$?
+  fi
+}
+ap_refused() {  # ap_refused <label> <repo> <head-before>
+  if [ "$rc" -eq 3 ] && printf '%s' "$out" | grep -q 'REFUSED \[autopilot-protected\]' \
+     && printf '%s' "$out" | grep -q 'NEXT: handback'; then
+    pass "$1"
+  else fail "$1: rc=$rc out=$out"; fi
+  if [ "$(git -C "$2" rev-parse HEAD)" = "$3" ]; then pass "$1 — nothing landed"
+  else fail "$1: the commit landed anyway"; fi
+}
+
+R="$(ap_repo ap-dir "$AP_BLOCK")"; before="$(git -C "$R" rev-parse HEAD)"
+ap_lane "$R" on supabase
+ap_refused "autopilot: a directory pathspec that stages a protected file is refused" "$R" "$before"
+
+ap_lane "$R" on ./supabase/x.sql
+ap_refused "autopilot: ./supabase/x.sql is refused" "$R" "$before"
+
+ap_lane "$R" on a/../supabase/x.sql
+ap_refused "autopilot: a/../supabase/x.sql is refused" "$R" "$before"
+
+printf 'create table t();\n' >"$R/supabase/new.sql"
+ap_lane "$R" on supabase/new.sql
+ap_refused "autopilot: an untracked new protected file is refused" "$R" "$before"
+rm -f "$R/supabase/new.sql"
+
+git -C "$R" add -- supabase/x.sql
+ap_lane "$R" on supabase/x.sql
+ap_refused "autopilot: a protected file already staged (nothing left for add to do) is still refused" "$R" "$before"
+git -C "$R" reset -q -- supabase/x.sql
+
+printf 'chore(beads): flush [no-bead]\n\nledger flush body\n' >"$R/msg.txt"
+ap_lane "$R" on supabase/x.sql
+ap_refused "autopilot: a [no-bead] commit staging a protected path is still refused" "$R" "$before"
+
+printf "lane: a body with an apostrophe — don't truncate me\n" >"$R/msg.txt"
+rm "$R/sib.txt"
+ap_lane "$R" on sib.txt
+ap_refused "autopilot: a deleted tracked file is refused" "$R" "$before"
+printf 'sib v1\n' >"$R/sib.txt"
+
+ap_lane "$R" on mine.txt
+if [ "$rc" -eq 0 ] && [ "$(git -C "$R" show HEAD:mine.txt)" = "mine v2" ]; then
+  pass "autopilot: a clean unprotected path commits"
+else fail "autopilot clean path: rc=$rc out=$out"; fi
+
+printf 'chore(beads): ledger sync [no-bead]\n\nledger body\n' >"$R/msg.txt"
+ap_lane "$R" on .beads/issues.jsonl
+if [ "$rc" -eq 0 ] && [ "$(git -C "$R" show HEAD:.beads/issues.jsonl)" = '{"id":"zz-x","n":2}' ]; then
+  pass "autopilot: the coordinator-shaped .beads/issues.jsonl commit passes the lane"
+else fail "autopilot ledger commit: rc=$rc out=$out"; fi
+
+# Inactive: switch unset, block disabled, and no block at all behave exactly like the plain lane.
+printf "lane: a body with an apostrophe — don't truncate me\n" >"$R/msg.txt"
+R="$(ap_repo ap-off "$AP_BLOCK")"
+ap_lane "$R" off supabase/x.sql
+if [ "$rc" -eq 0 ]; then pass "autopilot: switch unset, a protected path commits as before"
+else fail "autopilot inactive (switch unset): rc=$rc out=$out"; fi
+R="$(ap_repo ap-disabled '{"autopilot":{"enabled":false,"max_priority":1,"protect":"^supabase/"}}')"
+ap_lane "$R" on supabase/x.sql
+if [ "$rc" -eq 0 ]; then pass "autopilot: enabled:false, a protected path commits as before"
+else fail "autopilot inactive (disabled): rc=$rc out=$out"; fi
+R="$(ap_repo ap-noblock '{"ship":{}}')"
+ap_lane "$R" on supabase/x.sql
+if [ "$rc" -eq 0 ]; then pass "autopilot: no block, a protected path commits as before"
+else fail "autopilot inactive (no block): rc=$rc out=$out"; fi
+
+# A misconfigured block is NOT-GATED (exit 6), never a commit.
+R="$(ap_repo ap-badere '{"autopilot":{"enabled":true,"max_priority":1,"protect":"^supabase/(["}}')"; before="$(git -C "$R" rev-parse HEAD)"
+ap_lane "$R" on mine.txt
+if [ "$rc" -eq 6 ] && printf '%s' "$out" | grep -q 'NOT-GATED' && printf '%s' "$out" | grep -q 'NEXT: handback' \
+   && [ "$(git -C "$R" rev-parse HEAD)" = "$before" ]; then
+  pass "autopilot: a malformed protect ERE is NOT-GATED (exit 6) and commits nothing"
+else fail "autopilot malformed ERE: rc=$rc out=$out"; fi
 
 echo "---"
 echo "swarm-commit.test.sh: $CASES case(s), $FAILURES failure(s)"
