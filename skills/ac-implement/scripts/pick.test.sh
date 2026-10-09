@@ -5,6 +5,9 @@
 # Runs under bash and zsh:  bash <this> && zsh <this>       Exit 0 = all cases pass.
 
 SELF_DIR=$(cd "$(dirname "$0")" && pwd)
+# The harness never inherits a live autopilot session's switch: the autopilot cases set it
+# per run, every other case runs with it unset.
+unset AC2_AUTOPILOT
 PICK="$SELF_DIR/pick.sh"
 W=$(mktemp -d); trap 'rm -rf "$W"' EXIT
 mkdir -p "$W/bin"
@@ -111,6 +114,61 @@ check "rc-0 error envelope is NOT-GATED" "" 2
 reset; ready "$(bead p task 0 2026-01-01 '["refined","sensitive-prod"]')"; : > "$FIX/show.fail"
 check "br show failure is NOT-GATED" "" 2
 check_err "br show failure tells the worker what to do next (NEXT: handback)" "NEXT: handback"
+
+# 8 — autopilot (AC2_AUTOPILOT=1 + the project's factory.json block, read through autopilot.sh):
+# priority above max_priority and beads delivering a protected path are excluded, in pick AND
+# in --count. Every case below runs from inside a throwaway project that owns the block.
+P="$W/proj"; mkdir -p "$P/.claude"; git init -q "$P"
+factory() { printf '%s\n' "$1" > "$P/.claude/factory.json"; }
+BLOCK='{"autopilot":{"enabled":true,"max_priority":1,"protect":"^supabase/|\\.sql$"}}'
+dbead() {  # dbead <id> <priority> <created> <delivers-path>… — a refined task with a ## Delivers section
+  local id=$1 prio=$2 created=$3; shift 3
+  local desc="## Intent\nx\n\n## Delivers" p
+  for p in "$@"; do desc="$desc\n- file: $p"; done
+  jq -nc --arg id "$id" --argjson prio "$prio" --arg created "$created" --arg desc "$(printf '%b' "$desc")" \
+    '{id:$id,issue_type:"task",priority:$prio,created_at:$created,labels:["refined"],status:"open",assignee:"",title:("work "+$id),description:$desc}'
+}
+reset
+ready "$(dbead prot 0 2025-01-01 supabase/migrations/1.sql)" \
+      "$(dbead over 2 2025-01-02 skills/over.sh)" \
+      "$(dbead mixed 0 2025-01-03 skills/ok.sh db/q.sql)" \
+      "$(dbead fine 1 2026-01-01 skills/fine.sh)" \
+      "$(bead nodesc task 1 2026-01-02 "$R")"
+factory "$BLOCK"
+cd "$P" || exit 1
+# inactive path: byte-identical behaviour — the switch unset, or the block disabled, picks the
+# oldest P0 even though it is protected and counts every bead.
+check "inactive (switch unset): the protected P0 is still picked" prot 0
+check "inactive (switch unset): count sees every bead" 5 0 --count
+AC2_AUTOPILOT=1 check "autopilot: protected + over-cap beads are skipped" fine 0
+check_err "PROTECTED reported, not silently dropped" "^PROTECTED prot$"
+check_err "a bead with one protected path among several is reported" "^PROTECTED mixed$"
+AC2_AUTOPILOT=1 check "autopilot: over-cap bead is never picked" nodesc 0 --burned "fine"
+AC2_AUTOPILOT=1 check "autopilot: nothing eligible is DRY" DRY 1 --burned "fine nodesc"
+AC2_AUTOPILOT=1 check "autopilot: --count agrees with what workers can take" 2 0 --count
+factory '{"autopilot":{"enabled":false,"max_priority":1,"protect":"^supabase/"}}'
+AC2_AUTOPILOT=1 check "autopilot block disabled: the protected P0 is still picked" prot 0
+AC2_AUTOPILOT=1 check "autopilot block disabled: count unchanged" 5 0 --count
+factory '{"ship":{}}'
+AC2_AUTOPILOT=1 check "no autopilot block: behaviour unchanged" prot 0
+# a misconfigured block is NOT-GATED, never a pick and never DRY
+factory '{"autopilot":{"enabled":true,"max_priority":1,"protect":"^supabase/(["}}'
+AC2_AUTOPILOT=1 check "malformed protect ERE is NOT-GATED" "" 2
+check_err "NOT-GATED named" "NOT-GATED"
+check_err "NOT-GATED tells the worker what to do next (NEXT: handback)" "NEXT: handback"
+AC2_AUTOPILOT=1 check "malformed protect ERE: --count is NOT-GATED" "" 2 --count
+factory '{"autopilot":{"enabled":true,"protect":"^supabase/"}}'
+AC2_AUTOPILOT=1 check "missing max_priority is NOT-GATED" "" 2
+# --count agrees with a drain: pick, burn, repeat until DRY
+factory "$BLOCK"
+burned=""; picks=0
+while :; do
+  got=$(AC2_AUTOPILOT=1 bash "$PICK" --burned "$burned" 2>/dev/null) || break
+  burned="$burned $got"; picks=$((picks + 1))
+done
+want=$(AC2_AUTOPILOT=1 bash "$PICK" --count 2>/dev/null)
+if [ "$picks" = "$want" ]; then PASS=$((PASS + 1)); else FAIL=$((FAIL + 1)); echo "FAIL drain vs --count: drained $picks, counted $want"; fi
+cd "$SELF_DIR" || exit 1
 
 echo "PASS=$PASS FAIL=$FAIL"
 [ "$FAIL" = 0 ]

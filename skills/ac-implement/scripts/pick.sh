@@ -14,9 +14,12 @@
 #
 # Usage:  pick.sh [--actor NAME] [--burned "id id …"]   → `<id>`, `EPIC <id>`, or `DRY`
 #         pick.sh --count [--actor NAME]               → the eligible pool size
-# Stderr: `GATED <id>` / `MALFORMED <id>: no DECISION blocks edge`, one per skipped bead.
+# Stderr: `GATED <id>` / `MALFORMED <id>: no DECISION blocks edge` / `PROTECTED <id>`, one per skipped bead.
+# Autopilot: with AC2_AUTOPILOT=1 and an enabled factory.json autopilot block (autopilot.sh), a priority
+#         above max_priority is never offered and a bead delivering a protect-matched path is PROTECTED;
+#         pick and --count agree. A misconfigured block exits 2 NOT-GATED.
 # Exit:   0 picked or counted · 1 DRY · 2 NOT-GATED (a br read failed — never read as DRY)
-# Env:    AC2_BR_CMD — the br binary (br-call.sh)
+# Env:    AC2_BR_CMD — the br binary (br-call.sh) · AC2_AUTOPILOT — the autopilot switch
 #
 #   PROBE:      bash skills/ac-implement/scripts/pick.test.sh — stub br, filter/order/gate/fail cases
 #   SCHEDULE:   worker §1 every iteration · conductor Phase 0 (--count) · run-all-proofs.sh
@@ -39,9 +42,51 @@ export RUST_LOG=error
 BEAD_PY_TOOL="${BEAD_PY_TOOL:-$_TOOLS_DIR/bead.py}"
 
 ready=$(br_call ready --json -l refined --limit 0) || { echo "NOT-GATED: br ready failed" >&2; echo "NEXT: handback" >&2; exit 2; }
-rows=$(printf '%s' "$ready" | jq -r --arg me "$ACTOR" '
+
+# Autopilot (AC2_AUTOPILOT=1 + the project's factory.json block, read only through autopilot.sh):
+# a priority above max_priority is dropped in the jq filter, and a bead delivering a protected
+# path is dropped in the loop with `PROTECTED <id>`. Inactive, neither exists.
+AUTOPILOT_TOOL="${AUTOPILOT_TOOL:-$_TOOLS_DIR/autopilot.sh}"
+CAP=null; PROTECTED_IDS=""
+bash "$AUTOPILOT_TOOL" active; arc=$?
+case $arc in
+  0) CAP=$(bash "$AUTOPILOT_TOOL" get max_priority) \
+       || { echo "NOT-GATED: autopilot max_priority unreadable" >&2; echo "NEXT: handback" >&2; exit 2; }
+     # Every Delivers path of every ready row, as `<id>\t<path>`; the protect ERE runs once, in autopilot.sh.
+     dpaths=$(printf '%s' "$ready" | python3 -c '
+import json, os, sys
+sys.path.insert(0, os.path.dirname(sys.argv[1]))
+import bead
+
+for r in json.load(sys.stdin):
+    for d in bead.delivers(r.get("description") or ""):
+        for p in d["paths"]:
+            print(r["id"] + "\t" + p)
+' "$BEAD_PY_TOOL") \
+       || { echo "NOT-GATED: bead Delivers paths unreadable" >&2; echo "NEXT: handback" >&2; exit 2; }
+     if [ -n "$dpaths" ]; then
+       allpaths=()
+       while IFS= read -r ap; do allpaths+=("$ap"); done <<EOF
+$(printf '%s\n' "$dpaths" | cut -f2- | sort -u)
+EOF
+       hits=$(bash "$AUTOPILOT_TOOL" protected "${allpaths[@]}"); hrc=$?
+       if [ "$hrc" -gt 1 ]; then echo "NOT-GATED: autopilot protect could not be applied" >&2; echo "NEXT: handback" >&2; exit 2; fi
+       if [ "$hrc" -eq 0 ]; then
+         while IFS=$'\t' read -r pid ppath; do
+           if printf '%s\n' "$hits" | grep -qxF -- "$ppath"; then PROTECTED_IDS="$PROTECTED_IDS $pid "; fi
+         done <<EOF
+$dpaths
+EOF
+       fi
+     fi ;;
+  1) ;;
+  *) echo "NOT-GATED: autopilot config unreadable" >&2; echo "NEXT: handback" >&2; exit 2 ;;
+esac
+
+rows=$(printf '%s' "$ready" | jq -r --arg me "$ACTOR" --argjson cap "$CAP" '
   [ .[]
     | select(.status == "open")
+    | select($cap == null or (.priority // 99) <= $cap)
     | select(.issue_type != "decision")
     | select(((.labels // []) | any(. == "epic" or . == "human-gate"
                 or . == "device" or . == "unrefined" or . == "conductor")) | not)
@@ -57,6 +102,7 @@ n=0
 while IFS=$'\t' read -r id type prod; do
   [ -n "$id" ] || continue
   case " $BURNED " in *" $id "*) continue ;; esac
+  case "$PROTECTED_IDS" in *" $id "*) echo "PROTECTED $id" >&2; continue ;; esac
   if [ "$prod" = true ]; then
     # DECISION edge via bead.py: total/closed counts of this bead's `blocks` edges onto a
     # DECISION-titled bead. `blocking_ids` (public, bead.py) selects the `blocks` axis; the
