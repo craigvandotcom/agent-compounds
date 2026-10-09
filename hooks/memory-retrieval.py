@@ -104,7 +104,15 @@ MEMORY_LOBES = (
 # that gap — same candidate-selection/rank-promotion pipeline as every other memory hit below.
 FRICTIONS_SUFFIX = "/FRICTIONS.md"
 MAX_RESULTS = 3
-KEYWORD_WINDOW = 20  # per-term BM25 window BEFORE the memory filter (was 8)
+# Per-term BM25 window BEFORE the memory filter. qmd `search` ranks the WHOLE index and
+# the memory filter runs AFTER the cut, so this window must clear the global crowding or a
+# memory fact is dropped before the filter ever sees it. org-4ex's live misses had their
+# expected docs ranked 41-109 globally, invisible at 20. Raised 20 -> 60 (org-4ex): at 60
+# the seven-term q020 doc enters via 7 of 8 terms (clearing the >=2 floor), all three
+# q017/q020/q054 hit top-5 across 3 runs, and whole-suite recall@5 goes 0.9474 -> 1.0000
+# with zero regressions. NOT a "bigger is better" knob: beyond ~60 the larger pool
+# re-introduces breadth-over-specificity crowding (80 regresses q001/q022). (was 8 -> 20)
+KEYWORD_WINDOW = 60
 KEYWORD_TERMS = 8   # query terms per prompt (was 6) — late discriminative terms were dropped
 MIN_PROMPT_LEN = 25  # skip trivial prompts ("yes", "ok", short follow-ups)
 # Shown under every injection so a session knows tier 1 is a FILTERED view, not the whole
