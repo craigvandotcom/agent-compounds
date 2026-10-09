@@ -22,7 +22,7 @@
 #     cannot reach cannot prove a landing, so it fails closed (the model is not started).
 #     Either way the keys resurface next run.
 #   - A could-not-check source upserts ONE open ops bead (marker `triage-gate:source-down:<name>`):
-#     created once, commented at most every TRIAGE_GATE_COMMENT_EVERY_H hours, commented once on
+#     created once, commented at most every TRIAGE_GATE_COMMENT_EVERY_H hours, closed on
 #     recovery. It never starts the model and never touches the seen-set.
 #   - Every run rewrites $STATE/heartbeat.json — its age is the gate's proof of life.
 #
@@ -117,10 +117,10 @@ upsert_down() {  # upsert_down <name> <reason> — non-zero when br failed
   now >"$STATE/down/$name"
 }
 
-recovered() {  # recovered <name> — one comment on the open ops bead, then forget the outage
+recovered() {  # recovered <name> — close the open ops bead, then forget the outage
   local id
   id=$(open_down_bead "$1")
-  [ -n "$id" ] && "$BR" comments add "$id" --content "Recovered at $(date -u +%FT%TZ) — the source checks again." >/dev/null
+  [ -n "$id" ] && "$BR" close "$id" --reason "obsolete: triage source $1 recovered at $(date -u +%FT%TZ) — it checks again; nothing left to do." >/dev/null
   rm -f "$STATE/down/$1"
 }
 

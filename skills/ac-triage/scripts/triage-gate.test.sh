@@ -42,6 +42,7 @@ case "\$1" in
           printf '{"issues":['; sep=; for i in \$ids; do printf '%s{"id":"%s"}' "\$sep" "\$i"; sep=,; done; printf ']}\n' ;;
   create) n=\$(ls "$W/beads" | wc -l); printf '%s' "\$*" >"$W/beads/ops-\$n" ;;
   comments) : ;;
+  close)    rm -f "$W/beads/\$2" ;;
 esac
 SH
   chmod +x "$W/br"
@@ -134,7 +135,7 @@ git -C "$W/repo" remote remove origin
 : >"$W/model.log"; rc=$(gate)
 if [ "$rc" = 1 ] && ! grep -q k4 "$W/state/seen/alpha"; then ok; else bad "no origin at all marks nothing seen (got $rc)"; fi
 
-# 5. source error twice → one ops bead, then a comment; recovery comments once
+# 5. source error twice → one ops bead, then a comment; recovery closes it
 setup
 echo 2 >"$W/beta.rc"
 rc=$(gate)
@@ -145,7 +146,8 @@ rc=$(gate)
 if [ "$(calls create)" = 1 ] && [ "$(calls comments)" = 1 ]; then ok; else bad "second outage comments, files nothing"; fi
 if [ ! -s "$W/model.log" ]; then ok; else bad "down source never starts the model"; fi
 rm -f "$W/beta.rc"; gate >/dev/null
-if [ "$(calls comments)" = 2 ] && [ ! -f "$W/state/down/beta" ]; then ok; else bad "recovery comments once"; fi
+if [ "$(calls close)" = 1 ] && [ "$(calls comments)" = 1 ] && [ ! -f "$W/state/down/beta" ]; then ok; else bad "recovery closes the ops bead, no extra comment"; fi
+if ! grep -l "beta is down" "$W"/beads/* >/dev/null 2>&1; then ok; else bad "the closed ops bead is gone from the open set"; fi
 
 # 6. br failing while a source is down → exit 2
 setup
