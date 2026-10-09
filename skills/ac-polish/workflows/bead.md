@@ -10,7 +10,7 @@ what bead mode binds, and it is a MANDATORY load for a bead run.
 | **TARGET** | the epic id |
 | **ARTIFACT** | the epic plus its OPEN children, exported to one file by `scripts/bead-artifact.py export --ids <epic>,<open children>` — export runs `bead.py check` on each id; a REFUSED verdict still exports, as `CHECK:` lines (polish is the repair lane) — only NOT-GATED aborts. Never a closed bead: a closed description is the record of what shipped, and export REFUSES a closed id (see § Scope). Export ends with the seams sweep (§ Seams sweep at export) over every plan-less bead the `seams-missing` rule covers |
 | **CHECKLIST** | `references/bead-checklist.md` |
-| **VALIDATE** | `skills/_tools/stamp-refined.sh --check <description-file> --type <t> --labels <csv>` per bead (`<t>`/`<csv>` read off that bead's own artifact-block meta-header line) — the restamp gate's OWN read-only entry point: element4-check.sh plus every content leg `bead.py check` runs, in one call; it names on one line whichever board-only leg it cannot run without a live id, never silent. Either RED blocks the round from recording. ONE entry point for both readers, so a bead VALIDATE passes never gets downgraded at restamp for a content reason `--check` could have caught |
+| **VALIDATE** | `skills/_tools/stamp-refined.sh --check <description-file> --type <t> --labels <csv>` per bead (`<t>`/`<csv>` read off that bead's own artifact-block meta-header line) — the restamp gate's OWN read-only entry point: element4-check.sh plus every content leg `bead.py check` runs, in one call; it names on one line whichever board-only leg it cannot run without a live id, never silent. Either RED blocks the round from recording. ONE entry point for both readers, so a bead VALIDATE passes never gets downgraded at restamp for a content reason `--check` could have caught. A `seams-missing` RED (a round added a `## Delivers` path to a plan-less bead) is repaired in the same round by running the sweep's steps 1 to 3 on that bead, never by hand-writing `## Seams` |
 | **READERS** | ONE `coordinator` per round — it applies its own edits and must fix a VALIDATE RED itself, so it needs judgment tier AND the Edit tool; `references/reader-prompt.md` verbatim |
 | **STAMP** | `polish-fixpoint.sh --mode bead` writes the `POLISH-FIXPOINT:` receipt comment to EVERY bead in the artifact, not only the epic — no hand fan-out |
 
@@ -52,6 +52,8 @@ untouched until writeback.
    seam to record gets one line instead:
    `<path> · none — <command> lists <K> files, all covered`, where K is the number of files
    that command prints. The next round's reader re-derives K (`bead-checklist.md` § 3).
+
+The same steps repair a `seams-missing` VALIDATE refusal inside a round: the round's reader runs them on the refused bead before the round records. A hand-listed `## Seams` is the scope the rule exists to stop.
 
 ## Run PER-EPIC, never per-bead
 
