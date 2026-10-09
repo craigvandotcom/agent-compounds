@@ -105,7 +105,9 @@ settle the fork; the coordinator files it. When the fork is a hold the next work
 claim through (a prod-write authorization, or any gate reason), apply board state before
 unclaiming — `bash <scripts>/return-hold.sh <id> --reason <reason> --actor "$ACTOR"`, which
 labels `human-gate`, records `Gate-reason:`, and releases the claim — because a hold that
-lives only in prose is invisible to every eligibility filter.
+lives only in prose is invisible to every eligibility filter. Under `AC2_AUTOPILOT=1`, work on the
+project's AGENTS.md ask-first list, or an `autopilot-protected` refusal from the commit lane, is that
+hold: `bash <scripts>/return-hold.sh <id> --reason "authorization autopilot-boundary" --actor "$ACTOR"`, then §9.
 
 ## 4b — DISPOSITION — the bead in hand may already be someone else's work
 

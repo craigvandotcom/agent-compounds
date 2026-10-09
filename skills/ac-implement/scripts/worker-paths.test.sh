@@ -57,6 +57,19 @@ grep -qi 'repo-relative' "$WORKER" \
   && ok "worker.md names the repo-relative fallback it forbids" \
   || bad "worker.md does not forbid a repo-relative fallback"
 
+# --- worker.md: the autopilot-boundary hand-back -------------------------------------------
+# The commit lane's `NEXT: handback` routes to §9, whose unclaim is a plain `--status open`;
+# only this line makes a protected or deleting bead return gated instead of claimable.
+# return-hold.sh refuses a reason that does not start fork|authorization|intent|action.
+
+grep -q 'return-hold.sh <id> --reason "authorization autopilot-boundary"' "$WORKER" \
+  && ok "worker.md hands an autopilot-boundary bead back through return-hold.sh with an accepted reason" \
+  || bad "worker.md never names the autopilot-boundary hand-back (return-hold.sh, reason 'authorization autopilot-boundary')"
+
+grep -q 'AC2_AUTOPILOT' "$WORKER" && grep -q 'autopilot-protected' "$WORKER" \
+  && ok "worker.md names the switch and the commit-lane refusal that trigger it" \
+  || bad "worker.md does not name AC2_AUTOPILOT and autopilot-protected as the trigger"
+
 # --- SKILL.md: <scripts> is defined, and the appended SCRIPTS= line is named --------------
 
 grep -qE '`<scripts>`.*=|`<scripts>` is its' "$SKILL" \
