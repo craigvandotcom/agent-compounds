@@ -176,7 +176,7 @@ if [ $((UNREFINED + READY)) -eq 0 ]; then
   echo "autopilot-gate: no P0–$MAXP work — skipped"; ledger no-work; exit 0
 fi
 
-default_model() { claude -p --model opus "Execute $WORKFLOW now"; }
+default_model() { claude -p --dangerously-skip-permissions --model opus "Execute $WORKFLOW now"; }
 rm -f "$STATE/last-run.json"
 BASE=$(git rev-parse HEAD)
 START=$(now_iso)

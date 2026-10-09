@@ -16,7 +16,7 @@ GATE="$SELF_DIR/autopilot-gate.sh"
 unset AC2_AUTOPILOT AC2_AUTOPILOT_STATE
 W=$(mktemp -d); trap 'rm -rf "$W"' EXIT
 PASS=0; FAIL=0
-ok()  { PASS=$((PASS + 1)); }
+ok()  { PASS=$((PASS + 1)); echo "ok $PASS"; }
 bad() { FAIL=$((FAIL + 1)); echo "FAIL: $1"; }
 
 GITENV=(-c user.name=t -c user.email=t@example.com -c commit.gpgsign=false)
@@ -99,6 +99,21 @@ grep -q 'lock-fd9=closed' "$W/model.log" && ok || bad "the session does not inhe
 jq -e '.outcome == "ran" and .exit == 0 and .closed == 3 and .polished == 2 and .protected == 1
        and .pushed == ["abc123"] and (.start | length > 0) and (.end | length > 0) and (.base | length == 40)' \
   <<<"$(last)" >/dev/null && ok || bad "the ledger line carries last-run.json plus start/end/exit/base: $(last)"
+
+# 3b. the DEFAULT session (no test seam) is headless with permissions bypassed, opus, on scheduled.md
+setup
+cat >"$W/bin/claude" <<SH
+#!/usr/bin/env bash
+echo "\$*" >"$W/claude.args"
+cp "$W/model.report" "\$AC2_AUTOPILOT_STATE/last-run.json"
+SH
+chmod +x "$W/bin/claude"
+echo "[$(issue a 1 '["refined"]')]" >"$W/ready.json"; printf '{"closed":0}' >"$W/model.report"
+rc=$(cd "$W/repo" && env -u AUTOPILOT_GATE_MODEL bash "$GATE" >"$W/gate.out" 2>&1; echo $?)
+[ "$rc" = 0 ] && ok || bad "the default session runs and is handled (rc=$rc): $(cat "$W/gate.out")"
+grep -q -- '^-p --dangerously-skip-permissions --model opus Execute .*workflows/scheduled.md now$' "$W/claude.args" \
+  && ok || bad "the default session is claude -p --dangerously-skip-permissions --model opus: $(cat "$W/claude.args" 2>/dev/null)"
+rm -f "$W/bin/claude"
 
 # 4. work from an unrefined bead at or above the cap; above the cap or human-gated is no work
 setup
@@ -239,5 +254,5 @@ row "$(iso_ago 1day)" 12 "$BASE" "[\"$LEDGERONLY\"]" >"$W/state/ledger.jsonl"; :
 out=$(cd "$W/repo" && bash "$GATE" --verdict 14 2>&1); rc=$?
 [ "$rc" = 2 ] && ok || bad "verdict with gh failing is exit 2 (got $rc): $out"
 
-echo "PASS=$PASS FAIL=$FAIL"
+echo "$PASS passed, $FAIL failed"
 [ "$PASS" -gt 0 ] && [ "$FAIL" = 0 ]
