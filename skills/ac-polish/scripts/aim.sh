@@ -119,7 +119,7 @@ EOF_PY
       if [ -n "$sha" ] && git -C "$ROOT" cat-file -e "$sha^{commit}" 2>/dev/null; then
         files=$(python3 -c "import json,sys;print(' '.join(json.load(open(sys.argv[1])).get('files') or []))" "$m")
         # shellcheck disable=SC2086
-        git -C "$ROOT" log --format='- %h %ad %s' --date=short "$sha..HEAD" -- $files | head -20
+        git -C "$ROOT" log --format='- %h %ad %s' --date=short "$sha..HEAD" -- $files | awk 'NR<=20'
       else
         printf -- '- map carries no valid traced_at sha\n'
       fi
@@ -194,7 +194,7 @@ if [ "$MODE" = churn ]; then
       l=$(wc -l < "$REPO/$f" | tr -d ' ')
       printf '%s\t%s\t%s\t%s\n' "$((n * l))" "$n" "$l" "$f"
     done \
-  | sort -rn | head -n "$TOP" \
+  | sort -rn | awk -v n="$TOP" 'NR<=n' \
   | awk -F'\t' -v s="$SINCEARG" '{ i++; printf "| %d | `%s` | %s | %s | %s | `git log --no-merges --format=%%h %s-- %s \\| wc -l` |\n", i, $4, $2, $3, $1, s, $4 }'
 
   printf '\n## Temporal coupling — co-changed ≥ %s times, no import between them\n\n' "$MINCO"
@@ -309,7 +309,7 @@ ROWS=$(cd "$ROOT" && printf '%s\n' "$INV" | while IFS=$'\t' read -r kind sym; do
   w=$writers; [ "$w" -ge 1 ] || w=1
   score=$(( n * layers * w * 100 / (1 + tests) ))
   printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n' "$score" "$sym" "$kind" "$n" "$layers" "$writers" "$tests" "$kinds" "$table"
-done | sort -rn | head -n "$TOP")
+done | sort -rn | awk -v n="$TOP" 'NR<=n')
 if [ -z "$ROWS" ]; then
   printf '| — | — | — | — | — | — | — | — | — | no object reached --min-touchers %s%s |\n' "$MINTOUCH" "${AREA:+ in area /$AREA/}"
   exit 0
