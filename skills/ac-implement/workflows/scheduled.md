@@ -12,6 +12,8 @@ in every child's environment.
 **Unattended rule.** Nobody answers a prompt. Any human stop becomes a human-gate bead per
 `beads-standards/reference/human-gate-template.md` (`ACTION:` card or `DECISION:`), always P1 so
 Gate Watch posts it. Never ask, never wait. `<scripts>` is the symlink-resolved `scripts/` dir of this skill.
+Commit only inside this project's repo. A defect found anywhere else (agent-compounds, infrastructure,
+another app) becomes an `ACTION:` card here, never a commit there.
 
 ## 1 — Orient
 
@@ -67,7 +69,10 @@ Write `$AC2_AUTOPILOT_STATE/last-run.json` as ONE JSON object, even when degrade
 treats a missing file as a failed run:
 
     {"polished": N, "closed": N, "protected": N, "pushed": ["<head sha>"], "push_pending": "<file>"|null,
-     "gates": N, "degraded": "<reason>"|null}
+     "gates": N, "outside": ["<repo>@<sha>"], "degraded": "<reason>"|null}
+
+`outside` lists every commit this run made outside the project (`[]` expected); a non-empty
+list makes the card `degraded`.
 
 `closed` is a number and `pushed` an array of push.sh head SHAs (`[]` when none): the gate's
 `--verdict` reads exactly those two. Then send ONE Slack card from it with
