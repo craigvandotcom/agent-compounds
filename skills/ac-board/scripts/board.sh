@@ -8,6 +8,10 @@
 # ac-pipeline/references/board-scan.md — the text ci-gate-health.test.sh proves. Never copy
 # a scan in here.
 #
+# The `telemetry` read is the in-session extras — git status, Agent Mail file reservations,
+# bv's graph insights and what each harness did in the last 24h. tui.py draws it; render.py
+# (the plain-text board) does not, so the read only runs for the full board.
+#
 # Usage:  board.sh [--compact] [--json]  (from inside the project; --compact = the verdict
 #                                   line only, the org-wide one-line-per-repo view; --json
 #                                   prints model.build()'s dict instead of rendering — the
@@ -81,6 +85,7 @@ if [ "$COMPACT" = 0 ]; then
   job docket 20 "$(block '^### Docket health')"
   slow ci     60 "ARTIFACTS_DIR='$T/ci'; $(block '^## Scan E')"
   job truth  30 "'$SKILLS/ac-pipeline/scripts/board-truth.sh'"
+  job telemetry 10 "python3 '$SELF/telemetry.py' '$PROJECT_ROOT'"   # in-session telemetry (see tui.py)
   slow waves  "$(( ${AC_BOARD_FETCH_TIMEOUT:-5} + 5 ))" \
     "timeout ${AC_BOARD_FETCH_TIMEOUT:-5} git fetch --prune --quiet || echo 'git fetch failed — waves as of last fetch' >&2
      git branch -r --list '*wave/*'"

@@ -247,6 +247,15 @@ def build(T, ROOT, COMPACT):
                 "verdict": {"state": v_state, "line": v_line, "reasons": v_reasons}, "failed": failed}
 
     # ── the remaining reads (full board only) ────────────────────────────────
+    # telemetry is an extra, not a core read: board.sh only runs it for the full board, so an
+    # absent telemetry.rc means "not asked for" — never a failed read.
+    telemetry = None
+    if os.path.isfile(f"{T}/telemetry.rc"):
+        raw, ok = read("telemetry", "telemetry.py")
+        if ok:
+            try: telemetry = json.loads(raw)
+            except ValueError as e: failed.append(f"telemetry.py: {e}")
+
     waves = None
     lines, ok = lines_of("waves", "git branch -r")
     if ok:
@@ -446,6 +455,7 @@ def build(T, ROOT, COMPACT):
         "most_recent_closed_epic": most_recent_closed,
         "plans": plans, "pool": pool,
         "agents": agent_rows(), "mail": mail, "split": split,
+        "telemetry": telemetry,
         "waves": waves,
         "prs": None if prs is None else [{"number": p.get("number"), "ci": pr_ci(p)} for p in prs],
         "ci": ci_s, "truth": truth,

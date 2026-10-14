@@ -57,6 +57,8 @@ noemoji() {  # noemoji <name> — no codepoint at or above U+1F000 anywhere in $
   else echo "FAIL $1: an emoji codepoint leaked"; FAILURES=$((FAILURES + 1)); fi
 }
 
+esc() { printf '\033\\[%s' "$1"; }   # the grep -E prefix of an escape sequence
+
 cells() {  # cells <line> <glyph> — how many times <glyph> occurs in <line>
   python3 -c 'import sys; print(sys.argv[1].count(sys.argv[2]))' "$1" "$2"
 }
@@ -414,6 +416,175 @@ else echo "FAIL height: --height 1 gave $(wc -l <<<"$got") lines, floor is $floo
 got=$(once "$W/tall.json" --no-color)
 check none "a missing beads read renders a BEADS card marked ?" '^│ \? the bead reads failed'
 check none "…and an unreadable roster reads ?"                  'agents: \?'
+
+# ── telemetry: the harness legend, sessions & tools, locks, and the activity tail ───────
+# The model's `telemetry` block (model.py folds in telemetry.py's answer) drives four extra
+# surfaces: the header's git badge, the harness legend bar, the SESSIONS & TOOLS card and the
+# `tail -f activity.log` card. A model WITHOUT the block must render exactly as before — every
+# check above this line runs on one.
+cat >"$W/tel.json" <<'EOF'
+{
+  "git": {"branch": "main", "dirty": 0, "ahead": 0, "behind": 0},
+  "reservations": [
+    {"holder": "JadeLake", "program": "opencode", "path": "skills/ac-board/scripts/tui.py",
+     "reason": "ac-board in-session telemetry", "exclusive": true,
+     "created_at": "2026-10-14T23:02:34Z", "expires_at": "2026-10-15T00:02:34Z"},
+    {"holder": "JadeLake", "program": "opencode", "path": "skills/ac-board/scripts/model.py",
+     "reason": "ac-board in-session telemetry", "exclusive": true,
+     "created_at": "2026-10-14T22:40:00Z", "expires_at": "2026-10-14T23:40:00Z"},
+    {"holder": "OrangeAnchor", "program": "claude-code", "path": "skills/ac-board/scripts/board.sh",
+     "reason": "lane work", "exclusive": true,
+     "created_at": "2026-10-14T22:20:00Z", "expires_at": "2026-10-14T23:20:00Z"},
+    {"holder": "OrangeAnchor", "program": "claude-code", "path": "skills/ac-board/scripts/render.py",
+     "reason": "lane work", "exclusive": true,
+     "created_at": "2026-10-14T22:19:00Z", "expires_at": "2026-10-14T23:19:00Z"}
+  ],
+  "bv": {"keystone": {"id": "ac-tv83.8", "unblocks": 12, "title": "Move distribution.template.md"},
+         "bottleneck": {"id": "ac-an9w.9", "value": 95.3, "title": "A scheduled workflow runs autopilot"},
+         "cycles": 0, "avg_close_days": 3.9, "closed_30d": 327},
+  "harnesses": [
+    {"harness": "opencode", "sessions_24h": 26, "active_now": 1, "tokens": 26837750,
+     "cache_hit_pct": 93, "cost_usd": 1.8577, "models": ["gemini-4-argon-contributor"]},
+    {"harness": "claude-code", "sessions_24h": 22, "active_now": 2, "tokens": 1571465,
+     "cache_hit_pct": 69, "cost_usd": null, "models": ["claude-opus-5-5"]}
+  ],
+  "tools_24h": {"total": 184, "errors": 1,
+    "top": [["bash", 98], ["read", 54], ["edit", 19], ["subagent", 8]]},
+  "activity": [
+    {"ts": "2026-10-14T23:02:34Z", "lane": "mail", "actor": "JadeLake", "text": "reserved 6 paths (skills/ac-board/scripts/*)"},
+    {"ts": "2026-10-14T22:28:19Z", "lane": "git", "actor": "3ec02dce", "text": "feat(ac-board): tui cards, 2-column grid"},
+    {"ts": "2026-10-14T22:15:00Z", "lane": "bead", "actor": "ac-tv83.14", "text": "closed · One shipping process"},
+    {"ts": "2026-10-14T22:10:12Z", "lane": "opencode", "actor": "subagent", "text": "implementer · Implement upgraded ac-board TUI"}
+  ]
+}
+EOF
+
+# with <name> <fixture> — full.json plus that telemetry block (and a pinned "now" for the ages)
+with() {
+  python3 -c "
+import json, sys
+d = json.load(open('$W/full.json'))
+d['telemetry'] = json.load(open(sys.argv[1]))
+d['now'] = '2026-10-14T23:45:00+00:00'
+json.dump(d, open(sys.argv[2], 'w'))" "$W/$1.json" "$W/$2.json"
+}
+with tel tel-model
+TELFULL="$W/tel-model.json"
+
+got=$(once_w "$TELFULL" 96 --no-color)
+fits "telemetry" 96
+noemoji "telemetry"
+check tel "the header carries the branch and a clean tree" '^agent-compounds · main ✓ clean · [0-9]{2}:[0-9]{2}'
+check tel "the legend gives each harness a ■ pill"        '■ opencode · gemini-4-argon… \(1 live\)'
+check tel "…a second harness its own pill"                '■ claude-code · opus-5-5 \(2 live\)'
+check tel "…and the file locks their own count"           '⊞ 4 locks'
+order tel "the legend bar sits above the stage ribbon"    "■ opencode" "pool 1 · plan 3"
+order tel "…and below the verdict banner"                 "STUCK · 2 gates" "■ opencode"
+check tel "SESSIONS & TOOLS is a card"                    '^┌─┤ SESSIONS & TOOLS ├─'
+check tel "a harness row gauges its tokens"               '^│ opencode +26 █{20} 26\.8M'
+check tel "…the second row its own share"                 '^│ claude-code +22 █·{19} +1\.6M'
+check tel "the cache row reads a percentage and a bar"    'cache hit 81% +█+'
+check tel "the tool calls are broken down"                'tools 184 · bash 98 · read 54 · edit 19'
+check tel "…subagent shortened, an error counted"         'sub 8 · ⚠ 1 error'
+check tel "the SESSIONS badge counts the day's sessions"  '^┌─┤ SESSIONS & TOOLS ├─+┤ 48 sess ├─┐'
+check tel "the keystone is named with what it unblocks"   '◆ keystone +ac-tv83\.8 → unblocks 12'
+check tel "the bottleneck carries its centrality"         '▲ bottleneck ac-an9w\.9 \(centrality 95\)'
+order tel "the graph facts sit below the gauges"          "unrefined  16" "◆ keystone"
+check tel "the velocity summary is the EPICS footer"      'avg close 3\.9d · 327/30d · 0 cycles'
+order tel "…below the epics it summarises"                "✓ One silver bullet" "avg close 3.9d"
+check tel "a live lock shows holder, path and age"        '⊞ JadeLake +…d/scripts/tui\.py +42m'
+check tel "…and the overflow is summarised"               '⊞ \+1 more lock'
+check tel "the activity tail is a card"                   '^┌─┤ tail -f activity\.log ├─'
+order tel "the activity tail is the last card"            "AGENTS & HEALTH" "tail -f activity.log"
+order tel "its lines run oldest first, newest last"       "closed · One shipping process" "reserved 6 paths"
+check tel "…each line lane · actor · event"               '^│ 01:02 +mail +JadeLake +reserved 6 paths'
+check tel "in wide mode SESSIONS & TOOLS pairs with HEALTH" '^┌─┤ SESSIONS & TOOLS ├.+┌─┤ AGENTS & HEALTH ├'
+check tel "the agent row drops a redundant program"       '│ ● ChartreuseWolf +bd-9x +claude-opus-4-6 +│'
+
+got=$(once "$TELFULL" --no-color)
+fits "telemetry narrow" 48
+noemoji "telemetry narrow"
+order tel "stacked, SESSIONS & TOOLS precedes AGENTS & HEALTH" "SESSIONS & TOOLS" "AGENTS & HEALTH"
+order tel "…and follows BEADS"                                "BEADS" "SESSIONS & TOOLS"
+
+# lanes are coloured by source: git green, mail amber, bead cyan, a harness lane blue
+got=$(once_w "$TELFULL" 96)
+check tel "the git lane is green"      "$(esc '38;5;114m')git"
+check tel "the mail lane is amber"     "$(esc '38;5;215m')mail"
+check tel "the bead lane is cyan"      "$(esc '38;5;117m')bead"
+check tel "a harness lane is blue"     "$(esc '38;5;75m')opencode"
+
+# a dirty tree is a warning, not a ✓; the lead rides along
+python3 -c "
+import json
+d = json.load(open('$TELFULL'))
+d['telemetry']['git'] = {'branch': 'main', 'dirty': 3, 'ahead': 2, 'behind': 0}
+json.dump(d, open('$W/teldirty.json', 'w'))"
+got=$(once_w "$W/teldirty.json" 96 --no-color)
+check tel "a dirty tree warns with its count"  '^agent-compounds · main ⚠ 3 dirty ↑2 · '
+
+# an empty telemetry block is silent: the git badge and nothing else
+python3 -c "
+import json
+d = json.load(open('$TELFULL'))
+d['telemetry'] = {'git': {'branch': 'main', 'dirty': 0, 'ahead': 0, 'behind': 0},
+                  'reservations': [], 'bv': None, 'harnesses': [],
+                  'tools_24h': {'total': 0, 'errors': 0, 'top': []}, 'activity': []}
+json.dump(d, open('$W/telempty.json', 'w'))"
+got=$(once_w "$W/telempty.json" 96 --no-color)
+fits "telemetry empty" 96
+noemoji "telemetry empty"
+check tel "an empty telemetry block adds no SESSIONS card" 'SESSIONS & TOOLS' absent
+check tel "…no activity tail"                              'tail -f activity.log' absent
+check tel "…no lock rows"                                  '⊞' absent
+check tel "…no ■ legend pill"                              '■' absent
+check tel "…no keystone or bottleneck"                     'keystone|bottleneck' absent
+check tel "…but the header still carries the branch"       '^agent-compounds · main ✓ clean'
+
+# the trim ladder still holds with telemetry: footer → detail (tail + SESSIONS) → deco
+base=$(once_w "$TELFULL" 96 --no-color --footer "ac bca usa")
+base_n=$(wc -l <<<"$base")
+got=$(once_w "$TELFULL" 96 --no-color --footer "ac bca usa" --height $((base_n - 1)))
+check tel-height "a short pane drops the footer first"       'ac bca usa' absent
+check tel-height "…keeping the activity tail"                'tail -f activity.log'
+got=$(once_w "$TELFULL" 96 --no-color --footer "ac bca usa" --height $((base_n - 4)))
+check tel-height "shorter drops the tail and the SESSIONS card" 'tail -f activity.log' absent
+check tel-height "…and SESSIONS & TOOLS with it"                'SESSIONS & TOOLS' absent
+check tel-height "…but the legend bar stays"                    '■ opencode'
+
+# ── telemetry.py: the collector behind that block ───────────────────────────────────────
+TEL="$DIR/telemetry.py"
+ROOT="$(cd "$DIR/../../.." && pwd)"
+t0=$(date +%s%N); out=$(timeout 10 python3 "$TEL" "$ROOT" 2>/dev/null); tel_rc=$?
+tel_ms=$(( ($(date +%s%N) - t0) / 1000000 ))
+CASES=$((CASES + 1))
+if [ "$tel_rc" = 0 ] && python3 -c '
+import json, sys
+d = json.loads(sys.stdin.read())
+assert isinstance(d["git"], dict), "git"
+assert isinstance(d["reservations"], list), "reservations"
+assert d["bv"] is None or isinstance(d["bv"], dict), "bv"
+assert isinstance(d["harnesses"], list), "harnesses"
+assert isinstance(d["tools_24h"], dict) and isinstance(d["tools_24h"]["top"], list), "tools_24h"
+assert isinstance(d["activity"], list), "activity"' <<<"$out"
+then echo "ok   telemetry.py: prints the six sections as one JSON object"
+else echo "FAIL telemetry.py: rc=$tel_rc out=${out:0:200}"; FAILURES=$((FAILURES + 1)); fi
+CASES=$((CASES + 1))
+if [ "$tel_ms" -lt 2000 ]; then echo "ok   telemetry.py: answered the live repo in ${tel_ms}ms"
+else echo "FAIL telemetry.py: took ${tel_ms}ms"; FAILURES=$((FAILURES + 1)); fi
+CASES=$((CASES + 1))
+out=$(timeout 10 python3 "$TEL" /nonexistent-repo 2>/dev/null); tel_rc=$?
+if [ "$tel_rc" = 0 ] && python3 -c '
+import json, sys
+d = json.load(sys.stdin)
+assert d["harnesses"] == [] and d["reservations"] == [] and d["activity"] == []' <<<"$out"
+then echo "ok   telemetry.py: a repo that is not there is empty, never a crash"
+else echo "FAIL telemetry.py: rc=$tel_rc on a missing repo"; FAILURES=$((FAILURES + 1)); fi
+CASES=$((CASES + 1))
+tel_branch=$(python3 "$TEL" "$ROOT" 2>/dev/null |
+             python3 -c 'import json,sys; print(json.load(sys.stdin)["git"].get("branch") or "")')
+if [ -n "$tel_branch" ]; then echo "ok   telemetry.py: the live repo reports its branch ($tel_branch)"
+else echo "FAIL telemetry.py: no branch from the live repo"; FAILURES=$((FAILURES + 1)); fi
 
 # ── the watcher re-execs itself the moment its own source changes ───────────────────────
 # (a long-running watcher that re-shells the producer but keeps its own parser renders

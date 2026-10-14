@@ -90,6 +90,12 @@ def clip(s, w):
     return cut.rstrip(" ,:;—-(") + "…"
 
 
+def clip_path(s, w):
+    """A path clipped from the LEFT — the filename is the part worth keeping."""
+    s = (s or "").strip()
+    return s if len(s) <= w else "…" + s[-(w - 1):]
+
+
 def slug(title, w):
     """A gate title as a slug: `ACTION:`/`DECISION:` stripped, clipped at a word boundary."""
     return clip(re.sub(r"^(ACTION|DECISION):\s*", "", title or ""), w)
@@ -241,15 +247,30 @@ def join_h(left, right, c, gap="  "):
     return [x + gap + y for x, y in zip(pad_card(left, n, c), pad_card(right, n, c))]
 
 
-def build_header(name, now, w, secs_left, color_on):
+def build_header(name, now, w, secs_left, color_on, git=None):
     """Line 1 alone — the live loop rewrites just this line, in place, every second; it is
-    the "alive" signal between full refreshes."""
+    the "alive" signal between full refreshes. `git` (telemetry's branch/dirty/ahead) rides
+    between the name and the clock, so the working tree is visible without reading the board."""
     c = colorer(color_on)
     hhmm = now.astimezone().strftime("%H:%M")
-    left = f"{name} · {hhmm}"
-    right = f"↻ {secs_left}s" if secs_left is not None else ""
-    header = left + " " * max(1, w - len(left) - len(right)) + right if right else left
-    return c(MUT, clip(header, w))
+    left = [c(MUT, name)]
+    if git and git.get("branch"):
+        left += [c(BORD, " · "), git_badge(git, c)]
+    left += [c(BORD, " · "), c(MUT, hhmm)]
+    head = "".join(left)
+    right = c(MUT, f"↻ {secs_left}s") if secs_left is not None else ""
+    if not right: return trunc(head, w)
+    return trunc(head + " " * max(1, w - vlen(head) - vlen(right)) + right, w)
+
+
+def git_badge(git, c):
+    """`main ✓ clean` · `main ⚠ 3 dirty` · `main ✓ clean ↑2` — the tree in one glance."""
+    out = c(CYAN, git["branch"])
+    if git.get("dirty"): out += " " + c(AMBER, f"⚠ {git['dirty']} dirty")
+    else: out += " " + c(GREEN, "✓ clean")
+    if git.get("ahead"): out += " " + c(AMBER, f"↑{git['ahead']}")
+    if git.get("behind"): out += " " + c(AMBER, f"↓{git['behind']}")
+    return out
 
 
 # ── ON YOU: one row per ranked move — one row per PLAN within a grouped plan move ────────
@@ -370,6 +391,124 @@ def pipeline_rows(rows, iw, section, state, now, c, color_of):
     return out
 
 
+# ── telemetry: the harness legend, sessions & tools, and the activity tail ──────────────
+HARNESS_COLORS = (BLUE, GREEN, MAG, CYAN, AMBER)
+LANE_COLOR = {"git": GREEN, "mail": AMBER, "bead": CYAN}   # a harness lane falls back to blue
+SHORT_TOOL = {"subagent": "sub", "bash": "bash", "read": "read", "edit": "edit",
+              "grep": "grep", "web": "web", "todo": "todo"}
+
+
+def tel_of(M):
+    """The telemetry block, or None when the read was not asked for / could not answer."""
+    t = (M or {}).get("telemetry")
+    return t if isinstance(t, dict) else None
+
+
+def short_model(m):
+    """`claude-opus-5-5` -> `opus-5-5` — the vendor prefix is the harness's own name."""
+    return clip(re.sub(r"^claude-", "", (m or "").split("/")[-1]), 18)
+
+
+def fmt_tokens(n):
+    if not n: return "0"
+    if n >= 1_000_000: return f"{n / 1e6:.1f}M"
+    if n >= 1_000: return f"{n / 1e3:.0f}k"
+    return str(n)
+
+
+def legend_line(tel, agents, locks, c, w):
+    """The harness legend: a coloured `■` pill per harness that ran here, then the locks.
+    Falls back to plain text rather than truncating a coloured pill mid-escape."""
+    parts = []
+    for i, h in enumerate(tel.get("harnesses") or []):
+        live = h.get("active_now") or 0
+        model = short_model((h.get("models") or [None])[0])
+        count = f"{live} live" if live else f"{h.get('sessions_24h', 0)}/24h"
+        plain = h["harness"] + (f" · {model}" if model else "") + f" ({count})"
+        parts.append((c(HARNESS_COLORS[i % len(HARNESS_COLORS)], "■") + c(MUT, " " + plain),
+                      "■ " + plain))
+    if locks:
+        plain = f"{locks} lock" + ("" if locks == 1 else "s")
+        parts.append((c(AMBER, "⊞") + c(MUT, " " + plain), "⊞ " + plain))
+    elif not parts:
+        live = [a for a in (agents or []) if a.get("live")]
+        if not live: return None
+        plain = f"{len(live)} live agent" + ("" if len(live) == 1 else "s")
+        parts.append((c(GREEN, "●") + c(MUT, " " + plain), "● " + plain))
+    line = c(BORD, "  ·  ").join(p for p, _ in parts)
+    if vlen(line) <= w: return line
+    plain = "  ·  ".join(p for _, p in parts)
+    return c(MUT, plain if len(plain) <= w else clip(plain, w))
+
+
+def sessions_card(cw, tel, c):
+    """`SESSIONS & TOOLS` — a token gauge per harness, then cache efficiency and tool calls."""
+    iw = cw - 4
+    hs = tel.get("harnesses") or []
+    label_w = max([8] + [len(h["harness"]) for h in hs])
+    count_w, tok_w = 3, max([1] + [len(fmt_tokens(h.get("tokens"))) for h in hs])
+    barw = max(4, iw - label_w - count_w - tok_w - 4)
+    top = max([1] + [(h.get("tokens") or 0) for h in hs])
+    body = []
+    for h in hs:
+        n = h.get("tokens") or 0
+        body.append(c(BLUE, f"{h['harness']:<{label_w}}") + " "
+                    + c(MUT, f"{h.get('sessions_24h', 0):>{count_w}}") + " "
+                    + gauge(gauge_cells(n, top, barw), CYAN, c) + " "
+                    + c(MUT, f"{fmt_tokens(n):>{tok_w}}"))
+    pcts = [h.get("cache_hit_pct") for h in hs if h.get("cache_hit_pct") is not None]
+    if pcts:
+        pct = round(sum(pcts) / len(pcts))
+        body.append(c(MUT, f"{'cache hit ' + str(pct) + '%':<{label_w + count_w + 2}}") + " "
+                    + gauge(gauge_cells(pct, 100, barw + tok_w + 1), GREEN, c))
+    t = tel.get("tools_24h") or {}
+    parts = [f"tools {t.get('total', 0)}"] + [f"{SHORT_TOOL.get(k, k)} {n}" for k, n in t.get("top") or []]
+    if t.get("errors"): parts.append(f"⚠ {t['errors']} error" + ("" if t["errors"] == 1 else "s"))
+    for line in pack_parts(parts, iw): body.append(c(AMBER if "⚠" in line else MUT, line))
+    return box("SESSIONS & TOOLS", body or [c(MUT, "no session in 24h")], cw, c,
+               right=f"{sum(h.get('sessions_24h', 0) for h in hs)} sess", accent=CYAN)
+
+
+def activity_card(cw, rows, c):
+    """`tail -f activity.log` — the events across every lane, oldest first, newest last."""
+    iw = cw - 4
+    lane_w = max(len(r.get("lane") or "") for r in rows)
+    actor_w = min(14, max(len(r.get("actor") or "") for r in rows))
+    body = []
+    for r in reversed(rows):
+        t = ts(r.get("ts"))
+        lane = r.get("lane") or "?"
+        text_w = max(6, iw - lane_w - actor_w - 11)
+        body.append(c(MUT, t.astimezone().strftime("%H:%M") if t else "--:--") + "  "
+                    + c(LANE_COLOR.get(lane, BLUE), f"{lane:<{lane_w}}") + "  "
+                    + c(MUT, f"{clip(r.get('actor') or '?', actor_w):<{actor_w}}") + "  "
+                    + clip(r.get("text") or "", text_w))
+    return box("tail -f activity.log", body, cw, c, accent=MUT)
+
+
+def bv_lines(bv, iw, c):
+    """The two graph facts worth a row: what unblocks the most, and what sits between."""
+    out = []
+    ks, bn = bv.get("keystone"), bv.get("bottleneck")
+    if ks:
+        out.append(c(CYAN, "◆ keystone  ")
+                   + c(MUT, clip(f"{ks['id']} → unblocks {ks.get('unblocks') or 0}", iw - 12)))
+    if bn:
+        out.append(c(AMBER, "▲ bottleneck ")
+                   + c(MUT, clip(f"{bn['id']} (centrality {bn.get('value') or 0:.0f})", iw - 13)))
+    return out
+
+
+def velocity_line(bv, iw, c):
+    """`avg close 3.9d · 327/30d · 0 cycles` — bv's velocity, muted, as the EPICS footer."""
+    bits = []
+    if bv.get("avg_close_days") is not None: bits.append(f"avg close {bv['avg_close_days']}d")
+    if bv.get("closed_30d") is not None: bits.append(f"{bv['closed_30d']}/30d")
+    if bv.get("cycles") is not None:
+        bits.append(f"{bv['cycles']} cycle" + ("" if bv["cycles"] == 1 else "s"))
+    return [c(MUT, clip(" · ".join(bits), iw))] if bits else []
+
+
 def build_frame(M, width, color_on, state, secs_left=None, footer=None, height=None):
     w = max(36, min(120, width))
     wide = w >= 80
@@ -377,16 +516,18 @@ def build_frame(M, width, color_on, state, secs_left=None, footer=None, height=N
     now = resolve_now(M)
     c = colorer(color_on)
 
-    # ── header: name · HH:MM … ↻ Ns, then the verdict banner ────────────────────────────
+    # ── header: name · branch ✓ clean · HH:MM … ↻ Ns, then the verdict banner ───────────
     st = (M.get("verdict") or {}).get("state", "UNKNOWN")
     reasons = (M.get("verdict") or {}).get("reasons") or []
+    tel = tel_of(M)
     text = st
     for r in reasons:
         cand = text + " · " + r
         if len(cand) + 2 > w: break
         text = cand
     bar_text = clip(f" {text} ", w)
-    header_lines = [build_header(M.get("name", "?"), now, w, secs_left, color_on),
+    header_lines = [build_header(M.get("name", "?"), now, w, secs_left, color_on,
+                                 git=(tel or {}).get("git")),
                     c(f"7;{STATE_COLOR.get(st, RED)}", bar_text + " " * (w - len(bar_text)))]
 
     # ── ON YOU — one row per plan within a grouped plan move; `cap` shrinks under a height limit
@@ -488,6 +629,11 @@ def build_frame(M, width, color_on, state, secs_left=None, footer=None, height=N
     health_parts = [ci_piece, f"PRs: {len(prs) if prs is not None else '?'} open",
                     f"checks {'✓' if not checks_bad else '⚠'}"]
 
+    # ── telemetry-derived strips: the harness legend bar, and the activity tail ─────────
+    legend = (legend_line(tel, agents, len(tel.get("reservations") or []), c, w)
+              if tel else None)
+    activity = (tel.get("activity") or [])[:4] if tel else []
+
     # ── the cards, each rebuilt at the width its layout gives it ────────────────────────
     def onyou_card(cw, cap):
         iw = cw - 4
@@ -503,6 +649,7 @@ def build_frame(M, width, color_on, state, secs_left=None, footer=None, height=N
         body = progress_rows(prog_rows, iw, c) if prog_rows else []
         if mrc: body.append(closed_row(mrc, iw, now, c))
         if not body: body = [c(MUT, "none open")]
+        if tel and tel.get("bv"): body += velocity_line(tel["bv"], iw, c)
         if hdr_fill(cw, "EPICS", epics_badge) < 1:      # no room in the header: it becomes a row
             return box("EPICS", [c(MUT, clip(epics_badge, iw))] + body, cw, c, accent=CYAN)
         return box("EPICS", body, cw, c, right=epics_badge, accent=CYAN)
@@ -521,6 +668,7 @@ def build_frame(M, width, color_on, state, secs_left=None, footer=None, height=N
             (f" · {B['n_deferred']} deferred" if B.get("n_deferred") else "")
         body = pipeline_rows(beads_rows, iw, "beads", state, now, c,
                              lambda label: GREEN if label == "building" else BLUE)
+        if tel and tel.get("bv"): body += bv_lines(tel["bv"], iw, c)
         return box("BEADS", body, cw, c, right=badge, accent=BLUE)
 
     def health_card(cw, detail):
@@ -531,8 +679,21 @@ def build_frame(M, width, color_on, state, secs_left=None, footer=None, height=N
                 nm = a.get("name") or "?"
                 holds = a.get("holds") or "idle"
                 model = (a.get("model") or "").split("/")[-1]
-                body.append(c(GREEN, "● ") + clip(f"{nm}  {holds}" + (f"  {model}" if model else ""),
-                                                  iw - 2))
+                # the program only when the model does not already say it (`claude` + `claude-opus-5-5`)
+                prog = a.get("program") or ""
+                prog = f" [{prog}]" if prog and not model.startswith(prog) else ""
+                body.append(c(GREEN, "● ") + clip(f"{nm}  {holds}" + (f"  {model}" if model else "")
+                                                  + prog, iw - 2))
+        locks = (tel or {}).get("reservations") or []
+        if detail and locks:
+            for r in locks[:3]:
+                body.append(c(AMBER, "⊞ ") + c(MUT, pack_badge(
+                    clip(r.get("holder") or "?", 16) + "  "
+                    + clip_path(r.get("path"), max(8, iw - 26)),
+                    age(r.get("created_at"), now), iw - 2)))
+            if len(locks) > 3:
+                body.append(c(MUT, clip(f"⊞ +{len(locks) - 3} more lock"
+                                        + ("" if len(locks) == 4 else "s"), iw)))
         body += [c(MUT, clip(l, iw)) for l in pack_parts(machine_parts, iw)]
         body += [c(GREEN if ok else AMBER, clip(l, iw)) for l in pack_parts(health_parts, iw)]
         if detail:
@@ -546,18 +707,26 @@ def build_frame(M, width, color_on, state, secs_left=None, footer=None, height=N
 
     def assemble(cap, detail, deco, foot):
         out = list(header_lines)
+        if deco and legend: out.append(legend)
         if deco: out.append(stepper_line())
         out.append("")
+        sess_on = bool(tel and (tel.get("harnesses") or (tel.get("tools_24h") or {}).get("total")))
         if wide:
             out += join_h(onyou_card(lw, cap), epics_card(rw), c)
             out += join_h(plans_card(lw), beads_card(rw), c)
             out.append("")
-            out += health_card(w, detail)
+            out += (join_h(sessions_card(lw, tel, c), health_card(rw, detail), c)
+                    if sess_on and detail else health_card(w, detail))
         else:
-            for i, card in enumerate((onyou_card(w, cap), epics_card(w), plans_card(w),
-                                      beads_card(w), health_card(w, detail))):
+            cards = [onyou_card(w, cap), epics_card(w), plans_card(w), beads_card(w)]
+            if sess_on and detail: cards.append(sessions_card(w, tel, c))
+            cards.append(health_card(w, detail))
+            for i, card in enumerate(cards):
                 if i: out.append("")
                 out += card
+        if detail and activity:
+            out.append("")
+            out += activity_card(w, activity, c)
         return out + (footer_lines if foot else [])
 
     lines = assemble(8, True, True, True)
@@ -688,7 +857,8 @@ def live_loop(secs):
                     full_redraw(draw, cols, left, footer)
                     continue
                 if draw:
-                    hdr = build_header(name, header_now, max(36, min(120, cols)), left, color_on)
+                    hdr = build_header(name, header_now, max(36, min(120, cols)), left, color_on,
+                                       git=(tel_of(draw) or {}).get("git"))
                     sys.stdout.write(f"\033[1;1H{hdr}\033[K\n"); sys.stdout.flush()
     finally:
         sys.stdout.write("\033[?25h\033[?1049l"); sys.stdout.flush()
