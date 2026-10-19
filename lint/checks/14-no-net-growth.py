@@ -23,8 +23,8 @@ per-package absolute budget.
          exit 77 (honest skip), never a silent pass; leg 2 still runs and
          still bounds absolute size regardless.
   leg 2  every package's live-measured spine (member SKILL.md lines, the
-         always-loaded surface) and loaded (all Markdown under member dirs)
-         must fit its manifest budget (skills/packages.json's top-level
+         always-loaded surface) and loaded (all Markdown under member dirs
+         but FRICTIONS.md) must fit its manifest budget (skills/packages.json's top-level
          package entries, keyed by name -> {skills: [...], budget: {spine,
          loaded}}). Bounds new-skill and references/ growth even when every
          file individually holds.
@@ -199,8 +199,8 @@ def scan(repo, label, base, spec, cfg, staged=False):
 
 def check_package_budgets(root):
     """Leg 2 — every package's live-measured spine (member SKILL.md lines) and
-    loaded (all Markdown under member dirs) must fit its manifest budget
-    (skills/packages.json's top-level package entries). Ported from the
+    loaded (all Markdown under member dirs but FRICTIONS.md) must fit its
+    manifest budget (skills/packages.json's top-level package entries). Ported from the
     retired Check 23's leg 7: the manifest is already required by leg 1's
     require_config, so a missing manifest cannot reach here. Returns a list
     of violation strings; prints a PASS line per conforming package as it goes.
@@ -226,7 +226,8 @@ def check_package_budgets(root):
             sdir = os.path.join(root, "skills", skill)
             for dirpath, _dirnames, filenames in os.walk(sdir):
                 for fn in filenames:
-                    if fn.endswith(".md"):
+                    # A FRICTIONS.md ledger is written, never loaded, and gitignored.
+                    if fn.endswith(".md") and fn != "FRICTIONS.md":
                         with open(os.path.join(dirpath, fn), encoding="utf-8", errors="replace") as fh:
                             loaded += sum(1 for _ in fh)
         legs = []

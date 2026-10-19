@@ -223,6 +223,28 @@ else
 fi
 rm -rf "$P"
 
+# A FRICTIONS.md ledger is written, never loaded (and gitignored, so CI never sees it):
+# it does not count toward `loaded`.
+P="$(mktemp -d)"
+mkdir -p "$P/skills/ledger-skill/references"
+seq 1 5 > "$P/skills/ledger-skill/SKILL.md"
+seq 1 3 > "$P/skills/ledger-skill/references/r.md"
+seq 1 50 > "$P/skills/ledger-skill/FRICTIONS.md"
+cat > "$P/skills/packages.json" <<'EOF'
+{
+  "_lint": {"base_ref": "origin/main", "lean_family": [], "lean_family_cap": 800},
+  "ledger-pkg": {"skills": ["ledger-skill"], "budget": {"spine": 10, "loaded": 10}}
+}
+EOF
+OUT="$(pkg_check "$P" 2>&1)"; RC=$?
+if printf '%s\n' "$OUT" | grep -Eq "PASS +ledger-pkg +spine +5/10 +loaded +8/10"; then
+  PASS=$((PASS+1)); printf 'ok   %-46s\n' "leg 2: FRICTIONS.md not counted as loaded"
+else
+  FAIL=$((FAIL+1)); printf 'FAIL %-46s rc=%s\n' "leg 2: FRICTIONS.md not counted as loaded" "$RC"
+  printf '%s\n' "$OUT" | sed 's/^/  | /'
+fi
+rm -rf "$P"
+
 # --- LIVE: the real registry satisfies both legs --------------------------------------
 OUT="$(pkg_check "$ROOT" 2>&1)"; RC=$?
 if [ "$RC" = 0 ]; then
