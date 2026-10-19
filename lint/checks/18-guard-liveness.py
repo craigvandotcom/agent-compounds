@@ -45,13 +45,16 @@ violations = []
 notices = []
 
 
-def probe_guard(seg, payload, expected, label, flagroot):
+def probe_guard(seg, payload, expected, label, flagroot, project=None):
     flagdir = os.path.join(flagroot, f"p{expected}-{os.getpid()}-{label.replace(' ', '-')}")
+    env = {k: v for k, v in os.environ.items() if k != "CLAUDE_PROJECT_DIR"}
+    env["SKILL_EDIT_GUARD_FLAG_DIR"] = flagdir
+    if project:
+        env["CLAUDE_PROJECT_DIR"] = project
     try:
         cmd = [seg]
         proc = subprocess.run(
-            cmd, input=payload, capture_output=True, text=True, timeout=60,
-            env={**os.environ, "SKILL_EDIT_GUARD_FLAG_DIR": flagdir},
+            cmd, input=payload, capture_output=True, text=True, timeout=60, env=env,
         )
         got = proc.returncode
     except (subprocess.SubprocessError, OSError):
@@ -106,7 +109,17 @@ def main(argv=()):
                         0, "fired on a non-skill file", flagroot)
             probe_guard(seg, '{"tool_input":{"command":"grep -rn foo skills/"}}',
                         0, "fired on a read-only command", flagroot)
-        print("  skill-edit-guard: fires on both entry points, silent on both negatives")
+            proj = os.path.join(flagroot, "project")
+            os.makedirs(os.path.join(proj, "hooks"))
+            os.makedirs(os.path.join(proj, ".claude"))
+            with open(os.path.join(proj, "hooks", "skill-edit-guard.py"), "w", encoding="utf-8") as fh:
+                fh.write("#!/bin/sh\n")
+            with open(os.path.join(proj, ".claude", "settings.json"), "w", encoding="utf-8") as fh:
+                fh.write('{"command": "hooks/skill-edit-guard.py"}\n')
+            probe_guard(seg, '{"tool_input":{"file_path":"/x/skills/y/SKILL.md"}}',
+                        0, "fired in a project that wires its own copy", flagroot, project=proj)
+        print("  skill-edit-guard: fires on both entry points, silent on both negatives "
+              "and in a project that wires its own copy")
     else:
         violations.append(
             "skill-edit-guard.py missing or not executable — cannot probe behaviour")

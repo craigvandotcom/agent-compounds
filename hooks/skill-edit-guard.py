@@ -99,6 +99,23 @@ def allow():
     sys.exit(0)
 
 
+def project_owns_guard():
+    """True when the session's project carries and wires its own, different copy of this
+    guard: that copy speaks there, in the project's own paths, so this one stays silent and
+    the session sees one reminder, not two."""
+    proj = os.environ.get("CLAUDE_PROJECT_DIR")
+    if not proj:
+        return False
+    own = os.path.join(proj, "hooks", "skill-edit-guard.py")
+    if not os.path.isfile(own) or os.path.realpath(own) == os.path.realpath(__file__):
+        return False
+    try:
+        with open(os.path.join(proj, ".claude", "settings.json"), encoding="utf-8") as fh:
+            return "hooks/skill-edit-guard.py" in fh.read()
+    except OSError:
+        return False
+
+
 def session_key(target=""):
     # Key on session + TARGET FILE, not on the agent.
     #
@@ -135,6 +152,8 @@ def already_fired(key):
 def main():
     import json
 
+    if project_owns_guard():
+        allow()
     try:
         data = json.load(sys.stdin)
     except Exception:
