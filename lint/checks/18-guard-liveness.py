@@ -52,7 +52,7 @@ def probe_guard(seg, payload, expected, label, flagroot, project=None):
     if project:
         env["CLAUDE_PROJECT_DIR"] = project
     try:
-        cmd = [seg]
+        cmd = seg if isinstance(seg, list) else [seg]
         proc = subprocess.run(
             cmd, input=payload, capture_output=True, text=True, timeout=60, env=env,
         )
@@ -109,17 +109,24 @@ def main(argv=()):
                         0, "fired on a non-skill file", flagroot)
             probe_guard(seg, '{"tool_input":{"command":"grep -rn foo skills/"}}',
                         0, "fired on a read-only command", flagroot)
+            # The gatekeeper every {HOOKS} command runs through: it runs the guard, and steps
+            # aside only for a project that carries AND wires its own copy.
+            via_gate = [os.path.join(hooks, "defer-to-project.sh"), "skill-edit-guard.py"]
+            skill_edit = '{"tool_input":{"file_path":"/x/skills/y/SKILL.md"}}'
             proj = os.path.join(flagroot, "project")
             os.makedirs(os.path.join(proj, "hooks"))
             os.makedirs(os.path.join(proj, ".claude"))
             with open(os.path.join(proj, "hooks", "skill-edit-guard.py"), "w", encoding="utf-8") as fh:
                 fh.write("#!/bin/sh\n")
+            probe_guard(via_gate, skill_edit, 2, "did not fire through defer-to-project.sh", flagroot)
+            probe_guard(via_gate, skill_edit, 2, "stepped aside for a project copy it does not wire",
+                        flagroot, project=proj)
             with open(os.path.join(proj, ".claude", "settings.json"), "w", encoding="utf-8") as fh:
                 fh.write('{"command": "hooks/skill-edit-guard.py"}\n')
-            probe_guard(seg, '{"tool_input":{"file_path":"/x/skills/y/SKILL.md"}}',
-                        0, "fired in a project that wires its own copy", flagroot, project=proj)
-        print("  skill-edit-guard: fires on both entry points, silent on both negatives "
-              "and in a project that wires its own copy")
+            probe_guard(via_gate, skill_edit, 0, "fired in a project that wires its own copy",
+                        flagroot, project=proj)
+        print("  skill-edit-guard: fires on both entry points, silent on both negatives; "
+              "through defer-to-project.sh it fires, and steps aside for a project's wired copy")
     else:
         violations.append(
             "skill-edit-guard.py missing or not executable — cannot probe behaviour")
