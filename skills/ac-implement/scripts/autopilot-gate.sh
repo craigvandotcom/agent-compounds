@@ -176,7 +176,10 @@ if [ $((UNREFINED + READY)) -eq 0 ]; then
   echo "autopilot-gate: no P0–$MAXP work — skipped"; ledger no-work; exit 0
 fi
 
-default_model() { claude -p --dangerously-skip-permissions --model opus "Execute $WORKFLOW now"; }
+# Wait for the run's background workers however long they take: by default `claude -p` stops
+# them 10 minutes after the last turn, killing a worker mid-bead (2026-10-17). The scheduler's
+# job timeout still bounds the whole run.
+default_model() { CLAUDE_CODE_PRINT_BG_WAIT_CEILING_MS=0 claude -p --dangerously-skip-permissions --model opus "Execute $WORKFLOW now"; }
 rm -f "$STATE/last-run.json"
 BASE=$(git rev-parse HEAD)
 START=$(now_iso)
