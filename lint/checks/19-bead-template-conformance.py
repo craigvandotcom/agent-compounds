@@ -45,6 +45,7 @@ import importlib.util
 import os
 import re
 import shlex
+import subprocess
 import sys
 
 _HERE = os.path.dirname(os.path.abspath(__file__))
@@ -156,6 +157,21 @@ def is_finding_template(cmd):
     return typ in ("bug", "investigation")
 
 
+def skill_docs():
+    """skills/**/*.md minus git-ignored files (local FRICTIONS.md logs quote commands as
+    evidence; they are not templates). Outside a git checkout (fixtures), every file."""
+    paths = sorted(glob.glob(os.path.join(ROOT, "skills", "**", "*.md"), recursive=True))
+    try:
+        r = subprocess.run(["git", "-C", ROOT, "check-ignore", "--stdin"], input="\n".join(paths),
+                           capture_output=True, text=True, timeout=30)
+    except (OSError, subprocess.SubprocessError):
+        return paths
+    if r.returncode not in (0, 1):
+        return paths
+    ignored = set(r.stdout.splitlines())
+    return [p for p in paths if p not in ignored]
+
+
 def template_has_origin(cmd):
     return any(TEMPLATE_ORIGIN.match(label) for label in guard.all_labels(cmd))
 
@@ -242,7 +258,7 @@ def violations():
     worse than no check, because it is trusted."""
     out = []
     scanned = 0
-    for path in sorted(glob.glob(os.path.join(ROOT, "skills", "**", "*.md"), recursive=True)):
+    for path in skill_docs():
         rel = os.path.relpath(path, ROOT)
         for line_no, block in templates(path):
             try:
@@ -299,7 +315,7 @@ def probe_shape_violations():
     """
     out = []
     scanned = 0
-    for path in sorted(glob.glob(os.path.join(ROOT, "skills", "**", "*.md"), recursive=True)):
+    for path in skill_docs():
         rel = os.path.relpath(path, ROOT)
         for line_no, cmd in probes(path):
             scanned += 1
