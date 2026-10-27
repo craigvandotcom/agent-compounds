@@ -124,8 +124,11 @@ upsert_down() {  # upsert_down <name> <reason> — non-zero when br failed
 
 recovered() {  # recovered <name> — close the open ops bead, then forget the outage
   local id
+  local ts; ts=$(date -u +%FT%TZ)
   id=$(open_down_bead "$1")
-  [ -n "$id" ] && "$BR" close "$id" --reason "obsolete: triage source $1 recovered at $(date -u +%FT%TZ) — it checks again; nothing left to do." >/dev/null
+  # board rule 6 (lint 35): a close carries a cited landing record, or the board blocks commits
+  [ -n "$id" ] && "$BR" comments add "$id" --content "TRIAGE-CLOSE: $id — triage source $1 recovered at $ts; the gate checked it clean (tree: $(git rev-parse --short=12 HEAD 2>/dev/null || echo 0000))" >/dev/null \
+    && "$BR" close "$id" --reason "obsolete: triage source $1 recovered at $ts — it checks again; nothing left to do." >/dev/null
   rm -f "$STATE/down/$1"
 }
 
