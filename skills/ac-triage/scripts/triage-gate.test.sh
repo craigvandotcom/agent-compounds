@@ -171,6 +171,25 @@ rc=$(gate)
 if [ "$rc" = 0 ] && grep -q "beta: ✗ could-not-check (timed out after 2s)" "$W/gate.out"; then ok; else bad "timeout is could-not-check (got $rc)"; fi
 if [ "$(calls create)" = 1 ]; then ok; else bad "timeout files an ops bead"; fi
 
+# 8b. a source's own script error is not an outage: exit 4, no ops bead, nothing seen
+setup
+cat >"$W/src.sh" <<'SH'
+#!/usr/bin/env bash
+d=$(dirname "$0")
+case "$1" in
+  alpha) printf 'k1\tx\n'; exit 1 ;;
+  beta)  [ -f "$d/beta.msg" ] && cat "$d/beta.msg" >&2; exit "$(cat "$d/beta.rc" 2>/dev/null || echo 0)" ;;
+esac
+SH
+echo "gate-items.sh: line 1: tmp: unbound variable" >"$W/beta.msg"
+rc=$(gate --no-escalate)
+if [ "$rc" = 4 ] && grep -q "beta: ✗ script-error (.*tmp: unbound variable" "$W/gate.out"; then ok; else bad "diagnostic on stderr exits 4 (got $rc)"; fi
+if [ "$(calls create)" = 0 ]; then ok; else bad "script error files no ops bead"; fi
+rm -f "$W/beta.msg"; echo 127 >"$W/beta.rc"; rc=$(gate --no-escalate)
+if [ "$rc" = 4 ]; then ok; else bad "exit 127 is a script error (got $rc)"; fi
+echo "HTTP 401 from vendor" >"$W/beta.msg"; echo 2 >"$W/beta.rc"; rc=$(gate --no-escalate)
+if [ "$rc" = 0 ] && grep -q "beta: ✗ could-not-check (HTTP 401" "$W/gate.out"; then ok; else bad "plain exit 2 stays could-not-check (got $rc)"; fi
+
 # 9. --no-escalate and --seed
 setup
 printf 'k1\tx\n' >"$W/alpha.out"

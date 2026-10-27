@@ -10,6 +10,10 @@
 # A source command prints one `<key>\t<summary>` line per current item (key = stable
 # fingerprint) and exits 0 or 1 when it checked; any other exit, or its timeout, is
 # COULD-NOT-CHECK with the first stderr line as the reason. Sources run in declared order.
+# A source that breaks itself is NOT an outage: an exit above 2 (command not found, killed…) or
+# a shell/Python diagnostic on stderr (`line N:` — unbound variable, syntax error — or a
+# Traceback), whatever the exit, is a SCRIPT-ERROR: no ops bead, nothing marked seen, and the
+# gate exits 4 so the scheduler's failure alarm fires.
 #
 # Rules:
 #   - An item is new when its key is absent from the source's seen-set. A key that leaves the
@@ -42,6 +46,7 @@
 #            resurface next run
 #         2  a down source could not be recorded on its ops bead (br failed); wins over 1
 #         3  skipped — another gate run holds the lock
+#         4  a source script errored (see SCRIPT-ERROR above); any other non-zero code wins
 #         64 usage or config error
 
 NO_ESCALATE=0; SEED=0; STATUS=0
@@ -126,11 +131,16 @@ recovered() {  # recovered <name> — close the open ops bead, then forget the o
 
 RUN=$(mktemp -d); trap 'rm -rf "$RUN"' EXIT
 PENDING="$STATE/pending.tsv"; : >"$RUN/new"
-EXIT=0; SUMMARY=()
+EXIT=0; SCRIPT_ERR=0; SUMMARY=()
 say() { SUMMARY+=("$1"); echo "$1"; }
 
 while read -r name secs cmd <&3; do
   timeout "$secs" bash -c "$cmd" </dev/null >"$RUN/out" 2>"$RUN/err" 9>&-; rc=$?
+  bash_diag=$(grep -m1 -E ': line [0-9]+: |^Traceback \(most recent' "$RUN/err")
+  if [ "$rc" -ne 124 ] && { [ "$rc" -gt 2 ] || [ -n "$bash_diag" ]; }; then
+    say "$name: ✗ script-error (${bash_diag:-$(grep -m1 . "$RUN/err" || echo "exit $rc")} · exit $rc)"
+    SCRIPT_ERR=1; continue   # the source is broken, not down: no ops bead, seen-set untouched
+  fi
   if [ "$rc" -gt 1 ]; then
     if [ "$rc" -eq 124 ]; then why="timed out after ${secs}s"
     else why=$(grep -m1 . "$RUN/err" || echo "exit $rc"); fi
@@ -199,6 +209,7 @@ if [ "$N_NEW" -gt 0 ]; then
   fi
 fi
 
+[ "$SCRIPT_ERR" = 1 ] && [ "$EXIT" = 0 ] && EXIT=4
 printf '%s\n' "${SUMMARY[@]}" | jq -Rn --arg ts "$(date -u +%FT%TZ)" --argjson exit "$EXIT" \
   --arg escalated "$ESCALATED" '{ts:$ts, exit:$exit, escalated:$escalated, sources:[inputs]}' \
   >"$STATE/heartbeat.json.tmp" && mv "$STATE/heartbeat.json.tmp" "$STATE/heartbeat.json"
