@@ -146,7 +146,7 @@ rc=$(gate)
 if [ "$(calls create)" = 1 ] && [ "$(calls comments)" = 1 ]; then ok; else bad "second outage comments, files nothing"; fi
 if [ ! -s "$W/model.log" ]; then ok; else bad "down source never starts the model"; fi
 rm -f "$W/beta.rc"; gate >/dev/null
-if [ "$(calls close)" = 1 ] && [ "$(calls comments)" = 1 ] && [ ! -f "$W/state/down/beta" ]; then ok; else bad "recovery closes the ops bead, no extra comment"; fi
+if [ "$(calls close)" = 1 ] && [ "$(calls comments)" = 2 ] && [ ! -f "$W/state/down/beta" ]; then ok; else bad "recovery lands one TRIAGE-CLOSE comment, then closes the ops bead"; fi
 if ! grep -l "beta is down" "$W"/beads/* >/dev/null 2>&1; then ok; else bad "the closed ops bead is gone from the open set"; fi
 
 # 6. br failing while a source is down → exit 2
