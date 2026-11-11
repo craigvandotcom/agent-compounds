@@ -57,7 +57,7 @@ Print it verbatim — it is the header and the three tiers. Freshen (`/ac-tidy`,
 
 ## Phase 2–4: What the script computes, what you judge
 
-`docket.sh` applies the loop boundary and computes every mechanical fact: the 🔴 Decision Docket (`human-gate` ∪ `pipeline-proposal` ∪ `dream-proposal`, board-scan's on-docket rules), kind (`issue_type`, prefix fallback), pull-order sort (most beads freed, then P0→P4, then oldest), memo completeness, the anti-rot freshness tag from `events` + `verified:` stamps, queue lanes (`references/docket-lanes.md`), 🟡 plans awaiting sign-off, 🟢 the hopper, and the 🧰 frictions + 🧠 memory cards. Never recompute a fact it printed; a `?` is a failed read — name it, never guess.
+`docket.sh` applies the loop boundary and computes every mechanical fact: the 🔴 Decision Docket (`human-gate` ∪ `pipeline-proposal` ∪ `dream-proposal`, board-scan's on-docket rules), kind (`issue_type`, prefix fallback), pull-order sort (security first, then most beads freed, then P0→P4, then oldest), memo completeness, the anti-rot freshness tag from `events` + `verified:` stamps, queue lanes (`references/docket-lanes.md`), 🟡 plans awaiting sign-off, 🟢 the hopper, and the 🧰 frictions + 🧠 memory cards. Never recompute a fact it printed; a `?` is a failed read — name it, never guess.
 
 You own the judgment:
 
@@ -80,7 +80,7 @@ After rendering, *drive* the session one item at a time, top of 🔴 downward �
 
 ## Principles
 
-1. **Pull order** — the rung closest to implement first: gates that free beads (🔴), then plans (🟡), then gates that free nothing (⚪), then gates waiting on the loop (⏳), then the hopper (🟢). Canon: `ac-pipeline/references/stage-table.md` § Pull order.
+1. **Pull order** — security gates first (🛡: a `security` / `impact:security` label or a CVE / vulnerability / Dependabot-alert title — never idled, laned or demoted), then the rung closest to implement: gates that free beads (🔴), then plans (🟡), then gates that free nothing (⚪), then gates waiting on the loop (⏳), then the hopper (🟢). Canon: `ac-pipeline/references/stage-table.md` § Pull order.
 2. **Docket in, docket out** — present the docket in its printed order. Never drop, demote, or close a sitting because the list is long. Lead with "needs you" + remaining count.
 3. **Tap, not type** — every action is a button (`AskUserQuestion`), never "tell me your choice." Batch the trivial (dependabot PRs, chores) into one tap.
 4. **Drive, don't dump** — render the board, then *conduct* it: act on one item, confirm the ripple, auto-advance to the next.

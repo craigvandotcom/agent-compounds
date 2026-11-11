@@ -37,6 +37,10 @@ def bead(i, p, d, labels, t="decision", title=None, desc=memo, status="open", **
                   title=title or f"title {i}", description=desc, status=status, **kw))
 bead("g-p0", 0, 1, ["human-gate"])
 bead("g-p1-old", 1, 9, ["human-gate"])
+# security fixtures: both free nothing and are low priority, yet lead the docket —
+# one matched by its title (the ac-triage Dependabot shape), one by its label.
+bead("g-sec-t", 2, 1, ["human-gate", "triage"], t="task", desc="do it", title="CRITICAL Dependabot alert #9: pkg vulnerable")
+bead("g-sec-l", 3, 5, ["human-gate", "security"])
 bead("g-p1-new", 1, 2, ["human-gate"])
 bead("g-act", 2, 3, ["human-gate"], t="task", desc="do it")
 bead("g-nomemo", 3, 3, ["human-gate"], desc="HUMAN: decide X")
@@ -109,12 +113,16 @@ OUT=$(cd "$R" && "$DOCKET"); ALL="$ALL
 $OUT"
 
 # order + tiering
+before "security leads the docket"   "🛡 SECURITY · 2" "🔴 DECISIONS"
+before "security outranks freeing"   "g-sec-t · " "g-p1-new · "
+before "security P2 before P3"       "g-sec-t · " "g-sec-l · "
+has    "next is security"            "→ next g-sec-t"
+hasnt  "security is never idled"     "⚪ IDLE GATES · 1"
 before "a gate that frees beads outranks P0" "g-p1-new · " "g-p0 · "
 has    "it names what it frees"       "g-p1-new · 2d · P1 · frees 2"
 before "P0 before P1"                 "g-p0 · "    "g-p1-old"
 before "P1 oldest first"              "g-p1-old"   "flood-urgent"
 before "decisions before actions"     "🔴 DECISIONS"  "🔴 ACTIONS"
-has    "next is the most freeing"     "→ next g-p1-new"
 before "blocking gates before plans"  "🔴 ACTIONS"  "🟡 PLANS"
 before "plans before idle gates"      "🟡 PLANS"   "⚪ IDLE GATES"
 before "polished before approved"     "plan-p.md" "plan-a.md"
@@ -164,7 +172,7 @@ n=$(printf '%s' "$OUT" | grep -cF 'g-wloop ·'); [ "$n" = 1 ] && ok || bad "wait
 before   "waiting tier below idle"        "⚪ IDLE GATES"         "⏳ WAITING ON THE LOOP"
 has      "waits-on-gate stays itemized"   "g-gw · 3d · P3"
 hasnt    "waits-on-gate never demoted"    "waits on g-holdb"
-has      "waiting excluded from remaining" "🧑 NEEDS YOU · 10 gates"
+has      "waiting excluded from remaining" "🧑 NEEDS YOU · 12 gates"
 
 # edges unreadable → every gate stays 🔴, the failure named
 swap() { python3 -c 'import os, sys; os.rename(sys.argv[1], sys.argv[2])' "$R/.beads/$1" "$R/.beads/$2"; }

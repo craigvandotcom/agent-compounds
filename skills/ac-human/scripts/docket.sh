@@ -2,7 +2,7 @@
 # docket.sh — the ac-human docket in one call (read-only).
 #
 # Computes everything mechanical about the human's docket: the gate beads (the board-scan
-# on-docket rules), kind, pull order (beads freed → priority → age), memo completeness, the anti-rot freshness tag
+# on-docket rules), kind, pull order (security → beads freed → priority → age), memo completeness, the anti-rot freshness tag
 # (events + `verified:` stamps), the loop boundary's mirror (gates waiting on the loop, ⏳),
 # queue lanes (collapse / elevate / unreadable titles),
 # declared batch lanes with unanimous marking, plans awaiting sign-off, the hopper, and the
@@ -247,7 +247,13 @@ def tag_list(b):
 
 def prio(b):
     p = b.get("priority"); return p if isinstance(p, int) else 9
-order = lambda b: (-frees(b), prio(b), -days(b["created_at"]))  # the pull order: most freed first
+# Security first: a security gate leads the docket whatever it frees — never laned, idled or
+# demoted to the waiting tier. Matched by label, or by a security-shaped title, because the
+# producers (ac-triage's Dependabot findings) do not reliably label it.
+SEC_LABELS = {"security", "impact:security"}
+SEC_TITLE = re.compile(r"\bCVE-\d|\bsecurity\b|vulnerab|dependabot alert", re.I)
+def is_sec(b): return bool(SEC_LABELS & labels(b)) or bool(SEC_TITLE.search(b.get("title") or ""))
+order = lambda b: (not is_sec(b), -frees(b), prio(b), -days(b["created_at"]))  # the pull order: security, then most freed
 
 # ── lanes: declared batch lanes first, then any label with >5 gates ───────
 decl, lanes_file = [], os.path.join(ROOT, ".compounds", "config", "docket-lanes.json")
@@ -265,7 +271,7 @@ UUID = re.compile(r"[0-9a-f]{8}-[0-9a-f]{4}-|\b[0-9a-f]{12,}\b")
 itemized, lanes = [], {}          # lanes: label -> (declaration | None, members)
 for b in gates:
     d = next((L for L in decl if L.get("label") in labels(b)), None)
-    if d and prio(b) > 1: lanes.setdefault(d["label"], (d, []))[1].append(b)
+    if d and prio(b) > 1 and not is_sec(b): lanes.setdefault(d["label"], (d, []))[1].append(b)
 counts = {}
 for b in gates:
     for l in labels(b) - LIFECYCLE: counts[l] = counts.get(l, 0) + 1
@@ -273,7 +279,7 @@ laned = {id(b) for _, m in lanes.values() for b in m}
 for b in gates:
     if id(b) in laned: continue
     big = sorted((l for l in labels(b) - LIFECYCLE if counts[l] > 5), key=lambda l: (-counts[l], l))
-    if big and prio(b) > 1: lanes.setdefault(big[0], (None, []))[1].append(b)
+    if big and prio(b) > 1 and not is_sec(b): lanes.setdefault(big[0], (None, []))[1].append(b)
     else: itemized.append(b)
 itemized.sort(key=order)
 # A gate that blocks nothing waits below the plans; with edges unreadable, every gate stays 🔴.
@@ -289,9 +295,9 @@ def awaiting_loop(b):
     if BLOCKS is None: return None
     return waits_on_loop(b["id"], EDGES, lambda i: GATE_LABEL in labels(EDGES.get(i, {}))
                          or GATE_LABEL in labels(beads_by_id.get(i, {})))
-awaiting = [b for b in itemized if awaiting_loop(b)]
+awaiting = [b for b in itemized if not is_sec(b) and awaiting_loop(b)]
 itemized = [b for b in itemized if b not in awaiting]
-idle = [b for b in itemized if BLOCKS is not None and not frees(b)]
+idle = [b for b in itemized if BLOCKS is not None and not frees(b) and not is_sec(b)]
 itemized = [b for b in itemized if b not in idle]
 queued = sum(len(m) for _, m in lanes.values())
 
@@ -341,10 +347,10 @@ def red_section():
     if not gates: return ["🔴 GATES · 0", IND + "—", ""]
     if not itemized and not lanes: return ["🔴 GATES · 0 blocking", IND + "—", ""]
     out = []
-    for k, title in (("decision", "DECISIONS"), ("action", "ACTIONS")):
-        rows = [b for b in itemized if kind(b) == k]
+    for k, title in (("security", "🛡 SECURITY"), ("decision", "🔴 DECISIONS"), ("action", "🔴 ACTIONS")):
+        rows = [b for b in itemized if (is_sec(b) if k == "security" else not is_sec(b) and kind(b) == k)]
         if not rows: continue
-        out.append(f"🔴 {title} · {len(rows)}")
+        out.append(f"{title} · {len(rows)}")
         for i, b in enumerate(rows):
             if i: out.append("")
             out += gate_block(b)
