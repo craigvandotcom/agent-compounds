@@ -971,9 +971,9 @@ try {
 
 // opencode tool ids are lowercase; our matchers and hook scripts speak Claude names.
 const TOOL_ALIAS = {
-  bash: "Bash", edit: "Edit", write: "Write", read: "Read", grep: "Grep",
+  shell: "Bash", bash: "Bash", edit: "Edit", write: "Write", read: "Read", grep: "Grep",
   glob: "Glob", list: "Glob", webfetch: "WebFetch", websearch: "WebSearch",
-  task: "Task", todowrite: "TodoWrite", skill: "Skill",
+  task: "Task", subagent: "Task", todowrite: "TodoWrite", skill: "Skill",
 }
 
 const forEvent = (ev) => WIRING.filter((w) => w.event === ev)
@@ -1133,6 +1133,47 @@ export const server = async ({ directory, client }) => {
       for (const e of entries) run(e.command, payload, (e.timeout || 10) * 1000)
     },
   }
+}
+
+export default {
+  id: "ac-hooks",
+  async setup(ctx) {
+    const handlers = await server({
+      directory: ctx.location && ctx.location.directory,
+      client: {
+        session: {
+          get: ({ path }) => ctx.session.get({ sessionID: path.id }),
+        },
+      },
+    })
+
+    await ctx.session.hook("prompt", async (event) => {
+      const parts = [{ id: "prompt", type: "text", text: event.prompt.text || "" }]
+      await handlers["chat.message"]({ sessionID: event.sessionID }, { parts })
+      if (parts.length > 1) {
+        event.prompt.text = parts.map((p) => p.text || "").filter(Boolean).join("\n\n")
+      }
+    })
+
+    await ctx.tool.hook("execute.before", async (event) => {
+      await handlers["tool.execute.before"](
+        { tool: event.tool, sessionID: event.sessionID },
+        { args: event.input || {} },
+      )
+    })
+
+    await ctx.tool.hook("execute.after", async (event) => {
+      const output =
+        event.status === "completed"
+          ? (event.result && event.result.content) || ""
+          : (event.error && event.error.message) || ""
+      await handlers["tool.execute.after"](
+        { tool: event.tool, sessionID: event.sessionID, args: event.input || {} },
+        { output },
+      )
+    })
+  },
+  server,
 }
 ACJS
 )"

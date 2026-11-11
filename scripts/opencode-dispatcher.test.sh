@@ -76,9 +76,25 @@ export AC_MACHINE_FILE="$FIXTURE_MACHINE"
 cat > "$DRIVER" <<'EOF'
 // Drive the rendered plugin's tool-call gate for one wiring state; print RESULT.
 const mod = await import(process.argv[2])
-const handlers = await mod.server({ directory: process.cwd() })
+if (!mod.default || mod.default.id !== "ac-hooks" || typeof mod.default.setup !== "function") {
+  console.log("RESULT: BAD-EXPORT")
+  process.exit(1)
+}
+let beforeHook = null
+await mod.default.setup({
+  location: { directory: process.cwd() },
+  session: {
+    get: async () => ({}),
+    hook: async () => {},
+  },
+  tool: {
+    hook: async (name, fn) => {
+      if (name === "execute.before") beforeHook = fn
+    },
+  },
+})
 try {
-  await handlers["tool.execute.before"]({ tool: "bash", sessionID: "t1" }, { args: {} })
+  await beforeHook({ tool: "shell", sessionID: "t1", input: {} })
   console.log("RESULT: no-block")
 } catch (e) {
   console.log("RESULT: BLOCKED: " + e.message)
