@@ -81,7 +81,7 @@ No item gets a new store: *a lesson with no slot is a taxonomy bug to flag, neve
 | **content** | content-craft lessons: what works on which platform, editorial patterns — distinct from org strategy facts | `<org>/content/memory/` | `<org>/alignment/decisions/` |
 | **app-local** | one app's internals | the app's `factory.json` `memory.root` (each own-repo app) | app docs |
 | **client** | one client's environment, people or access, in a repo that serves clients | where the repo's own `AGENTS.md` routes it (e.g. `clients/<c>/AGENTS.md`) | the repo's docs |
-| **personal** | life, PKM, journaling | `knowledge/` | — |
+| **personal** | the owner's life: family, parenting, health, admin, PKM | `$PERSONAL_ROOT/memory/` | — |
 | **global** | tooling, agents, infra, PAI | `<global>/memory/` | `<global>/memory/` |
 
 > **Public-skill boundary:** this skill is the **method**; the example paths above are illustrative. The deployment's
