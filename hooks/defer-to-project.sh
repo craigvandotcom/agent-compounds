@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # defer-to-project.sh <hook-file> [args] — run one of this registry's hooks, unless the
 # session's project carries and wires its own, different copy of it: a file at
-# <project>/hooks/<hook-file> that <project>/.claude/settings.json names. That copy then
+# <project>/.claude/hooks/<hook-file> (or <project>/hooks/<hook-file>) that
+# <project>/.claude/settings.json names. That copy then
 # speaks and this one stays silent, so a hook wired machine-wide and by the project runs
 # once. Every {HOOKS} command in engine/hooks.wiring.json runs through here.
 #
@@ -14,10 +15,13 @@ shift
 hook="$here/$name"
 proj="${CLAUDE_PROJECT_DIR:-}"
 
-if [ -n "$proj" ] && [ -f "$proj/hooks/$name" ] \
-  && [ "$(realpath "$proj/hooks/$name")" != "$(realpath "$hook")" ] \
-  && grep -qF "hooks/$name" "$proj/.claude/settings.json" 2>/dev/null; then
-  exit 0
+if [ -n "$proj" ]; then
+  for own in "$proj/.claude/hooks/$name" "$proj/hooks/$name"; do
+    if [ -f "$own" ] && [ "$(realpath "$own")" != "$(realpath "$hook")" ] \
+      && grep -qF "hooks/$name" "$proj/.claude/settings.json" 2>/dev/null; then
+      exit 0
+    fi
+  done
 fi
 
 case "$name" in
