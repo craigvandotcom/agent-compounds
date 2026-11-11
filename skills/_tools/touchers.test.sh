@@ -469,6 +469,136 @@ else
   fail "Case 19: owner-unknown — expected exit 2 + NOT-GATED for a dead board, got $RC. Output: $OUT"
 fi
 
+# --- Case 20: a TS/JS target gains a RELATIVE-IMPORT leg ---------------------------------
+# The stem (`components/Widget`) and basename (`Widget.tsx`) never match `from './Widget'` or
+# `from '../components/Widget'`. A throwaway git fixture, never the live registry.
+IMP_FIX="$WORK/import-fixture"
+mkdir -p "$IMP_FIX/components" "$IMP_FIX/app/lib" "$IMP_FIX/app/(auth)/[slug]" "$IMP_FIX/a" "$IMP_FIX/b"
+git -C "$IMP_FIX" init -q
+printf 'export function Widget() {}\n// components/Widget\n' >"$IMP_FIX/components/Widget.tsx"
+printf "import Widget from './Widget'\n" >"$IMP_FIX/components/Sibling.tsx"
+printf 'import { Widget } from "../components/Widget"\n' >"$IMP_FIX/app/lib/Up.ts"
+printf "export * from '../../components/Widget/index'\n" >"$IMP_FIX/app/lib/Reexport.ts"
+printf "const W = lazy(() => import('./Widget'))\n" >"$IMP_FIX/components/Lazy.tsx"
+printf "import WL from './WidgetList'\nimport N from './NotWidget'\nimport D from './Widget.helpers'\nimport X from './WidgetXtsx'\n" >"$IMP_FIX/components/Decoys.tsx"
+printf 'export function WidgetList() {}\n' >"$IMP_FIX/components/WidgetList.tsx"
+# Shared leaf: two tracked `types.ts`.
+printf 'export type A = 1\n' >"$IMP_FIX/a/types.ts"
+printf 'export type B = 2\n' >"$IMP_FIX/b/types.ts"
+printf "import { A } from './types'\n" >"$IMP_FIX/a/user.ts"
+# Next.js segments in the path.
+printf 'export function Panel() {}\n// app/(auth)/[slug]/Panel\n' >"$IMP_FIX/app/(auth)/[slug]/Panel.tsx"
+printf "import { Panel } from './Panel'\n" >"$IMP_FIX/app/(auth)/[slug]/Shell.tsx"
+printf 'export default function Page() {}\n' >"$IMP_FIX/app/(auth)/[slug]/page.tsx"
+git -C "$IMP_FIX" add -- components app a b
+
+DER=$(cd "$IMP_FIX" && bash "$TOOL" derive "components/Widget.tsx" 2>&1); RC=$?
+W_CMD=$(printf '%s' "$DER" | cut -f2-)
+W_HITS=$(cd "$IMP_FIX" && bash -c "$W_CMD" 2>&1); W_RC=$?
+if [ "$RC" -eq 0 ] && [ "$W_RC" -eq 0 ] \
+   && printf '%s\n' "$W_HITS" | grep -qx "./components/Sibling.tsx" \
+   && printf '%s\n' "$W_HITS" | grep -qx "./components/Lazy.tsx" \
+   && printf '%s\n' "$W_HITS" | grep -qx "./app/lib/Up.ts" \
+   && printf '%s\n' "$W_HITS" | grep -qx "./app/lib/Reexport.ts" \
+   && ! printf '%s\n' "$W_HITS" | grep -q "Decoys.tsx"; then
+  pass "Case 20: derive finds a sibling './Widget', a '../components/Widget', a re-export '/index' and a dynamic import('./Widget') importer — and none of the near-miss names"
+else
+  fail "Case 20: expected Sibling/Lazy/Up/Reexport found and Decoys not, rc=$RC/$W_RC. cmd: $W_CMD / hits: $W_HITS"
+fi
+if ! printf '%s\n' "$W_HITS" | grep -qx "./components/Widget.tsx"; then
+  pass "Case 20: the target never counts itself, though its own text names its stem"
+else
+  fail "Case 20: the target appears among its own referrers: $W_HITS"
+fi
+# Output shape is unchanged: still `<stem>\t<command>`, the stem still the two-segment one.
+if [ "$(printf '%s' "$DER" | awk -F'\t' '{print NF}')" -eq 2 ] && [ "$(printf '%s' "$DER" | cut -f1)" = "components/Widget" ]; then
+  pass "Case 20: derive keeps its two-field '<stem>\\t<command>' output with the two-segment stem"
+else
+  fail "Case 20: derive output shape changed: $DER"
+fi
+
+# --- Case 21: the relative-import command survives backticks + `bash -c` -----------------
+# A bead stores the command inside backticks under a touchers: line, and the gate re-runs it
+# after extracting it (touchers_check: sed between backticks, then the `\|` rewrite, then
+# `bash -c`; diff-closure: grep -o between backticks, then `bash -c`). A leg that carries a raw
+# quote or `(` / `)` / `?` and is mis-quoted reads as ZERO referrers there. Round-trip through
+# BOTH real extractors, not through the string derive printed.
+RT=$(write_desc roundtrip.md "## Delivers
+- \`components/Widget.tsx\` — the widget
+  touchers: \`$W_CMD\` · out-of-scope: importers are rewritten wholesale
+")
+OUT=$(cd "$IMP_FIX" && bash "$TOOL" check "$RT" roundtrip 2>&1); RC=$?
+if [ "$RC" -eq 0 ] && echo "$OUT" | grep -q "touchers: OK"; then
+  pass "Case 21: touchers_check accepts the stored relative-import command (backtick extraction + bash -c reproduce its referrers)"
+else
+  fail "Case 21: touchers_check refused the stored command, rc=$RC. Output: $OUT"
+fi
+DC_CMD=$(grep -oE 'touchers:[[:space:]]*`[^`]+`' "$RT" | sed -E 's/^touchers:[[:space:]]*`//; s/`$//')
+DC_N=$( (cd "$IMP_FIX" && bash -c "$DC_CMD" 2>/dev/null) | grep -c . )
+if [ "$DC_CMD" = "$W_CMD" ] && [ "$DC_N" -eq 4 ]; then
+  pass "Case 21: diff-closure's extraction (grep -o between backticks, no \\| rewrite) returns the command intact and it finds all 4 importers"
+else
+  fail "Case 21: diff-closure-style extraction mangled the command or lost referrers (n=$DC_N). extracted: $DC_CMD"
+fi
+# The command is also safe through the check's `\|` rewrite: it must carry no `\|` at all.
+case "$W_CMD" in
+  *'\|'*) fail "Case 21: the command carries a '\\|' that touchers_check would rewrite to an alternation" ;;
+  *) pass "Case 21: the command carries no '\\|' for touchers_check's markdown-table rewrite to alter" ;;
+esac
+
+# --- Case 22: a shared LEAF gets NO relative-import leg ----------------------------------
+# `types`, `index`, `page`: two tracked `types.ts` — a leg keyed on `types` would count every
+# importer of either. The guard mirrors Case 16's shared basename; derive falls back to the
+# original -F shape.
+DER=$(cd "$IMP_FIX" && bash "$TOOL" derive "a/types.ts" 2>&1); RC=$?
+T_CMD=$(printf '%s' "$DER" | cut -f2-)
+if [ "$RC" -eq 0 ] && ! printf '%s' "$T_CMD" | grep -qF 'from\s' && ! printf '%s' "$T_CMD" | grep -qF 'import\(' \
+   && printf '%s' "$T_CMD" | grep -q '^rg -l -F '; then
+  pass "Case 22: a shared-leaf object (two types.ts) gains no relative-import leg and keeps the -F shape"
+else
+  fail "Case 22: expected no import leg for a shared leaf, rc=$RC. cmd: $T_CMD"
+fi
+
+# --- Case 23: Next.js '[slug]' / '(auth)' segments derive without an rg error ------------
+# `-F` covers a whole rg run, so a regex leg puts the stem in regex mode: unescaped `[slug]`
+# matches one letter and `(auth)` is a group. The stem must be escaped, and the self-exclusion
+# glob must treat `[slug]` as a literal too.
+DER=$(cd "$IMP_FIX" && bash "$TOOL" derive "app/(auth)/[slug]/Panel.tsx" 2>&1); RC=$?
+P_CMD=$(printf '%s' "$DER" | cut -f2-)
+P_HITS=$(cd "$IMP_FIX" && bash -c "$P_CMD" 2>&1); P_RC=$?
+if [ "$RC" -eq 0 ] && [ "$P_RC" -eq 0 ] && printf '%s\n' "$P_HITS" | grep -qF "Shell.tsx" \
+   && ! printf '%s\n' "$P_HITS" | grep -qF "Panel.tsx" && printf '%s' "$P_CMD" | grep -qF '\[slug\]'; then
+  pass "Case 23: a path with [slug] and (auth) segments derives (rc 0), finds its './Panel' importer, escapes the stem and never counts itself"
+else
+  fail "Case 23: expected Shell.tsx found, Panel.tsx not, rc=$RC/$P_RC. cmd: $P_CMD / hits: $P_HITS"
+fi
+# The shared-leaf Next.js file (`page.tsx`) keeps the -F shape and still derives cleanly.
+DER=$(cd "$IMP_FIX" && bash "$TOOL" derive "app/(auth)/[slug]/page.tsx" 2>&1); RC=$?
+if [ "$RC" -eq 0 ] && [ "$DER" != "new" ]; then
+  pass "Case 23: a Next.js 'page.tsx' with [slug] and (auth) segments derives without an rg error (rc 0)"
+else
+  fail "Case 23: derive of the page.tsx path failed, rc=$RC. Output: $DER"
+fi
+# A '.' in a name is a literal dot, not a wildcard: 'use.thing' must not match './useXthing'.
+printf 'export const a = 1\n' >"$IMP_FIX/components/use.thing.ts"
+printf "import a from './use.thing'\nimport b from './useXthing'\n" >"$IMP_FIX/components/Dots.tsx"
+git -C "$IMP_FIX" add -- components
+DER=$(cd "$IMP_FIX" && bash "$TOOL" derive "components/use.thing.ts" 2>&1); RC=$?
+U_CMD=$(printf '%s' "$DER" | cut -f2-)
+U_HITS=$(cd "$IMP_FIX" && bash -c "$U_CMD" 2>&1)
+if [ "$RC" -eq 0 ] && printf '%s\n' "$U_HITS" | grep -qF "Dots.tsx"; then
+  pass "Case 23: a dotted leaf (use.thing) is found by its exact relative import"
+else
+  fail "Case 23: expected Dots.tsx found for './use.thing', rc=$RC. cmd: $U_CMD / hits: $U_HITS"
+fi
+printf "import b from './useXthing'\n" >"$IMP_FIX/components/Dots.tsx"
+U_HITS=$(cd "$IMP_FIX" && bash -c "$U_CMD" 2>&1)
+if ! printf '%s\n' "$U_HITS" | grep -qF "Dots.tsx"; then
+  pass "Case 23: the leaf's '.' is escaped — './useXthing' is not a referrer of use.thing"
+else
+  fail "Case 23: an unescaped '.' matched './useXthing'. cmd: $U_CMD / hits: $U_HITS"
+fi
+
 echo
 if [ "$FAILURES" -eq 0 ]; then
   echo "All touchers fixture tests passed."

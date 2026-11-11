@@ -195,17 +195,87 @@ _touchers_basename_unique() {
   [ "$n" = 1 ]
 }
 
+# A TS/JS target is imported by a RELATIVE path — `./Widget`, `../ui/Widget`,
+# `./Widget/index` — that neither the two-segment stem nor the basename can match.
+# The relative-import leg keys on the LEAF: the file name without its extension (NOT
+# `_touchers_stem`, which planned-layer.sh copies and which stays untouched).
+_touchers_is_tsjs() {
+  case "$1" in
+    *.ts|*.tsx|*.js|*.jsx|*.mjs|*.cjs|*.mts|*.cts) return 0 ;;
+  esac
+  return 1
+}
+
+# The leaf, extension dropped: `app/(auth)/[id]/Widget.tsx` -> `Widget`.
+_touchers_leaf() {
+  printf '%s' "$1" | awk -F/ '{ s = $NF; sub(/\.[^.]*$/, "", s); print s }'
+}
+
+# A leaf many tracked files share (`types`, `index`, `page`) identifies no single artifact — the
+# leg would count every importer of every same-named file (same reasoning as
+# _touchers_basename_unique). Only files an extensionless import can resolve to are counted: a
+# `Widget.css` does not make `./Widget` ambiguous.
+_touchers_leaf_unique() {
+  local root="$1" leaf="$2" n
+  n=$(git -C "$root" ls-files -- '*' 2>/dev/null | awk -F/ -v l="$leaf" '
+    { f = $NF; if (f !~ /\.(ts|tsx|js|jsx|mjs|cjs|mts|cts)$/) next
+      sub(/\.[^.]*$/, "", f); if (f == l) c++ }
+    END { print c + 0 }')
+  [ "$n" = 1 ]
+}
+
+# ONE rg run has ONE mode: `-F` covers every `-e`, so a command that carries a regex leg must
+# put the stem and basename in regex mode too. Escape them so `.` stays a dot and a Next.js
+# `[id]` / `(auth)` segment stays literal (unescaped, `[id]` matches one letter and an
+# unbalanced `(` makes rg exit 2, which derive reads as NOT-GATED). A literal `|` becomes `[|]`,
+# never `\|`: touchers_check rewrites `\|` to `|` (a markdown-table escape) before running.
+_touchers_rx_escape() {
+  printf '%s' "$1" | sed -E 's/[][\\.^$*+?(){}]/\\&/g; s/[|]/[|]/g'
+}
+
+# The same path as an rg --glob pattern: `[id]` is a character class there, not a literal.
+_touchers_glob_escape() {
+  printf '%s' "$1" | sed -E 's/[][\\*?{}]/\\&/g'
+}
+
 # The command a bead pastes: the gate's shape, rooted at `.` so it runs from the repo root.
 # Two -F alternatives when the basename is unique — the stem catches a path-shaped reference,
 # the basename catches a bare-filename or built-path one; a shared basename keeps the stem-only
 # command, since a bare-filename alternative there would match every file of that name.
+#
+# A TS/JS target whose leaf is unique also gains two REGEX legs (a static `from '<rel>'` and a
+# dynamic `import('<rel>')`); the command then drops `-F` and escapes the other legs (see
+# _touchers_rx_escape). Quotes are written `\x27` / `\x22` and every argument is single-quoted, so
+# the command carries no quote of its own to break when a bead stores it in backticks and
+# touchers_check / diff-closure re-run it with `bash -c`. A target that gains no leg keeps the
+# original -F shape byte for byte, so already-stamped commands stay valid.
 _touchers_command() {
-  local _tc_q="'" root="$1" rel="$2" stem="$3" base
+  local _tc_q="'" root="$1" rel="$2" stem="$3" base leaf grel
+  local _tc_qc='[\x27\x22]' _tc_relp='\.{1,2}/([^\x27\x22]*/)?' _tc_idx='(/index)?'
   base=$(_touchers_basename "$rel")
-  if _touchers_basename_unique "$root" "$base"; then
-    printf 'rg -l -F -e "%s" -e "%s" . -g %s!%s%s %s' "$stem" "$base" "$_tc_q" "$rel" "$_tc_q" "$(_touchers_globs)"
+  grel=$(_touchers_glob_escape "$rel")
+  leaf=""
+  if _touchers_is_tsjs "$rel"; then
+    leaf=$(_touchers_leaf "$rel")
+    # A quote in a name would break the single-quoted argument: no leg, never a broken command.
+    case "$leaf$stem$base" in *"'"*) leaf="" ;; esac
+    if [ -n "$leaf" ] && ! _touchers_leaf_unique "$root" "$leaf"; then leaf=""; fi
+  fi
+  if [ -n "$leaf" ]; then
+    local lrx
+    lrx=$(_touchers_rx_escape "$leaf")
+    printf 'rg -l -e %s%s%s' "$_tc_q" "$(_touchers_rx_escape "$stem")" "$_tc_q"
+    if _touchers_basename_unique "$root" "$base"; then
+      printf ' -e %s%s%s' "$_tc_q" "$(_touchers_rx_escape "$base")" "$_tc_q"
+    fi
+    # Pattern text travels as %s arguments only: a backslash in a printf FORMAT is an escape.
+    printf ' -e %s%s%s%s%s%s%s%s' "$_tc_q" 'from\s+' "$_tc_qc" "$_tc_relp" "$lrx" "$_tc_idx" "$_tc_qc" "$_tc_q"
+    printf ' -e %s%s%s%s%s%s%s%s' "$_tc_q" 'import\(\s*' "$_tc_qc" "$_tc_relp" "$lrx" "$_tc_idx" "$_tc_qc" "$_tc_q"
+    printf ' . -g %s!%s%s %s' "$_tc_q" "$grel" "$_tc_q" "$(_touchers_globs)"
+  elif _touchers_basename_unique "$root" "$base"; then
+    printf 'rg -l -F -e "%s" -e "%s" . -g %s!%s%s %s' "$stem" "$base" "$_tc_q" "$grel" "$_tc_q" "$(_touchers_globs)"
   else
-    printf 'rg -l -F -e "%s" . -g %s!%s%s %s' "$stem" "$_tc_q" "$rel" "$_tc_q" "$(_touchers_globs)"
+    printf 'rg -l -F -e "%s" . -g %s!%s%s %s' "$stem" "$_tc_q" "$grel" "$_tc_q" "$(_touchers_globs)"
   fi
 }
 
