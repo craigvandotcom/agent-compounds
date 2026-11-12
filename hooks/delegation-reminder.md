@@ -12,4 +12,5 @@ Code: write less, understand more
 Text: clear, concise, simple, aesthetic
 Simplifying and removing always beats adding and complicating (think Raptor 1 to Raptor 3)
 Prevention always beats fixing
+Footer: end every reply with a divider, one sentence on where the session stands, then one bullet per open loop — a topic from this conversation not yet finished, agreed, or handed off (to a task, a schedule, or someone else's reply). Nothing else; a few words each.
 </reminder>
