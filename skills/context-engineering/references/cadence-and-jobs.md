@@ -6,6 +6,7 @@ What runs when, which lane it feeds or drains, and where its proof-of-life lives
 - [Feeders vs drains](#feeders-vs-drains)
 - [Run markers](#run-markers)
 - [Wiring a new job](#wiring-a-new-job)
+- [Agent ledger](#agent-ledger)
 
 ## The wired schedule
 
@@ -76,3 +77,21 @@ quietly.
    is a job nobody will ever notice breaking.
 5. **Say what it drains.** A job that only feeds a lane increases the backlog. If nothing
    downstream consumes its output, wiring it makes the system worse, not better.
+
+## Agent ledger
+
+Recurring agent duties are **not** scheduled jobs. Each agent keeps one `LEDGER.md` beside
+its `SKILL.md`, and the agent decides what is due when it runs.
+
+```
+# <Agent> ledger
+Handoff: <what the next run must check, or —>
+| Duty | Cadence | Last done | How |
+|---|---|---|---|
+| tools.lock-refresh | 30d | 2026-11-16 | modules/tools.md §2 |
+```
+
+- **Open:** read the handoff line, then do every duty past its cadence (or list it as gated).
+- **Close:** stamp `Last done` for duties done; overwrite the handoff line. It never accumulates.
+- Plain text, no CLI: the agent reads and edits it. Lessons still go to memory via `reflect`;
+  tasks for the human still go to their task tracker. Keep it beside the agent's `SKILL.md`.
