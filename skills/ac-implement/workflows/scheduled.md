@@ -1,6 +1,6 @@
 # ac-implement · scheduled — the unattended autopilot run
 
-The hourly gate (`scripts/autopilot-gate.sh`) starts this session only when P0–P1 work exists. This
+The gate (`scripts/autopilot-gate.sh`) starts this session only when work at or above `max_priority` exists. This
 file is a run skeleton: every behaviour lives in the skill it names, so call that skill, restate nothing.
 
 **Authority.** The stage-table clause in `ac-pipeline/references/stage-table.md` plus the project's
@@ -11,7 +11,7 @@ in every child's environment.
 
 **Unattended rule.** Nobody answers a prompt. Any human stop becomes a human-gate bead per
 `beads-standards/reference/human-gate-template.md` (`ACTION:` card or `DECISION:`), always P1 so
-Gate Watch posts it. Never ask, never wait. `<scripts>` is the symlink-resolved `scripts/` dir of this skill.
+the docket ranks it first. Never ask, never wait. `<scripts>` is the symlink-resolved `scripts/` dir of this skill.
 Commit only inside this project's repo. A defect found anywhere else (agent-compounds, infrastructure,
 another app) becomes an `ACTION:` card here, never a commit there.
 
@@ -30,7 +30,7 @@ For each id: `bash <scripts>/return-hold.sh <id> --reason "authorization autopil
 
 ## 2 — Polish
 
-At most TWO epics that have unrefined P0–P1 open children, via `ac-polish/SKILL.md` with
+At most TWO epics that have unrefined open children, via `ac-polish/SKILL.md` with
 `ac-polish/workflows/bead.md` (standalone beads share one artifact). `max_priority` from the block
 is the ceiling. A bead that fails to converge twice in a row (`REFUSED` or `ENDED`
 twice) gets an `ACTION:` card with the reader's open findings; it stays unrefined.
@@ -45,8 +45,8 @@ means the skill default). The swarm's own `push.sh` outcome is the push of recor
 ## 4 — Ledger and push
 
 When Implement ran, its Phase 2 already committed the ledger and pushed: report that outcome.
-When it was skipped, polish stamps are only on disk, and the nightly tidy rebuilds the board
-from origin, so an uncommitted ledger is lost. Commit it through the coordinator's lane
+When it was skipped, polish stamps are only on disk, and any job that rebuilds the board
+from origin loses an uncommitted ledger. Commit it through the coordinator's lane
 (`bash <scripts>/coordinator.sh --run <run-id> --actor <conductor>`, whose commit subject carries
 `[no-bead]`), then `bash <scripts>/../../ac-pipeline/scripts/push.sh`. Exit 3 is not a failure:
 record `push pending: <file>` in the report and carry on. Exit 1 is a failure — report it.

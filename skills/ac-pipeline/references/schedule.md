@@ -19,6 +19,10 @@ here as an owner-hosted operating contract, with two archived skill names update
 | Hygiene | Weekly per active repo (manual until the first monitored run signs off scheduling) | 7-lens panel; fixes commit direct to `main`, close via `ac-publish`; deferred → epic beads. **Sole owner of the standing review of `main`** when no batch shipped in >7 days — `ac-review` provides only the diff-range mechanism and never self-schedules it | `ac-hygiene` |
 | Audit | **Not yet scheduled** — human-triggered today; the checklists are reference depth behind the weekly hygiene panel (`ac-review/references/audit-checklists.md` — the merged security/performance deep sweeps, ac-1p7j.29 — and `ac-hygiene/references/tests-audit.md`) | findings → beads, never fixes in place | `ac-review` + `ac-hygiene` |
 
+An app with a manager check-in runs Curator, Tidy, Triage and the autopilot gate from that
+check-in, in the order its workflow file gives; for that app the rows above name the mode, not
+the clock, and triage runs first in every check-in.
+
 **Triage-before-swarm ordering** is the one cadence rule with a *hard dependency* on another
 job — triage must feed the board before the swarm consumes it — rather than a fixed wall-clock
 slot. It was enforced at the archived loop skill's own "Scheduling" section, decoupled so a

@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
-# autopilot-gate.sh — the hourly autopilot gate. Plain shell decides; the model starts ONLY when
-# P0–P1 work exists, and every run, started or not, leaves one line in the run ledger.
+# autopilot-gate.sh — the autopilot gate. Plain shell decides; the model starts ONLY when work
+# at or above max_priority exists, and every run, started or not, leaves one line in the run ledger.
 #
 #   PROBE:      bash skills/ac-implement/scripts/autopilot-gate.test.sh — stub br, model and gh
-#   SCHEDULE:   hourly at :30 (the scheduler job) · run-all-proofs.sh
+#   SCHEDULE:   the app's scheduler job or manager check-in · run-all-proofs.sh
 #   MODE:       blocking
 #   ON-FAILURE: closed — a gate that cannot tell never starts the model; non-zero is a Slack alert
 #
@@ -20,7 +20,7 @@
 #                  session) · closed (number, 0 when absent) · pushed (SHA array, [] when absent).
 #                  Everything else the session wrote to last-run.json is carried along unchanged.
 #   last-run.json  written by the session; removed before each run so a stale one is never reused.
-#                  `closed` (P0–P1 beads closed this run) and `pushed` (head SHA of each push.sh
+#                  `closed` (beads closed this run) and `pushed` (head SHA of each push.sh
 #                  push) are the two fields --verdict reads.
 #
 # Usage:  autopilot-gate.sh                 one gate pass
