@@ -322,7 +322,7 @@ Persist via the reflect/context-engineering route (memory substrate), or the use
 
 | Mistake                             | Fix                                                     |
 | ----------------------------------- | ------------------------------------------------------- |
-| Skipping screenshot analysis        | Always run image-describe first to understand context   |
+| Skipping screenshot analysis        | Always read the screenshot first to understand context   |
 | Biasing models with brand too early | Keep brand rubric weight low (15%) to allow innovation  |
 | Ignoring high-variance ideas        | Flag for review - dissent often signals valuable debate |
 | Over-relying on consensus           | Sometimes minority view is breakthrough                 |
