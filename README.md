@@ -79,15 +79,14 @@ the map). Stage order — stage · owner · trigger · human gate · artifact �
 
 *budget: spine ≤600, loaded ≤7000*
 
-**library** — one-shot prompts, methodology, labs, multi-model access, UI critique.
+**library** — one-shot prompts, methodology, labs, UI critique.
 | Skill | What it does |
 |-------|-------------|
 | **[jef-prompts](./skills/jef-prompts/)** | A curated library of high-leverage one-shot prompts — the Jeffrey-Emanuel jef pack plus local additions. Triggers: "/jef-prompts <hint>", "give me a prompt for", "is there a prompt for", "bug hunting prompt", "planning prompt", "performance audit prompt", "refactor prompt", "find a prompt". RETRIEVES a canned prompt — NOT for scoring or improving prompts already written (skill-builder's prompt rubric) or authoring skills (skill-builder). |
 | **[jef-flywheel](./skills/jef-flywheel/)** | Use when learning or applying the agentic build methodology end-to-end — beads (br/bv) and agent-swarm (ntm) setup, coordinating multi-agent work, AGENTS.md conventions. The conceptual/setup layer, not the per-stage pipeline skills. Triggers on flywheel, agent swarm, ntm, br/bv setup, agent coordination, multi-agent development. To convert a plan into beads use ac-beadify; to run a stage use the ac-* skills; for live coordination (identity, file reservations) use agent-mail; for bead canon use beads-standards. |
 | **[brainstorming](./skills/brainstorming/)** | Pre-planning exploration and ideation using divergent-convergent methodology. Use when exploring ideas before committing to a plan or uncertain which approach to take. Triggers on "brainstorm", "explore ideas", "what are the options", "think through approaches", "before I plan this", "/brainstorm". NOT for UI/design ideation across models (ui-brainstorm), forensic critique of an existing idea (ac-idea-lab), or polling models on one question (multi-model). |
-| **[ac-idea-lab](./skills/ac-idea-lab/)** | Use to deeply work a raw IDEA, framework, concept, or strategy (anything without execution steps yet) — two modes: GENIUS forensic first-principles critique (stress-test, find flaws, distill) and ALIEN paradigm transcendence (escape the frame, cross-domain transplants, expand). Triggers on "review this idea", "stress-test this", "devil's advocate", "critique this concept", "find flaws in this", "first-principles review", "transcend this idea", "go deeper", "push beyond analysis", "alien perspective", "escape local optima", "what am I missing at a deeper level". For a written implementation plan with steps/timelines use ac-plan-lab; for open-ended generation of new options use brainstorming; for a multi-model panel use multi-model. |
+| **[ac-idea-lab](./skills/ac-idea-lab/)** | Use to deeply work a raw IDEA, framework, concept, or strategy (anything without execution steps yet) — two modes: GENIUS forensic first-principles critique (stress-test, find flaws, distill) and ALIEN paradigm transcendence (escape the frame, cross-domain transplants, expand). Triggers on "review this idea", "stress-test this", "devil's advocate", "critique this concept", "find flaws in this", "first-principles review", "transcend this idea", "go deeper", "push beyond analysis", "alien perspective", "escape local optima", "what am I missing at a deeper level". For a written implementation plan with steps/timelines use ac-plan-lab; for open-ended generation of new options use brainstorming; for a panel of other models use ai-models. |
 | **[ac-plan-lab](./skills/ac-plan-lab/)** | Use to deeply pressure-test and elevate a written implementation PLAN, roadmap, or strategy (steps/timelines/resources) — two modes: GENIUS forensic first-principles critique (find flaws, stress-test assumptions, reconstruct) and ALIEN paradigm transcendence (escape the frame, cross-domain transplants, future-proof). A review gate in the planning chain. Triggers: ''genius review the plan'', ''pressure-test this plan'', ''find flaws in the plan'', ''forensic plan review'', ''transcend this plan'', ''push the plan deeper'', ''alien perspective on the plan'', ''escape local optima on this plan'', ''what is the plan missing''. For a raw idea or concept (no execution steps) use ac-idea-lab. |
-| **[multi-model](./skills/multi-model/)** | Use when a task needs a specific AI model or several weighing in on one question — query Claude, GPT, Gemini, Grok or DeepSeek directly, or get a multi-model panel synthesized into one answer on OpenRouter Fusion. Triggers on "query a model", "which model for", "use OpenRouter", "ask GPT/Gemini/Grok directly", "run this on <model>", "ask the experts", "model consensus", "panel of AI models", "second opinion from other AIs". NOT for UI/design options (ui-brainstorm), forensic idea critique (ac-idea-lab), or Anthropic API/model reference (claude-api). |
 | **[ui-brainstorm](./skills/ui-brainstorm/)** | Use ONLY when the user explicitly wants MULTIPLE divergent design options or several AI models'' opinions on a UI — design ideation, exploring alternatives, or cross-model consensus ranking. Triggers on "ui brainstorm", "design options", "multiple ideas", "explore alternatives", "what would different models suggest", "consensus on this design". NOT for single-track polish of existing UI (ui-elevate), accessibility/compliance audits (ac-polish/references/ui-checklist.md), or visual/CSS bugs (ui-debug). |
 
 *budget: spine ≤1300, loaded ≤18000*
@@ -170,11 +169,7 @@ mkdir -p ../my-project/_backlog ../my-project/_plans ../my-project/_strategy
 
 ### Skills setup
 
-```bash
-export OPENROUTER_API_KEY=sk-or-...  # for multi-model
-```
-
-Claude Code discovers each `SKILL.md` automatically. Use e.g. `/multi-model What makes a great API?` — direct query or panel synthesis via OpenRouter Fusion (`skills/multi-model/workflows/fusion.md`).
+Claude Code discovers each `SKILL.md` automatically.
 
 ## Dependencies
 
@@ -189,7 +184,6 @@ clone is missing, not because you can go install them.
 | **[beads (br/bv)](https://github.com/Dicklesworthstone/beads_rust)** | Artifact-based planning and implementation tracking — plans, beads, pipeline stages. The `ac-*` pipeline skills assume it; without it, bead-based stages have nothing to read/write | `cargo install --git https://github.com/Dicklesworthstone/beads_rust.git` |
 | **[agent-mail (MCP)](https://github.com/Dicklesworthstone/mcp_agent_mail)** | Inter-agent messaging, file reservations, coordination for multi-agent workflows | Add as MCP server in `.claude/settings.json` |
 | **[agent-browser](https://www.npmjs.com/package/agent-browser)** | Headless browser automation CLI for UI testing (used by implementer workers on browser journeys, ac-land, ac-review) | `npm install -g agent-browser` |
-| **openrouter** | CLI for multi-model queries (used by the multi-model skill) | Install an `openrouter` CLI and put it on your `PATH` — this is the author's own unpublished wrapper over the OpenRouter API; without it, multi-model has nothing to call |
 | **ubs** | Meta-linter that gates commits across changed files, invoked by pipeline commit-discipline doctrine | Author's own unpublished tool; skills that call it degrade to skipping the gate |
 | **qmd** | Memory/recall CLI — queries the facts/rules/wiki memory substrate | Author's own unpublished tool; recall calls degrade to "no hits" rather than failing |
 | **cass** | Past-session search CLI | Author's own unpublished tool; same degrade-to-empty behavior as qmd |
@@ -204,7 +198,7 @@ clone is missing, not because you can go install them.
 - **Compound, don't collect** — each skill should make the next one more valuable
 - **SKILL.md is the interface** — human-readable reference that doubles as AI context
 - **Standalone by default** — no frameworks, no setup wizards
-- **One workflow file per skill** — e.g. `skills/multi-model/workflows/fusion.md`
+- **One workflow file per skill** — e.g. `skills/ac-align/workflows/weekly-align.md`
 
 ## License
 

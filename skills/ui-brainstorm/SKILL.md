@@ -13,7 +13,7 @@ description: 'Use ONLY when the user explicitly wants MULTIPLE divergent design 
 # UI Brainstorm Skill
 
 **Purpose:** Multi-model AI consensus for UI/UX design ideation and critique using cutting-edge vision models
-**Tools:** Claude Opus 4.8 (native), multi-model / openrouter CLI (Gemini 3.1 Pro, Grok 4.20) (verify: `openrouter --list-models`)
+**Tools:** Claude (native), the `openrouter` CLI for the newest Google and xAI flagships: full IDs from `openrouter --list-models <lab> --newest`
 **Domain:** Interface design, UX optimization, visual critique
 **Status:** Active
 
@@ -336,7 +336,7 @@ Persist via the reflect/context-engineering route (memory substrate), or the use
 **Cross-Skill Usage:**
 
 - `brand-system` skill (app/portfolio-local — not in this registry; must be present in the consuming workspace) loads for brand alignment rubric scoring
-- `multi-model` skill provides multi-model access via the openrouter CLI
+- `ai-models` skill: how to reach and pick other models
 
 **Subagent delegation:**
 

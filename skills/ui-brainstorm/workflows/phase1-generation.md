@@ -101,7 +101,7 @@ EOF
 **Step 2: Run with vision**
 
 ```bash
-openrouter --file /tmp/gemini-prompt.txt --image [screenshot-path] -m gemini --max-tokens 2000 --raw -o /tmp/gemini-ideas.md
+openrouter --file /tmp/gemini-prompt.txt --image [screenshot-path] -m <google id> --max-tokens 2000 --raw -o /tmp/gemini-ideas.md
 ```
 
 **Capture Gemini's 5 ideas to working doc.**
@@ -153,7 +153,7 @@ EOF
 **Step 2: Run with vision**
 
 ```bash
-openrouter --file /tmp/grok-prompt.txt --image [screenshot-path] -m grok --max-tokens 2000 --raw -o /tmp/grok-ideas.md
+openrouter --file /tmp/grok-prompt.txt --image [screenshot-path] -m <x-ai id> --max-tokens 2000 --raw -o /tmp/grok-ideas.md
 ```
 
 **Capture Grok's 5 ideas to working doc.**

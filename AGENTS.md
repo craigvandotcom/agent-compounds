@@ -103,7 +103,7 @@ lives in `skills/ac-pipeline/references/stage-table.md`; nothing here restates i
 - **stack-nextjs-supabase** — supabase, capacitor
 - **substrate** — context-engineering, reflect, dream, wiki (deploy together)
 - **meta** — skill-builder
-- **library** — jef-prompts, jef-flywheel, brainstorming, ac-idea-lab, ac-plan-lab, multi-model, ui-brainstorm
+- **library** — jef-prompts, jef-flywheel, brainstorming, ac-idea-lab, ac-plan-lab, ui-brainstorm
 
 **Not promoted (stay per-app):** `CORE`, `brand`, `design-system` (pillar-color-coupled),
 `writing-guidelines` (brand-voice-coupled), `curate` — project/brand-specific. `app-store-screenshots`,

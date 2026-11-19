@@ -117,7 +117,7 @@ EOF
 **Step 2: Run ranking**
 
 ```bash
-openrouter --file /tmp/gemini-ranking-prompt.txt -m gemini --max-tokens 2000 --raw -o /tmp/gemini-rankings.md
+openrouter --file /tmp/gemini-ranking-prompt.txt -m <google id> --max-tokens 2000 --raw -o /tmp/gemini-rankings.md
 ```
 
 **Capture Gemini's ranking to working doc.**
@@ -142,7 +142,7 @@ EOF
 **Step 2: Run ranking**
 
 ```bash
-openrouter --file /tmp/grok-ranking-prompt.txt -m grok --max-tokens 2000 --raw -o /tmp/grok-rankings.md
+openrouter --file /tmp/grok-ranking-prompt.txt -m <x-ai id> --max-tokens 2000 --raw -o /tmp/grok-rankings.md
 ```
 
 **Capture Grok's ranking to working doc.**

@@ -39,7 +39,7 @@ wait
 Feed all evaluations back to your primary model to produce a final ranked list:
 
 ```bash
-cat /tmp/eval-*.md | openrouter "Here are cross-evaluations from 3 leading AI models scoring each other's improvement ideas. Synthesize these into a single ranked list of the top 10 ideas, weighted by cross-model consensus. Ideas rated highly by multiple models are stronger signals. Produce a final action plan." -m opus --reasoning high -o "/tmp/dueling-wizards-result.md"
+cat /tmp/eval-*.md | openrouter "Here are cross-evaluations from 3 leading AI models scoring each other's improvement ideas. Synthesize these into a single ranked list of the top 10 ideas, weighted by cross-model consensus. Ideas rated highly by multiple models are stronger signals. Produce a final action plan." -m <model id> --reasoning high -o "/tmp/dueling-wizards-result.md"
 ```
 
 Review the result at `/tmp/dueling-wizards-result.md`.

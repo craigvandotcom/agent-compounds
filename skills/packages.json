@@ -162,7 +162,7 @@
   },
   "library": {
     "agents": [],
-    "blurb": "one-shot prompts, methodology, labs, multi-model access, UI critique",
+    "blurb": "one-shot prompts, methodology, labs, UI critique",
     "budget": {
       "loaded": 18000,
       "spine": 1300
@@ -175,7 +175,6 @@
       "brainstorming",
       "ac-idea-lab",
       "ac-plan-lab",
-      "multi-model",
       "ui-brainstorm"
     ]
   }

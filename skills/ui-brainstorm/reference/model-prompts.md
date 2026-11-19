@@ -59,7 +59,7 @@ CONSTRAINTS:
 **CLI Usage:**
 
 ```bash
-openrouter --file /tmp/gemini-prompt.txt --image [screenshot-path] -m gemini --max-tokens 2000 --raw -o /tmp/gemini-ideas.md
+openrouter --file /tmp/gemini-prompt.txt --image [screenshot-path] -m <google id> --max-tokens 2000 --raw -o /tmp/gemini-ideas.md
 ```
 
 **Prompt:**
@@ -111,7 +111,7 @@ CONSTRAINTS:
 **CLI Usage:**
 
 ```bash
-openrouter --file /tmp/grok-prompt.txt --image [screenshot-path] -m grok --max-tokens 2000 --raw -o /tmp/grok-ideas.md
+openrouter --file /tmp/grok-prompt.txt --image [screenshot-path] -m <x-ai id> --max-tokens 2000 --raw -o /tmp/grok-ideas.md
 ```
 
 **Prompt:**
@@ -216,7 +216,7 @@ Focus on which would truly deliver most user value.
 **CLI Usage:**
 
 ```bash
-openrouter --file /tmp/gemini-ranking-prompt.txt -m gemini --max-tokens 2000 --raw -o /tmp/gemini-rankings.md
+openrouter --file /tmp/gemini-ranking-prompt.txt -m <google id> --max-tokens 2000 --raw -o /tmp/gemini-rankings.md
 ```
 
 **Prompt:**
@@ -237,7 +237,7 @@ Focus on which would truly deliver most user value.
 **CLI Usage:**
 
 ```bash
-openrouter --file /tmp/grok-ranking-prompt.txt -m grok --max-tokens 2000 --raw -o /tmp/grok-rankings.md
+openrouter --file /tmp/grok-ranking-prompt.txt -m <x-ai id> --max-tokens 2000 --raw -o /tmp/grok-rankings.md
 ```
 
 **Prompt:**
