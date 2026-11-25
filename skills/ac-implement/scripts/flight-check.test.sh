@@ -66,7 +66,11 @@ case "${1:-}" in
         # The STALE-STAMP leg (Refusal 5) reads the bead itself unconditionally once
         # premises hold this far — labels:[] means it holds no `refined` and that leg
         # correctly skips re-gating.
-        echo '[{"id":"ac-test-0001","labels":[]}]' ;;
+        if [ "${AC_TEST_REFINED:-}" = "1" ]; then
+          echo '[{"id":"ac-test-0001","labels":["refined"],"comments":[]}]'
+        else
+          echo '[{"id":"ac-test-0001","labels":[]}]'
+        fi ;;
       blocker-promises)
         printf '[{"id":"blocker-promises","description":"## Delivers\\n- `skills/never-built/absent-artifact.md` — the thing this bead builds on\\n"}]\n' ;;
       blocker-silent)
@@ -827,6 +831,117 @@ run "$WORK/bodies/static-only.md"
 grep -q '^red-probe: test -f ./static-only-a.md$' "$RECEIPT" \
   && ok "10c: a static-only bead falls back to the first failing static probe, unchanged" \
   || bad "10c: static-only fallback picked the wrong probe: $(grep '^red-probe:' "$RECEIPT")"
+
+# ---------------------------------------------------------------------------------------
+echo "flight-check.test: case 11 — the bead's own uncommitted work is not a premise failure"
+# ---------------------------------------------------------------------------------------
+# A worker's finished, uncommitted work for the bead sits in the tree; a later claim finds
+# every probe green. That must not stamp the bead (or strip its `refined` label): exit 3,
+# one OWN-WIP line naming the files, nothing routed, nothing banked.
+R4="$WORK/root4"; mkdir -p "$R4/src"
+printf 'echo built\n' >"$R4/src/work.sh"
+printf 'unrelated\n' >"$R4/other.txt"
+git -C "$R4" init -q
+git -C "$R4" -c user.email=f@f -c user.name=f add -A
+git -C "$R4" -c user.email=f@f -c user.name=f commit -qm fixture
+cat >"$WORK/stamp-gate-fake.sh" <<'FAKE'
+#!/usr/bin/env bash
+echo "$1" >>"${AC_STAMP_CALLS:?}"
+echo "stamp_refined: REFUSED $1 — bead.py check refused (above); no label written." >&2
+exit 1
+FAKE
+chmod +x "$WORK/stamp-gate-fake.sh"
+cat >"$WORK/bodies/ownwip-green.md" <<'BODY'
+## Delivers
+- `src/work.sh` — the thing this bead builds
+
+## Acceptance Criteria
+- The work exists.
+  Probe: `test -e ./src/work.sh` — tier: none
+- And it runs.
+  Probe: `true` — tier: none
+
+## Consumes
+- none
+BODY
+cat >"$WORK/bodies/ownwip-red.md" <<'BODY'
+## Delivers
+- `src/work.sh` — the thing this bead builds
+
+## Acceptance Criteria
+- Not built yet.
+  Probe: `test -e ./src/not-built-yet.sh` — tier: none
+
+## Consumes
+- none
+BODY
+run4() { # <body> [env…] -> RUN_OUT / RUN_RC, root = the git fixture
+  local body="$1"; shift
+  RUN_OUT=$(env AC2_DRY_RUN=1 AC2_FLIGHT_DIR="$WORK/receipts4" AC_STAMP_CALLS="$WORK/stamp-calls" \
+    STAMP_GATE="$WORK/stamp-gate-fake.sh" PATH="$WORK/bin:$PATH" "$@" \
+    bash "$GATE" ac-test-0001 --body-file "$body" --root "$R4" 2>&1)
+  RUN_RC=$?
+}
+: >"$WORK/stamp-calls"; rm -rf "$WORK/receipts4"
+
+# 11a — a clean tree with green probes is still stamped, exactly as before.
+run4 "$WORK/bodies/ownwip-green.md"
+if [ "$RUN_RC" -eq 1 ] && printf '%s' "$RUN_OUT" | grep -q 'PREMISE-FAILED: RED'; then
+  ok "11a: green probes on a clean tree still stamp PREMISE-FAILED: RED"
+else bad "11a: expected exit 1 + PREMISE-FAILED: RED, got $RUN_RC: $RUN_OUT"; fi
+
+# 11b — the bead's own Delivers file is modified in the tree: exit 3, nothing stamped or banked.
+printf 'echo built and finished\n' >>"$R4/src/work.sh"
+run4 "$WORK/bodies/ownwip-green.md"
+if [ "$RUN_RC" -eq 3 ] \
+   && [ "$(printf '%s\n' "$RUN_OUT" | grep -c '^OWN-WIP:')" -eq 1 ] \
+   && printf '%s' "$RUN_OUT" | grep '^OWN-WIP:' | grep -q 'src/work.sh' \
+   && printf '%s' "$RUN_OUT" | grep '^OWN-WIP:' | grep -q 'landed' \
+   && printf '%s' "$RUN_OUT" | grep -q 'NEXT: handback' \
+   && ! printf '%s' "$RUN_OUT" | grep -q 'PREMISE-FAILED' \
+   && ! printf '%s' "$RUN_OUT" | grep -q 'ROUTE' \
+   && [ ! -e "$WORK/receipts4/ac-test-0001.flight-receipt" ]; then
+  ok "11b: own uncommitted Delivers work -> exit 3, one OWN-WIP line naming the file, no stamp, no route, no receipt"
+else bad "11b: expected exit 3 + OWN-WIP only, got $RUN_RC: $RUN_OUT"; fi
+
+# 11c — --check-only (what refly asks) gets the same answer and writes nothing.
+RUN_OUT=$(env AC2_DRY_RUN=1 AC2_FLIGHT_DIR="$WORK/receipts4" PATH="$WORK/bin:$PATH" \
+  bash "$GATE" ac-test-0001 --body-file "$WORK/bodies/ownwip-green.md" --root "$R4" --check-only 2>&1); RUN_RC=$?
+if [ "$RUN_RC" -eq 3 ] && printf '%s' "$RUN_OUT" | grep -q '^OWN-WIP:' && ! printf '%s' "$RUN_OUT" | grep -q 'PREMISE-FAILED'; then
+  ok "11c: --check-only answers OWN-WIP (exit 3), not PREMISE-FAILED"
+else bad "11c: expected exit 3 under --check-only, got $RUN_RC: $RUN_OUT"; fi
+
+# 11d — a modified file the bead does NOT name is not its own work: still stamped.
+git -C "$R4" checkout -- src/work.sh
+printf 'edited by someone else\n' >>"$R4/other.txt"
+run4 "$WORK/bodies/ownwip-green.md"
+if [ "$RUN_RC" -eq 1 ] && printf '%s' "$RUN_OUT" | grep -q 'PREMISE-FAILED: RED' && ! printf '%s' "$RUN_OUT" | grep -q 'OWN-WIP'; then
+  ok "11d: a modified file outside the bead's Delivers is not its own work — still PREMISE-FAILED: RED"
+else bad "11d: expected exit 1 + RED, got $RUN_RC: $RUN_OUT"; fi
+git -C "$R4" checkout -- other.txt
+
+# 11e — own work in the tree but a probe still RED (the build-your-own-harness loop): the RED
+# is banked as before; the guard only replaces the all-green stamp.
+printf 'echo half done\n' >>"$R4/src/work.sh"
+run4 "$WORK/bodies/ownwip-red.md"
+if [ "$RUN_RC" -eq 0 ] && grep -q '^red-probe: test -e ./src/not-built-yet.sh$' "$WORK/receipts4/ac-test-0001.flight-receipt" 2>/dev/null; then
+  ok "11e: own work present but a probe still RED -> the RED is banked as before (exit 0)"
+else bad "11e: expected exit 0 + banked RED, got $RUN_RC: $RUN_OUT"; fi
+rm -rf "$WORK/receipts4"
+
+# 11f — a `refined` bead: with own work in the tree the stamp gate must not run (it strips
+# the label on all-green); without it, the gate runs and a stale stamp still routes.
+: >"$WORK/stamp-calls"
+run4 "$WORK/bodies/ownwip-green.md" AC_TEST_REFINED=1
+if [ "$RUN_RC" -eq 3 ] && [ ! -s "$WORK/stamp-calls" ] && printf '%s' "$RUN_OUT" | grep -q 'STAMP deferred'; then
+  ok "11f: refined bead + own work -> stamp gate not run (label not stripped), exit 3"
+else bad "11f: expected exit 3 with the stamp gate uncalled, got $RUN_RC calls=$(cat "$WORK/stamp-calls"): $RUN_OUT"; fi
+git -C "$R4" checkout -- src/work.sh
+: >"$WORK/stamp-calls"
+run4 "$WORK/bodies/ownwip-green.md" AC_TEST_REFINED=1
+if [ "$RUN_RC" -eq 1 ] && [ -s "$WORK/stamp-calls" ] && printf '%s' "$RUN_OUT" | grep -q 'PREMISE-FAILED: STALE-STAMP'; then
+  ok "11f: refined bead on a clean tree -> the stamp gate still runs and a stale stamp still routes"
+else bad "11f: expected the stamp gate to run (exit 1, STALE-STAMP), got $RUN_RC: $RUN_OUT"; fi
 
 # ---------------------------------------------------------------------------------------
 echo ""
