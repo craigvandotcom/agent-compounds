@@ -48,8 +48,8 @@ When Implement ran, its Phase 2 already committed the ledger and pushed: report 
 When it was skipped, polish stamps are only on disk, and any job that rebuilds the board
 from origin loses an uncommitted ledger. Commit it through the coordinator's lane
 (`bash <scripts>/coordinator.sh --run <run-id> --actor <conductor>`, whose commit subject carries
-`[no-bead]`), then `bash <scripts>/../../ac-pipeline/scripts/push.sh`. Exit 3 is not a failure:
-record `push pending: <file>` in the report and carry on. Exit 1 is a failure — report it.
+`[no-bead]`), then `bash <scripts>/../../ac-pipeline/scripts/push.sh`. A dirty tracked file never
+holds the push (push.sh checks a clean export of what it pushes). Exit 1 is a failure — report it.
 
 ## 5 — Release card
 

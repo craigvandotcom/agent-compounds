@@ -41,15 +41,16 @@ new_repo() {
   echo "$d"
 }
 
-# --- 1. refusal: dirty tracked source, naming the file ------------------------------------
+# --- 1. a dirty tracked file does NOT refuse: it is named, never pushed, never touched ----
 R="$(new_repo dirty-tree)"
 printf 'uncommitted edit\n' >>"$R/tracked.txt"
 out="$(cd "$R" && "$PUSH" 2>&1)"; rc=$?
-if [ "$rc" -eq 3 ] && printf '%s' "$out" | grep -q 'REFUSED \[dirty-tree\]' \
-   && printf '%s' "$out" | grep -q 'tracked.txt'; then
-  pass "refuses a dirty tracked file, naming it"
+if [ "$rc" -eq 0 ] && ! printf '%s' "$out" | grep -q 'REFUSED' \
+   && printf '%s' "$out" | grep -q 'NOT part of this push' \
+   && printf '%s' "$out" | grep -q 'tracked.txt' \
+   && [ "$(tail -1 "$R/tracked.txt")" = "uncommitted edit" ]; then
+  pass "a dirty tracked file no longer refuses: named in the output, left untouched on disk"
 else fail "dirty-tree: rc=$rc out=$out"; fi
-if [ -z "$(git -C "$R" diff)" ]; then :; else :; fi   # working tree left untouched either way
 git -C "$R" checkout -- tracked.txt
 
 # --- 1b. .beads/ is EXEMPT from the dirty-tree refusal (the ledger's own committer lane) --
@@ -78,14 +79,14 @@ out="$(cd "$R" && "$PUSH" 2>&1)"; rc=$?
 if [ "$rc" -eq 0 ] && [ "$(git -C "$R" rev-parse origin/main)" = "$(git -C "$R" rev-parse HEAD)" ]; then
   pass "a repo's own .push-dirty-allow declaration (memory/) exempts a dirty tracked file under it"
 else fail "dirty-declared-allow: rc=$rc out=$out"; fi
-# The SAME repo's tracked SOURCE file is still refused — a declared prefix exempts only
-# what it names, never code paths.
+# The SAME repo's tracked SOURCE file is not exempt — a declared prefix exempts only what it
+# names, never code paths — so it is still reported (and still triggers the clean export).
 printf 'uncommitted source edit\n' >>"$R/tracked.txt"
 out="$(cd "$R" && "$PUSH" 2>&1)"; rc=$?
-if [ "$rc" -eq 3 ] && printf '%s' "$out" | grep -q 'REFUSED \[dirty-tree\]' \
-   && printf '%s' "$out" | grep -q 'tracked.txt'; then
-  pass "a declared live-state allowlist never exempts a tracked SOURCE file — still refused, naming it"
-else fail "dirty-declared-allow-code-still-refuses: rc=$rc out=$out"; fi
+if [ "$rc" -eq 0 ] && printf '%s' "$out" | grep -q 'NOT part of this push' \
+   && printf '%s' "$out" | grep -q 'tracked.txt' && ! printf '%s' "$out" | grep -q 'memory/x.md'; then
+  pass "a declared live-state allowlist never exempts a tracked SOURCE file — still reported, naming it"
+else fail "dirty-declared-allow-code-still-reported: rc=$rc out=$out"; fi
 git -C "$R" checkout -- tracked.txt
 
 # --- 2. origin ahead: merged, never a history-discarding rewrite --------------------------
@@ -222,13 +223,13 @@ if [ "$rc" -ne 0 ] && printf '%s' "$out" | grep -q 'REFUSED \[red-check\]' \
   pass "hook running push.sh --check-only: a failing whole-tree check exits non-zero and pushes nothing"
 else fail "hook-check-only-red: rc=$rc before=$BEFORE out=$out"; fi
 
-# 5d. --check-only run directly: the dirty-tree refusal holds; a green tree is never pushed
-# or merged.
+# 5d. --check-only run directly: a dirty tree is noted, not refused; a green tree is never
+# pushed or merged.
 R="$(new_repo check-only-direct)"
 printf 'uncommitted edit\n' >>"$R/tracked.txt"
 out="$(cd "$R" && "$PUSH" --check-only 2>&1)"; rc=$?
-if [ "$rc" -eq 3 ] && printf '%s' "$out" | grep -q 'REFUSED \[dirty-tree\]'; then
-  pass "--check-only keeps the dirty-tree refusal (exit 3, file named)"
+if [ "$rc" -eq 0 ] && printf '%s' "$out" | grep -q 'NOT part of this push'; then
+  pass "--check-only notes a dirty tree and passes (exit 0, file named)"
 else fail "check-only-dirty: rc=$rc out=$out"; fi
 git -C "$R" checkout -- tracked.txt
 printf 'unpushed\n' >>"$R/tracked.txt"
@@ -273,6 +274,93 @@ if [ "$rc" -eq 0 ] \
    && [ "$(git -C "$R" rev-parse main)" = "$LIVE_MAIN" ]; then
   pass "detached worktree: push.sh lands HEAD on origin/main and leaves the diverged local main untouched"
 else fail "detached-worktree: rc=$rc live=$LIVE_MAIN wt=$WT_HEAD origin=$(git --git-dir="$R.git" rev-parse main) out=$out"; fi
+
+# --- 7. a dirty tree does not hold committed work back -------------------------------------
+lint_rejects_BAD() {  # a committed whole-tree check that goes red when tracked.txt holds BAD
+  cat >"$1/lint.sh" <<'EOF'
+#!/usr/bin/env bash
+echo "lint.sh: ran in $PWD"
+grep -q BAD tracked.txt && { echo "lint.sh: BAD found"; exit 1; }
+exit 0
+EOF
+  chmod +x "$1/lint.sh"
+  git -C "$1" add -- lint.sh
+  git -C "$1" commit -qm "add lint.sh"
+}
+worktrees_of() { git -C "$1" worktree list | wc -l | tr -d ' '; }
+
+# 7a. committed work lands although UNRELATED tracked files are modified; the checks saw the
+# committed tree (not the dirty one) and the export is gone afterwards.
+R="$(new_repo dirty-unrelated)"
+printf 'other\n' >"$R/other.txt"; git -C "$R" add -- other.txt; git -C "$R" commit -qm "other"; git -C "$R" push -q origin main
+lint_rejects_BAD "$R"
+printf 'committed work\n' >"$R/work.txt"; git -C "$R" add -- work.txt; git -C "$R" commit -qm "committed work"
+printf 'BAD edit nobody committed\n' >>"$R/other.txt"
+printf 'BAD uncommitted\n' >>"$R/tracked.txt"        # would turn lint.sh red if it ran in place
+HEAD_SHA="$(git -C "$R" rev-parse HEAD)"
+out="$(cd "$R" && "$PUSH" 2>&1)"; rc=$?
+if [ "$rc" -eq 0 ] && [ "$(git --git-dir="$R.git" rev-parse main)" = "$HEAD_SHA" ] \
+   && printf '%s' "$out" | grep -q 'lint.sh: ran in .*push-sh-export' \
+   && ! printf '%s' "$out" | grep -q 'BAD found' \
+   && ! printf '%s' "$out" | grep -q 'also touched by an unpushed commit' \
+   && [ "$(worktrees_of "$R")" = "1" ] \
+   && grep -q 'BAD edit nobody committed' "$R/other.txt" && grep -q 'BAD uncommitted' "$R/tracked.txt"; then
+  pass "dirty unrelated files: committed work pushes, checks ran in a clean export, export removed, dirty edits untouched"
+else fail "dirty-unrelated: rc=$rc worktrees=$(worktrees_of "$R") out=$out"; fi
+
+# 7b. the protection is kept: a red check on the COMMITTED tree still refuses and pushes
+# nothing, dirty tree or not.
+R="$(new_repo dirty-committed-red)"
+lint_rejects_BAD "$R"
+printf 'BAD but committed\n' >>"$R/tracked.txt"; git -C "$R" commit -qam "commit a red tree"
+printf 'unrelated dirt\n' >>"$R/lint.sh"
+BEFORE="$(git --git-dir="$R.git" rev-parse main)"
+out="$(cd "$R" && "$PUSH" 2>&1)"; rc=$?
+if [ "$rc" -eq 1 ] && printf '%s' "$out" | grep -q 'REFUSED \[red-check\]' \
+   && printf '%s' "$out" | grep -q 'BAD found' && [ "$BEFORE" = "$(git --git-dir="$R.git" rev-parse main)" ] \
+   && [ "$(worktrees_of "$R")" = "1" ]; then
+  pass "a red check on the committed tree still refuses (exit 1) with a dirty tree, pushes nothing, leaves no export"
+else fail "dirty-committed-red: rc=$rc out=$out"; fi
+
+# 7c. a dirty file that an unpushed commit ALSO touches is named; the commit still pushes.
+R="$(new_repo dirty-overlap)"
+printf 'commit edit\n' >>"$R/tracked.txt"; git -C "$R" commit -qam "edit tracked.txt"
+HEAD_SHA="$(git -C "$R" rev-parse HEAD)"
+printf 'second, uncommitted edit\n' >>"$R/tracked.txt"
+out="$(cd "$R" && "$PUSH" 2>&1)"; rc=$?
+if [ "$rc" -eq 0 ] && [ "$(git --git-dir="$R.git" rev-parse main)" = "$HEAD_SHA" ] \
+   && printf '%s' "$out" | grep -q 'also touched by an unpushed commit' \
+   && [ "$(tail -1 "$R/tracked.txt")" = "second, uncommitted edit" ]; then
+  pass "a dirty file an unpushed commit also touches is named; the commit pushes as committed, the edit stays local"
+else fail "dirty-overlap: rc=$rc out=$out"; fi
+
+# 7d. an origin merge that would overwrite a dirty file is still refused, and loses nothing.
+R="$(new_repo dirty-merge-overlap)"
+CLONE="$WORKDIR/dirty-merge-overlap-clone"
+git clone -q "$R.git" "$CLONE"
+git -C "$CLONE" config user.email push-test@test.local; git -C "$CLONE" config user.name "push-sh-test"
+git -C "$CLONE" config commit.gpgsign false
+printf 'origin edit\n' >>"$CLONE/tracked.txt"; git -C "$CLONE" commit -qam "origin edits tracked.txt"; git -C "$CLONE" push -q origin main
+printf 'mine\n' >"$R/mine.txt"; git -C "$R" add -- mine.txt; git -C "$R" commit -qm "mine"
+printf 'dirty edit of the file origin changed\n' >>"$R/tracked.txt"
+BEFORE="$(git --git-dir="$R.git" rev-parse main)"
+out="$(cd "$R" && "$PUSH" 2>&1)"; rc=$?
+if [ "$rc" -eq 1 ] && printf '%s' "$out" | grep -q 'REFUSED \[merge-conflict\]' \
+   && [ "$BEFORE" = "$(git --git-dir="$R.git" rev-parse main)" ] \
+   && [ "$(tail -1 "$R/tracked.txt")" = "dirty edit of the file origin changed" ]; then
+  pass "a merge that would overwrite a dirty file is still refused (exit 1), nothing pushed, the dirty edit intact"
+else fail "dirty-merge-overlap: rc=$rc out=$out"; fi
+
+# 7e. through a pre-push hook (--check-only), a dirty tree does not block the plain push.
+R="$(new_repo hook-dirty)"
+install_hook "$R" "--check-only"
+printf 'v2\n' >"$R/work.txt"; git -C "$R" add -- work.txt; git -C "$R" commit -qm "a green change"
+printf 'unrelated dirt\n' >>"$R/tracked.txt"
+out="$(cd "$R" && git push origin main 2>&1)"; rc=$?
+if [ "$rc" -eq 0 ] && [ "$(git --git-dir="$R.git" rev-parse main)" = "$(git -C "$R" rev-parse HEAD)" ] \
+   && [ "$(worktrees_of "$R")" = "1" ]; then
+  pass "pre-push hook (--check-only) with a dirty tree: the plain push exits 0, origin equals HEAD, no export left"
+else fail "hook-dirty: rc=$rc out=$out"; fi
 
 echo "---"
 echo "CASES=$CASES FAILURES=$FAILURES"

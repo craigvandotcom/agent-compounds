@@ -104,7 +104,7 @@ bash skills/ac-pipeline/scripts/push.sh
 git status   # Must show "up to date with origin"
 ```
 
-**If push.sh refuses:** it names the failure (dirty tree, a whole-tree check, a merge
+**If push.sh refuses:** it names the failure (a whole-tree check, a merge
 conflict, or a rejected push) and NEXT: fix-forward. Resolve what it names and re-run;
 never a bare `git push`. Do not proceed until pushed.
 
