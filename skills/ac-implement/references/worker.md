@@ -89,7 +89,8 @@ re-run flight-check so the receipt anchors that stronger RED. Nothing refuses a 
 ## 4 — WORK
 
 Implement the bead as written. Load the domain skill it names. Your file list is the bead's
-own `## Delivers` paths — the same scope `diff-closure.sh` measures callers against; a scope
+own `## Delivers` paths — the same scope `diff-closure.sh` measures callers against — plus any
+test file its own text names; a scope
 that contradicts its own ACs is a spec defect — comment `spec-contradiction`, try §4b first
 when the work already exists, otherwise unclaim, go to §1.
 

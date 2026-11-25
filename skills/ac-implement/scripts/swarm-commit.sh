@@ -51,6 +51,9 @@
 #                      claim another writer holds
 #   outside-scope      a named path is not inside that bead's own `## Delivers` scope — the
 #                      bead's own declaration is the boundary, never a hand-audited guess.
+#                      One widening: a TEST path (`*.test.*`, `*.spec.*`, `*__tests__*`,
+#                      `*/tests/*`) that the bead's body names anywhere (Intent, a probe,
+#                      Seams, Notes) as a whole path is in scope too; no other path is.
 #                      A bead whose Delivers names no path is unscoped and is not checked; a
 #                      subject with no bead token, or the coordinator's own `[no-bead]`
 #                      ledger-flush marker, is unchecked outright.
@@ -141,6 +144,38 @@ _delivers_paths_via_bead() {
   BEAD_PY_PATH="${BEAD_PY_HOME:-}" python3 "$py" "$tf"; rc=$?
   rm -f "$tf" "$py"
   return $rc
+}
+
+# _is_test_path <path> — a test file, by the same shape diff-closure.sh files a test under
+# (`*.test.*`, `*__tests__*`, `*/tests/*`) plus `*.spec.*`.
+_is_test_path() {
+  case "$1" in
+    *.test.*|*.spec.*|*__tests__*|*/tests/*) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
+# _named_in_text <path> <text> — true when <path> appears in <text> as a whole path: not the
+# tail of a longer path (`lib/__tests__/x.ts` does not name `__tests__/x.ts`) and not the
+# head of a longer name (`x.ts.snap`). A trailing sentence period is fine. Also accepts the
+# `./`-prefixed spelling.
+_named_in_text() {
+  printf '%s\n' "$2" | NEEDLE="$1" awk '
+    BEGIN { n = ENVIRON["NEEDLE"]; L = length(n) }
+    L > 0 {
+      pos = 1
+      while ((i = index(substr($0, pos), n)) > 0) {
+        abs = pos + i - 1
+        pre = (abs > 1) ? substr($0, abs - 1, 1) : ""
+        c1 = substr($0, abs + L, 1); c2 = substr($0, abs + L + 1, 1)
+        if (pre == "/" && abs > 2 && substr($0, abs - 2, 1) == ".") pre = substr($0, abs - 3, 1)
+        okpre = (pre == "" || pre !~ /[A-Za-z0-9_.\/-]/)
+        okpost = (c1 == "" || (c1 !~ /[A-Za-z0-9_\/-]/ && !(c1 == "." && c2 ~ /[A-Za-z0-9_]/)))
+        if (okpre && okpost) { found = 1; exit }
+        pos = abs + 1
+      }
+    }
+    END { exit found ? 0 : 1 }'
 }
 
 # The ONE br_call invocation shape (ac-heyt.3). The witness read below is
@@ -446,8 +481,14 @@ if [ -n "$SUBJECT" ]; then
 
           for p in "${PATHS[@]}"; do
             pn="${p#./}"
-            printf '%s\n' "$scope_list" | grep -qxF "$pn" \
-              || refuse outside-scope "path '$p' is not in '$tok''s own ## Delivers scope — own it in this change, or split the commit"
+            printf '%s\n' "$scope_list" | grep -qxF "$pn" && continue
+            # A test file the bead's own text names (Intent, a probe, Seams, Notes) is in
+            # scope: the bead cannot be done without it. Non-test paths keep the Delivers rule.
+            if _is_test_path "$pn" && _named_in_text "$pn" "$desc"; then
+              echo "swarm-commit: scope — test file '$pn' is named in '$tok''s body, not its ## Delivers; in scope"
+              continue
+            fi
+            refuse outside-scope "path '$p' is not in '$tok''s own ## Delivers scope — own it in this change, or split the commit"
           done
         done
       fi

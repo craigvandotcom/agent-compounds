@@ -409,6 +409,51 @@ if [ "$rc" -eq 0 ]; then
   pass "a claimed bead's own declared Delivers path is accepted, never falsely refused"
 else fail "in-scope: rc=$rc out=$out"; fi
 
+# --- 25b. a TEST file the bead's body names is in scope; anything else is not -----------------
+# The Delivers section is still the boundary for every non-test path. A test path that the
+# bead names ANYWHERE in its body (Intent, a probe, Seams) is in scope too, so a bead whose
+# own text requires updating a test is not refused over the paperwork.
+R="$(new_repo test-named-in-body)"
+mkdir -p "$R/lib" "$R/__tests__/lib" "$R/.beads"
+for f in lib/owned.txt lib/helper.ts __tests__/lib/intent.test.ts __tests__/lib/probe.test.ts \
+         __tests__/lib/seam.test.ts __tests__/lib/unnamed.test.ts __tests__/longer.test.ts \
+         lib/__tests__/longer.test.ts; do
+  mkdir -p "$R/$(dirname "$f")"; printf 'v1\n' >"$R/$f"
+done
+git -C "$R" add -- lib __tests__
+git -C "$R" commit -qm "seed lib and tests"; git -C "$R" push -q origin main
+for f in lib/owned.txt lib/helper.ts __tests__/lib/intent.test.ts __tests__/lib/probe.test.ts \
+         __tests__/lib/seam.test.ts __tests__/lib/unnamed.test.ts __tests__/longer.test.ts; do
+  printf 'v2\n' >>"$R/$f"
+done
+cat >"$R/.beads/issues.jsonl" <<'JSONL'
+{"id":"ac-testscope-demo","title":"some work","status":"in_progress","issue_type":"task","assignee":"t","description":"## Intent\nMust update: __tests__/lib/intent.test.ts (it pins the old behaviour).\n\n## Delivers\n- lib/owned.txt\n\n## Acceptance Criteria\n- Works.\n  Probe: `bash __tests__/lib/probe.test.ts` -- tier: none\n\n## Seams\n- lib/helper.ts reads it; lib/__tests__/longer.test.ts and __tests__/lib/seam.test.ts must follow.\n"}
+JSONL
+printf 'fix(ac-testscope-demo): update the tests the bead names\n\nthe bead names these test files in its own text\n' >"$R/msg.txt"
+lane_paths() { (cd "$R" && "$LANE" --identity t --message-file msg.txt "$@" 2>&1); }
+out="$(lane_paths --path __tests__/lib/intent.test.ts)"; rc=$?
+if [ "$rc" -eq 0 ] && git -C "$R" log -1 --format=%s | grep -q 'update the tests the bead names'; then
+  pass "a test file named in the bead's Intent but not its Delivers is in scope"
+else fail "test named in Intent: rc=$rc out=$out"; fi
+out="$(lane_paths --path __tests__/lib/probe.test.ts)"; rc=$?
+if [ "$rc" -eq 0 ]; then pass "a test file named only in an AC probe is in scope"
+else fail "test named in a probe: rc=$rc out=$out"; fi
+out="$(lane_paths --path __tests__/lib/seam.test.ts)"; rc=$?
+if [ "$rc" -eq 0 ]; then pass "a test file named in Seams is in scope"
+else fail "test named in Seams: rc=$rc out=$out"; fi
+out="$(lane_paths --path __tests__/lib/unnamed.test.ts)"; rc=$?
+if [ "$rc" -eq 3 ] && printf '%s' "$out" | grep -q 'REFUSED \[outside-scope\]'; then
+  pass "a test file the bead does not name anywhere is still refused, naming outside-scope"
+else fail "unnamed test file: rc=$rc out=$out"; fi
+out="$(lane_paths --path lib/helper.ts)"; rc=$?
+if [ "$rc" -eq 3 ] && printf '%s' "$out" | grep -q 'REFUSED \[outside-scope\]'; then
+  pass "a NON-test file named in the body (not Delivers) is still refused: the Delivers rule is unchanged"
+else fail "non-test named in body: rc=$rc out=$out"; fi
+out="$(lane_paths --path __tests__/longer.test.ts)"; rc=$?
+if [ "$rc" -eq 3 ] && printf '%s' "$out" | grep -q 'REFUSED \[outside-scope\]'; then
+  pass "a test path that only appears as the tail of a LONGER named path is not named"
+else fail "tail of a longer path: rc=$rc out=$out"; fi
+
 # --- 26. [no-bead] marker exempts a subject outright, even one that names a claimed-by-another
 # bead — the coordinator's own ledger-flush commit is never any one bead's. ------------------
 R="$(new_repo no-bead-marker)"
