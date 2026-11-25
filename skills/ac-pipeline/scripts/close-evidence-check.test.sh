@@ -215,6 +215,49 @@ run_epic 0 "epic whose touchers name a dotted child bead id -> PASS (ids are not
 run_epic 0 "epic with a deleted-* declaration not on disk -> PASS" -- bd-epic-deleted "shipped: epic landed. Delivered: epicship/thing.sh. probe receipt: FLIGHT-RECEIPT v1 exit 0"
 run_epic 0 "epic whose only deliverable is a deletion -> PASS (not UNVERIFIABLE)" -- bd-epic-delonly "shipped: the deletion landed. probe receipt: FLIGHT-RECEIPT v1 exit 0"
 
+echo "--- epic with NO ## Delivers: closes when every child is closed and the reason cites the probe receipt ---"
+# Children are the union of parent-child edges (the epic's own `dependents`) and dotted ids
+# (`<epic>.<n>`, from the board list). Statuses come from the board list.
+EPIC_NODEL_DESC='## Intent
+an integration epic that declares no artifact
+
+## Acceptance Criteria
+- Probe: `true`'
+epic_nodel() { # <id> <edge-child-ids-json> — an epic with no Delivers and parent-child dependents
+  jq -n --arg id "$1" --arg d "$EPIC_NODEL_DESC" --argjson e "$2" \
+    '{id:$id, issue_type:"epic", status:"in_progress", labels:[], description:$d, comments:[],
+      dependents:($e | map({id:., dependency_type:"parent-child", status:"closed"}))}' \
+    > "$FIXTURE_DIR/$1.json"
+}
+board() { # <rows-json: [[id,status],...]> — the board list the gate reads child statuses from
+  jq -n --argjson r "$1" '{issues: ($r | map({id:.[0], status:.[1]}))}' > "$FIXTURE_DIR/list.json"
+}
+RECEIPT_REASON="shipped: epic landed. probe receipt: FLIGHT-RECEIPT v1 exit 0 (3/3 green)"
+epic_nodel bd-en-ok '["bd-en-edge"]'
+board '[["bd-en-ok","in_progress"],["bd-en-ok.1","closed"],["bd-en-edge","closed"],["bd-unrelated","open"]]'
+run_epic 0 "epic with no Delivers, every child closed, receipt cited -> PASS" -- bd-en-ok "$RECEIPT_REASON"
+run_epic 1 "epic with no Delivers, every child closed, NO probe receipt cited -> REFUSE" -- bd-en-ok "shipped: epic landed"
+epic_nodel bd-en-edge-open '["bd-en-edge"]'
+board '[["bd-en-edge-open.1","closed"],["bd-en-edge","in_progress"]]'
+run_epic 1 "epic with no Delivers and an OPEN edge child -> REFUSE" -- bd-en-edge-open "$RECEIPT_REASON"
+epic_nodel bd-en-dot-open '[]'
+board '[["bd-en-dot-open.1","closed"],["bd-en-dot-open.2","open"]]'
+run_epic 1 "epic with no Delivers and an OPEN dotted-id child -> REFUSE" -- bd-en-dot-open "$RECEIPT_REASON"
+epic_nodel bd-en-none '[]'
+board '[["bd-unrelated","open"]]'
+run_epic 2 "epic with no Delivers and no children at all -> NOT-CHECKED (nothing to close on)" -- bd-en-none "$RECEIPT_REASON"
+epic_nodel bd-en-missing '["bd-en-ghost"]'
+board '[["bd-en-missing.1","closed"]]'
+run_epic 2 "epic with no Delivers whose edge child is absent from the board -> NOT-CHECKED" -- bd-en-missing "$RECEIPT_REASON"
+epic_nodel bd-en-nolist '["bd-en-edge"]'
+rm -f "$FIXTURE_DIR/list.json"
+run_epic 2 "epic with no Delivers and an unreadable board list -> NOT-CHECKED (never a pass)" -- bd-en-nolist "$RECEIPT_REASON"
+# An epic that DOES declare Delivers is unchanged: its children are not consulted and its
+# artifacts are still required (bd-epic-gone: promised path missing on disk, still REFUSE).
+board '[["bd-epic-gone.1","closed"]]'
+run_epic 1 "epic that declares Delivers keeps the artifact rule (children closed does not waive it)" -- bd-epic-gone "shipped: epic landed. Delivered: epicship/gone.sh. probe receipt: FLIGHT-RECEIPT v1 exit 0"
+rm -f "$FIXTURE_DIR/list.json"
+
 echo "--- audit mode: --list-unverifiable names the never-verifiable population ---"
 jq -s '.' "$FIXTURE_DIR/bd-prose.json" "$FIXTURE_DIR/bd-task.json" "$FIXTURE_DIR/bd-epic.json" \
   > "$FIXTURE_DIR/list.json"
