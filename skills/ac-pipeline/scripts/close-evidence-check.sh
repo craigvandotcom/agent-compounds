@@ -26,7 +26,10 @@
 #   bug           -> the reason cites a test-shaped path (the regression test)
 #   task/feature  -> the reason names >=1 artifact from THIS bead's own ## Delivers
 #   investigation -> the reason cites a spawned bead id or a documented-answer marker
-#   epic          -> the reason cites the probe receipt close-gate.sh ran from, AND
+#   epic          -> with no populated ## Delivers: every child is closed (parent-child
+#                    edges ∪ dotted ids; an open child REFUSES, no child or an unreadable
+#                    board is NOT-CHECKED) AND the reason cites the probe receipt. With
+#                    Delivers: the reason cites the probe receipt close-gate.sh ran from, AND
 #                    every ## Delivers path exists on disk, EXCEPT those declared
 #                    under a `deleted-*:` label (`deleted-script:`, `deleted-test:`,
 #                    …): their absence is the deliverable, so they are skipped and
@@ -107,6 +110,17 @@ def main():
         if mode == "epic":
             for a in deleted:
                 print(f"DELETED:{a}")
+        return 0
+    if mode == "epic-children":
+        # the epic's parent-child children, from its own `br show` payload, through bead.py's
+        # one reader of that edge — never a second inline select of it
+        with open(sys.argv[2], "r") as f:
+            ids, err = bead.parent_child_children(json.load(f))
+        if err:
+            print(f"NOT-CHECKED: {err}", file=sys.stderr)
+            return 2
+        for cid in ids:
+            print(cid)
         return 0
     if mode == "audit":
         data = json.load(sys.stdin)
@@ -313,7 +327,40 @@ case "$ITYPE" in
 
     _POPULATED=$(printf '%s\n' "$_HELP_OUT" | sed -n 's/^POPULATED://p')
     if [ "$_POPULATED" != "yes" ]; then
-      verdict "NOT-CHECKED" "epic has no populated '## Delivers' section — there is no declared artifact to cross-reference. Give the bead a Delivers section" 2
+      # No declared artifact to cross-reference: the epic closes on its children alone — every
+      # child closed (parent-child edges ∪ dotted ids; either alone false-passes) and the reason
+      # citing the probe receipt close-gate.sh ran from. An epic with an open child is refused.
+      if ! printf '%s' "$REASON" | grep -qiE 'probe receipt'; then
+        verdict "REFUSE" "epic — close reason cites no probe receipt: an epic closes on its children's temporal pairs, so the reason must cite the probe receipt line close-gate.sh ran from (every probe exit 0)" 1
+      fi
+      _SHOWFILE=$(mktemp) || verdict "NOT-CHECKED" "cannot create a scratch file for the epic's children" 2
+      printf '%s' "$RAW" >"$_SHOWFILE"
+      _EDGE_IDS=$(BEAD_PY_PATH="$_TOOLS_DIR/bead.py" python3 "$_EV_BEAD_HELPER" epic-children "$_SHOWFILE" 2>&1); _EDGE_RC=$?
+      rm -f "$_SHOWFILE"
+      [ "$_EDGE_RC" -eq 0 ] \
+        || verdict "NOT-CHECKED" "epic has no populated '## Delivers' and its parent-child children could not be read: $_EDGE_IDS" 2
+      _BOARD=$(br_call list --status all --limit 0 --json) \
+        || verdict "NOT-CHECKED" "epic has no populated '## Delivers' and br_call list refused — its children's statuses cannot be read" 2
+      [ -n "$_BOARD" ] \
+        || verdict "NOT-CHECKED" "epic has no populated '## Delivers' and 'br list' returned nothing — its children's statuses cannot be read" 2
+      _EDGE_JSON=$(printf '%s\n' "$_EDGE_IDS" | jq -R 'select(length > 0)' | jq -s '.')
+      _CHILD_ROWS=$(printf '%s' "$_BOARD" | jq -r --arg p "$BEAD_ID." --argjson edge "$_EDGE_JSON" '
+        (if type == "object" then (.issues // []) else . end) as $all
+        | ($all | map(.id)) as $have
+        | ($edge | map(select(. as $e | $have | index($e) | not)) | .[] | "MISSING\t" + .),
+          ($all | map(select((.id | startswith($p)) or (.id as $i | $edge | index($i)))) | .[] | "\(.id)\t\(.status)")' 2>/dev/null) \
+        || verdict "NOT-CHECKED" "epic has no populated '## Delivers' and the board list could not be parsed" 2
+      if printf '%s\n' "$_CHILD_ROWS" | grep -q '^MISSING'; then
+        verdict "NOT-CHECKED" "epic has no populated '## Delivers' and child(ren) $(printf '%s\n' "$_CHILD_ROWS" | sed -n 's/^MISSING\t//p' | tr '\n' ' ')are absent from the board list — their status cannot be read" 2
+      fi
+      if [ -z "$(printf '%s' "$_CHILD_ROWS")" ]; then
+        verdict "NOT-CHECKED" "epic has no populated '## Delivers' and no children were found — there is nothing to close it on. Give the bead a Delivers section or children" 2
+      fi
+      _OPEN_CHILDREN=$(printf '%s\n' "$_CHILD_ROWS" | awk -F'\t' '$2 != "closed" { printf "%s(%s) ", $1, $2 }')
+      if [ -n "$_OPEN_CHILDREN" ]; then
+        verdict "REFUSE" "epic — child(ren) not closed: ${_OPEN_CHILDREN}— an epic closes only when every child is" 1
+      fi
+      verdict "PASS" "epic — no ## Delivers declared; every child is closed ($(printf '%s\n' "$_CHILD_ROWS" | grep -c .)) and the close reason cites the probe receipt" 0
     fi
 
     ARTIFACTS=$(printf '%s\n' "$_HELP_OUT" | sed -n 's/^ARTIFACT://p')
