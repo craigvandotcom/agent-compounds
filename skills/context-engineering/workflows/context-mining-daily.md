@@ -197,22 +197,12 @@ Save extraction summary to `<your-deployment>/health/reports/context-<date>.json
 - Tier-0 hygiene: index-prune proposals emitted (homes + dangling slug counts); staged
   orphans promoted, and the older backlog count carried for the human
 
-### 9. Notify — MANDATORY, DO THIS LAST, DO NOT SKIP
-If you have a notification tool wired, actually run it (don't describe it) — this example
-assumes a Slack card CLI at `<your-deployment>/tools/bin/slack-send`; substitute your own.
-`--status`: `healthy` normally; `degraded` if gitleaks flagged anything or extraction errored.
-```bash
-<your-deployment>/tools/bin/slack-send --channel pi --card \
-  --status <healthy|degraded> \
-  --title "Context Mining — $(date +%Y-%m-%d)" \
-  --field "Extracted=<N>" --field "Gaps mined=<N>" \
-  --field "Dupes skipped=<N>" --field "Index-prunes=<N>" \
-  --body "<one line: notable lesson + what the gap-scan caught, or 'nothing new'>" \
-  --context "01:30 context mining · capture backstop + Tier-0 hygiene"
-```
-If wired, confirm exit 0 and retry once on error — the job is not complete until this posts.
+### 9. No notification
+The report from step 8 is the result. Post nothing: the morning check-in reads it.
+Add `"status"` to the report: `healthy`, or `degraded` if gitleaks flagged anything or
+extraction errored.
 
 ## Security
 - Run gitleaks check on any extracted content (transcripts are private — scrub before any
   lesson reaches the git-tracked queue)
-- Never include secrets in lessons (this includes the Slack card body)
+- Never include secrets in lessons (this includes the report)
