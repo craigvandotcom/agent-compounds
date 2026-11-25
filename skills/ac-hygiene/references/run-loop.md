@@ -80,8 +80,8 @@ bash skills/ac-pipeline/scripts/push.sh --branch "$(git branch --show-current)"
 > your hygiene commit and misattributes it (`ac-implement` Phase 0 H7d). New (untracked)
 > files need `git add <file>` first, then the pathspec commit of exactly that path.
 
-> **`push.sh` owns the fetch, the merge, and the push.** It refuses a dirty tracked tree
-> (naming the file), brings origin in with a merge — never a rebase, so an existing commit
+> **`push.sh` owns the fetch, the merge, and the push.** It names a dirty tracked file and
+> pushes only what is committed, brings origin in with a merge — never a rebase, so an existing commit
 > never changes identity — runs this repo's own whole-tree checks, and only then pushes. There
 > is no `--no-verify` to reach for: the check that runs is scoped to the tree just committed,
 > not a neighbour's uncommitted WIP. A refusal names the failure; fix what it names and re-run
