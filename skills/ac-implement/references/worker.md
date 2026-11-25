@@ -79,7 +79,8 @@ on the claim's exit status — a lost race must not comment:
 - **exit 0** — premises hold, a RED was observed, the receipt is banked. Continue.
 - **exit non-zero** — do what its `NEXT:` line says. `pick` → already routed (commented, title
   prefixed, unclaimed); add the id to `$BURNED` first. `handback` → verification was
-  unavailable; never read it as a pass.
+  unavailable; never read it as a pass. Exit 3 (`OWN-WIP:`) also says `handback`: the bead's
+  own uncommitted work is in the tree and nothing was stamped; the coordinator lands or clears it.
 
 **If this bead DELIVERS ITS OWN HARNESS**, the claim-time RED is only "the harness does not
 exist". Write the harness, **see it fail for the reason the AC names, before any fix**, and

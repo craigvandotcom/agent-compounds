@@ -70,6 +70,12 @@
 # Exit 0  cleared for flight — premises hold, RED observed, receipt written
 # Exit 1  PREMISE-FAILED (one named class) — route, do not debug
 # Exit 2  NOT-GATED — this gate could not verify; treat as a stop, never as a pass
+# Exit 3  OWN-WIP — a tracked file the bead's own `## Delivers` names is modified in the
+#         working tree, so the bead's own uncommitted work is present and its probes cannot
+#         judge the premise. Nothing is stamped, routed, unclaimed or banked (also under
+#         --check-only), the refined re-gate is deferred, and one `OWN-WIP:` line names the
+#         files. It fires only where a PREMISE-FAILED: RED would: land the work through
+#         swarm-commit.sh or clear it, then re-run. `NEXT: handback`.
 #
 set -uo pipefail
 
@@ -422,6 +428,51 @@ fi
 # commit or a tracked sibling edit must force the touchers command to be re-run.
 STAMP_FRESHNESS_KEY="tree=$CURRENT_TREE;tracked=$TRACKED_TREE_STATE"
 
+# OWN-WIP: a TRACKED file this bead's own `## Delivers` names is modified in the working tree
+# — the bead's own finished-but-uncommitted work (a prior worker's, or this one's after a
+# refused commit). Probes that go green on that tree prove the WORK exists, not that the
+# premise failed, so neither the stamp re-gate below nor the RED leg may judge the bead on it:
+# the stamp gate would strip `refined`, the RED leg would stamp PREMISE-FAILED, and the bead
+# would leave the pool with its own work stranded in the shared tree. Delivers paths read
+# through bead.py's `delivers()`, the one reader; a modified path is one `git status` reports
+# for a TRACKED file (untracked files never count here, as at close-gate's UNCOMMITTED leg).
+OWN_WIP=""
+if [ "$CURRENT_TREE" != "no-git" ] && [ -z "$FAIL_CLASS" ]; then
+  OWN_DELIVERS=$(python3 -c '
+import os, sys
+
+try:
+    sys.path.insert(0, os.path.dirname(sys.argv[1]))
+    import bead
+
+    with open(sys.argv[2], encoding="utf-8", errors="replace") as fh:
+        desc = fh.read()
+    for d in bead.delivers(desc):
+        for p in d["paths"]:
+            if p:
+                print(p)
+except Exception as exc:
+    print("NOT-GATED bead.py crashed reading Delivers: %s" % exc, file=sys.stderr)
+    sys.exit(2)
+' "$BEAD_PY_TOOL" "$BODY") \
+    || { echo "NOT-GATED: bead.py could not read $BEAD's Delivers — own uncommitted work cannot be ruled in or out" >&2; echo "NEXT: handback" >&2; exit 2; }
+  while IFS= read -r dp; do
+    dp="${dp#./}"
+    [ -n "$dp" ] || continue
+    if [ -n "$(GIT_LITERAL_PATHSPECS=1 git status --porcelain --untracked-files=no -- "$dp" 2>/dev/null)" ]; then
+      OWN_WIP="$OWN_WIP $dp"
+    fi
+  done <<EOF
+$OWN_DELIVERS
+EOF
+fi
+# own_wip_exit — one line, exit 3: no stamp, no title prefix, no unclaim, no receipt.
+own_wip_exit() {
+  echo "OWN-WIP: $BEAD — the bead's own uncommitted work is present in the tree (${OWN_WIP# }); it must be landed (swarm-commit.sh) or cleared first — nothing stamped, no RED banked"
+  echo "NEXT: handback" >&2
+  exit 3
+}
+
 # touchers_check calls touchers.sh derive for every git-tracked Delivers path.  Run that
 # read-only derivation in --check-only as well: refly must be able to re-run a live touchers
 # command without invoking the mutating refined-stamp gate.
@@ -476,7 +527,13 @@ if [ -z "$FAIL_CLASS" ] && [ "$CHECK_ONLY" -eq 0 ]; then
       LAST_FRESHNESS=$(printf '%s\n' "$LAST_RECEIPT" | grep -m1 '^freshness-key:' | sed 's/^freshness-key:[[:space:]]*//')
     fi
     norm_ts() { printf '%s' "$1" | sed -E 's/\.[0-9]+//; s/Z$//'; }
-    if [ -n "$CLAIM_TS" ] && [ -n "$LAST_AT" ] \
+    if [ -n "$OWN_WIP" ]; then
+      # The gate's check runs the probes against this tree and its downgrade strips `refined`
+      # on all-green; with the bead's own work in the tree that verdict is not about the
+      # premise. Defer it: the RED leg below decides (all green -> OWN-WIP exit, else RED).
+      STAMP_SKIPPED=1
+      echo "flight-check[$BEAD] STAMP deferred — the bead's own uncommitted work is in the tree (${OWN_WIP# }); the refined stamp is not re-gated against it"
+    elif [ -n "$CLAIM_TS" ] && [ -n "$LAST_AT" ] \
        && [ "$LAST_FRESHNESS" = "$STAMP_FRESHNESS_KEY" ] \
        && ! [ "$(norm_ts "$LAST_AT")" \< "$(norm_ts "$CLAIM_TS")" ]; then
       STAMP_SKIPPED=1
@@ -567,6 +624,7 @@ EOF
   fi
 
   if [ -z "$FAIL_CLASS" ] && [ -z "$RED_PROBE" ]; then
+    [ -n "$OWN_WIP" ] && own_wip_exit
     premise_failed RED "all $PROBE_COUNT named probe(s) are ALREADY GREEN — there is no RED for a diff to flip, so no causal claim is available"
   fi
 fi
