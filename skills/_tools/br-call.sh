@@ -15,7 +15,7 @@
 # this helper exists to replace; br stderr passes through to the caller untouched.
 #
 # br's stdout goes to a regular file, never a pipe: a reader that exits early (a dead parent,
-# `head`) cannot hand br an EPIPE to panic on. The file lives under the cache dir, not /tmp.
+# `head`) cannot hand br an EPIPE to panic on. The file lives under the cache dir, falling back to TMPDIR.
 #
 # Usage:   br_call <br-args…>
 # Example: data=$(br_call show ac-xyz --json) || return $?
@@ -27,7 +27,7 @@
 br_call() {
   local out rc br_cmd tmp dir
   br_cmd="${AC2_BR_CMD:-br}"
-  dir="${XDG_CACHE_HOME:-$HOME/.cache}/br-call"
+  dir="${XDG_CACHE_HOME:-${TMPDIR:-/tmp}}/br-call"
   mkdir -p "$dir" && tmp=$(mktemp "$dir/out.XXXXXX") || { echo "br_call: cannot create a capture file under $dir" >&2; return 2; }
   "$br_cmd" "$@" >"$tmp"
   rc=$?
